@@ -1,8 +1,12 @@
 # Resonance
 
+<p align="center">
+  <img src="assets/branding/resonance-icon-master.png" alt="Resonance 应用图标" width="128">
+</p>
+
 一个面向 Android 与 Windows 的本地音乐库：扫描和整理本机音频、转换受支持的 KGMA 文件、读取歌曲元数据与专辑封面、像常规音乐应用一样播放，并在不部署服务器的情况下同步两台设备。
 
-当前版本：`v0.1.4`
+当前版本：`v0.1.5`
 
 > Resonance 坚持本地优先：不要求注册账号，不上传音乐库，也不依赖常驻云服务。酷狗歌单链接仅用于读取公开曲目目录并匹配本机已有歌曲；应用不会下载会员/受保护音频，也不会绕过账号、DRM 或版权限制。
 
@@ -27,10 +31,10 @@
 
 | 文件 | 用途 | SHA-256 |
 | --- | --- | --- |
-| `Resonance-Android-v0.1.4.apk` | Android 8.0（API 26）及以上 | `8FDBEEA29A81581B965653C329602DE161DA0E6100C740950EC67BC36DC4E818` |
-| `Resonance-Windows-v0.1.4-Portable.zip` | Windows 便携版，解压后运行 | `192B463CCB1F827E3D403A6A89DE7323BC5CCBAABBC5491ED0B09081A17C04F9` |
-| `Resonance-Windows-v0.1.4-Setup.exe` | Windows 安装程序 | `BB4C9422B7F11F31D60C74E5BBBDAC0C34740E9AC71B2F95E2390B60913EE9B5` |
-| `Resonance-Windows-v0.1.4.msi` | Windows MSI 安装包 | `CD8B2F04B9DBF6A0D334A43134EF6B5D615198A1BE18963564317CBAC9C52975` |
+| `Resonance-Android-v0.1.5.apk` | Android 8.0（API 26）及以上 | `4A3C04F3E6072A4B5DF96FFBDAACAF9C93DD04D54209EAAA649F62DC6551BE9D` |
+| `Resonance-Windows-v0.1.5-Portable.zip` | Windows 便携版，解压后运行 | `9E3B9FBBB275E87DF664668ABA3545947BEE45004275971702769218625F2A3D` |
+| `Resonance-Windows-v0.1.5-Setup.exe` | Windows 安装程序 | `7AE4CF49E22EA8960A3A1032C818D9E9675CC8B5C7EA6B2B7B27422D6D4B9992` |
+| `Resonance-Windows-v0.1.5.msi` | Windows MSI 安装包 | `3502BB1EB03ECEFC88E94DC6F673F893AA7A2868A7B3DB62AF35271ED4D49913` |
 
 ### Android
 
@@ -47,7 +51,7 @@
 在 PowerShell 中校验下载文件：
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Resonance-Android-v0.1.4.apk
+Get-FileHash -Algorithm SHA256 .\Resonance-Android-v0.1.5.apk
 ```
 
 ## 快速开始
@@ -199,7 +203,7 @@ keyPassword=change-me
 
 ## 测试与发布质量门槛
 
-`v0.1.4` 发布前已完成：
+`v0.1.5` 发布前已完成：
 
 - 15 个测试套件、30 个测试，0 失败；
 - KGMA v3/slot 1 解密、MP3 原样复制、转换失败保护和“转换成功但删除失败”分离报告；
@@ -209,8 +213,10 @@ keyPassword=change-me
 - Android 模拟器安装、启动、文件夹授权、KGMA 转换、源文件删除及再次启动；
 - Windows Release 便携包实际启动，EXE/MSI/ZIP 结构检查；
 - APK v2 签名校验与四个发布文件的 SHA-256 校验。
+- Android 自适应/圆形图标资源检查，MuMu 升级安装、版本名称与启动前台检查；
+- Windows 便携 EXE、安装器内嵌图标提取，产品名、窗口标题及实际启动检查。
 
-完整版本说明见 [`docs/RELEASE_NOTES-0.1.4.md`](docs/RELEASE_NOTES-0.1.4.md)。
+完整版本说明见 [`docs/RELEASE_NOTES-0.1.5.md`](docs/RELEASE_NOTES-0.1.5.md)。
 
 ## 数据、安全与限制
 
