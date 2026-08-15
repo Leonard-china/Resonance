@@ -200,6 +200,20 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         Unit
     }
 
+    override suspend fun loadLastSelectedPlaylistId(): String? = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .getString("library.selectedPlaylistId", null)
+            ?.takeIf(String::isNotBlank)
+    }
+
+    override suspend fun saveLastSelectedPlaylistId(playlistId: String?): Unit = withContext(Dispatchers.IO) {
+        val editor = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE).edit()
+        if (playlistId.isNullOrBlank()) editor.remove("library.selectedPlaylistId")
+        else editor.putString("library.selectedPlaylistId", playlistId)
+        editor.commit()
+        Unit
+    }
+
     override suspend fun exportSyncPackage(passphrase: String): SyncReport = withContext(Dispatchers.IO) {
         val playlists = loadPlaylists()
         val tracks = tracksWithPlaylistArtwork(loadLibrary(), playlists)

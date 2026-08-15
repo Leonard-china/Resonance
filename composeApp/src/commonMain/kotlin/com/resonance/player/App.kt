@@ -1,11 +1,9 @@
 package com.resonance.player
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,37 +48,40 @@ fun App(services: PlatformServices) {
         var trackPendingDeletion by remember { mutableStateOf<Track?>(null) }
         var operationInProgress by remember { mutableStateOf(false) }
         var previewMode by remember { mutableStateOf(false) }
-        var selectedPlaylistId by remember { mutableStateOf("local-library") }
+        var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
         var importMessage by remember { mutableStateOf<String?>(null) }
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
         var lanQrPath by remember { mutableStateOf<String?>(null) }
         val scope = rememberCoroutineScope()
 
+        fun selectPlaylist(playlistId: String?, persist: Boolean = true) {
+            selectedPlaylistId = playlistId
+            if (persist && !previewMode) {
+                scope.launch { services.saveLastSelectedPlaylistId(playlistId) }
+            }
+        }
+
         LaunchedEffect(services) {
             val loadedTracks = services.loadLibrary()
             val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
+            val restoredPlaylistId = resolveSelectedPlaylistId(
+                requestedId = services.loadLastSelectedPlaylistId(),
+                playlists = loadedPlaylists,
+            )
             importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
             playlists = loadedPlaylists
+            selectedPlaylistId = restoredPlaylistId
             services.savePlaylists(loadedPlaylists)
+            services.saveLastSelectedPlaylistId(restoredPlaylistId)
         }
         DisposableEffect(services) {
             onDispose { services.close() }
         }
 
-        val visiblePlaylists = when {
-            previewMode -> PreviewLibrary.playlists
-            importedTracks.isNotEmpty() -> listOf(
-                Playlist(
-                    id = "local-library",
-                    name = "本地音乐",
-                    subtitle = "${importedTracks.size} 首 · 来自已导入文件夹",
-                    tracks = importedTracks,
-                    artworkSeed = 17,
-                ),
-            ) + playlists
-            else -> playlists
-        }
-        val playbackQueue = visiblePlaylists.flatMap(Playlist::tracks).filter { it.sourceUri != null }.distinctBy(Track::id)
+        val visiblePlaylists = if (previewMode) PreviewLibrary.playlists else playlists
+        val playbackQueue = (importedTracks + playlists.flatMap(Playlist::tracks))
+            .filter { it.sourceUri != null }
+            .distinctBy(Track::id)
 
         fun persistPlaylists(updated: List<Playlist>) {
             playlists = updated
@@ -146,6 +147,8 @@ fun App(services: PlatformServices) {
                         importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
                         playlists = loadedPlaylists
                         services.savePlaylists(loadedPlaylists)
+                        val restored = resolveSelectedPlaylistId(selectedPlaylistId, loadedPlaylists)
+                        selectPlaylist(restored)
                     }
                 } catch (error: Throwable) {
                     importMessage = "局域网同步失败：${error.message ?: error::class.simpleName.orEmpty()}"
@@ -163,15 +166,8 @@ fun App(services: PlatformServices) {
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.safeDrawing),
             ) {
-                AnimatedContent(
-                    targetState = destination,
-                    transitionSpec = {
-                        fadeIn(tween(180)) togetherWith fadeOut(tween(120))
-                    },
-                    label = "destination",
-                ) { selectedDestination ->
-                    LibraryShell(
-                        destination = selectedDestination,
+                LibraryShell(
+                        destination = destination,
                         onDestinationChange = { destination = it },
                         playlists = visiblePlaylists,
                         playerState = player,
@@ -185,7 +181,7 @@ fun App(services: PlatformServices) {
                         },
                         selectedPlaylistId = selectedPlaylistId,
                         userPlaylists = playlists,
-                        onPlaylistSelected = { playlistId -> selectedPlaylistId = playlistId },
+                        onPlaylistSelected = { playlistId -> selectPlaylist(playlistId) },
                         onPlaylistMembershipChange = { track, playlistId, include ->
                             val updated = playlists.map { playlist ->
                                 if (playlist.id != playlistId) {
@@ -213,8 +209,11 @@ fun App(services: PlatformServices) {
                             }
                         },
                         onDeletePlaylist = { playlistId ->
-                            persistPlaylists(playlists.filterNot { it.id == playlistId })
-                            if (selectedPlaylistId == playlistId) selectedPlaylistId = "local-library"
+                            val updated = playlists.filterNot { it.id == playlistId }
+                            persistPlaylists(updated)
+                            if (selectedPlaylistId == playlistId) {
+                                selectPlaylist(updated.firstOrNull()?.id)
+                            }
                         },
                         onDeleteLocalTrack = { track -> trackPendingDeletion = track },
                         onPrevious = { moveInQueue(direction = -1) },
@@ -249,7 +248,6 @@ fun App(services: PlatformServices) {
                                         importedTracks = tracksWithPlaylistArtwork(loadedTracks, rematchedPlaylists)
                                         persistPlaylists(rematchedPlaylists)
                                         previewMode = false
-                                        selectedPlaylistId = "local-library"
                                         destination = LibraryDestination.Library
                                     }
                                     importMessage = importReportMessage(report, convertToMp3)
@@ -284,7 +282,6 @@ fun App(services: PlatformServices) {
                         message = importMessage,
                         operationInProgress = operationInProgress,
                     )
-                }
 
                 AnimatedVisibility(
                     visible = showCreateDialog,
@@ -303,7 +300,7 @@ fun App(services: PlatformServices) {
                                 artworkSeed = playlists.size + 20,
                             )
                             persistPlaylists(updated)
-                            selectedPlaylistId = playlistId
+                            selectPlaylist(playlistId)
                             destination = LibraryDestination.Library
                             showCreateDialog = false
                         },
@@ -331,6 +328,8 @@ fun App(services: PlatformServices) {
                                         importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
                                         playlists = loadedPlaylists
                                         services.savePlaylists(loadedPlaylists)
+                                        val restored = resolveSelectedPlaylistId(selectedPlaylistId, loadedPlaylists)
+                                        selectPlaylist(restored)
                                     }
                                 } catch (error: Throwable) {
                                     importMessage = "同步失败：${error.message ?: error::class.simpleName.orEmpty()}"
@@ -353,7 +352,7 @@ fun App(services: PlatformServices) {
                                     val updated = playlists.filterNot { it.id == report.playlist.id } + report.playlist
                                     persistPlaylists(updated)
                                     importedTracks = tracksWithPlaylistArtwork(importedTracks, updated)
-                                    selectedPlaylistId = report.playlist.id
+                                    selectPlaylist(report.playlist.id)
                                     destination = LibraryDestination.Library
                                     importMessage = report.message
                                 } catch (error: Throwable) {
@@ -410,6 +409,9 @@ fun App(services: PlatformServices) {
         }
     }
 }
+
+internal fun resolveSelectedPlaylistId(requestedId: String?, playlists: List<Playlist>): String? =
+    playlists.firstOrNull { it.id == requestedId }?.id ?: playlists.firstOrNull()?.id
 
 internal fun importReportMessage(report: ImportReport, conversionRequested: Boolean): String? {
     val completed = report.tracks.size

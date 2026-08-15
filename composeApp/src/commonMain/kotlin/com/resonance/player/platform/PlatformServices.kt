@@ -18,6 +18,8 @@ interface PlatformServices {
     suspend fun loadLibrary(): List<Track>
     suspend fun loadPlaylists(): List<Playlist>
     suspend fun savePlaylists(playlists: List<Playlist>)
+    suspend fun loadLastSelectedPlaylistId(): String?
+    suspend fun saveLastSelectedPlaylistId(playlistId: String?)
     suspend fun exportSyncPackage(passphrase: String): SyncReport
     suspend fun importSyncPackage(passphrase: String): SyncReport
     suspend fun startLanShare(): LanShareInfo

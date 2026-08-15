@@ -53,6 +53,14 @@ class DesktopPlatformServices : PlatformServices {
         library.savePlaylists(playlists)
     }
 
+    override suspend fun loadLastSelectedPlaylistId(): String? = withContext(Dispatchers.IO) {
+        library.loadLastSelectedPlaylistId()
+    }
+
+    override suspend fun saveLastSelectedPlaylistId(playlistId: String?) = withContext(Dispatchers.IO) {
+        library.saveLastSelectedPlaylistId(playlistId)
+    }
+
     override suspend fun exportSyncPackage(passphrase: String): SyncReport = withContext(Dispatchers.IO) {
         val target = chooseSyncPackageOnEdt(save = true) ?: return@withContext SyncReport(false, "已取消导出")
         val playlists = library.loadPlaylists()
@@ -300,6 +308,7 @@ internal class DesktopLibraryStore {
     )
     private val libraryFile = appDirectory.resolve("library.properties")
     private val playlistFile = appDirectory.resolve("playlists.properties")
+    private val uiStateFile = appDirectory.resolve("ui-state.properties")
     val artworkDirectory: Path = appDirectory.resolve("artwork")
     val managedMusicDirectory: Path = preferredManagedMusicDirectory()
 
@@ -420,6 +429,21 @@ internal class DesktopLibraryStore {
             playlist.tracks.forEachIndexed { trackIndex, track -> writeCatalogTrack(properties, prefix, trackIndex, track) }
         }
         writePropertiesAtomically(playlistFile, properties, "Resonance playlists")
+    }
+
+    fun loadLastSelectedPlaylistId(): String? {
+        if (!Files.isRegularFile(uiStateFile)) return null
+        val properties = Properties()
+        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
+        return properties.getProperty("library.selectedPlaylistId")?.takeIf(String::isNotBlank)
+    }
+
+    fun saveLastSelectedPlaylistId(playlistId: String?) {
+        Files.createDirectories(appDirectory)
+        val properties = Properties().apply {
+            playlistId?.takeIf(String::isNotBlank)?.let { setProperty("library.selectedPlaylistId", it) }
+        }
+        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
 
     private fun readCatalogTrack(properties: Properties, playlistPrefix: String, trackIndex: Int, id: String): Track? {

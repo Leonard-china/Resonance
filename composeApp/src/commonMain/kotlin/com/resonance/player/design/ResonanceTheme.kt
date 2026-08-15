@@ -12,17 +12,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
 object ResonanceColors {
-    val Canvas = Color(0xFF0D1117)
-    val Raised = Color(0xFF151B23)
-    val Soft = Color(0xFF1C2430)
-    val Divider = Color(0xFF29313D)
-    val Ivory = Color(0xFFF7F2E8)
-    val Muted = Color(0xFFA9B1BD)
-    val Dim = Color(0xFF747E8D)
-    val Coral = Color(0xFFFF735C)
-    val CoralSoft = Color(0xFF38201F)
-    val Mint = Color(0xFF5FD19B)
-    val Amber = Color(0xFFF2BD5B)
+    val Canvas = Color(0xFF080A0F)
+    val Raised = Color(0xFF10141D)
+    val Soft = Color(0xFF171D29)
+    val Glass = Color(0xE61A202C)
+    val Divider = Color(0xFF2A3344)
+    val DividerStrong = Color(0xFF3A465D)
+    val Ivory = Color(0xFFF9F5EE)
+    val Muted = Color(0xFFAEB7C7)
+    val Dim = Color(0xFF788397)
+    val Coral = Color(0xFFFF715B)
+    val CoralGlow = Color(0xFFFFA08F)
+    val CoralSoft = Color(0xFF351B21)
+    val Mint = Color(0xFF67DBB3)
+    val Amber = Color(0xFFF3BD63)
+    val Violet = Color(0xFF8A7CFF)
+    val Azure = Color(0xFF61C8FF)
+    val Shadow = Color(0xFF020308)
 }
 
 private val resonanceColorScheme: ColorScheme = darkColorScheme(
@@ -38,6 +44,7 @@ private val resonanceColorScheme: ColorScheme = darkColorScheme(
     surfaceVariant = ResonanceColors.Soft,
     onSurfaceVariant = ResonanceColors.Muted,
     outline = ResonanceColors.Divider,
+    outlineVariant = ResonanceColors.DividerStrong,
     error = Color(0xFFFFB4AB),
 )
 

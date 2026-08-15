@@ -1,14 +1,34 @@
 package com.resonance.player.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.RepeatMode as AnimationRepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -92,15 +112,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,6 +154,82 @@ private val destinationItems = listOf(
     DestinationItem(LibraryDestination.Settings, "设置", Icons.Default.Settings),
 )
 
+private const val MotionQuick = 160
+private const val MotionStandard = 280
+
+@Composable
+private fun Modifier.pressScale(
+    interactionSource: MutableInteractionSource,
+    pressedScale: Float = 0.96f,
+    restingScale: Float = 1f,
+): Modifier {
+    val pressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) pressedScale else restingScale,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium,
+        ),
+        label = "pressScale",
+    )
+    return graphicsLayer {
+        scaleX = scale
+        scaleY = scale
+    }
+}
+
+@Composable
+private fun ResonanceBackdrop(
+    seed: Int,
+    energized: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val energy by animateFloatAsState(
+        targetValue = if (energized) 1f else 0.62f,
+        animationSpec = tween(700),
+        label = "backdropEnergy",
+    )
+    val phase = (((seed % 19) + 19) % 19) / 18f
+    Canvas(
+        modifier = modifier.background(
+            Brush.verticalGradient(
+                listOf(
+                    Color(0xFF0C1018),
+                    ResonanceColors.Canvas,
+                    Color(0xFF07080C),
+                ),
+            ),
+        ),
+    ) {
+        val radius = size.maxDimension * 0.56f
+        val coralCenter = Offset(size.width * (0.18f + phase * 0.12f), size.height * 0.08f)
+        val violetCenter = Offset(size.width * (0.86f - phase * 0.10f), size.height * 0.58f)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(ResonanceColors.Coral.copy(alpha = 0.14f * energy), Color.Transparent),
+                center = coralCenter,
+                radius = radius,
+            ),
+            radius = radius,
+            center = coralCenter,
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(ResonanceColors.Violet.copy(alpha = 0.11f * energy), Color.Transparent),
+                center = violetCenter,
+                radius = radius * 0.82f,
+            ),
+            radius = radius * 0.82f,
+            center = violetCenter,
+        )
+        drawCircle(
+            color = ResonanceColors.Azure.copy(alpha = 0.035f * energy),
+            radius = size.minDimension * 0.30f,
+            center = Offset(size.width * 0.62f, size.height * 0.96f),
+        )
+    }
+}
+
 @Composable
 fun LibraryShell(
     destination: LibraryDestination,
@@ -144,7 +243,7 @@ fun LibraryShell(
     onCycleRepeat: () -> Unit,
     onSeek: (Float) -> Unit,
     onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String,
+    selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
@@ -163,12 +262,21 @@ fun LibraryShell(
     message: String?,
     operationInProgress: Boolean,
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(ResonanceColors.Canvas)) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val windowClass = when {
             maxWidth < 720.dp -> WindowClass.Compact
             maxWidth < 1100.dp -> WindowClass.Medium
             else -> WindowClass.Expanded
         }
+        val activeSeed = playerState.currentTrack?.artworkSeed
+            ?: playlists.firstOrNull { it.id == selectedPlaylistId }?.artworkSeed
+            ?: 0
+
+        ResonanceBackdrop(
+            seed = activeSeed,
+            energized = playerState.isPlaying,
+            modifier = Modifier.matchParentSize(),
+        )
 
         when (windowClass) {
             WindowClass.Compact -> CompactShell(
@@ -285,7 +393,7 @@ private fun CompactShell(
     onCycleRepeat: () -> Unit,
     onSeek: (Float) -> Unit,
     onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String,
+    selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
@@ -336,15 +444,21 @@ private fun CompactShell(
             MiniPlayer(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat, onSeek, horizontalPadding = 8.dp)
         }
         NavigationBar(
-            containerColor = ResonanceColors.Raised,
-            tonalElevation = 0.dp,
-            modifier = Modifier.height(72.dp),
+            containerColor = ResonanceColors.Glass,
+            tonalElevation = 6.dp,
+            modifier = Modifier.height(76.dp).border(1.dp, ResonanceColors.Divider.copy(alpha = 0.75f)),
         ) {
             destinationItems.forEach { item ->
+                val selected = destination == item.destination
+                val iconScale by animateFloatAsState(
+                    targetValue = if (selected) 1.12f else 1f,
+                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                    label = "bottomNavIcon",
+                )
                 NavigationBarItem(
-                    selected = destination == item.destination,
+                    selected = selected,
                     onClick = { onDestinationChange(item.destination) },
-                    icon = { Icon(item.icon, contentDescription = item.label) },
+                    icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }) },
                     label = { Text(item.label) },
                 )
             }
@@ -366,7 +480,7 @@ private fun WideShell(
     onCycleRepeat: () -> Unit,
     onSeek: (Float) -> Unit,
     onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String,
+    selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
@@ -388,16 +502,22 @@ private fun WideShell(
     Row(modifier = Modifier.fillMaxSize()) {
         if (compactRail) {
             NavigationRail(
-                containerColor = ResonanceColors.Raised,
+                containerColor = ResonanceColors.Glass,
                 header = {
                     BrandMark(modifier = Modifier.padding(vertical = 20.dp))
                 },
             ) {
                 destinationItems.forEach { item ->
+                    val selected = destination == item.destination
+                    val iconScale by animateFloatAsState(
+                        targetValue = if (selected) 1.12f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+                        label = "railIcon",
+                    )
                     NavigationRailItem(
-                        selected = destination == item.destination,
+                        selected = selected,
                         onClick = { onDestinationChange(item.destination) },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
+                        icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }) },
                         label = { Text(item.label) },
                     )
                 }
@@ -432,7 +552,7 @@ private fun WideShell(
                     lanQrPath = lanQrPath,
                     onExitPreview = onExitPreview,
                     previewMode = previewMode,
-                    compact = false,
+                    compact = compactRail,
                     message = message,
                     operationInProgress = operationInProgress,
                 )
@@ -453,7 +573,16 @@ private fun DesktopSidebar(
         modifier = Modifier
             .width(232.dp)
             .fillMaxHeight()
-            .background(ResonanceColors.Raised)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF151A25),
+                        ResonanceColors.Raised,
+                        Color(0xFF0D1119),
+                    ),
+                ),
+            )
+            .border(width = 1.dp, color = ResonanceColors.Divider.copy(alpha = 0.72f))
             .padding(horizontal = 18.dp, vertical = 24.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -475,8 +604,10 @@ private fun DesktopSidebar(
         }
         Spacer(Modifier.weight(1f))
         Surface(
-            color = ResonanceColors.Soft,
-            shape = RoundedCornerShape(16.dp),
+            color = ResonanceColors.Glass,
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.85f)),
+            shadowElevation = 8.dp,
         ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -493,25 +624,47 @@ private fun DesktopSidebar(
 
 @Composable
 private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     val background by animateColorAsState(
-        if (selected) ResonanceColors.CoralSoft else Color.Transparent,
-        animationSpec = tween(180),
+        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.92f) else Color.Transparent,
+        animationSpec = tween(MotionQuick),
         label = "sidebarBackground",
     )
     val foreground by animateColorAsState(
         if (selected) ResonanceColors.Coral else ResonanceColors.Muted,
-        animationSpec = tween(180),
+        animationSpec = tween(MotionQuick),
         label = "sidebarForeground",
     )
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .pressScale(interactionSource, pressedScale = 0.975f)
+            .clip(RoundedCornerShape(14.dp))
             .background(background)
-            .clickable(role = Role.Tab, onClick = onClick)
+            .border(
+                width = 1.dp,
+                color = if (selected) ResonanceColors.Coral.copy(alpha = 0.24f) else Color.Transparent,
+                shape = RoundedCornerShape(14.dp),
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Tab,
+                onClick = onClick,
+            )
             .padding(horizontal = 14.dp, vertical = 12.dp),
     ) {
+        if (selected) {
+            Box(
+                Modifier
+                    .width(3.dp)
+                    .height(18.dp)
+                    .clip(CircleShape)
+                    .background(ResonanceColors.Coral),
+            )
+            Spacer(Modifier.width(9.dp))
+        }
         Icon(item.icon, contentDescription = null, tint = foreground, modifier = Modifier.size(21.dp))
         Spacer(Modifier.width(12.dp))
         Text(item.label, style = MaterialTheme.typography.labelLarge, color = foreground)
@@ -524,7 +677,7 @@ private fun DestinationContent(
     playlists: List<Playlist>,
     playerState: PlayerState,
     onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String,
+    selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
@@ -544,7 +697,23 @@ private fun DestinationContent(
     message: String?,
     operationInProgress: Boolean,
 ) {
-    when (destination) {
+    AnimatedContent(
+        targetState = destination,
+        transitionSpec = {
+            val movingForward = targetState.ordinal >= initialState.ordinal
+            val enter = fadeIn(tween(MotionStandard)) + slideInHorizontally(
+                animationSpec = tween(MotionStandard),
+                initialOffsetX = { width -> if (movingForward) width / 12 else -width / 12 },
+            )
+            val exit = fadeOut(tween(MotionQuick)) + slideOutHorizontally(
+                animationSpec = tween(MotionQuick),
+                targetOffsetX = { width -> if (movingForward) -width / 18 else width / 18 },
+            )
+            enter togetherWith exit using SizeTransform(clip = false)
+        },
+        label = "destinationContent",
+    ) { activeDestination ->
+        when (activeDestination) {
         LibraryDestination.Library -> LibraryScreen(
             playlists = playlists,
             playerState = playerState,
@@ -580,6 +749,7 @@ private fun DestinationContent(
             message = message,
         )
         LibraryDestination.Settings -> SettingsScreen(compact = compact)
+        }
     }
 }
 
@@ -588,7 +758,7 @@ private fun LibraryScreen(
     playlists: List<Playlist>,
     playerState: PlayerState,
     onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String,
+    selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
@@ -627,14 +797,34 @@ private fun LibraryScreen(
         }
         if (message != null) {
             item {
-                Surface(color = ResonanceColors.CoralSoft, shape = RoundedCornerShape(12.dp)) {
+                Surface(
+                    color = ResonanceColors.CoralSoft.copy(alpha = 0.92f),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.24f)),
+                    shadowElevation = 6.dp,
+                ) {
                     Text(message, color = ResonanceColors.Coral, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
                 }
                 Spacer(Modifier.height(18.dp))
             }
         }
         item {
-            Text("你的歌单", style = MaterialTheme.typography.headlineMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("你的歌单", style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.width(10.dp))
+                Surface(
+                    color = ResonanceColors.Soft,
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, ResonanceColors.Divider),
+                ) {
+                    Text(
+                        playlists.size.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = ResonanceColors.Muted,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                    )
+                }
+            }
             Spacer(Modifier.height(14.dp))
             PlaylistStrip(
                 playlists = playlists,
@@ -645,44 +835,70 @@ private fun LibraryScreen(
             Spacer(Modifier.height(if (compact) 30.dp else 38.dp))
         }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(selectedPlaylist.name, style = MaterialTheme.typography.headlineMedium)
-                    Text(
-                        if (selectedPlaylist.id == "local-library") "全部已导入音乐" else selectedPlaylist.subtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ResonanceColors.Muted,
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                if (selectedPlaylist.id != "local-library" && !previewMode) {
-                    IconButton(onClick = { showRenameDialog = true }) {
-                        Icon(Icons.Default.Edit, contentDescription = "重命名歌单", tint = ResonanceColors.Muted)
-                    }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "删除歌单", tint = ResonanceColors.Muted)
+            AnimatedContent(
+                targetState = selectedPlaylist,
+                transitionSpec = {
+                    (fadeIn(tween(MotionStandard)) + slideInVertically(tween(MotionStandard)) { it / 5 }) togetherWith
+                        (fadeOut(tween(MotionQuick)) + slideOutVertically(tween(MotionQuick)) { -it / 6 })
+                },
+                contentKey = Playlist::id,
+                label = "playlistHeading",
+            ) { playlist ->
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = ResonanceColors.Glass,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.9f)),
+                    shadowElevation = 12.dp,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(if (compact) 14.dp else 18.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AlbumArtwork(
+                            seed = playlist.artworkSeed,
+                            modifier = Modifier.size(if (compact) 58.dp else 68.dp).shadow(8.dp, RoundedCornerShape(15.dp)),
+                            cornerRadius = 15.dp,
+                            artworkPath = playlist.tracks.firstNotNullOfOrNull(Track::artworkPath),
+                        )
+                        Spacer(Modifier.width(15.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(playlist.name, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Spacer(Modifier.height(4.dp))
+                            Text(playlist.subtitle, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+                        }
+                        if (!previewMode) {
+                            IconButton(onClick = { showRenameDialog = true }) {
+                                Icon(Icons.Default.Edit, contentDescription = "重命名歌单", tint = ResonanceColors.Muted)
+                            }
+                            IconButton(onClick = { showDeleteDialog = true }) {
+                                Icon(Icons.Default.Delete, contentDescription = "删除歌单", tint = ResonanceColors.Muted)
+                            }
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(12.dp))
         }
         if (selectedPlaylist.tracks.isEmpty()) {
             item {
                 EmptyPlaylistNotice(
-                    canAddMusic = userPlaylists.isNotEmpty(),
+                    canAddMusic = userPlaylists.any { it.id != selectedPlaylist.id && it.tracks.isNotEmpty() },
                     onImport = { onImport(false) },
                 )
             }
         }
-        itemsIndexed(selectedPlaylist.tracks, key = { index, track -> "${track.id}-$index" }) { _, track ->
+        itemsIndexed(selectedPlaylist.tracks, key = { index, track -> "${selectedPlaylist.id}-${track.id}-$index" }) { _, track ->
             TrackRow(
                 track = track,
                 selected = playerState.currentTrack?.id == track.id,
+                isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
                 onClick = { onTrackSelected(track) },
                 compact = compact,
                 userPlaylists = userPlaylists,
                 onPlaylistMembershipChange = onPlaylistMembershipChange,
                 onDeleteLocalTrack = onDeleteLocalTrack,
+                modifier = Modifier.animateItem(),
             )
         }
     }
@@ -718,34 +934,71 @@ private fun LibraryHeader(
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val lowProfile = compact && maxWidth > 500.dp
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("晚上好", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.Coral)
-                Spacer(Modifier.height(5.dp))
-                Text(
-                    if (lowProfile) "你的音乐，留在身边。" else "你的音乐，\n留在身边。",
-                    style = when {
-                        lowProfile -> MaterialTheme.typography.headlineLarge
-                        compact -> MaterialTheme.typography.displaySmall
-                        else -> MaterialTheme.typography.displayLarge
-                    },
-                )
-                if (!compact) {
-                    Spacer(Modifier.height(10.dp))
-                    Text("离线收藏、播放与设备同步，都由你掌控。", style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted)
+        val shape = RoundedCornerShape(if (compact) 24.dp else 30.dp)
+        val addInteraction = remember { MutableInteractionSource() }
+        Surface(
+            modifier = Modifier.fillMaxWidth().shadow(18.dp, shape),
+            color = ResonanceColors.Glass,
+            shape = shape,
+            border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.9f)),
+        ) {
+            Box {
+                Canvas(Modifier.matchParentSize()) {
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(ResonanceColors.Coral.copy(alpha = 0.19f), Color.Transparent),
+                            center = Offset(size.width * 0.86f, size.height * 0.06f),
+                            radius = size.maxDimension * 0.66f,
+                        ),
+                        radius = size.maxDimension * 0.66f,
+                        center = Offset(size.width * 0.86f, size.height * 0.06f),
+                    )
+                    drawCircle(
+                        color = ResonanceColors.Violet.copy(alpha = 0.07f),
+                        radius = size.minDimension * 0.48f,
+                        center = Offset(size.width * 0.12f, size.height * 1.05f),
+                    )
                 }
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                FilledIconButton(
-                    onClick = onCreatePlaylist,
-                    modifier = Modifier.size(50.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(containerColor = ResonanceColors.Coral),
+                Row(
+                    modifier = Modifier.padding(horizontal = if (compact) 20.dp else 28.dp, vertical = if (compact) 20.dp else 26.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "新建歌单")
-                }
-                if (previewMode) {
-                    Spacer(Modifier.height(6.dp))
-                    TextButton(onClick = onExitPreview) { Text("清空预览") }
+                    Column(Modifier.weight(1f)) {
+                        Text("晚上好  ·  RESONANCE", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.CoralGlow)
+                        Spacer(Modifier.height(7.dp))
+                        Text(
+                            if (lowProfile) "你的音乐，留在身边。" else "你的音乐，\n留在身边。",
+                            style = when {
+                                lowProfile -> MaterialTheme.typography.headlineLarge
+                                compact -> MaterialTheme.typography.displaySmall
+                                else -> MaterialTheme.typography.displayLarge
+                            },
+                        )
+                        if (!compact) {
+                            Spacer(Modifier.height(10.dp))
+                            Text("离线收藏、播放与设备同步，都由你掌控。", style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted)
+                        }
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        FilledIconButton(
+                            onClick = onCreatePlaylist,
+                            interactionSource = addInteraction,
+                            modifier = Modifier
+                                .size(54.dp)
+                                .pressScale(addInteraction, pressedScale = 0.88f)
+                                .shadow(12.dp, CircleShape, ambientColor = ResonanceColors.Coral, spotColor = ResonanceColors.Coral),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = ResonanceColors.Coral,
+                                contentColor = Color(0xFF2A0B07),
+                            ),
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "新建歌单", modifier = Modifier.size(26.dp))
+                        }
+                        if (previewMode) {
+                            Spacer(Modifier.height(6.dp))
+                            TextButton(onClick = onExitPreview) { Text("清空预览") }
+                        }
+                    }
                 }
             }
         }
@@ -821,11 +1074,16 @@ private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, com
 
 @Composable
 private fun PrimaryAction(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
+        interactionSource = interactionSource,
         shape = RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
-        modifier = modifier.heightIn(min = 52.dp),
+        modifier = modifier
+            .heightIn(min = 52.dp)
+            .pressScale(interactionSource)
+            .shadow(10.dp, RoundedCornerShape(14.dp), ambientColor = ResonanceColors.Coral, spotColor = ResonanceColors.Coral),
     ) {
         Icon(icon, contentDescription = null)
         Spacer(Modifier.width(9.dp))
@@ -835,12 +1093,15 @@ private fun PrimaryAction(label: String, icon: ImageVector, onClick: () -> Unit,
 
 @Composable
 private fun SecondaryAction(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val interactionSource = remember { MutableInteractionSource() }
     Button(
         onClick = onClick,
+        interactionSource = interactionSource,
         shape = RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
         colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Soft, contentColor = ResonanceColors.Ivory),
-        modifier = modifier.heightIn(min = 52.dp),
+        border = BorderStroke(1.dp, ResonanceColors.Divider),
+        modifier = modifier.heightIn(min = 52.dp).pressScale(interactionSource),
     ) {
         Icon(icon, contentDescription = null)
         Spacer(Modifier.width(9.dp))
@@ -852,40 +1113,108 @@ private fun SecondaryAction(label: String, icon: ImageVector, onClick: () -> Uni
 private fun PlaylistStrip(
     playlists: List<Playlist>,
     compact: Boolean,
-    selectedPlaylistId: String,
+    selectedPlaylistId: String?,
     onPlaylistSelected: (String) -> Unit,
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp),
+        contentPadding = PaddingValues(vertical = 8.dp),
+    ) {
         items(playlists, key = { it.id }) { playlist ->
             val selected = playlist.id == selectedPlaylistId
+            val interactionSource = remember { MutableInteractionSource() }
+            val borderColor by animateColorAsState(
+                targetValue = if (selected) ResonanceColors.Coral.copy(alpha = 0.82f) else ResonanceColors.Divider.copy(alpha = 0.86f),
+                animationSpec = tween(MotionStandard),
+                label = "playlistBorder",
+            )
+            val titleColor by animateColorAsState(
+                targetValue = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Ivory,
+                animationSpec = tween(MotionStandard),
+                label = "playlistTitle",
+            )
+            val elevation by animateDpAsState(
+                targetValue = if (selected) 18.dp else 7.dp,
+                animationSpec = tween(MotionStandard),
+                label = "playlistElevation",
+            )
             Column(
                 modifier = Modifier
-                    .width(if (compact) 148.dp else 176.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .border(
-                        width = if (selected) 2.dp else 0.dp,
-                        color = if (selected) ResonanceColors.Coral else Color.Transparent,
-                        shape = RoundedCornerShape(18.dp),
+                    .width(if (compact) 156.dp else 188.dp)
+                    .pressScale(
+                        interactionSource = interactionSource,
+                        pressedScale = 0.955f,
+                        restingScale = if (selected) 1.018f else 1f,
                     )
-                    .clickable { onPlaylistSelected(playlist.id) }
-                    .padding(8.dp),
+                    .shadow(
+                        elevation = elevation,
+                        shape = RoundedCornerShape(22.dp),
+                        ambientColor = if (selected) ResonanceColors.Coral else ResonanceColors.Shadow,
+                        spotColor = if (selected) ResonanceColors.Coral else ResonanceColors.Shadow,
+                    )
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            if (selected) {
+                                listOf(Color(0xFF2D2027), Color(0xFF1A1821))
+                            } else {
+                                listOf(Color(0xFF1A202C), Color(0xFF111620))
+                            },
+                        ),
+                    )
+                    .border(
+                        width = if (selected) 1.5.dp else 1.dp,
+                        color = borderColor,
+                        shape = RoundedCornerShape(22.dp),
+                    )
+                    .semantics { this.selected = selected }
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        role = Role.Tab,
+                    ) { onPlaylistSelected(playlist.id) }
+                    .padding(9.dp),
             ) {
-                AlbumArtwork(
-                    seed = playlist.artworkSeed,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                    cornerRadius = 18.dp,
-                    artworkPath = playlist.tracks.firstNotNullOfOrNull(Track::artworkPath),
-                )
-                Spacer(Modifier.height(11.dp))
+                Box {
+                    AlbumArtwork(
+                        seed = playlist.artworkSeed,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                        cornerRadius = 17.dp,
+                        artworkPath = playlist.tracks.firstNotNullOfOrNull(Track::artworkPath),
+                    )
+                    if (selected) {
+                        Surface(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                            color = Color(0xD9131017),
+                            shape = CircleShape,
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+                        ) {
+                            Text(
+                                "当前",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = ResonanceColors.Ivory,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
                 Text(
                     playlist.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (selected) ResonanceColors.Coral else ResonanceColors.Ivory,
+                    color = titleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(3.dp))
-                Text(playlist.subtitle, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted, maxLines = 1)
+                Text(
+                    playlist.subtitle,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ResonanceColors.Muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
             }
         }
     }
@@ -895,25 +1224,45 @@ private fun PlaylistStrip(
 private fun TrackRow(
     track: Track,
     selected: Boolean,
+    isPlaying: Boolean,
     onClick: () -> Unit,
     compact: Boolean,
     userPlaylists: List<Playlist>,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
     onDeleteLocalTrack: (Track) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val available = track.sourceUri != null
     var menuExpanded by remember(track.id) { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
     val background by animateColorAsState(
-        if (selected) ResonanceColors.CoralSoft else Color.Transparent,
-        animationSpec = tween(160),
+        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.88f) else Color.Transparent,
+        animationSpec = tween(MotionQuick),
         label = "trackBackground",
     )
+    val elevation by animateDpAsState(
+        targetValue = if (selected) 6.dp else 0.dp,
+        animationSpec = tween(MotionQuick),
+        label = "trackElevation",
+    )
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .pressScale(interactionSource, pressedScale = 0.988f)
+            .shadow(elevation, RoundedCornerShape(16.dp), ambientColor = ResonanceColors.Coral, spotColor = ResonanceColors.Shadow)
+            .clip(RoundedCornerShape(16.dp))
             .background(background)
-            .clickable(role = Role.Button, onClick = onClick)
+            .border(
+                width = 1.dp,
+                color = if (selected) ResonanceColors.Coral.copy(alpha = 0.20f) else Color.Transparent,
+                shape = RoundedCornerShape(16.dp),
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick,
+            )
             .padding(horizontal = if (compact) 8.dp else 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -922,7 +1271,7 @@ private fun TrackRow(
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selected) {
-                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(16.dp))
+                    NowPlayingIndicator(isPlaying = isPlaying)
                     Spacer(Modifier.width(6.dp))
                 }
                 Text(
@@ -1005,6 +1354,53 @@ private fun TrackRow(
 }
 
 @Composable
+private fun NowPlayingIndicator(isPlaying: Boolean) {
+    if (!isPlaying) {
+        Icon(
+            Icons.Default.GraphicEq,
+            contentDescription = "当前曲目",
+            tint = ResonanceColors.Coral,
+            modifier = Modifier.size(16.dp),
+        )
+        return
+    }
+    val transition = rememberInfiniteTransition(label = "playingBars")
+    val first by transition.animateFloat(
+        initialValue = 0.30f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(tween(460), AnimationRepeatMode.Reverse),
+        label = "playingBarOne",
+    )
+    val second by transition.animateFloat(
+        initialValue = 0.88f,
+        targetValue = 0.38f,
+        animationSpec = infiniteRepeatable(tween(620), AnimationRepeatMode.Reverse),
+        label = "playingBarTwo",
+    )
+    val third by transition.animateFloat(
+        initialValue = 0.48f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(540), AnimationRepeatMode.Reverse),
+        label = "playingBarThree",
+    )
+    Row(
+        modifier = Modifier.width(16.dp).height(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        listOf(first, second, third).forEach { heightFraction ->
+            Box(
+                Modifier
+                    .width(3.dp)
+                    .fillMaxHeight(heightFraction)
+                    .clip(CircleShape)
+                    .background(ResonanceColors.Coral),
+            )
+        }
+    }
+}
+
+@Composable
 private fun EmptyPlaylistNotice(canAddMusic: Boolean, onImport: () -> Unit) {
     Surface(
         color = ResonanceColors.Soft,
@@ -1015,7 +1411,7 @@ private fun EmptyPlaylistNotice(canAddMusic: Boolean, onImport: () -> Unit) {
             Text("这个歌单还没有歌曲", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(6.dp))
             Text(
-                if (canAddMusic) "在“本地音乐”里打开歌曲右侧菜单，即可加入这里。" else "先导入本机音乐，再把喜欢的歌曲加入歌单。",
+                if (canAddMusic) "打开其他歌单的歌曲菜单，即可加入这里。" else "导入公开歌单并匹配本机音乐，或先扫描本机曲库。",
                 color = ResonanceColors.Muted,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -1037,24 +1433,63 @@ private fun MiniPlayer(
     horizontalPadding: Dp,
 ) {
     val track = playerState.currentTrack ?: return
+    val shuffleInteraction = remember { MutableInteractionSource() }
+    val previousInteraction = remember { MutableInteractionSource() }
+    val playInteraction = remember { MutableInteractionSource() }
+    val nextInteraction = remember { MutableInteractionSource() }
+    val repeatInteraction = remember { MutableInteractionSource() }
+    val artworkScale by animateFloatAsState(
+        targetValue = if (playerState.isPlaying) 1.035f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "miniArtworkScale",
+    )
     Column(
         modifier = Modifier
             .padding(horizontal = horizontalPadding, vertical = 8.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(ResonanceColors.Soft),
+            .shadow(18.dp, RoundedCornerShape(22.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.horizontalGradient(
+                    listOf(Color(0xF21B202C), Color(0xF2261C27), Color(0xF2181D28)),
+                ),
+            )
+            .border(1.dp, ResonanceColors.DividerStrong.copy(alpha = 0.72f), RoundedCornerShape(22.dp)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AlbumArtwork(track.artworkSeed, Modifier.size(50.dp), 12.dp, track.artworkPath)
+            AlbumArtwork(
+                track.artworkSeed,
+                Modifier
+                    .size(52.dp)
+                    .graphicsLayer { scaleX = artworkScale; scaleY = artworkScale }
+                    .shadow(9.dp, RoundedCornerShape(13.dp)),
+                13.dp,
+                track.artworkPath,
+            )
             Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(track.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(track.artist, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            AnimatedContent(
+                targetState = track,
+                modifier = Modifier.weight(1f),
+                transitionSpec = {
+                    (fadeIn(tween(MotionStandard)) + slideInVertically(tween(MotionStandard)) { it / 3 }) togetherWith
+                        (fadeOut(tween(MotionQuick)) + slideOutVertically(tween(MotionQuick)) { -it / 3 })
+                },
+                contentKey = Track::id,
+                label = "miniTrack",
+            ) { activeTrack ->
+                Column {
+                    Text(activeTrack.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(activeTrack.artist, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
             }
-            IconButton(onClick = onToggleShuffle, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onToggleShuffle,
+                interactionSource = shuffleInteraction,
+                modifier = Modifier.size(40.dp).pressScale(shuffleInteraction, pressedScale = 0.82f),
+            ) {
                 Icon(
                     Icons.Default.Shuffle,
                     contentDescription = if (playerState.shuffleEnabled) "关闭随机播放" else "开启随机播放",
@@ -1062,20 +1497,45 @@ private fun MiniPlayer(
                     modifier = Modifier.size(20.dp),
                 )
             }
-            IconButton(onClick = onPrevious, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onPrevious,
+                interactionSource = previousInteraction,
+                modifier = Modifier.size(40.dp).pressScale(previousInteraction, pressedScale = 0.82f),
+            ) {
                 Icon(Icons.Default.SkipPrevious, contentDescription = "上一首")
             }
             FilledIconButton(
                 onClick = onTogglePlay,
-                modifier = Modifier.size(46.dp),
-                colors = IconButtonDefaults.filledIconButtonColors(containerColor = ResonanceColors.Coral),
+                interactionSource = playInteraction,
+                modifier = Modifier
+                    .size(48.dp)
+                    .pressScale(playInteraction, pressedScale = 0.82f)
+                    .shadow(10.dp, CircleShape, ambientColor = ResonanceColors.Coral, spotColor = ResonanceColors.Coral),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = ResonanceColors.Coral,
+                    contentColor = Color(0xFF2A0B07),
+                ),
             ) {
-                Icon(if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (playerState.isPlaying) "暂停" else "播放")
+                AnimatedContent(
+                    targetState = playerState.isPlaying,
+                    transitionSpec = { scaleIn(tween(MotionQuick)) togetherWith scaleOut(tween(MotionQuick)) },
+                    label = "playPause",
+                ) { playing ->
+                    Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (playing) "暂停" else "播放")
+                }
             }
-            IconButton(onClick = onNext, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onNext,
+                interactionSource = nextInteraction,
+                modifier = Modifier.size(40.dp).pressScale(nextInteraction, pressedScale = 0.82f),
+            ) {
                 Icon(Icons.Default.SkipNext, contentDescription = "下一首")
             }
-            IconButton(onClick = onCycleRepeat, modifier = Modifier.size(40.dp)) {
+            IconButton(
+                onClick = onCycleRepeat,
+                interactionSource = repeatInteraction,
+                modifier = Modifier.size(40.dp).pressScale(repeatInteraction, pressedScale = 0.82f),
+            ) {
                 Icon(
                     if (playerState.repeatMode == RepeatMode.One) Icons.Default.RepeatOne else Icons.Default.Repeat,
                     contentDescription = when (playerState.repeatMode) {
@@ -1091,7 +1551,7 @@ private fun MiniPlayer(
         Slider(
             value = playerState.progress.coerceIn(0f, 1f),
             onValueChange = onSeek,
-            modifier = Modifier.fillMaxWidth().height(16.dp),
+            modifier = Modifier.fillMaxWidth().height(18.dp).padding(horizontal = 4.dp),
             colors = SliderDefaults.colors(
                 thumbColor = ResonanceColors.Coral,
                 activeTrackColor = ResonanceColors.Coral,
@@ -1234,11 +1694,35 @@ private fun FeaturePage(
         modifier = Modifier.fillMaxSize(),
     ) {
         item {
-            Text(eyebrow, style = MaterialTheme.typography.labelLarge, color = ResonanceColors.Coral)
-            Spacer(Modifier.height(8.dp))
-            Text(title, style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge)
-            Spacer(Modifier.height(12.dp))
-            Text(body, style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted, modifier = Modifier.widthIn(max = 620.dp))
+            val shape = RoundedCornerShape(if (compact) 24.dp else 30.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp).shadow(18.dp, shape),
+                color = ResonanceColors.Glass,
+                shape = shape,
+                border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.9f)),
+            ) {
+                Box {
+                    Canvas(Modifier.matchParentSize()) {
+                        val center = Offset(size.width * 0.92f, size.height * 0.15f)
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                listOf(ResonanceColors.Violet.copy(alpha = 0.17f), Color.Transparent),
+                                center = center,
+                                radius = size.maxDimension * 0.58f,
+                            ),
+                            radius = size.maxDimension * 0.58f,
+                            center = center,
+                        )
+                    }
+                    Column(Modifier.padding(if (compact) 22.dp else 30.dp)) {
+                        Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge, color = ResonanceColors.CoralGlow)
+                        Spacer(Modifier.height(9.dp))
+                        Text(title, style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge)
+                        Spacer(Modifier.height(12.dp))
+                        Text(body, style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted, modifier = Modifier.widthIn(max = 620.dp))
+                    }
+                }
+            }
         }
         item { Column(Modifier.widthIn(max = 760.dp)) { content() } }
     }
@@ -1246,27 +1730,39 @@ private fun FeaturePage(
 
 @Composable
 private fun ActionList(actions: List<Triple<ImageVector, String, String>>, onClick: (Int) -> Unit) {
-    Column {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         actions.forEachIndexed { index, action ->
+            val interactionSource = remember { MutableInteractionSource() }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable { onClick(index) }
-                    .padding(horizontal = 12.dp, vertical = 16.dp),
+                    .pressScale(interactionSource, pressedScale = 0.985f)
+                    .shadow(6.dp, RoundedCornerShape(18.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(ResonanceColors.Glass)
+                    .border(1.dp, ResonanceColors.Divider.copy(alpha = 0.86f), RoundedCornerShape(18.dp))
+                    .clickable(interactionSource = interactionSource, indication = null) { onClick(index) }
+                    .padding(horizontal = 14.dp, vertical = 15.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(46.dp).clip(RoundedCornerShape(13.dp)).background(ResonanceColors.Soft), contentAlignment = Alignment.Center) {
-                    Icon(action.first, contentDescription = null, tint = ResonanceColors.Coral)
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .shadow(6.dp, RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(Brush.linearGradient(listOf(ResonanceColors.CoralSoft, Color(0xFF262035))))
+                        .border(1.dp, ResonanceColors.Coral.copy(alpha = 0.18f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(action.first, contentDescription = null, tint = ResonanceColors.CoralGlow)
                 }
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(action.second, style = MaterialTheme.typography.titleMedium)
                     Text(action.third, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
                 }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = ResonanceColors.Dim)
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = ResonanceColors.Coral.copy(alpha = 0.72f))
             }
-            if (index < actions.lastIndex) HorizontalDivider(color = ResonanceColors.Divider, modifier = Modifier.padding(start = 72.dp))
         }
     }
 }
@@ -1274,7 +1770,11 @@ private fun ActionList(actions: List<Triple<ImageVector, String, String>>, onCli
 @Composable
 private fun BrandMark(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(ResonanceColors.Coral),
+        modifier = modifier
+            .size(40.dp)
+            .shadow(10.dp, RoundedCornerShape(13.dp), ambientColor = ResonanceColors.Coral, spotColor = ResonanceColors.Coral)
+            .clip(RoundedCornerShape(13.dp))
+            .background(Brush.linearGradient(listOf(ResonanceColors.CoralGlow, ResonanceColors.Coral))),
         contentAlignment = Alignment.Center,
     ) {
         Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color(0xFF2B0C08), modifier = Modifier.size(22.dp))
@@ -1334,7 +1834,7 @@ fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 16
         listOf(Color(0xFFF2BD5B), Color(0xFF81412D), Color(0xFF15131D)),
         listOf(Color(0xFF8EA7FF), Color(0xFF3D356B), Color(0xFF151824)),
     )
-    val palette = palettes[kotlin.math.abs(seed) % palettes.size]
+    val palette = palettes[((seed % palettes.size) + palettes.size) % palettes.size]
     Canvas(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
