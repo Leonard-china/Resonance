@@ -103,6 +103,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // 构建产物固定输出到 build/outputs/apk/<variant>/ 并带版本号命名（如 Resonance-0.1.5-release.apk）
+    applicationVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
+                "Resonance-${versionName}-${name}.apk"
+        }
+    }
 }
 
 compose.desktop {

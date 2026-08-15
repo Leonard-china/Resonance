@@ -1,5 +1,6 @@
 .gradle/
 .idea/
+.workbuddy/
 build/
 **/build/
 local.properties
