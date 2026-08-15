@@ -77,8 +77,8 @@ android {
         applicationId = "com.resonance.player"
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
-        versionName = "0.1.5"
+        versionCode = 7
+        versionName = "0.1.6"
     }
 
     signingConfigs {
@@ -126,7 +126,7 @@ compose.desktop {
             modules("jdk.httpserver")
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Resonance"
-            packageVersion = "0.1.5"
+            packageVersion = "0.1.6"
             description = "Local music library, player, converter, and device sync"
             vendor = "Resonance"
             windows {

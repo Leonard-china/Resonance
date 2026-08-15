@@ -6,7 +6,7 @@
 
 一个面向 Android 与 Windows 的本地音乐库：扫描和整理本机音频、转换受支持的 KGMA 文件、读取歌曲元数据与专辑封面、像常规音乐应用一样播放，并在不部署服务器的情况下同步两台设备。
 
-当前版本：`v0.1.5`
+当前版本：`v0.1.6`
 
 > Resonance 坚持本地优先：不要求注册账号，不上传音乐库，也不依赖常驻云服务。酷狗歌单链接仅用于读取公开曲目目录并匹配本机已有歌曲；应用不会下载会员/受保护音频，也不会绕过账号、DRM 或版权限制。
 
@@ -31,10 +31,9 @@
 
 | 文件 | 用途 | SHA-256 |
 | --- | --- | --- |
-| `Resonance-Android-v0.1.5.apk` | Android 8.0（API 26）及以上 | `4A3C04F3E6072A4B5DF96FFBDAACAF9C93DD04D54209EAAA649F62DC6551BE9D` |
-| `Resonance-Windows-v0.1.5-Portable.zip` | Windows 便携版，解压后运行 | `9E3B9FBBB275E87DF664668ABA3545947BEE45004275971702769218625F2A3D` |
-| `Resonance-Windows-v0.1.5-Setup.exe` | Windows 安装程序 | `7AE4CF49E22EA8960A3A1032C818D9E9675CC8B5C7EA6B2B7B27422D6D4B9992` |
-| `Resonance-Windows-v0.1.5.msi` | Windows MSI 安装包 | `3502BB1EB03ECEFC88E94DC6F673F893AA7A2868A7B3DB62AF35271ED4D49913` |
+| `Resonance-0.1.6-release.apk` | Android 8.0（API 26）及以上 | `485F5A600C9668E4A84E554077590C750143A93D93206E6CAD94D018616D6F64` |
+
+> Windows 便携版、安装程序与 MSI 沿用 v0.1.5，可在 [GitHub Releases](../../releases) 历史版本中下载；下一版本将同步发布。
 
 ### Android
 
@@ -51,7 +50,7 @@
 在 PowerShell 中校验下载文件：
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Resonance-Android-v0.1.5.apk
+Get-FileHash -Algorithm SHA256 .\Resonance-0.1.6-release.apk
 ```
 
 ## 快速开始
@@ -203,9 +202,10 @@ keyPassword=change-me
 
 ## 测试与发布质量门槛
 
-`v0.1.5` 发布前已完成：
+`v0.1.6` 发布前已完成：
 
 - 15 个测试套件、30 个测试，0 失败；
+- 新增 SelectedPlaylistStateTest 覆盖歌单选择状态逻辑；
 - KGMA v3/slot 1 解密、MP3 原样复制、转换失败保护和“转换成功但删除失败”分离报告；
 - 酷狗公开歌单解析、分页、主机限制和本地匹配；
 - 加密同步包的口令、完整性、大小限制与路径安全；
@@ -216,7 +216,7 @@ keyPassword=change-me
 - Android 自适应/圆形图标资源检查，MuMu 升级安装、版本名称与启动前台检查；
 - Windows 便携 EXE、安装器内嵌图标提取，产品名、窗口标题及实际启动检查。
 
-完整版本说明见 [`docs/RELEASE_NOTES-0.1.5.md`](docs/RELEASE_NOTES-0.1.5.md)。
+完整版本说明见 [`docs/RELEASE_NOTES-0.1.6.md`](docs/RELEASE_NOTES-0.1.6.md)。
 
 ## 数据、安全与限制
 
