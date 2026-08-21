@@ -6,6 +6,7 @@ import com.resonance.player.model.Playlist
 import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.LanShareInfo
+import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Track
 import kotlinx.coroutines.flow.Flow
@@ -20,8 +21,11 @@ interface PlatformServices {
     suspend fun savePlaylists(playlists: List<Playlist>)
     suspend fun loadLastSelectedPlaylistId(): String?
     suspend fun saveLastSelectedPlaylistId(playlistId: String?)
-    suspend fun exportSyncPackage(passphrase: String): SyncReport
-    suspend fun importSyncPackage(passphrase: String): SyncReport
+    val libraryLocation: String
+    suspend fun setTrackFavorite(trackId: String, favorite: Boolean)
+    suspend fun loadLyrics(track: Track, forceRefresh: Boolean = false): LyricsFetchResult
+    suspend fun exportSyncPackage(playlistId: String?): SyncReport
+    suspend fun importSyncPackage(): SyncReport
     suspend fun startLanShare(): LanShareInfo
     suspend fun importLanShare(link: String): SyncReport
     fun stopLanShare()

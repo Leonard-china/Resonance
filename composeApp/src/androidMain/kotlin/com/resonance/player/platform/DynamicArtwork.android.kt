@@ -8,7 +8,7 @@ import java.net.URL
 
 actual fun decodeArtwork(path: String): ImageBitmap? = runCatching {
     val bitmap = if (path.startsWith("content://")) {
-        AndroidArtworkResolver.contentResolver.openInputStream(Uri.parse(path)).use(BitmapFactory::decodeStream)
+        AndroidArtworkResolver.application.contentResolver.openInputStream(Uri.parse(path)).use(BitmapFactory::decodeStream)
             ?: AndroidArtworkResolver.audioArtwork[path]
                 ?.let(Uri::parse)
                 ?.let { audioUri -> embeddedArtwork(audioUri) }
@@ -27,7 +27,7 @@ actual fun decodeArtwork(path: String): ImageBitmap? = runCatching {
 private fun embeddedArtwork(audioUri: Uri) = runCatching {
     android.media.MediaMetadataRetriever().let { retriever ->
         try {
-            retriever.setDataSource(AndroidArtworkResolver.context, audioUri)
+            retriever.setDataSource(AndroidArtworkResolver.application, audioUri)
             retriever.embeddedPicture?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
         } finally {
             retriever.release()

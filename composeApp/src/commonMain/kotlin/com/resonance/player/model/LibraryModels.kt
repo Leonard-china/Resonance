@@ -1,5 +1,7 @@
 package com.resonance.player.model
 
+const val APP_VERSION = "0.2.0"
+
 data class Track(
     val id: String,
     val title: String,
@@ -17,7 +19,6 @@ data class ImportReport(
     val tracks: List<Track>,
     val skippedCount: Int = 0,
     val warnings: List<String> = emptyList(),
-    val cleanupWarnings: List<String> = emptyList(),
 )
 
 data class PlaylistImportReport(
@@ -75,3 +76,39 @@ data class PlayerState(
     val repeatMode: RepeatMode = RepeatMode.Off,
     val progress: Float = 0f,
 )
+
+data class LyricLine(
+    val timestampMs: Long?,
+    val text: String,
+)
+
+data class Lyrics(
+    val trackId: String,
+    val lines: List<LyricLine>,
+    val synchronized: Boolean,
+    val instrumental: Boolean,
+    val source: String,
+    val fromCache: Boolean = false,
+)
+
+sealed interface LyricsFetchResult {
+    data class Found(val lyrics: Lyrics) : LyricsFetchResult
+    data class Unavailable(val message: String, val retryable: Boolean) : LyricsFetchResult
+}
+
+sealed interface LyricsUiState {
+    data object Idle : LyricsUiState
+    data object Loading : LyricsUiState
+    data class Ready(val lyrics: Lyrics) : LyricsUiState
+    data class Unavailable(val message: String, val retryable: Boolean) : LyricsUiState
+}
+
+fun durationTextToSeconds(text: String): Int {
+    val parts = text.trim().split(':').map { it.toIntOrNull() ?: return 0 }
+    return when (parts.size) {
+        3 -> parts[0] * 3_600 + parts[1] * 60 + parts[2]
+        2 -> parts[0] * 60 + parts[1]
+        1 -> parts[0]
+        else -> 0
+    }.coerceAtLeast(0)
+}

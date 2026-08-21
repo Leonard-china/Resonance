@@ -64,7 +64,7 @@ class DesktopManagedMp3ConverterTest {
             val output = DesktopManagedMp3Converter(managed).importAsMp3(kgma)
 
             assertTrue(Files.isRegularFile(output))
-            assertContentEquals(kgmaHash, digest(kgma), "底层转换器不得修改源 KGMA；文件夹导入层负责在成功后删除")
+            assertContentEquals(kgmaHash, digest(kgma), "转换器不得修改源 KGMA；源文件始终保留")
             Files.list(managed).use { files -> assertTrue(files.noneMatch { it.fileName.toString().startsWith(".staging-") }) }
         } finally {
             Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }

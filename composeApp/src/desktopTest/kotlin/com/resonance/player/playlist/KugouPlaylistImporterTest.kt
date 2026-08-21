@@ -1,9 +1,6 @@
 package com.resonance.player.playlist
 
 import com.resonance.player.model.Track
-import java.nio.charset.StandardCharsets
-import kotlin.io.path.Path
-import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -12,7 +9,32 @@ import kotlin.test.assertFailsWith
 class KugouPlaylistImporterTest {
     @Test
     fun parsesOfficialPlaylistAndMatchesLocalTrack() {
-        val fixture = Path("../build/kugou-official-tracks.json").readText(StandardCharsets.UTF_8)
+        val fixture = """
+            {
+              "error_code": 0,
+              "data": {
+                "list_info": { "name": "Leonard" },
+                "songs": [
+                  {
+                    "name": "Eagles - Hotel California",
+                    "hash": "HOTEL_HASH",
+                    "timelen": 391000,
+                    "cover": "https://img.example/{size}/hotel.jpg",
+                    "singerinfo": [{ "name": "Eagles" }],
+                    "albuminfo": { "name": "Hotel California" }
+                  },
+                  {
+                    "name": "温岚 - 夏天的风",
+                    "hash": "SUMMER_HASH",
+                    "timelen": 241000,
+                    "cover": "https://img.example/{size}/summer.jpg",
+                    "singerinfo": [{ "name": "温岚" }],
+                    "albuminfo": { "name": "温式效应" }
+                  }
+                ]
+              }
+            }
+        """.trimIndent()
         val local = Track(
             id = "local-hotel-california",
             title = "Hotel California",
@@ -30,7 +52,7 @@ class KugouPlaylistImporterTest {
         )
 
         assertEquals("Leonard", result.playlist.name)
-        assertEquals(21, result.catalogTrackCount)
+        assertEquals(2, result.catalogTrackCount)
         assertEquals(1, result.matchedTrackCount)
         assertEquals(local.sourceUri, result.playlist.tracks.first().sourceUri)
         assertEquals(local.title, result.playlist.tracks.first().title)

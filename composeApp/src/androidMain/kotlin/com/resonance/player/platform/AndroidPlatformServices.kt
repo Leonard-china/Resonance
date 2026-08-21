@@ -2,7 +2,6 @@ package com.resonance.player.platform
 
 import android.Manifest
 import android.content.ContentUris
-import android.content.ContentResolver
 import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.content.Intent
@@ -27,12 +26,15 @@ import com.resonance.player.LanSyncLinkBus
 import com.resonance.player.model.ImportReport
 import com.resonance.player.model.DeleteTrackReport
 import com.resonance.player.model.LanShareInfo
+import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.Track
+import com.resonance.player.lyrics.LrclibLyricsRepository
 import com.resonance.player.sync.EncryptedSyncPackage
+import com.resonance.player.sync.PlainSyncPackage
 import com.resonance.player.conversion.KgmaCipher
 import com.resonance.player.playlist.KugouPlaylistImporter
 import com.resonance.player.conversion.NativeAudioFormat
@@ -60,6 +62,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
+    private val lyricsRepository = LrclibLyricsRepository(activity.filesDir.toPath().resolve("lyrics-cache"))
     private val controllerFuture = MediaController.Builder(
         activity,
         SessionToken(activity, ComponentName(activity, PlaybackService::class.java)),
@@ -115,8 +118,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override val incomingLanLinks: Flow<String> = LanSyncLinkBus.links
 
     init {
-        AndroidArtworkResolver.context = activity.applicationContext
-        AndroidArtworkResolver.contentResolver = activity.contentResolver
+        AndroidArtworkResolver.application = activity.application
         controllerFuture.addListener({
             val controller = runCatching(controllerFuture::get).getOrNull() ?: return@addListener
             player = controller
@@ -149,17 +151,18 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override suspend fun loadLibrary(): List<Track> {
         val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
         if (ActivityCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
-            cachedTracks = withContext(Dispatchers.IO) { loadSyncedTracks() }
+            cachedTracks = withContext(Dispatchers.IO) { applyFavorites(loadSyncedTracks()) }
             return cachedTracks
         }
         cachedTracks = withContext(Dispatchers.IO) {
-            (scanMediaStore() + loadSyncedTracks()).associateBy(Track::id).values.toList()
+            applyFavorites((scanMediaStore() + loadSyncedTracks()).associateBy(Track::id).values.toList())
         }
         return cachedTracks
     }
 
     override suspend fun loadPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
         val preferences = activity.getSharedPreferences("resonance_playlists", android.content.Context.MODE_PRIVATE)
+        val favorites = favoriteIds()
         val tracksById = cachedTracks.associateBy(Track::id)
         val count = preferences.getInt("count", 0)
         (0 until count).mapNotNull { index ->
@@ -172,12 +175,15 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 subtitle = preferences.getString(prefix + "subtitle", null) ?: "${trackIds.size} 首",
                 tracks = trackIds.mapIndexedNotNull { trackIndex, trackId ->
                     val snapshot = readCatalogTrack(preferences, prefix, trackIndex, trackId)
-                    tracksById[trackId]?.let { local ->
+                    val resolved = tracksById[trackId]?.let { local ->
                         local.copy(
                             artworkPath = local.artworkPath ?: snapshot?.artworkPath,
                             artworkSeed = if (local.artworkPath == null && snapshot != null) snapshot.artworkSeed else local.artworkSeed,
                         )
                     } ?: snapshot
+                    resolved?.let { track ->
+                        if (track.id in favorites && !track.isFavorite) track.copy(isFavorite = true) else track
+                    }
                 },
                 artworkSeed = preferences.getInt(prefix + "seed", id.hashCode()),
             )
@@ -214,27 +220,68 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         Unit
     }
 
-    override suspend fun exportSyncPackage(passphrase: String): SyncReport = withContext(Dispatchers.IO) {
-        val playlists = loadPlaylists()
-        val tracks = tracksWithPlaylistArtwork(loadLibrary(), playlists)
+    override val libraryLocation: String
+        get() = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
+            .resolve("Resonance").absolutePath
+
+    override suspend fun setTrackFavorite(trackId: String, favorite: Boolean): Unit = withContext(Dispatchers.IO) {
+        val preferences = activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
+        val ids = preferences.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
+        if (favorite) ids += trackId else ids -= trackId
+        preferences.edit().putStringSet("ids", ids).commit()
+        val synced = loadSyncedTracks()
+        if (synced.any { it.id == trackId }) {
+            saveSyncedTracks(synced.map { track ->
+                if (track.id == trackId) track.copy(isFavorite = favorite) else track
+            })
+        }
+        cachedTracks = cachedTracks.map { track ->
+            if (track.id == trackId) track.copy(isFavorite = favorite) else track
+        }
+        Unit
+    }
+
+    override suspend fun loadLyrics(track: Track, forceRefresh: Boolean): LyricsFetchResult =
+        lyricsRepository.fetch(track, forceRefresh)
+
+    private fun favoriteIds(): Set<String> =
+        activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
+            .getStringSet("ids", emptySet()).orEmpty()
+
+    private fun applyFavorites(tracks: List<Track>): List<Track> {
+        val ids = favoriteIds()
+        if (ids.isEmpty()) return tracks
+        return tracks.map { track -> if (track.id in ids && !track.isFavorite) track.copy(isFavorite = true) else track }
+    }
+
+    override suspend fun exportSyncPackage(playlistId: String?): SyncReport = withContext(Dispatchers.IO) {
+        val allPlaylists = loadPlaylists()
+        val allTracks = tracksWithPlaylistArtwork(loadLibrary(), allPlaylists)
+        val selectedPlaylists = if (playlistId == null) allPlaylists else allPlaylists.filter { it.id == playlistId }
+        val tracks = if (playlistId == null) {
+            allTracks
+        } else {
+            val byId = allTracks.associateBy(Track::id)
+            selectedPlaylists.flatMap(Playlist::tracks).map { track -> byId[track.id] ?: track }.distinctBy(Track::id)
+        }
+        require(tracks.isNotEmpty()) { "所选歌单没有可导出的本地音频" }
         val temporary = activity.cacheDir.toPath().resolve("Resonance-Sync.resonance")
         try {
-            EncryptedSyncPackage().export(
+            PlainSyncPackage().export(
                 target = temporary,
-                passphrase = passphrase,
                 tracks = tracks,
-                playlists = playlists,
+                playlists = selectedPlaylists,
                 openAudio = { track -> openTrackSource(track.sourceUri) },
                 openArtwork = { track -> openArtworkSource(track.artworkPath) },
             )
             val destination = saveToDownloads(temporary)
-            SyncReport(true, "已导出到下载/Resonance：$destination", tracks.size, playlists.size)
+            SyncReport(true, "已导出到下载/Resonance：$destination", tracks.size, selectedPlaylists.size)
         } finally {
             Files.deleteIfExists(temporary)
         }
     }
 
-    override suspend fun importSyncPackage(passphrase: String): SyncReport = withContext(Dispatchers.IO) {
+    override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
         val temporary = activity.cacheDir.toPath().resolve("Resonance-Import.resonance")
         val sourceUri = pickSyncPackage() ?: return@withContext SyncReport(false, "已取消导入")
         val sourceName = sourceUri.lastPathSegment?.substringAfterLast('/') ?: "同步包"
@@ -245,7 +292,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         try {
             val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
                 .toPath().resolve("Resonance")
-            val imported = EncryptedSyncPackage().import(temporary, passphrase, managed)
+            val imported = PlainSyncPackage().import(temporary, managed)
             val existingPlaylists = loadPlaylists()
             val androidTracks = imported.tracks.map { track ->
                 track.copy(sourceUri = Paths.get(track.sourceUri!!).toUri().toString())
@@ -283,7 +330,11 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             connection.requestMethod = "GET"
             connection.connect()
             require(connection.responseCode == 200) { "Windows 端已过期、已被使用或拒绝连接（${connection.responseCode}）" }
-            val usableBytes = activity.cacheDir.usableSpace.coerceAtLeast(0)
+            val usableBytes = runCatching {
+                val storage = activity.getSystemService(android.os.storage.StorageManager::class.java)
+                val storageUuid = storage.getUuidForPath(activity.cacheDir)
+                storage.getAllocatableBytes(storageUuid)
+            }.getOrElse { activity.cacheDir.usableSpace }.coerceAtLeast(0)
             val maximumBytes = (usableBytes - 128L * 1024 * 1024).coerceAtLeast(0)
             val declaredBytes = connection.contentLengthLong
             require(declaredBytes < 0 || declaredBytes <= maximumBytes) { "同步包超过设备可用空间" }
@@ -351,11 +402,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val rawSource = track.sourceUri ?: return@withContext DeleteTrackReport(false, false, "这首歌曲没有本地 MP3")
         val source = Uri.parse(rawSource)
         val fileDeleted = when (source.scheme?.lowercase()) {
-            "content" -> try {
-                deleteContentUri(source)
-            } catch (recoverable: android.app.RecoverableSecurityException) {
-                requestLegacyDeleteConfirmation(track, recoverable.userAction.actionIntent.intentSender)
-            }
+            "content" -> if (Build.VERSION.SDK_INT >= 29) deleteContentUriWithRecovery(source, track) else deleteContentUri(source)
             "file" -> {
                 val path = source.path?.let(Paths::get) ?: error("本地文件路径无效")
                 require(isAppManagedPath(path)) { "为保护原始音乐，只能删除 Resonance 转换或同步生成的 MP3" }
@@ -404,6 +451,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         return true
     }
 
+    @androidx.annotation.RequiresApi(29)
+    private suspend fun deleteContentUriWithRecovery(uri: Uri, track: Track): Boolean = try {
+        deleteContentUri(uri)
+    } catch (recoverable: android.app.RecoverableSecurityException) {
+        requestLegacyDeleteConfirmation(track, recoverable.userAction.actionIntent.intentSender)
+    }
+
     private suspend fun requestDeleteConfirmation(intentSender: android.content.IntentSender): Boolean =
         suspendCancellableCoroutine { continuation ->
             check(pendingDeleteConfirmationResult == null) { "已有删除确认正在进行" }
@@ -443,6 +497,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             album = preferences.getString(prefix + "album", null) ?: "未知专辑",
             durationText = preferences.getString(prefix + "duration", null) ?: "0:00",
             artworkSeed = preferences.getInt(prefix + "seed", id.hashCode()),
+            isFavorite = preferences.getBoolean(prefix + "favorite", false),
             artworkPath = preferences.getString(prefix + "artwork", null)?.takeIf(String::isNotBlank),
             mimeType = preferences.getString(prefix + "mime", null) ?: KugouPlaylistImporter.CATALOG_MIME_TYPE,
         )
@@ -460,6 +515,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         editor.putString(prefix + "album", track.album)
         editor.putString(prefix + "duration", track.durationText)
         editor.putInt(prefix + "seed", track.artworkSeed)
+        editor.putBoolean(prefix + "favorite", track.isFavorite)
         editor.putString(prefix + "artwork", track.artworkPath)
         editor.putString(prefix + "mime", track.mimeType)
     }
@@ -590,20 +646,16 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private fun convertSelectedKgmaDocuments(documents: List<Uri>): ImportReport {
         val tracks = mutableListOf<Track>()
         val warnings = mutableListOf<String>()
-        val cleanupWarnings = mutableListOf<String>()
         var skipped = 0
         documents.distinct().forEachIndexed { index, uri ->
             val document = DocumentFile.fromSingleUri(activity, uri)
             val name = document?.name ?: uri.lastPathSegment ?: "KGMA 文件"
             runCatching {
                 val readableDocument = requireNotNull(document) { "无法读取所选文件" }
-                readableDocument to decryptKgmaMp3(readableDocument)
+                decryptKgmaMp3(readableDocument)
             }
                 .onSuccess { converted ->
-                    tracks += converted.second
-                    deleteSourceDocument(converted.first).onFailure {
-                        if (cleanupWarnings.size < 5) cleanupWarnings += "已转换 $name，但无法删除源 KGMA：${it.message.orEmpty()}"
-                    }
+                    tracks += converted
                 }
                 .onFailure {
                     skipped++
@@ -614,7 +666,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             tracks = tracks.sortedWith(compareBy(Track::artist, Track::title)),
             skippedCount = skipped,
             warnings = warnings,
-            cleanupWarnings = cleanupWarnings,
         )
     }
 
@@ -623,7 +674,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             ?: return ImportReport(emptyList(), warnings = listOf("无法读取所选文件夹"))
         val tracks = mutableListOf<Track>()
         val warnings = mutableListOf<String>()
-        val cleanupWarnings = mutableListOf<String>()
         var skipped = 0
         val queue = ArrayDeque<DocumentFile>().apply { add(root) }
         val kgmaFiles = mutableListOf<DocumentFile>()
@@ -655,9 +705,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             runCatching { decryptKgmaMp3(document) }
                 .onSuccess { converted ->
                     tracks += converted
-                    deleteSourceDocument(document).onFailure {
-                        if (cleanupWarnings.size < 5) cleanupWarnings += "已转换 ${document.name}，但无法删除源 KGMA：${it.message.orEmpty()}"
-                    }
                 }
                 .onFailure {
                     skipped++
@@ -668,13 +715,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             tracks = tracks.sortedWith(compareBy(Track::artist, Track::title)),
             skippedCount = skipped,
             warnings = warnings,
-            cleanupWarnings = cleanupWarnings,
         )
-    }
-
-    private fun deleteSourceDocument(document: DocumentFile): Result<Unit> = runCatching {
-        require(document.canWrite()) { "当前文件夹只有读取权限" }
-        require(document.delete()) { "系统拒绝删除" }
     }
 
     private fun readAndroidTrack(uri: Uri): Track {
@@ -1000,7 +1041,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 }
 
 internal object AndroidArtworkResolver {
-    lateinit var context: android.content.Context
-    lateinit var contentResolver: ContentResolver
+    lateinit var application: android.app.Application
     val audioArtwork = java.util.concurrent.ConcurrentHashMap<String, String>()
 }

@@ -24,6 +24,8 @@ import com.resonance.player.data.PreviewLibrary
 import com.resonance.player.design.ResonanceTheme
 import com.resonance.player.model.LibraryDestination
 import com.resonance.player.model.ImportReport
+import com.resonance.player.model.LyricsFetchResult
+import com.resonance.player.model.LyricsUiState
 import com.resonance.player.model.PlayerState
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.RepeatMode
@@ -47,11 +49,13 @@ fun App(services: PlatformServices) {
         var showPlaylistLinkDialog by remember { mutableStateOf(false) }
         var trackPendingDeletion by remember { mutableStateOf<Track?>(null) }
         var operationInProgress by remember { mutableStateOf(false) }
+        var initialLoadInProgress by remember { mutableStateOf(true) }
         var previewMode by remember { mutableStateOf(false) }
         var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
         var importMessage by remember { mutableStateOf<String?>(null) }
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
         var lanQrPath by remember { mutableStateOf<String?>(null) }
+        var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
         val scope = rememberCoroutineScope()
 
         fun selectPlaylist(playlistId: String?, persist: Boolean = true) {
@@ -62,23 +66,34 @@ fun App(services: PlatformServices) {
         }
 
         LaunchedEffect(services) {
-            val loadedTracks = services.loadLibrary()
-            val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
-            val restoredPlaylistId = resolveSelectedPlaylistId(
-                requestedId = services.loadLastSelectedPlaylistId(),
-                playlists = loadedPlaylists,
-            )
-            importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
-            playlists = loadedPlaylists
-            selectedPlaylistId = restoredPlaylistId
-            services.savePlaylists(loadedPlaylists)
-            services.saveLastSelectedPlaylistId(restoredPlaylistId)
+            try {
+                val loadedTracks = services.loadLibrary()
+                val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
+                val restoredPlaylistId = resolveSelectedPlaylistId(
+                    requestedId = services.loadLastSelectedPlaylistId(),
+                    playlists = loadedPlaylists,
+                )
+                importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
+                playlists = loadedPlaylists
+                selectedPlaylistId = restoredPlaylistId
+                services.savePlaylists(loadedPlaylists)
+                services.saveLastSelectedPlaylistId(restoredPlaylistId)
+            } catch (error: Throwable) {
+                importMessage = "音乐库加载失败：${error.message ?: error::class.simpleName.orEmpty()}"
+            } finally {
+                initialLoadInProgress = false
+            }
         }
         DisposableEffect(services) {
             onDispose { services.close() }
         }
 
         val visiblePlaylists = if (previewMode) PreviewLibrary.playlists else playlists
+        val visibleLibraryTracks = if (previewMode) {
+            PreviewLibrary.playlists.flatMap(Playlist::tracks).distinctBy(Track::id)
+        } else {
+            importedTracks
+        }
         val playbackQueue = (importedTracks + playlists.flatMap(Playlist::tracks))
             .filter { it.sourceUri != null }
             .distinctBy(Track::id)
@@ -86,6 +101,23 @@ fun App(services: PlatformServices) {
         fun persistPlaylists(updated: List<Playlist>) {
             playlists = updated
             scope.launch { services.savePlaylists(updated) }
+        }
+
+        fun toggleFavorite(track: Track) {
+            val next = !track.isFavorite
+            fun mark(list: List<Track>): List<Track> =
+                list.map { if (it.id == track.id) it.copy(isFavorite = next) else it }
+            importedTracks = mark(importedTracks)
+            persistPlaylists(playlists.map { playlist -> playlist.copy(tracks = mark(playlist.tracks)) })
+            player.currentTrack?.takeIf { it.id == track.id }?.let {
+                player = player.copy(currentTrack = it.copy(isFavorite = next))
+            }
+            scope.launch { services.setTrackFavorite(track.id, next) }
+        }
+
+        fun lyricsUiState(result: LyricsFetchResult): LyricsUiState = when (result) {
+            is LyricsFetchResult.Found -> LyricsUiState.Ready(result.lyrics)
+            is LyricsFetchResult.Unavailable -> LyricsUiState.Unavailable(result.message, result.retryable)
         }
 
         fun startTrack(track: Track) {
@@ -127,6 +159,16 @@ fun App(services: PlatformServices) {
         }
         LaunchedEffect(services) {
             services.playbackProgress.collect { progress -> player = player.copy(progress = progress) }
+        }
+        LaunchedEffect(services, player.currentTrack?.id) {
+            val track = player.currentTrack
+            if (track == null || track.sourceUri == null) {
+                lyricsState = LyricsUiState.Idle
+            } else {
+                lyricsState = LyricsUiState.Loading
+                val result = services.loadLyrics(track)
+                if (player.currentTrack?.id == track.id) lyricsState = lyricsUiState(result)
+            }
         }
         LaunchedEffect(services, playbackQueue) {
             services.activeTrackChanges.collect { trackId ->
@@ -170,7 +212,10 @@ fun App(services: PlatformServices) {
                         destination = destination,
                         onDestinationChange = { destination = it },
                         playlists = visiblePlaylists,
+                        libraryTracks = visibleLibraryTracks,
                         playerState = player,
+                        playbackQueue = playbackQueue,
+                        lyricsState = lyricsState,
                         onTogglePlay = {
                             val nextPlaying = !player.isPlaying
                             services.setPlaying(nextPlaying)
@@ -216,6 +261,18 @@ fun App(services: PlatformServices) {
                             }
                         },
                         onDeleteLocalTrack = { track -> trackPendingDeletion = track },
+                        onToggleFavorite = { track -> toggleFavorite(track) },
+                        onRefreshLyrics = {
+                            val track = player.currentTrack
+                            if (track != null) {
+                                lyricsState = LyricsUiState.Loading
+                                scope.launch {
+                                    val result = services.loadLyrics(track, forceRefresh = true)
+                                    if (player.currentTrack?.id == track.id) lyricsState = lyricsUiState(result)
+                                }
+                            }
+                        },
+                        libraryLocation = services.libraryLocation,
                         onPrevious = { moveInQueue(direction = -1) },
                         onNext = { moveInQueue(direction = 1) },
                         onToggleShuffle = {
@@ -280,7 +337,7 @@ fun App(services: PlatformServices) {
                         },
                         previewMode = previewMode,
                         message = importMessage,
-                        operationInProgress = operationInProgress,
+                        operationInProgress = operationInProgress || initialLoadInProgress,
                     )
 
                 AnimatedVisibility(
@@ -311,15 +368,16 @@ fun App(services: PlatformServices) {
                 if (activeSyncAction != null) {
                     com.resonance.player.ui.SyncPackageDialog(
                         exporting = activeSyncAction == SyncAction.Export,
+                        playlists = playlists,
                         onDismiss = { syncAction = null },
-                        onConfirm = { passphrase ->
+                        onConfirm = { playlistId ->
                             syncAction = null
                             scope.launch {
                                 try {
                                     val report = if (activeSyncAction == SyncAction.Export) {
-                                        services.exportSyncPackage(passphrase)
+                                        services.exportSyncPackage(playlistId)
                                     } else {
-                                        services.importSyncPackage(passphrase)
+                                        services.importSyncPackage()
                                     }
                                     importMessage = report.message
                                     if (report.success && activeSyncAction == SyncAction.Import) {
@@ -416,23 +474,17 @@ internal fun resolveSelectedPlaylistId(requestedId: String?, playlists: List<Pla
 internal fun importReportMessage(report: ImportReport, conversionRequested: Boolean): String? {
     val completed = report.tracks.size
     val notProcessed = report.skippedCount
-    val notDeleted = report.cleanupWarnings.size
     val action = if (conversionRequested) "转换" else "导入"
     return when {
         completed > 0 && notProcessed > 0 -> buildString {
-            append("处理完成：已${action} $completed 首，$notProcessed 首未处理")
-            if (notDeleted > 0) append("；$notDeleted 个源 KGMA 未删除")
-            append("。")
+            append("处理完成：已${action} $completed 首，$notProcessed 首未处理。")
             report.warnings.firstOrNull()?.let(::append)
             if (conversionRequested) append(" 已存在的 MP3 不受影响。")
         }
-        completed > 0 && notDeleted > 0 ->
-            "转换完成：$completed 首 MP3 已保存；$notDeleted 个源 KGMA 因文件提供方未授予删除权限而保留。MP3 不受影响。"
         completed > 0 && report.warnings.isNotEmpty() ->
             "已${action} $completed 首；${report.warnings.first()}"
         completed > 0 -> "已${action} $completed 首音乐"
         report.warnings.isNotEmpty() -> report.warnings.first()
-        report.cleanupWarnings.isNotEmpty() -> report.cleanupWarnings.first()
         else -> null
     }
 }

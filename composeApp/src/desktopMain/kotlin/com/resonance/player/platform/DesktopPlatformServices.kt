@@ -6,11 +6,14 @@ import com.resonance.player.model.Playlist
 import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.LanShareInfo
+import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Track
+import com.resonance.player.lyrics.LrclibLyricsRepository
 import com.resonance.player.conversion.DesktopManagedMp3Converter
 import com.resonance.player.playlist.KugouPlaylistImporter
 import com.resonance.player.sync.EncryptedSyncPackage
+import com.resonance.player.sync.PlainSyncPackage
 import com.resonance.player.sync.DesktopLanShare
 import javafx.application.Platform
 import javafx.scene.media.Media
@@ -35,6 +38,7 @@ import javax.swing.SwingUtilities
 
 class DesktopPlatformServices : PlatformServices {
     private val library = DesktopLibraryStore()
+    private val lyricsRepository = LrclibLyricsRepository(library.lyricsCacheDirectory)
     private val player = DesktopAudioPlayer()
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
@@ -61,24 +65,41 @@ class DesktopPlatformServices : PlatformServices {
         library.saveLastSelectedPlaylistId(playlistId)
     }
 
-    override suspend fun exportSyncPackage(passphrase: String): SyncReport = withContext(Dispatchers.IO) {
+    override val libraryLocation: String
+        get() = library.managedMusicDirectory.toString()
+
+    override suspend fun setTrackFavorite(trackId: String, favorite: Boolean) = withContext(Dispatchers.IO) {
+        library.setFavorite(trackId, favorite)
+    }
+
+    override suspend fun loadLyrics(track: Track, forceRefresh: Boolean): LyricsFetchResult =
+        lyricsRepository.fetch(track, forceRefresh)
+
+    override suspend fun exportSyncPackage(playlistId: String?): SyncReport = withContext(Dispatchers.IO) {
+        val allPlaylists = library.loadPlaylists()
         val target = chooseSyncPackageOnEdt(save = true) ?: return@withContext SyncReport(false, "已取消导出")
-        val playlists = library.loadPlaylists()
-        val tracks = tracksWithPlaylistArtwork(library.load(), playlists)
-        EncryptedSyncPackage().export(
+        val allTracks = tracksWithPlaylistArtwork(library.load(), allPlaylists)
+        val selectedPlaylists = if (playlistId == null) allPlaylists else allPlaylists.filter { it.id == playlistId }
+        val tracks = if (playlistId == null) {
+            allTracks
+        } else {
+            val byId = allTracks.associateBy(Track::id)
+            selectedPlaylists.flatMap(Playlist::tracks).map { track -> byId[track.id] ?: track }.distinctBy(Track::id)
+        }
+        require(tracks.isNotEmpty()) { "所选歌单没有可导出的本地音频" }
+        PlainSyncPackage().export(
             target = target,
-            passphrase = passphrase,
             tracks = tracks,
-            playlists = playlists,
+            playlists = selectedPlaylists,
             openAudio = { track -> track.sourceUri?.let(Path::of)?.takeIf(Files::isRegularFile)?.let(Files::newInputStream) },
             openArtwork = { track -> openArtworkSource(track.artworkPath) },
         )
-        SyncReport(true, "已导出到 $target", tracks.size, playlists.size)
+        SyncReport(true, "已导出到 $target", tracks.size, selectedPlaylists.size)
     }
 
-    override suspend fun importSyncPackage(passphrase: String): SyncReport = withContext(Dispatchers.IO) {
+    override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
         val source = chooseSyncPackageOnEdt(save = false) ?: return@withContext SyncReport(false, "已取消导入")
-        val imported = EncryptedSyncPackage().import(source, passphrase, library.managedMusicDirectory)
+        val imported = PlainSyncPackage().import(source, library.managedMusicDirectory)
         library.merge(imported.tracks)
         val mergedPlaylists = (library.loadPlaylists() + imported.playlists).associateBy(Playlist::id).values.toList()
         library.savePlaylists(mergedPlaylists)
@@ -188,7 +209,7 @@ class DesktopPlatformServices : PlatformServices {
         val selection = AtomicReference<Path?>()
         SwingUtilities.invokeAndWait {
             val chooser = JFileChooser().apply {
-                dialogTitle = if (save) "导出加密同步包" else "导入加密同步包"
+                dialogTitle = if (save) "导出同步包" else "导入同步包"
                 fileSelectionMode = JFileChooser.FILES_ONLY
                 isAcceptAllFileFilterUsed = false
                 fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Resonance 同步包 (*.resonance)", "resonance")
@@ -227,7 +248,6 @@ internal class DesktopMusicScanner(
     fun scan(root: Path, convertToMp3: Boolean): ImportReport {
         val tracks = mutableListOf<Track>()
         val warnings = mutableListOf<String>()
-        val cleanupWarnings = mutableListOf<String>()
         var skipped = 0
 
         Files.walk(root).use { paths ->
@@ -252,10 +272,6 @@ internal class DesktopMusicScanner(
                 runCatching { readMp3(importPath) }
                     .onSuccess { track ->
                         tracks += track
-                        if (convertToMp3 && extension == "kgma") {
-                            runCatching { Files.deleteIfExists(path) }
-                                .onFailure { if (cleanupWarnings.size < 5) cleanupWarnings += "已转换 ${path.fileName}，但无法删除源 KGMA：${it.message.orEmpty()}" }
-                        }
                     }
                     .onFailure {
                         skipped += 1
@@ -268,7 +284,6 @@ internal class DesktopMusicScanner(
             tracks = tracks.sortedWith(compareBy(Track::artist, Track::title)),
             skippedCount = skipped,
             warnings = warnings,
-            cleanupWarnings = cleanupWarnings,
         )
     }
 
@@ -310,6 +325,7 @@ internal class DesktopLibraryStore {
     private val playlistFile = appDirectory.resolve("playlists.properties")
     private val uiStateFile = appDirectory.resolve("ui-state.properties")
     val artworkDirectory: Path = appDirectory.resolve("artwork")
+    val lyricsCacheDirectory: Path = appDirectory.resolve("lyrics-cache")
     val managedMusicDirectory: Path = preferredManagedMusicDirectory()
 
     fun installationId(): String {
@@ -344,6 +360,7 @@ internal class DesktopLibraryStore {
                 album = properties.getProperty(prefix + "album") ?: "未知专辑",
                 durationText = properties.getProperty(prefix + "duration") ?: "0:00",
                 artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: source.hashCode(),
+                isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
                 sourceUri = source,
                 artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
                 mimeType = properties.getProperty(prefix + "mime") ?: "audio/mpeg",
@@ -365,6 +382,7 @@ internal class DesktopLibraryStore {
             properties.setProperty(prefix + "album", track.album)
             properties.setProperty(prefix + "duration", track.durationText)
             properties.setProperty(prefix + "seed", track.artworkSeed.toString())
+            properties.setProperty(prefix + "favorite", track.isFavorite.toString())
             properties.setProperty(prefix + "source", track.sourceUri.orEmpty())
             properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
             properties.setProperty(prefix + "mime", track.mimeType)
@@ -386,6 +404,15 @@ internal class DesktopLibraryStore {
     fun remove(trackId: String) {
         save(load().filterNot { it.id == trackId })
         savePlaylists(loadPlaylists().map { playlist -> playlist.copy(tracks = playlist.tracks.filterNot { it.id == trackId }) })
+    }
+
+    fun setFavorite(trackId: String, favorite: Boolean) {
+        save(load().map { track -> if (track.id == trackId) track.copy(isFavorite = favorite) else track })
+        savePlaylists(loadPlaylists().map { playlist ->
+            playlist.copy(tracks = playlist.tracks.map { track ->
+                if (track.id == trackId) track.copy(isFavorite = favorite) else track
+            })
+        })
     }
 
     fun loadPlaylists(): List<Playlist> {
@@ -456,6 +483,7 @@ internal class DesktopLibraryStore {
             album = properties.getProperty(prefix + "album") ?: "未知专辑",
             durationText = properties.getProperty(prefix + "duration") ?: "0:00",
             artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: id.hashCode(),
+            isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
             artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
             mimeType = properties.getProperty(prefix + "mime") ?: KugouPlaylistImporter.CATALOG_MIME_TYPE,
         )
@@ -468,6 +496,7 @@ internal class DesktopLibraryStore {
         properties.setProperty(prefix + "album", track.album)
         properties.setProperty(prefix + "duration", track.durationText)
         properties.setProperty(prefix + "seed", track.artworkSeed.toString())
+        properties.setProperty(prefix + "favorite", track.isFavorite.toString())
         properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
         properties.setProperty(prefix + "mime", track.mimeType)
     }

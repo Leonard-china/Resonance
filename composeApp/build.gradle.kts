@@ -21,14 +21,14 @@ kotlin {
     sourceSets {
         val commonMain by getting {
             dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.ui)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.icons)
+                implementation(libs.compose.resources)
+                implementation(libs.compose.preview)
+                implementation(libs.kotlinx.coroutines.core)
             }
         }
         commonTest.dependencies {
@@ -77,8 +77,8 @@ android {
         applicationId = "com.resonance.player"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "0.1.6"
+        versionCode = 8
+        versionName = "0.2.0"
     }
 
     signingConfigs {
@@ -93,6 +93,9 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+        }
         getByName("release") {
             signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = false
@@ -126,7 +129,7 @@ compose.desktop {
             modules("jdk.httpserver")
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Resonance"
-            packageVersion = "0.1.6"
+            packageVersion = "0.2.0"
             description = "Local music library, player, converter, and device sync"
             vendor = "Resonance"
             windows {
