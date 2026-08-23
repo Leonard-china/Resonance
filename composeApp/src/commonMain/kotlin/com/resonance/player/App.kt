@@ -29,6 +29,7 @@ import com.resonance.player.model.LyricsUiState
 import com.resonance.player.model.PlayerState
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.RepeatMode
+import com.resonance.player.model.ThemeMode
 import com.resonance.player.model.Track
 import com.resonance.player.platform.PlatformServices
 import com.resonance.player.platform.tracksWithPlaylistArtwork
@@ -40,7 +41,16 @@ private enum class SyncAction { Export, Import }
 
 @Composable
 fun App(services: PlatformServices) {
-    ResonanceTheme {
+    var themeMode by remember { mutableStateOf(ThemeMode.Dark) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(services) {
+        try {
+            themeMode = services.loadThemeMode()
+        } catch (_: Throwable) {}
+    }
+
+    ResonanceTheme(themeMode = themeMode) {
         var destination by remember { mutableStateOf(LibraryDestination.Library) }
         var playlists by remember { mutableStateOf(emptyList<Playlist>()) }
         var importedTracks by remember { mutableStateOf(emptyList<com.resonance.player.model.Track>()) }
@@ -56,7 +66,6 @@ fun App(services: PlatformServices) {
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
         var lanQrPath by remember { mutableStateOf<String?>(null) }
         var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
-        val scope = rememberCoroutineScope()
 
         fun selectPlaylist(playlistId: String?, persist: Boolean = true) {
             selectedPlaylistId = playlistId
@@ -64,6 +73,7 @@ fun App(services: PlatformServices) {
                 scope.launch { services.saveLastSelectedPlaylistId(playlistId) }
             }
         }
+
 
         LaunchedEffect(services) {
             try {
@@ -336,9 +346,17 @@ fun App(services: PlatformServices) {
                             player = PlayerState()
                         },
                         previewMode = previewMode,
+                        themeMode = themeMode,
+                        onThemeModeChange = { newMode ->
+                            themeMode = newMode
+                            scope.launch {
+                                services.saveThemeMode(newMode)
+                            }
+                        },
                         message = importMessage,
                         operationInProgress = operationInProgress || initialLoadInProgress,
                     )
+
 
                 AnimatedVisibility(
                     visible = showCreateDialog,

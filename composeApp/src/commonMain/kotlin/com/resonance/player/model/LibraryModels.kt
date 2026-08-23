@@ -69,7 +69,14 @@ enum class RepeatMode {
     One,
 }
 
+enum class ThemeMode {
+    Dark,
+    Light,
+    System,
+}
+
 data class PlayerState(
+
     val currentTrack: Track? = null,
     val isPlaying: Boolean = false,
     val shuffleEnabled: Boolean = false,

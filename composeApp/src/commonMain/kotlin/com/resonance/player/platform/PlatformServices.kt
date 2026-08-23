@@ -21,6 +21,8 @@ interface PlatformServices {
     suspend fun savePlaylists(playlists: List<Playlist>)
     suspend fun loadLastSelectedPlaylistId(): String?
     suspend fun saveLastSelectedPlaylistId(playlistId: String?)
+    suspend fun loadThemeMode(): com.resonance.player.model.ThemeMode
+    suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode)
     val libraryLocation: String
     suspend fun setTrackFavorite(trackId: String, favorite: Boolean)
     suspend fun loadLyrics(track: Track, forceRefresh: Boolean = false): LyricsFetchResult

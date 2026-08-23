@@ -206,6 +206,13 @@ internal fun NowPlayingOverlay(
 
 @Composable
 private fun NowPlayingBackdrop(seed: Int, playing: Boolean, modifier: Modifier = Modifier) {
+    val isDark = ResonanceColors.isDark
+    val coral = ResonanceColors.Coral
+    val violet = ResonanceColors.Violet
+    val violetSoft = ResonanceColors.VioletSoft
+    val mint = ResonanceColors.Mint
+    val canvas = ResonanceColors.Canvas
+
     val energy by animateFloatAsState(
         targetValue = if (playing) 1f else 0.65f,
         animationSpec = tween(600),
@@ -226,20 +233,30 @@ private fun NowPlayingBackdrop(seed: Int, playing: Boolean, modifier: Modifier =
     val phase = (((seed % 17) + 17) % 17) / 16f
     val rad = (angle * (kotlin.math.PI / 180.0)).toFloat()
 
+    val bgGradient = if (isDark) {
+        listOf(
+            Color(0xFF0F1626),
+            canvas,
+            Color(0xFF04060A),
+        )
+    } else {
+        listOf(
+            Color(0xFFF9FAFD),
+            canvas,
+            Color(0xFFE8EFF9),
+        )
+    }
+
+    val coralAlpha = if (isDark) 0.32f * energy else 0.20f * energy
+    val violetAlpha = if (isDark) 0.28f * energy else 0.18f * energy
+    val mintAlpha = if (isDark) 0.16f * energy else 0.12f * energy
+
     Canvas(
-        modifier.background(
-            Brush.verticalGradient(
-                listOf(
-                    Color(0xFF0F1524),
-                    ResonanceColors.Canvas,
-                    Color(0xFF04060A),
-                ),
-            ),
-        ),
+        modifier.background(Brush.verticalGradient(bgGradient)),
     ) {
-        val radius = size.maxDimension * 0.65f
-        val cosOffset = cos(rad) * (size.width * 0.08f)
-        val sinOffset = sin(rad) * (size.height * 0.08f)
+        val radius = size.maxDimension * 0.70f
+        val cosOffset = cos(rad) * (size.width * 0.10f)
+        val sinOffset = sin(rad) * (size.height * 0.10f)
 
         val first = Offset(size.width * (0.22f + phase * 0.14f) + cosOffset, size.height * 0.15f + sinOffset)
         val second = Offset(size.width * (0.80f - phase * 0.12f) - cosOffset, size.height * 0.70f - sinOffset)
@@ -248,7 +265,11 @@ private fun NowPlayingBackdrop(seed: Int, playing: Boolean, modifier: Modifier =
         // Aurora Ambient Bleed Layer 1: Vibrant Coral
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Coral.copy(alpha = 0.18f * energy), Color.Transparent),
+                colors = listOf(
+                    coral.copy(alpha = coralAlpha),
+                    coral.copy(alpha = coralAlpha * 0.3f),
+                    Color.Transparent,
+                ),
                 center = first,
                 radius = radius,
             ),
@@ -259,26 +280,35 @@ private fun NowPlayingBackdrop(seed: Int, playing: Boolean, modifier: Modifier =
         // Aurora Ambient Bleed Layer 2: Electric Violet
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Violet.copy(alpha = 0.16f * energy), Color.Transparent),
+                colors = listOf(
+                    violet.copy(alpha = violetAlpha),
+                    violetSoft.copy(alpha = violetAlpha * 0.3f),
+                    Color.Transparent,
+                ),
                 center = second,
-                radius = radius * 0.85f,
+                radius = radius * 0.9f,
             ),
             center = second,
-            radius = radius * 0.85f,
+            radius = radius * 0.9f,
         )
 
         // Aurora Ambient Bleed Layer 3: Subtle Mint Center
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Mint.copy(alpha = 0.08f * energy), Color.Transparent),
+                colors = listOf(
+                    mint.copy(alpha = mintAlpha),
+                    Color.Transparent,
+                ),
                 center = third,
-                radius = radius * 0.7f,
+                radius = radius * 0.75f,
             ),
             center = third,
-            radius = radius * 0.7f,
+            radius = radius * 0.75f,
         )
     }
 }
+
+
 
 @Composable
 private fun NowPlayingTopBar(track: Track, onDismiss: () -> Unit, onToggleFavorite: (Track) -> Unit) {

@@ -65,6 +65,14 @@ class DesktopPlatformServices : PlatformServices {
         library.saveLastSelectedPlaylistId(playlistId)
     }
 
+    override suspend fun loadThemeMode(): com.resonance.player.model.ThemeMode = withContext(Dispatchers.IO) {
+        library.loadThemeMode()
+    }
+
+    override suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode): Unit = withContext(Dispatchers.IO) {
+        library.saveThemeMode(mode)
+    }
+
     override val libraryLocation: String
         get() = library.managedMusicDirectory.toString()
 
@@ -467,11 +475,41 @@ internal class DesktopLibraryStore {
 
     fun saveLastSelectedPlaylistId(playlistId: String?) {
         Files.createDirectories(appDirectory)
-        val properties = Properties().apply {
-            playlistId?.takeIf(String::isNotBlank)?.let { setProperty("library.selectedPlaylistId", it) }
+        val properties = if (Files.isRegularFile(uiStateFile)) {
+            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
+        } else {
+            Properties()
+        }
+        if (playlistId.isNullOrBlank()) {
+            properties.remove("library.selectedPlaylistId")
+        } else {
+            properties.setProperty("library.selectedPlaylistId", playlistId)
         }
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
+
+    fun loadThemeMode(): com.resonance.player.model.ThemeMode {
+        if (!Files.isRegularFile(uiStateFile)) return com.resonance.player.model.ThemeMode.Dark
+        val properties = Properties()
+        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
+        return when (properties.getProperty("app.themeMode")) {
+            "Light" -> com.resonance.player.model.ThemeMode.Light
+            "System" -> com.resonance.player.model.ThemeMode.System
+            else -> com.resonance.player.model.ThemeMode.Dark
+        }
+    }
+
+    fun saveThemeMode(mode: com.resonance.player.model.ThemeMode) {
+        Files.createDirectories(appDirectory)
+        val properties = if (Files.isRegularFile(uiStateFile)) {
+            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
+        } else {
+            Properties()
+        }
+        properties.setProperty("app.themeMode", mode.name)
+        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
+    }
+
 
     private fun readCatalogTrack(properties: Properties, playlistPrefix: String, trackIndex: Int, id: String): Track? {
         val prefix = "${playlistPrefix}catalog.$trackIndex."

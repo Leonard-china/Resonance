@@ -60,8 +60,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -72,8 +74,10 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -133,6 +137,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
@@ -142,7 +147,9 @@ import com.resonance.player.model.LyricsUiState
 import com.resonance.player.model.PlayerState
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.RepeatMode
+import com.resonance.player.model.ThemeMode
 import com.resonance.player.model.Track
+
 import com.resonance.player.platform.currentHourOfDay
 import com.resonance.player.platform.decodeArtwork
 import kotlinx.coroutines.Dispatchers
@@ -180,8 +187,16 @@ private fun ResonanceBackdrop(
     energized: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = ResonanceColors.isDark
+    val coral = ResonanceColors.Coral
+    val violet = ResonanceColors.Violet
+    val violetSoft = ResonanceColors.VioletSoft
+    val mint = ResonanceColors.Mint
+    val azure = ResonanceColors.Azure
+    val canvas = ResonanceColors.Canvas
+
     val energy by animateFloatAsState(
-        targetValue = if (energized) 1f else 0.7f,
+        targetValue = if (energized) 1f else 0.85f,
         animationSpec = tween(700),
         label = "backdropEnergy",
     )
@@ -190,7 +205,7 @@ private fun ResonanceBackdrop(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(28000, easing = androidx.compose.animation.core.LinearEasing),
+            animation = tween(22000, easing = androidx.compose.animation.core.LinearEasing),
             repeatMode = AnimationRepeatMode.Restart,
         ),
         label = "backdropAuroraAngle",
@@ -200,58 +215,101 @@ private fun ResonanceBackdrop(
     val sinOffset = kotlin.math.sin(rad)
     val phase = (((seed % 19) + 19) % 19) / 18f
 
+    val bgGradient = if (isDark) {
+        listOf(
+            Color(0xFF090D16),
+            canvas,
+            Color(0xFF04060A),
+        )
+    } else {
+        listOf(
+            Color(0xFFF9FAFD),
+            canvas,
+            Color(0xFFE8EFF9),
+        )
+    }
+
+    val coralAlpha = if (isDark) 0.26f * energy else 0.18f * energy
+    val violetAlpha = if (isDark) 0.22f * energy else 0.16f * energy
+    val mintAlpha = if (isDark) 0.14f * energy else 0.12f * energy
+    val azureAlpha = if (isDark) 0.11f * energy else 0.10f * energy
+
     Canvas(
         modifier = modifier.background(
-            Brush.verticalGradient(
-                listOf(
-                    Color(0xFF0A0E17),
-                    ResonanceColors.Canvas,
-                    Color(0xFF040609),
-                ),
-            ),
+            Brush.verticalGradient(bgGradient),
         ),
     ) {
-        val radius = size.maxDimension * 0.60f
+        val radius = size.maxDimension * 0.65f
         val coralCenter = Offset(
-            size.width * (0.18f + phase * 0.12f) + cosOffset * (size.width * 0.05f),
-            size.height * 0.08f + sinOffset * (size.height * 0.05f),
+            size.width * (0.20f + phase * 0.12f) + cosOffset * (size.width * 0.08f),
+            size.height * 0.10f + sinOffset * (size.height * 0.08f),
         )
         val violetCenter = Offset(
-            size.width * (0.86f - phase * 0.10f) - cosOffset * (size.width * 0.05f),
-            size.height * 0.58f - sinOffset * (size.height * 0.05f),
+            size.width * (0.82f - phase * 0.10f) - cosOffset * (size.width * 0.08f),
+            size.height * 0.45f - sinOffset * (size.height * 0.08f),
         )
-        // Aurora Layer 1: Coral Bloom
+        val mintCenter = Offset(
+            size.width * 0.45f + sinOffset * (size.width * 0.06f),
+            size.height * 0.88f - cosOffset * (size.height * 0.06f),
+        )
+        val azureCenter = Offset(
+            size.width * 0.85f + cosOffset * (size.width * 0.05f),
+            size.height * 0.90f + sinOffset * (size.height * 0.05f),
+        )
+
+        // Aurora Layer 1: Coral Vibrant Bloom
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Coral.copy(alpha = 0.08f * energy), Color.Transparent),
+                colors = listOf(
+                    coral.copy(alpha = coralAlpha),
+                    coral.copy(alpha = coralAlpha * 0.3f),
+                    Color.Transparent,
+                ),
                 center = coralCenter,
                 radius = radius,
             ),
             radius = radius,
             center = coralCenter,
         )
-        // Aurora Layer 2: Violet Depth
+        // Aurora Layer 2: Violet Glow
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Violet.copy(alpha = 0.065f * energy), Color.Transparent),
+                colors = listOf(
+                    violet.copy(alpha = violetAlpha),
+                    violetSoft.copy(alpha = violetAlpha * 0.3f),
+                    Color.Transparent,
+                ),
                 center = violetCenter,
-                radius = radius * 0.85f,
+                radius = radius * 0.9f,
             ),
-            radius = radius * 0.85f,
+            radius = radius * 0.9f,
             center = violetCenter,
         )
-        // Aurora Layer 3: Mint Subtle Floor
+        // Aurora Layer 3: Mint Electric Floor
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Mint.copy(alpha = 0.035f * energy), Color.Transparent),
-                center = Offset(size.width * 0.55f, size.height * 0.95f),
-                radius = size.minDimension * 0.45f,
+                colors = listOf(mint.copy(alpha = mintAlpha), Color.Transparent),
+                center = mintCenter,
+                radius = size.minDimension * 0.55f,
             ),
-            radius = size.minDimension * 0.45f,
-            center = Offset(size.width * 0.55f, size.height * 0.95f),
+            radius = size.minDimension * 0.55f,
+            center = mintCenter,
+        )
+        // Aurora Layer 4: Azure Accent
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(azure.copy(alpha = azureAlpha), Color.Transparent),
+                center = azureCenter,
+                radius = size.minDimension * 0.42f,
+            ),
+            radius = size.minDimension * 0.42f,
+            center = azureCenter,
         )
     }
 }
+
+
+
 
 
 @Composable
@@ -289,6 +347,8 @@ fun LibraryShell(
     lanQrPath: String?,
     onExitPreview: () -> Unit,
     previewMode: Boolean,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -342,6 +402,8 @@ fun LibraryShell(
                 lanQrPath = lanQrPath,
                 onExitPreview = onExitPreview,
                 previewMode = previewMode,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 message = message,
                 operationInProgress = operationInProgress,
             )
@@ -379,6 +441,8 @@ fun LibraryShell(
                 lanQrPath = lanQrPath,
                 onExitPreview = onExitPreview,
                 previewMode = previewMode,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 message = message,
                 operationInProgress = operationInProgress,
             )
@@ -416,10 +480,13 @@ fun LibraryShell(
                 lanQrPath = lanQrPath,
                 onExitPreview = onExitPreview,
                 previewMode = previewMode,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 message = message,
                 operationInProgress = operationInProgress,
             )
         }
+
 
         if (showNowPlaying && playerState.currentTrack != null) {
             NowPlayingOverlay(
@@ -474,6 +541,8 @@ private fun CompactShell(
     lanQrPath: String?,
     onExitPreview: () -> Unit,
     previewMode: Boolean,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -504,6 +573,8 @@ private fun CompactShell(
                 onExitPreview = onExitPreview,
                 previewMode = previewMode,
                 compact = true,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
                 message = message,
                 operationInProgress = operationInProgress,
             )
@@ -598,6 +669,8 @@ private fun WideShell(
     lanQrPath: String?,
     onExitPreview: () -> Unit,
     previewMode: Boolean,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -628,6 +701,8 @@ private fun WideShell(
             DesktopSidebar(
                 destination = destination,
                 onDestinationChange = onDestinationChange,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
             )
         }
 
@@ -658,6 +733,8 @@ private fun WideShell(
                     onExitPreview = onExitPreview,
                     previewMode = previewMode,
                     compact = compactRail,
+                    themeMode = themeMode,
+                    onThemeModeChange = onThemeModeChange,
                     message = message,
                     operationInProgress = operationInProgress,
                 )
@@ -684,20 +761,29 @@ private fun WideShell(
 private fun DesktopSidebar(
     destination: LibraryDestination,
     onDestinationChange: (LibraryDestination) -> Unit,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
 ) {
+    val isDark = ResonanceColors.isDark
+    val sidebarBg = if (isDark) {
+        listOf(
+            Color(0xFF131826),
+            ResonanceColors.Raised,
+            Color(0xFF090D14),
+        )
+    } else {
+        listOf(
+            Color(0xFFFFFFFF),
+            ResonanceColors.Canvas,
+            Color(0xFFF0F4FA),
+        )
+    }
+
     Column(
         modifier = Modifier
             .width(236.dp)
             .fillMaxHeight()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF131826),
-                        ResonanceColors.Raised,
-                        Color(0xFF090D14),
-                    ),
-                ),
-            )
+            .background(Brush.verticalGradient(sidebarBg))
             .border(
                 BorderStroke(
                     1.dp,
@@ -711,9 +797,25 @@ private fun DesktopSidebar(
         Row(verticalAlignment = Alignment.CenterVertically) {
             BrandMark()
             Spacer(Modifier.width(12.dp))
-            Column {
+            Column(Modifier.weight(1f)) {
                 Text("RESONANCE", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 Text("LOCAL MUSIC", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Mint)
+            }
+            val nextMode = when (themeMode) {
+                ThemeMode.Dark -> ThemeMode.Light
+                ThemeMode.Light -> ThemeMode.Dark
+                ThemeMode.System -> if (isDark) ThemeMode.Light else ThemeMode.Dark
+            }
+            IconButton(
+                onClick = { onThemeModeChange(nextMode) },
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                    contentDescription = "切换主题模式",
+                    tint = ResonanceColors.CoralGlow,
+                    modifier = Modifier.size(20.dp),
+                )
             }
         }
         Spacer(Modifier.height(34.dp))
@@ -747,6 +849,8 @@ private fun DesktopSidebar(
         }
     }
 }
+
+
 
 
 @Composable
@@ -830,6 +934,8 @@ private fun DestinationContent(
     onExitPreview: () -> Unit,
     previewMode: Boolean,
     compact: Boolean,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -868,6 +974,8 @@ private fun DestinationContent(
             onExitPreview = onExitPreview,
             previewMode = previewMode,
             compact = compact,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
             message = message,
             operationInProgress = operationInProgress,
         )
@@ -887,7 +995,12 @@ private fun DestinationContent(
             lanQrPath = lanQrPath,
             message = message,
         )
-        LibraryDestination.Settings -> SettingsScreen(compact = compact, libraryLocation = libraryLocation)
+        LibraryDestination.Settings -> SettingsScreen(
+            compact = compact,
+            libraryLocation = libraryLocation,
+            themeMode = themeMode,
+            onThemeModeChange = onThemeModeChange,
+        )
         }
     }
 }
@@ -911,6 +1024,8 @@ private fun LibraryScreen(
     onExitPreview: () -> Unit,
     previewMode: Boolean,
     compact: Boolean,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -973,11 +1088,14 @@ private fun LibraryScreen(
                 previewMode = previewMode,
                 onExitPreview = onExitPreview,
                 onCreatePlaylist = onCreatePlaylist,
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
             )
             Spacer(Modifier.height(if (compact) 16.dp else 20.dp))
             LibrarySearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
             Spacer(Modifier.height(if (compact) 20.dp else 24.dp))
         }
+
         if (message != null) {
             item {
                 Surface(
@@ -1200,6 +1318,8 @@ private fun LibraryHeader(
     previewMode: Boolean,
     onExitPreview: () -> Unit,
     onCreatePlaylist: () -> Unit,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val lowProfile = compact && maxWidth > 500.dp
@@ -1211,57 +1331,104 @@ private fun LibraryHeader(
             in 14..18 -> "下午好"
             else -> "晚上好"
         }
-        Surface(
-            modifier = Modifier.fillMaxWidth().shadow(10.dp, shape),
-            color = ResonanceColors.Glass,
-            shape = shape,
-            border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.9f)),
+        val isDark = ResonanceColors.isDark
+        val coral = ResonanceColors.Coral
+        val violet = ResonanceColors.Violet
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .resonanceGlass(
+                    shape = shape,
+                    backgroundColor = ResonanceColors.Glass,
+                    borderColors = listOf(ResonanceColors.GlassBorderGlow, ResonanceColors.GlassBorder),
+                    shadowElevation = 14.dp,
+                ),
         ) {
-            Box {
-                Canvas(Modifier.matchParentSize()) {
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(ResonanceColors.Coral.copy(alpha = 0.08f), Color.Transparent),
-                            center = Offset(size.width * 0.86f, size.height * 0.06f),
-                            radius = size.maxDimension * 0.66f,
-                        ),
-                        radius = size.maxDimension * 0.66f,
-                        center = Offset(size.width * 0.86f, size.height * 0.06f),
-                    )
-                    drawCircle(
-                        color = ResonanceColors.Violet.copy(alpha = 0.03f),
-                        radius = size.minDimension * 0.48f,
-                        center = Offset(size.width * 0.12f, size.height * 1.05f),
-                    )
-                }
-                Row(
-                    modifier = Modifier.padding(horizontal = if (compact) 20.dp else 28.dp, vertical = if (compact) 20.dp else 26.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("$greeting  ·  RESONANCE", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.CoralGlow)
-                        Spacer(Modifier.height(7.dp))
-                        Text(
-                            if (lowProfile) "你的音乐，留在身边。" else "你的音乐，\n留在身边。",
-                            style = when {
-                                lowProfile -> MaterialTheme.typography.headlineLarge
-                                compact -> MaterialTheme.typography.displaySmall
-                                else -> MaterialTheme.typography.displayLarge
-                            },
-                        )
-                        if (!compact) {
-                            Spacer(Modifier.height(10.dp))
-                            Text("离线收藏、播放与设备同步，都由你掌控。", style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted)
+            Canvas(Modifier.matchParentSize()) {
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        listOf(coral.copy(alpha = 0.22f), Color.Transparent),
+                        center = Offset(size.width * 0.88f, size.height * 0.10f),
+                        radius = size.maxDimension * 0.65f,
+                    ),
+                    radius = size.maxDimension * 0.65f,
+                    center = Offset(size.width * 0.88f, size.height * 0.10f),
+                )
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        listOf(violet.copy(alpha = 0.16f), Color.Transparent),
+                        center = Offset(size.width * 0.10f, size.height * 0.95f),
+                        radius = size.minDimension * 0.55f,
+                    ),
+                    radius = size.minDimension * 0.55f,
+                    center = Offset(size.width * 0.10f, size.height * 0.95f),
+                )
+            }
+
+            Row(
+                modifier = Modifier.padding(horizontal = if (compact) 20.dp else 28.dp, vertical = if (compact) 20.dp else 26.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(ResonanceColors.CoralSoft)
+                                .border(1.dp, ResonanceColors.Coral.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 9.dp, vertical = 4.dp),
+                        ) {
+                            Text(
+                                "✦ RESONANCE 0.2.0 · HIFI",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.8.sp),
+                                color = ResonanceColors.CoralGlow,
+                            )
                         }
+                        Spacer(Modifier.width(8.dp))
+                        Text("· $greeting", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
                     }
-                    Column(horizontalAlignment = Alignment.End) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        if (lowProfile) "你的音乐，留在身边。" else "你的音乐，\n留在身边。",
+                        style = when {
+                            lowProfile -> MaterialTheme.typography.headlineLarge
+                            compact -> MaterialTheme.typography.displaySmall
+                            else -> MaterialTheme.typography.displayLarge
+                        },
+                        color = ResonanceColors.Ivory,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    )
+                    if (!compact) {
+                        Spacer(Modifier.height(10.dp))
+                        Text("本地优先 · 无损音质 · 跨设备自由同步", style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted)
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val nextMode = when (themeMode) {
+                            ThemeMode.Dark -> ThemeMode.Light
+                            ThemeMode.Light -> ThemeMode.Dark
+                            ThemeMode.System -> if (isDark) ThemeMode.Light else ThemeMode.Dark
+                        }
+                        IconButton(
+                            onClick = { onThemeModeChange(nextMode) },
+                            modifier = Modifier.size(46.dp),
+                        ) {
+                            Icon(
+                                if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "切换明暗主题",
+                                tint = ResonanceColors.CoralGlow,
+                                modifier = Modifier.size(24.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
                         FilledIconButton(
                             onClick = onCreatePlaylist,
                             interactionSource = addInteraction,
                             modifier = Modifier
                                 .size(54.dp)
                                 .pressScale(addInteraction, pressedScale = 0.88f)
-                                .shadow(6.dp, CircleShape, ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow),
+                                .shadow(12.dp, CircleShape, ambientColor = ResonanceColors.Coral.copy(alpha = 0.5f), spotColor = ResonanceColors.CoralGlow),
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = ResonanceColors.Coral,
                                 contentColor = Color(0xFF2A0B07),
@@ -1269,16 +1436,17 @@ private fun LibraryHeader(
                         ) {
                             Icon(Icons.Default.Add, contentDescription = "新建歌单", modifier = Modifier.size(26.dp))
                         }
-                        if (previewMode) {
-                            Spacer(Modifier.height(6.dp))
-                            TextButton(onClick = onExitPreview) { Text("清空预览") }
-                        }
+                    }
+                    if (previewMode) {
+                        Spacer(Modifier.height(6.dp))
+                        TextButton(onClick = onExitPreview) { Text("清空预览", color = ResonanceColors.Muted) }
                     }
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun LibraryQuickAccess(
@@ -1294,6 +1462,7 @@ private fun LibraryQuickAccess(
                 subtitle = "$allTrackCount 首本地音乐",
                 icon = Icons.Default.Headphones,
                 selected = selected == LibraryCollection.AllTracks,
+                isMint = true,
                 onClick = { onSelect(LibraryCollection.AllTracks) },
             )
         }
@@ -1303,6 +1472,7 @@ private fun LibraryQuickAccess(
                 subtitle = "$favoriteCount 首喜欢的歌",
                 icon = Icons.Default.Favorite,
                 selected = selected == LibraryCollection.Favorites,
+                isMint = false,
                 onClick = { onSelect(LibraryCollection.Favorites) },
             )
         }
@@ -1315,50 +1485,66 @@ private fun QuickAccessCard(
     subtitle: String,
     icon: ImageVector,
     selected: Boolean,
+    isMint: Boolean = false,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val accentColor = if (isMint) ResonanceColors.Mint else ResonanceColors.Coral
+    val accentSoft = if (isMint) ResonanceColors.MintSoft else ResonanceColors.CoralSoft
+    val accentGlow = if (isMint) ResonanceColors.MintGlow else ResonanceColors.CoralGlow
+
     val container by animateColorAsState(
-        targetValue = if (selected) ResonanceColors.CoralSoft else ResonanceColors.Glass,
+        targetValue = if (selected) accentSoft.copy(alpha = 0.95f) else ResonanceColors.Glass,
         animationSpec = tween(MotionQuick),
         label = "quickAccessContainer",
     )
     val elevation by animateDpAsState(
-        targetValue = if (selected) 7.dp else 2.dp,
+        targetValue = if (selected) 10.dp else 3.dp,
         animationSpec = tween(MotionQuick),
         label = "quickAccessElevation",
     )
-    Surface(
-        onClick = onClick,
-        interactionSource = interactionSource,
+
+    Box(
         modifier = Modifier
-            .widthIn(min = 164.dp)
-            .heightIn(min = 82.dp)
+            .widthIn(min = 168.dp)
+            .heightIn(min = 84.dp)
             .pressScale(interactionSource, pressedScale = 0.97f)
-            .shadow(elevation, RoundedCornerShape(20.dp)),
-        color = container,
-        contentColor = ResonanceColors.Ivory,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, if (selected) ResonanceColors.Coral.copy(alpha = 0.5f) else ResonanceColors.Divider),
+            .resonanceGlass(
+                shape = RoundedCornerShape(20.dp),
+                backgroundColor = container,
+                borderColors = if (selected) listOf(accentColor.copy(alpha = 0.7f), accentColor.copy(alpha = 0.25f)) else listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = elevation,
+                shadowColor = if (selected) accentColor.copy(alpha = 0.35f) else ResonanceColors.Shadow,
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = androidx.compose.ui.semantics.Role.Tab,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(ResonanceColors.Soft),
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentSoft)
+                    .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, contentDescription = null, tint = if (selected) ResonanceColors.Coral else ResonanceColors.Muted)
+                Icon(icon, contentDescription = null, tint = accentGlow, modifier = Modifier.size(22.dp))
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(13.dp))
             Column {
-                Text(title, style = MaterialTheme.typography.titleMedium)
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+                Text(title, style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Spacer(Modifier.height(2.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = if (selected) accentGlow else ResonanceColors.Muted)
             }
         }
     }
 }
+
 
 @Composable
 private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, compact: Boolean, message: String?) {
@@ -1496,14 +1682,14 @@ private fun PlaylistStrip(
     onPlaylistSelected: (String) -> Unit,
 ) {
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 14.dp else 18.dp),
         contentPadding = PaddingValues(vertical = 8.dp),
     ) {
         items(playlists, key = { it.id }) { playlist ->
             val selected = playlist.id == selectedPlaylistId
             val interactionSource = remember { MutableInteractionSource() }
             val borderColor by animateColorAsState(
-                targetValue = if (selected) ResonanceColors.Coral.copy(alpha = 0.5f) else ResonanceColors.Divider.copy(alpha = 0.86f),
+                targetValue = if (selected) ResonanceColors.Coral.copy(alpha = 0.7f) else ResonanceColors.GlassBorderSubtle,
                 animationSpec = tween(MotionStandard),
                 label = "playlistBorder",
             )
@@ -1513,38 +1699,38 @@ private fun PlaylistStrip(
                 label = "playlistTitle",
             )
             val elevation by animateDpAsState(
-                targetValue = if (selected) 8.dp else 3.dp,
+                targetValue = if (selected) 12.dp else 4.dp,
                 animationSpec = tween(MotionStandard),
                 label = "playlistElevation",
             )
             Column(
                 modifier = Modifier
-                    .width(if (compact) 156.dp else 188.dp)
+                    .width(if (compact) 160.dp else 192.dp)
                     .pressScale(
                         interactionSource = interactionSource,
                         pressedScale = 0.955f,
-                        restingScale = if (selected) 1.018f else 1f,
+                        restingScale = if (selected) 1.02f else 1f,
                     )
                     .shadow(
                         elevation = elevation,
-                        shape = RoundedCornerShape(22.dp),
-                        ambientColor = if (selected) ResonanceColors.Coral else ResonanceColors.Shadow,
-                        spotColor = if (selected) ResonanceColors.Coral else ResonanceColors.Shadow,
+                        shape = RoundedCornerShape(24.dp),
+                        ambientColor = if (selected) ResonanceColors.Coral.copy(alpha = 0.35f) else ResonanceColors.Shadow,
+                        spotColor = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Shadow,
                     )
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(24.dp))
                     .background(
                         Brush.verticalGradient(
                             if (selected) {
-                                listOf(Color(0xFF2D2027), Color(0xFF1A1821))
+                                listOf(Color(0xE62A1D2A), Color(0xCC161422))
                             } else {
-                                listOf(Color(0xFF1A202C), Color(0xFF111620))
+                                listOf(Color(0xD9182030), Color(0xB3101624))
                             },
                         ),
                     )
                     .border(
                         width = if (selected) 1.5.dp else 1.dp,
                         color = borderColor,
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(24.dp),
                     )
                     .semantics { this.selected = selected }
                     .clickable(
@@ -1552,27 +1738,27 @@ private fun PlaylistStrip(
                         indication = null,
                         role = Role.Tab,
                     ) { onPlaylistSelected(playlist.id) }
-                    .padding(9.dp),
+                    .padding(10.dp),
             ) {
                 Box {
                     AlbumArtwork(
                         seed = playlist.artworkSeed,
                         modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                        cornerRadius = 17.dp,
+                        cornerRadius = 18.dp,
                         artworkPath = playlist.tracks.firstNotNullOfOrNull(Track::artworkPath),
                     )
                     if (selected) {
                         Surface(
                             modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                            color = Color(0xD9131017),
+                            color = ResonanceColors.CoralSoft,
                             shape = CircleShape,
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.18f)),
+                            border = BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.4f)),
                         ) {
                             Text(
-                                "当前",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = ResonanceColors.Ivory,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                                "当前歌单",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+                                color = ResonanceColors.CoralGlow,
+                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                             )
                         }
                     }
@@ -1582,6 +1768,7 @@ private fun PlaylistStrip(
                     playlist.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = titleColor,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1606,7 +1793,7 @@ private fun LibrarySearchBar(query: String, onQueryChange: (String) -> Unit) {
         onValueChange = onQueryChange,
         modifier = Modifier.fillMaxWidth(),
         placeholder = { Text("搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.Muted) },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.CoralGlow) },
         trailingIcon = if (query.isNotEmpty()) {
             {
                 IconButton(onClick = { onQueryChange("") }) {
@@ -1615,10 +1802,10 @@ private fun LibrarySearchBar(query: String, onQueryChange: (String) -> Unit) {
             }
         } else null,
         singleLine = true,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(18.dp),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = ResonanceColors.Coral.copy(alpha = 0.55f),
-            unfocusedBorderColor = ResonanceColors.Divider,
+            focusedBorderColor = ResonanceColors.Coral.copy(alpha = 0.65f),
+            unfocusedBorderColor = ResonanceColors.GlassBorderSubtle,
             focusedContainerColor = ResonanceColors.Glass,
             unfocusedContainerColor = ResonanceColors.Glass,
             cursorColor = ResonanceColors.Coral,
@@ -1642,26 +1829,33 @@ private fun TrackRow(
     val available = track.sourceUri != null
     var menuExpanded by remember(track.id) { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
+    val isFlac = track.mimeType == "audio/flac" || track.title.endsWith(".flac", ignoreCase = true)
+
     val background by animateColorAsState(
-        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.88f) else Color.Transparent,
+        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.92f) else ResonanceColors.GlassLight.copy(alpha = 0.20f),
         animationSpec = tween(MotionQuick),
         label = "trackBackground",
     )
     val elevation by animateDpAsState(
-        targetValue = if (selected) 3.dp else 0.dp,
+        targetValue = if (selected) 6.dp else 0.dp,
         animationSpec = tween(MotionQuick),
         label = "trackElevation",
     )
+
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .padding(vertical = 2.5.dp)
             .pressScale(interactionSource, pressedScale = 0.988f)
-            .shadow(elevation, RoundedCornerShape(16.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
+            .shadow(elevation, RoundedCornerShape(16.dp), ambientColor = if (selected) ResonanceColors.Coral.copy(alpha = 0.3f) else ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
             .clip(RoundedCornerShape(16.dp))
             .background(background)
             .border(
                 width = 1.dp,
-                color = if (selected) ResonanceColors.Coral.copy(alpha = 0.20f) else Color.Transparent,
+                brush = Brush.linearGradient(
+                    if (selected) listOf(ResonanceColors.Coral.copy(alpha = 0.6f), ResonanceColors.Coral.copy(alpha = 0.2f))
+                    else listOf(ResonanceColors.GlassBorderSubtle, Color.Transparent),
+                ),
                 shape = RoundedCornerShape(16.dp),
             )
             .clickable(
@@ -1670,28 +1864,50 @@ private fun TrackRow(
                 role = Role.Button,
                 onClick = onClick,
             )
-            .padding(horizontal = if (compact) 8.dp else 12.dp, vertical = 9.dp),
+            .padding(horizontal = if (compact) 10.dp else 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AlbumArtwork(track.artworkSeed, Modifier.size(if (compact) 52.dp else 58.dp), 12.dp, track.artworkPath)
-        Spacer(Modifier.width(13.dp))
+        AlbumArtwork(
+            track.artworkSeed,
+            Modifier
+                .size(if (compact) 52.dp else 56.dp)
+                .shadow(6.dp, RoundedCornerShape(13.dp)),
+            13.dp,
+            track.artworkPath,
+        )
+        Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (selected) {
                     NowPlayingIndicator(isPlaying = isPlaying)
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                 }
                 Text(
                     track.title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (selected) ResonanceColors.Coral else ResonanceColors.Ivory,
+                    color = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Ivory,
+                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Spacer(Modifier.width(8.dp))
                 if (!available) {
-                    Spacer(Modifier.width(8.dp))
                     Surface(color = ResonanceColors.Soft, shape = RoundedCornerShape(6.dp)) {
                         Text("待匹配", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                } else {
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isFlac) ResonanceColors.VioletSoft else ResonanceColors.SurfaceSubtle)
+                            .border(0.5.dp, if (isFlac) ResonanceColors.Violet.copy(alpha = 0.4f) else ResonanceColors.GlassBorderSubtle, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    ) {
+                        Text(
+                            if (isFlac) "FLAC" else "320K",
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
+                            color = if (isFlac) ResonanceColors.VioletGlow else ResonanceColors.Mint,
+                        )
                     }
                 }
             }
@@ -1704,12 +1920,12 @@ private fun TrackRow(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(onClick = { onToggleFavorite(track) }, modifier = Modifier.size(48.dp)) {
+        IconButton(onClick = { onToggleFavorite(track) }, modifier = Modifier.size(46.dp)) {
             Icon(
                 if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (track.isFavorite) "取消收藏" else "收藏",
                 tint = if (track.isFavorite) ResonanceColors.Coral else ResonanceColors.Dim,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(19.dp),
             )
         }
         Text(track.durationText, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
@@ -1763,6 +1979,7 @@ private fun TrackRow(
         }
     }
 }
+
 
 @Composable
 private fun NowPlayingIndicator(isPlaying: Boolean) {
@@ -2129,14 +2346,20 @@ private fun SyncScreen(
 }
 
 @Composable
-private fun SettingsScreen(compact: Boolean, libraryLocation: String) {
+private fun SettingsScreen(
+    compact: Boolean,
+    libraryLocation: String,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
+) {
     FeaturePage(
         eyebrow = "设置",
         title = "音乐库偏好",
-        body = "查看导入质量、文件位置与应用信息。",
+        body = "查看导入质量、外观主题、文件位置与应用信息。",
         compact = compact,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ThemeModeSelector(currentMode = themeMode, onModeSelect = onThemeModeChange)
             SettingsInfoRow(Icons.Default.GraphicEq, "转换质量", "默认 MP3 320 kbps · 原 MP3 不重新编码")
             SettingsInfoRow(Icons.Default.MusicNote, "自动歌词", "LRCLIB 自动匹配逐行歌词 · 结果仅缓存在本机")
             SettingsInfoRow(Icons.Default.FolderOpen, "音乐库位置", libraryLocation)
@@ -2165,20 +2388,146 @@ private fun SettingsScreen(compact: Boolean, libraryLocation: String) {
 }
 
 @Composable
+private fun ThemeModeSelector(
+    currentMode: ThemeMode,
+    onModeSelect: (ThemeMode) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .resonanceGlass(
+                shape = RoundedCornerShape(20.dp),
+                backgroundColor = ResonanceColors.Glass,
+                borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 6.dp,
+            )
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(ResonanceColors.CoralSoft),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Palette, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(20.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text("界面主题风格", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(2.dp))
+                Text("即时切换深色极光或纯净浅色磨砂质感", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ThemeOptionButton(
+                label = "深色模式",
+                icon = Icons.Default.DarkMode,
+                selected = currentMode == ThemeMode.Dark,
+                onClick = { onModeSelect(ThemeMode.Dark) },
+                modifier = Modifier.weight(1f),
+            )
+            ThemeOptionButton(
+                label = "浅色模式",
+                icon = Icons.Default.LightMode,
+                selected = currentMode == ThemeMode.Light,
+                onClick = { onModeSelect(ThemeMode.Light) },
+                modifier = Modifier.weight(1f),
+            )
+            ThemeOptionButton(
+                label = "跟随系统",
+                icon = Icons.Default.BrightnessAuto,
+                selected = currentMode == ThemeMode.System,
+                onClick = { onModeSelect(ThemeMode.System) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeOptionButton(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) ResonanceColors.Coral.copy(alpha = 0.7f) else ResonanceColors.GlassBorderSubtle,
+        animationSpec = tween(150),
+        label = "themeBorder",
+    )
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) ResonanceColors.CoralSoft else ResonanceColors.Raised,
+        animationSpec = tween(150),
+        label = "themeContainer",
+    )
+
+    Surface(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(14.dp),
+        color = containerColor,
+        border = BorderStroke(if (selected) 1.5.dp else 1.dp, borderColor),
+        modifier = modifier
+            .pressScale(interactionSource, pressedScale = 0.96f)
+            .shadow(if (selected) 6.dp else 1.dp, RoundedCornerShape(14.dp), ambientColor = if (selected) ResonanceColors.Coral else ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow),
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Dim,
+                modifier = Modifier.size(22.dp),
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal),
+                color = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Muted,
+            )
+        }
+    }
+}
+
+
+@Composable
 private fun SettingsInfoRow(icon: ImageVector, title: String, detail: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(ResonanceColors.Glass)
-            .border(1.dp, ResonanceColors.Divider.copy(alpha = 0.8f), RoundedCornerShape(18.dp))
-            .padding(horizontal = 14.dp, vertical = 15.dp),
+            .resonanceGlass(
+                shape = RoundedCornerShape(18.dp),
+                backgroundColor = ResonanceColors.Glass,
+                borderColors = listOf(ResonanceColors.GlassBorderSubtle, Color.Transparent),
+                shadowElevation = 4.dp,
+            )
+            .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, contentDescription = null, tint = ResonanceColors.Muted)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(ResonanceColors.Soft),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(20.dp))
+        }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(title, style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            Spacer(Modifier.height(2.dp))
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
         }
     }
@@ -2192,6 +2541,8 @@ private fun FeaturePage(
     compact: Boolean,
     content: @Composable () -> Unit,
 ) {
+    val violet = ResonanceColors.Violet
+    val coral = ResonanceColors.Coral
     LazyColumn(
         contentPadding = PaddingValues(if (compact) 24.dp else 48.dp),
         verticalArrangement = Arrangement.spacedBy(28.dp),
@@ -2199,32 +2550,61 @@ private fun FeaturePage(
     ) {
         item {
             val shape = RoundedCornerShape(if (compact) 24.dp else 30.dp)
-            Surface(
-                modifier = Modifier.fillMaxWidth().widthIn(max = 840.dp).shadow(10.dp, shape),
-                color = ResonanceColors.Glass,
-                shape = shape,
-                border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.9f)),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .widthIn(max = 840.dp)
+                    .resonanceGlass(
+                        shape = shape,
+                        backgroundColor = ResonanceColors.Glass,
+                        borderColors = listOf(ResonanceColors.VioletGlow.copy(alpha = 0.5f), ResonanceColors.GlassBorder),
+                        shadowElevation = 14.dp,
+                    ),
             ) {
-                Box {
-                    Canvas(Modifier.matchParentSize()) {
-                        val center = Offset(size.width * 0.92f, size.height * 0.15f)
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                listOf(ResonanceColors.Violet.copy(alpha = 0.07f), Color.Transparent),
-                                center = center,
-                                radius = size.maxDimension * 0.58f,
-                            ),
-                            radius = size.maxDimension * 0.58f,
+                Canvas(Modifier.matchParentSize()) {
+                    val center = Offset(size.width * 0.90f, size.height * 0.15f)
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(violet.copy(alpha = 0.22f), Color.Transparent),
                             center = center,
+                            radius = size.maxDimension * 0.65f,
+                        ),
+                        radius = size.maxDimension * 0.65f,
+                        center = center,
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(coral.copy(alpha = 0.15f), Color.Transparent),
+                            center = Offset(size.width * 0.12f, size.height * 0.90f),
+                            radius = size.minDimension * 0.55f,
+                        ),
+                        radius = size.minDimension * 0.55f,
+                        center = Offset(size.width * 0.12f, size.height * 0.90f),
+                    )
+                }
+                Column(Modifier.padding(if (compact) 22.dp else 32.dp)) {
+                    Box(
+                        Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(ResonanceColors.VioletSoft)
+                            .border(1.dp, ResonanceColors.Violet.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 9.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            eyebrow.uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.8.sp),
+                            color = ResonanceColors.VioletGlow,
                         )
                     }
-                    Column(Modifier.padding(if (compact) 22.dp else 30.dp)) {
-                        Text(eyebrow.uppercase(), style = MaterialTheme.typography.labelLarge, color = ResonanceColors.CoralGlow)
-                        Spacer(Modifier.height(9.dp))
-                        Text(title, style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge)
-                        Spacer(Modifier.height(12.dp))
-                        Text(body, style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted, modifier = Modifier.widthIn(max = 620.dp))
-                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        title,
+                        style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge,
+                        color = ResonanceColors.Ivory,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(body, style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted, modifier = Modifier.widthIn(max = 620.dp))
                 }
             }
         }
@@ -2234,42 +2614,46 @@ private fun FeaturePage(
 
 @Composable
 private fun ActionList(actions: List<Triple<ImageVector, String, String>>, onClick: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         actions.forEachIndexed { index, action ->
             val interactionSource = remember { MutableInteractionSource() }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .pressScale(interactionSource, pressedScale = 0.985f)
-                    .shadow(3.dp, RoundedCornerShape(18.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(ResonanceColors.Glass)
-                    .border(1.dp, ResonanceColors.Divider.copy(alpha = 0.86f), RoundedCornerShape(18.dp))
+                    .resonanceGlass(
+                        shape = RoundedCornerShape(20.dp),
+                        backgroundColor = ResonanceColors.Glass,
+                        borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                        shadowElevation = 6.dp,
+                    )
                     .clickable(interactionSource = interactionSource, indication = null) { onClick(index) }
-                    .padding(horizontal = 14.dp, vertical = 15.dp),
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(
                     Modifier
-                        .size(48.dp)
-                        .shadow(3.dp, RoundedCornerShape(14.dp))
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Brush.linearGradient(listOf(ResonanceColors.CoralSoft, Color(0xFF262035))))
-                        .border(1.dp, ResonanceColors.Coral.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                        .size(50.dp)
+                        .shadow(6.dp, RoundedCornerShape(15.dp), ambientColor = ResonanceColors.Coral.copy(alpha = 0.3f), spotColor = ResonanceColors.Shadow)
+                        .clip(RoundedCornerShape(15.dp))
+                        .background(Brush.linearGradient(listOf(ResonanceColors.CoralSoft, Color(0xFF261E38))))
+                        .border(1.dp, ResonanceColors.Coral.copy(alpha = 0.3f), RoundedCornerShape(15.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(action.first, contentDescription = null, tint = ResonanceColors.CoralGlow)
+                    Icon(action.first, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(24.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(action.second, style = MaterialTheme.typography.titleMedium)
+                    Text(action.second, style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    Spacer(Modifier.height(3.dp))
                     Text(action.third, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
                 }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = ResonanceColors.Coral.copy(alpha = 0.72f))
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(20.dp))
             }
         }
     }
 }
+
 
 @Composable
 private fun BrandMark(modifier: Modifier = Modifier) {
@@ -2287,23 +2671,27 @@ private fun BrandMark(modifier: Modifier = Modifier) {
 
 @Composable
 private fun EmptyLibraryArtwork(size: Dp) {
+    val coral = ResonanceColors.Coral
+    val soft = ResonanceColors.Soft
+    val divider = ResonanceColors.Divider
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             drawCircle(
-                brush = Brush.radialGradient(listOf(ResonanceColors.Coral.copy(alpha = 0.26f), Color.Transparent)),
+                brush = Brush.radialGradient(listOf(coral.copy(alpha = 0.26f), Color.Transparent)),
                 radius = this.size.minDimension * 0.52f,
             )
             drawCircle(color = Color(0xFF090C10), radius = this.size.minDimension * 0.37f)
-            drawCircle(color = ResonanceColors.Soft, radius = this.size.minDimension * 0.17f)
-            drawCircle(color = ResonanceColors.Coral, radius = this.size.minDimension * 0.055f)
+            drawCircle(color = soft, radius = this.size.minDimension * 0.17f)
+            drawCircle(color = coral, radius = this.size.minDimension * 0.055f)
             repeat(5) { index ->
                 drawCircle(
-                    color = ResonanceColors.Divider.copy(alpha = 0.55f),
+                    color = divider.copy(alpha = 0.55f),
                     radius = this.size.minDimension * (0.21f + index * 0.026f),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
                 )
             }
         }
+
         Box(
             Modifier
                 .align(Alignment.BottomEnd)

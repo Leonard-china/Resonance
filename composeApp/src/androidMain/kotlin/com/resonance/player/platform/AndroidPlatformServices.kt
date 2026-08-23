@@ -220,6 +220,25 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         Unit
     }
 
+    override suspend fun loadThemeMode(): com.resonance.player.model.ThemeMode = withContext(Dispatchers.IO) {
+        val raw = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .getString("app.themeMode", null)
+        when (raw) {
+            "Light" -> com.resonance.player.model.ThemeMode.Light
+            "System" -> com.resonance.player.model.ThemeMode.System
+            else -> com.resonance.player.model.ThemeMode.Dark
+        }
+    }
+
+    override suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("app.themeMode", mode.name)
+            .commit()
+        Unit
+    }
+
+
     override val libraryLocation: String
         get() = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
             .resolve("Resonance").absolutePath
