@@ -134,6 +134,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.resonanceGlass
+import com.resonance.player.design.resonancePressable
 import com.resonance.player.model.APP_VERSION
 import com.resonance.player.model.LibraryDestination
 import com.resonance.player.model.LyricsUiState
@@ -165,26 +167,12 @@ private val destinationItems = listOf(
 private const val MotionQuick = 160
 private const val MotionStandard = 280
 
-@Composable
 private fun Modifier.pressScale(
     interactionSource: MutableInteractionSource,
     pressedScale: Float = 0.96f,
     restingScale: Float = 1f,
-): Modifier {
-    val pressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) pressedScale else restingScale,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessMedium,
-        ),
-        label = "pressScale",
-    )
-    return graphicsLayer {
-        scaleX = scale
-        scaleY = scale
-    }
-}
+): Modifier = this.resonancePressable(interactionSource, pressedScale, restingScale)
+
 
 @Composable
 private fun ResonanceBackdrop(
@@ -197,46 +185,74 @@ private fun ResonanceBackdrop(
         animationSpec = tween(700),
         label = "backdropEnergy",
     )
+    val transition = rememberInfiniteTransition(label = "backdropAuroraMotion")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(28000, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = AnimationRepeatMode.Restart,
+        ),
+        label = "backdropAuroraAngle",
+    )
+    val rad = (angle * (kotlin.math.PI / 180.0)).toFloat()
+    val cosOffset = kotlin.math.cos(rad)
+    val sinOffset = kotlin.math.sin(rad)
     val phase = (((seed % 19) + 19) % 19) / 18f
+
     Canvas(
         modifier = modifier.background(
             Brush.verticalGradient(
                 listOf(
-                    Color(0xFF0C1018),
+                    Color(0xFF0A0E17),
                     ResonanceColors.Canvas,
-                    Color(0xFF07080C),
+                    Color(0xFF040609),
                 ),
             ),
         ),
     ) {
-        val radius = size.maxDimension * 0.56f
-        val coralCenter = Offset(size.width * (0.18f + phase * 0.12f), size.height * 0.08f)
-        val violetCenter = Offset(size.width * (0.86f - phase * 0.10f), size.height * 0.58f)
+        val radius = size.maxDimension * 0.60f
+        val coralCenter = Offset(
+            size.width * (0.18f + phase * 0.12f) + cosOffset * (size.width * 0.05f),
+            size.height * 0.08f + sinOffset * (size.height * 0.05f),
+        )
+        val violetCenter = Offset(
+            size.width * (0.86f - phase * 0.10f) - cosOffset * (size.width * 0.05f),
+            size.height * 0.58f - sinOffset * (size.height * 0.05f),
+        )
+        // Aurora Layer 1: Coral Bloom
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Coral.copy(alpha = 0.055f * energy), Color.Transparent),
+                colors = listOf(ResonanceColors.Coral.copy(alpha = 0.08f * energy), Color.Transparent),
                 center = coralCenter,
                 radius = radius,
             ),
             radius = radius,
             center = coralCenter,
         )
+        // Aurora Layer 2: Violet Depth
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(ResonanceColors.Violet.copy(alpha = 0.04f * energy), Color.Transparent),
+                colors = listOf(ResonanceColors.Violet.copy(alpha = 0.065f * energy), Color.Transparent),
                 center = violetCenter,
-                radius = radius * 0.82f,
+                radius = radius * 0.85f,
             ),
-            radius = radius * 0.82f,
+            radius = radius * 0.85f,
             center = violetCenter,
         )
+        // Aurora Layer 3: Mint Subtle Floor
         drawCircle(
-            color = ResonanceColors.Azure.copy(alpha = 0.015f * energy),
-            radius = size.minDimension * 0.30f,
-            center = Offset(size.width * 0.62f, size.height * 0.96f),
+            brush = Brush.radialGradient(
+                colors = listOf(ResonanceColors.Mint.copy(alpha = 0.035f * energy), Color.Transparent),
+                center = Offset(size.width * 0.55f, size.height * 0.95f),
+                radius = size.minDimension * 0.45f,
+            ),
+            radius = size.minDimension * 0.45f,
+            center = Offset(size.width * 0.55f, size.height * 0.95f),
         )
     }
 }
+
 
 @Composable
 fun LibraryShell(
@@ -508,21 +524,40 @@ private fun CompactShell(
         }
         NavigationBar(
             containerColor = ResonanceColors.Glass,
-            tonalElevation = 6.dp,
-            modifier = Modifier.heightIn(min = 76.dp).border(1.dp, ResonanceColors.Divider.copy(alpha = 0.75f)),
+            tonalElevation = 0.dp,
+            modifier = Modifier
+                .heightIn(min = 74.dp)
+                .resonanceGlass(
+                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
+                    backgroundColor = ResonanceColors.Glass,
+                    shadowElevation = 10.dp,
+                ),
         ) {
             destinationItems.forEach { item ->
                 val selected = destination == item.destination
                 val iconScale by animateFloatAsState(
-                    targetValue = if (selected) 1.12f else 1f,
+                    targetValue = if (selected) 1.15f else 1f,
                     animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
                     label = "bottomNavIcon",
                 )
                 NavigationBarItem(
                     selected = selected,
                     onClick = { onDestinationChange(item.destination) },
-                    icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }) },
-                    label = { Text(item.label) },
+                    icon = {
+                        Icon(
+                            item.icon,
+                            contentDescription = item.label,
+                            tint = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Dim,
+                            modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+                        )
+                    },
+                    label = {
+                        Text(
+                            item.label,
+                            color = if (selected) ResonanceColors.Ivory else ResonanceColors.Dim,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                    },
                 )
             }
         }
@@ -652,26 +687,33 @@ private fun DesktopSidebar(
 ) {
     Column(
         modifier = Modifier
-            .width(232.dp)
+            .width(236.dp)
             .fillMaxHeight()
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF151A25),
+                        Color(0xFF131826),
                         ResonanceColors.Raised,
-                        Color(0xFF0D1119),
+                        Color(0xFF090D14),
                     ),
                 ),
             )
-            .border(width = 1.dp, color = ResonanceColors.Divider.copy(alpha = 0.72f))
+            .border(
+                BorderStroke(
+                    1.dp,
+                    Brush.verticalGradient(
+                        listOf(ResonanceColors.GlassBorder, ResonanceColors.DividerStrong.copy(alpha = 0.35f)),
+                    ),
+                ),
+            )
             .padding(horizontal = 18.dp, vertical = 24.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             BrandMark()
             Spacer(Modifier.width(12.dp))
             Column {
-                Text("RESONANCE", style = MaterialTheme.typography.titleMedium)
-                Text("LOCAL MUSIC", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Dim)
+                Text("RESONANCE", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text("LOCAL MUSIC", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Mint)
             }
         }
         Spacer(Modifier.height(34.dp))
@@ -684,35 +726,39 @@ private fun DesktopSidebar(
             Spacer(Modifier.height(6.dp))
         }
         Spacer(Modifier.weight(1f))
-        Surface(
-            color = ResonanceColors.Glass,
-            shape = RoundedCornerShape(18.dp),
-            border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.85f)),
-            shadowElevation = 4.dp,
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .resonanceGlass(
+                    shape = RoundedCornerShape(18.dp),
+                    backgroundColor = ResonanceColors.GlassUltra,
+                    shadowElevation = 4.dp,
+                ),
         ) {
             Column(Modifier.padding(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(ResonanceColors.Mint))
                     Spacer(Modifier.width(8.dp))
-                    Text("本地模式", style = MaterialTheme.typography.labelLarge)
+                    Text("本地优先", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.Ivory)
                 }
                 Spacer(Modifier.height(6.dp))
-                Text("音乐只在你的设备之间流动", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+                Text("音乐只在你的设备之间安全流动", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
             }
         }
     }
 }
 
+
 @Composable
 private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val background by animateColorAsState(
-        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.92f) else Color.Transparent,
+        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.95f) else Color.Transparent,
         animationSpec = tween(MotionQuick),
         label = "sidebarBackground",
     )
     val foreground by animateColorAsState(
-        if (selected) ResonanceColors.Coral else ResonanceColors.Muted,
+        if (selected) ResonanceColors.CoralGlow else ResonanceColors.Muted,
         animationSpec = tween(MotionQuick),
         label = "sidebarForeground",
     )
@@ -725,7 +771,7 @@ private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick
             .background(background)
             .border(
                 width = 1.dp,
-                color = if (selected) ResonanceColors.Coral.copy(alpha = 0.16f) else Color.Transparent,
+                color = if (selected) ResonanceColors.Coral.copy(alpha = 0.4f) else Color.Transparent,
                 shape = RoundedCornerShape(14.dp),
             )
             .clickable(
@@ -739,7 +785,7 @@ private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick
         if (selected) {
             Box(
                 Modifier
-                    .width(3.dp)
+                    .width(3.5.dp)
                     .height(18.dp)
                     .clip(CircleShape)
                     .background(ResonanceColors.Coral),
@@ -748,9 +794,15 @@ private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick
         }
         Icon(item.icon, contentDescription = null, tint = foreground, modifier = Modifier.size(21.dp))
         Spacer(Modifier.width(12.dp))
-        Text(item.label, style = MaterialTheme.typography.labelLarge, color = foreground)
+        Text(
+            item.label,
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) ResonanceColors.Ivory else foreground,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+        )
     }
 }
+
 
 @Composable
 private fun DestinationContent(
@@ -1800,7 +1852,7 @@ private fun MiniPlayer(
     val nextInteraction = remember { MutableInteractionSource() }
     val repeatInteraction = remember { MutableInteractionSource() }
     val artworkScale by animateFloatAsState(
-        targetValue = if (playerState.isPlaying) 1.035f else 1f,
+        targetValue = if (playerState.isPlaying) 1.04f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "miniArtworkScale",
     )
@@ -1808,17 +1860,15 @@ private fun MiniPlayer(
         modifier = Modifier
             .padding(horizontal = horizontalPadding, vertical = 8.dp)
             .fillMaxWidth()
-            .shadow(10.dp, RoundedCornerShape(22.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
-            .clip(RoundedCornerShape(22.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(Color(0xF21B202C), Color(0xF2261C27), Color(0xF2181D28)),
-                ),
-            )
-            .border(1.dp, ResonanceColors.DividerStrong.copy(alpha = 0.72f), RoundedCornerShape(22.dp)),
+            .resonanceGlass(
+                shape = RoundedCornerShape(22.dp),
+                backgroundColor = ResonanceColors.Glass,
+                borderColors = listOf(ResonanceColors.Coral.copy(alpha = 0.35f), ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 12.dp,
+            ),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 9.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
@@ -1835,11 +1885,11 @@ private fun MiniPlayer(
                     Modifier
                         .size(52.dp)
                         .graphicsLayer { scaleX = artworkScale; scaleY = artworkScale }
-                        .shadow(9.dp, RoundedCornerShape(13.dp)),
-                    13.dp,
+                        .shadow(10.dp, RoundedCornerShape(14.dp), ambientColor = ResonanceColors.Coral.copy(alpha = 0.3f), spotColor = ResonanceColors.Shadow),
+                    14.dp,
                     track.artworkPath,
                 )
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(13.dp))
                 AnimatedContent(
                     targetState = track,
                     modifier = Modifier.weight(1f),
@@ -1851,8 +1901,22 @@ private fun MiniPlayer(
                     label = "miniTrack",
                 ) { activeTrack ->
                     Column {
-                        Text(activeTrack.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(activeTrack.artist, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            activeTrack.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            color = ResonanceColors.Ivory,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            activeTrack.artist.ifBlank { "未知歌手" },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = ResonanceColors.Muted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                 }
             }
@@ -1860,30 +1924,30 @@ private fun MiniPlayer(
                 IconButton(
                     onClick = onToggleShuffle,
                     interactionSource = shuffleInteraction,
-                    modifier = Modifier.size(48.dp).pressScale(shuffleInteraction, pressedScale = 0.82f),
+                    modifier = Modifier.size(46.dp).pressScale(shuffleInteraction, pressedScale = 0.85f),
                 ) {
                     Icon(
                         Icons.Default.Shuffle,
                         contentDescription = if (playerState.shuffleEnabled) "关闭随机播放" else "开启随机播放",
-                        tint = if (playerState.shuffleEnabled) ResonanceColors.Coral else ResonanceColors.Muted,
+                        tint = if (playerState.shuffleEnabled) ResonanceColors.Coral else ResonanceColors.Dim,
                         modifier = Modifier.size(20.dp),
                     )
                 }
                 IconButton(
                     onClick = onPrevious,
                     interactionSource = previousInteraction,
-                    modifier = Modifier.size(48.dp).pressScale(previousInteraction, pressedScale = 0.82f),
+                    modifier = Modifier.size(46.dp).pressScale(previousInteraction, pressedScale = 0.85f),
                 ) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一首")
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一首", tint = ResonanceColors.Ivory)
                 }
             }
             FilledIconButton(
                 onClick = onTogglePlay,
                 interactionSource = playInteraction,
                 modifier = Modifier
-                    .size(48.dp)
-                    .pressScale(playInteraction, pressedScale = 0.82f)
-                    .shadow(6.dp, CircleShape, ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow),
+                    .size(50.dp)
+                    .pressScale(playInteraction, pressedScale = 0.88f)
+                    .shadow(10.dp, CircleShape, ambientColor = ResonanceColors.Coral.copy(alpha = 0.45f), spotColor = ResonanceColors.CoralGlow),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = ResonanceColors.Coral,
                     contentColor = Color(0xFF2A0B07),
@@ -1894,21 +1958,25 @@ private fun MiniPlayer(
                     transitionSpec = { scaleIn(tween(MotionQuick)) togetherWith scaleOut(tween(MotionQuick)) },
                     label = "playPause",
                 ) { playing ->
-                    Icon(if (playing) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (playing) "暂停" else "播放")
+                    Icon(
+                        if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        contentDescription = if (playing) "暂停" else "播放",
+                        modifier = Modifier.size(26.dp),
+                    )
                 }
             }
             IconButton(
                 onClick = onNext,
                 interactionSource = nextInteraction,
-                modifier = Modifier.size(48.dp).pressScale(nextInteraction, pressedScale = 0.82f),
+                modifier = Modifier.size(46.dp).pressScale(nextInteraction, pressedScale = 0.85f),
             ) {
-                Icon(Icons.Default.SkipNext, contentDescription = "下一首")
+                Icon(Icons.Default.SkipNext, contentDescription = "下一首", tint = ResonanceColors.Ivory)
             }
             if (!compact) {
                 IconButton(
                     onClick = onCycleRepeat,
                     interactionSource = repeatInteraction,
-                    modifier = Modifier.size(48.dp).pressScale(repeatInteraction, pressedScale = 0.82f),
+                    modifier = Modifier.size(46.dp).pressScale(repeatInteraction, pressedScale = 0.85f),
                 ) {
                     Icon(
                         if (playerState.repeatMode == RepeatMode.One) Icons.Default.RepeatOne else Icons.Default.Repeat,
@@ -1917,7 +1985,7 @@ private fun MiniPlayer(
                             RepeatMode.All -> "开启单曲循环"
                             RepeatMode.One -> "关闭循环"
                         },
-                        tint = if (playerState.repeatMode == RepeatMode.Off) ResonanceColors.Muted else ResonanceColors.Coral,
+                        tint = if (playerState.repeatMode == RepeatMode.Off) ResonanceColors.Dim else ResonanceColors.Coral,
                         modifier = Modifier.size(20.dp),
                     )
                 }
@@ -1926,16 +1994,16 @@ private fun MiniPlayer(
         Slider(
             value = playerState.progress.coerceIn(0f, 1f),
             onValueChange = onSeek,
-            modifier = Modifier.fillMaxWidth().height(18.dp).padding(horizontal = 4.dp),
+            modifier = Modifier.fillMaxWidth().height(16.dp).padding(horizontal = 6.dp),
             colors = SliderDefaults.colors(
-                thumbColor = ResonanceColors.Coral,
+                thumbColor = ResonanceColors.CoralGlow,
                 activeTrackColor = ResonanceColors.Coral,
-                inactiveTrackColor = ResonanceColors.Divider,
+                inactiveTrackColor = ResonanceColors.DividerStrong.copy(alpha = 0.7f),
             ),
         )
         if (!compact) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(

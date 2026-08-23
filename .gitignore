@@ -24,3 +24,4 @@ Thumbs.db
 *.msi
 *.exe
 *.zip
+.agents/
