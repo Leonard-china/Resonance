@@ -3,7 +3,6 @@ package com.resonance.player.design
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -23,8 +22,6 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -36,6 +33,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.resonance.player.model.ThemeMode
 
+/**
+ * Resonance Design System — Minimal / Music-first / Hi-Fi.
+ *
+ * 克制、高信息密度、封面优先。页面背景为纯色（浅 #FAFAFA / 深 #101010），
+ * 珊瑚红仅作强调色。不允许大面积渐变、厚阴影与玻璃拟态。
+ */
 data class ResonanceColorTokens(
     val isDark: Boolean,
     val Canvas: Color,
@@ -71,68 +74,68 @@ data class ResonanceColorTokens(
 
 val DarkResonanceColors = ResonanceColorTokens(
     isDark = true,
-    Canvas = Color(0xFF06080D),
-    CanvasElevated = Color(0xFF0B1019),
-    Raised = Color(0xFF101622),
-    Soft = Color(0xFF161E2E),
-    SurfaceSubtle = Color(0xFF1C263A),
-    Glass = Color(0xB8121826),
-    GlassLight = Color(0x701D283E),
-    GlassUltra = Color(0x40162032),
-    GlassBorder = Color(0x40FFFFFF),
-    GlassBorderSubtle = Color(0x20FFFFFF),
-    GlassBorderGlow = Color(0x66FF715B),
-    Divider = Color(0xFF202A3C),
-    DividerStrong = Color(0xFF32415B),
-    Ivory = Color(0xFFF9F6F0),
-    Muted = Color(0xFFBAC5D8),
-    Dim = Color(0xFF7B8BA6),
-    Dimmer = Color(0xFF50607A),
+    Canvas = Color(0xFF101010),
+    CanvasElevated = Color(0xFF161616),
+    Raised = Color(0xFF1B1B1B),
+    Soft = Color(0xFF242424),
+    SurfaceSubtle = Color(0xFF2E2E2E),
+    Glass = Color(0xFF1A1A1A),
+    GlassLight = Color(0xFF222222),
+    GlassUltra = Color(0xFF2A2A2A),
+    GlassBorder = Color(0x1FFFFFFF),
+    GlassBorderSubtle = Color(0x12FFFFFF),
+    GlassBorderGlow = Color(0x66FF6B55),
+    Divider = Color(0x1FFFFFFF),
+    DividerStrong = Color(0x33FFFFFF),
+    Ivory = Color(0xFFF5F5F5),
+    Muted = Color(0xFFA6A6A6),
+    Dim = Color(0xFF757575),
+    Dimmer = Color(0xFF545454),
     Coral = Color(0xFFFF6B55),
-    CoralGlow = Color(0xFFFFA090),
-    CoralSoft = Color(0xFF3D1E24),
+    CoralGlow = Color(0xFFFF8A76),
+    CoralSoft = Color(0x2EFF6B55),
     Mint = Color(0xFF4EE3B0),
     MintGlow = Color(0xFF88F2CE),
-    MintSoft = Color(0xFF14382E),
+    MintSoft = Color(0x2E4EE3B0),
     Amber = Color(0xFFFFB84D),
     Violet = Color(0xFF9885FF),
     VioletGlow = Color(0xFFBFB2FF),
-    VioletSoft = Color(0xFF28204E),
+    VioletSoft = Color(0x2E9885FF),
     Azure = Color(0xFF4AC4F3),
-    Shadow = Color(0xFF020306),
+    Shadow = Color(0xFF000000),
 )
 
 val LightResonanceColors = ResonanceColorTokens(
     isDark = false,
-    Canvas = Color(0xFFF3F5FA),
+    Canvas = Color(0xFFFAFAFA),
     CanvasElevated = Color(0xFFFFFFFF),
     Raised = Color(0xFFFFFFFF),
-    Soft = Color(0xFFE6EDF7),
-    SurfaceSubtle = Color(0xFFDCE5F2),
-    Glass = Color(0xD8FFFFFF),
-    GlassLight = Color(0x99FFFFFF),
-    GlassUltra = Color(0x60FFFFFF),
-    GlassBorder = Color(0x25000000),
-    GlassBorderSubtle = Color(0x10000000),
-    GlassBorderGlow = Color(0x40FF5E48),
-    Divider = Color(0xFFD8E1ED),
-    DividerStrong = Color(0xFFC0CDDF),
-    Ivory = Color(0xFF111827),
-    Muted = Color(0xFF4B5B74),
-    Dim = Color(0xFF71829B),
-    Dimmer = Color(0xFF99A9BF),
+    Soft = Color(0xFFF0F0F0),
+    SurfaceSubtle = Color(0xFFE6E6E6),
+    Glass = Color(0xFFFFFFFF),
+    GlassLight = Color(0xFFF4F4F4),
+    GlassUltra = Color(0xFFECECEC),
+    GlassBorder = Color(0x14000000),
+    GlassBorderSubtle = Color(0x0D000000),
+    GlassBorderGlow = Color(0x40FF5238),
+    Divider = Color(0x14000000),
+    DividerStrong = Color(0x24000000),
+    Ivory = Color(0xFF1A1A1A),
+    Muted = Color(0xFF5F5F5F),
+    Dim = Color(0xFF8A8A8A),
+    Dimmer = Color(0xFFB4B4B4),
     Coral = Color(0xFFFF5238),
-    CoralGlow = Color(0xFFFF6E56),
-    CoralSoft = Color(0xFFFFECE8),
+    CoralGlow = Color(0xFFFF5238),
+    CoralSoft = Color(0x1AFF5238),
     Mint = Color(0xFF0FB883),
-    MintGlow = Color(0xFF1FCF95),
-    MintSoft = Color(0xFFE0F8EF),
+    MintGlow = Color(0xFF0FB883),
+    MintSoft = Color(0x1A0FB883),
     Amber = Color(0xFFE68A00),
     Violet = Color(0xFF735BF2),
-    VioletGlow = Color(0xFF8B75FF),
-    VioletSoft = Color(0xFFEDE8FE),
+    VioletGlow = Color(0xFF735BF2),
+    VioletSoft = Color(0x1A735BF2),
     Azure = Color(0xFF0EA5E9),
-    Shadow = Color(0x18101E36),
+    Shadow = Color(0xFF000000),
 )
 
 val LocalResonanceColors = staticCompositionLocalOf { DarkResonanceColors }
@@ -143,6 +146,7 @@ object ResonanceColors {
     val CanvasElevated: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.CanvasElevated
     val Raised: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Raised
     val Soft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Soft
+    val Surface: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.CanvasElevated
     val SurfaceSubtle: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.SurfaceSubtle
     val Glass: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Glass
     val GlassLight: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.GlassLight
@@ -170,20 +174,36 @@ object ResonanceColors {
     val Shadow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Shadow
 }
 
-/**
- * Emil Kowalski's Spring-physics pressable modifier for instantaneous (zero-delay)
- * and tactile active interaction feedback.
- */
+/** 统一圆角尺度 —— 克制使用。 */
+object ResonanceShapes {
+    val Button = RoundedCornerShape(12.dp)
+    val ArtworkSmall = RoundedCornerShape(8.dp)
+    val Artwork = RoundedCornerShape(12.dp)
+    val ArtworkLarge = RoundedCornerShape(20.dp)
+    val Panel = RoundedCornerShape(14.dp)
+}
+
+/** 统一间距尺度。 */
+object ResonanceSpacing {
+    val Xs = 4.dp
+    val Sm = 8.dp
+    val Md = 12.dp
+    val Lg = 16.dp
+    val Xl = 20.dp
+    val Xxl = 28.dp
+}
+
+/** 按压反馈：轻微的即时缩放。 */
 fun Modifier.resonancePressable(
     interactionSource: MutableInteractionSource,
-    pressedScale: Float = 0.96f,
+    pressedScale: Float = 0.97f,
     restingScale: Float = 1f,
 ): Modifier = composed {
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) pressedScale else restingScale,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
+            dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessMedium,
         ),
         label = "resonancePressScale",
@@ -195,51 +215,47 @@ fun Modifier.resonancePressable(
 }
 
 /**
- * Reusable Glassmorphism Panel with luminous subtle gradient border and soft shadow.
+ * 平面面板（原玻璃拟态的替代品）：纯色背景 + 细分隔描边，无阴影、无渐变。
+ * 保留原函数签名，所有既有调用点自动变为扁平风格。
  */
 @Composable
 fun Modifier.resonanceGlass(
-    shape: Shape = RoundedCornerShape(20.dp),
+    shape: Shape = ResonanceShapes.Panel,
     backgroundColor: Color = ResonanceColors.Glass,
     borderColors: List<Color> = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-    shadowElevation: Dp = 8.dp,
+    shadowElevation: Dp = 0.dp,
     shadowColor: Color = ResonanceColors.Shadow,
 ): Modifier = this
-    .shadow(shadowElevation, shape, ambientColor = shadowColor.copy(alpha = 0.35f), spotColor = shadowColor)
     .clip(shape)
     .background(backgroundColor)
-    .border(
-        BorderStroke(1.dp, Brush.linearGradient(borderColors)),
-        shape,
-    )
+    .border(Dp.Hairline, borderColors.first(), shape)
 
 private val resonanceTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 52.sp,
-        lineHeight = 56.sp,
-        letterSpacing = (-1.4).sp,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.3).sp,
     ),
     displaySmall = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 36.sp,
-        lineHeight = 41.sp,
-        letterSpacing = (-0.8).sp,
+        fontSize = 26.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.2).sp,
     ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
-        letterSpacing = (-0.4).sp,
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 22.sp,
-        lineHeight = 28.sp,
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -250,6 +266,12 @@ private val resonanceTypography = Typography(
     titleMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 21.sp,
+    ),
+    titleSmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
         fontSize = 15.sp,
         lineHeight = 20.sp,
     ),
@@ -257,13 +279,19 @@ private val resonanceTypography = Typography(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
+        lineHeight = 23.sp,
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
+    ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
@@ -276,6 +304,13 @@ private val resonanceTypography = Typography(
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
+        letterSpacing = 0.2.sp,
+    ),
+    labelSmall = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 11.sp,
+        lineHeight = 15.sp,
         letterSpacing = 0.2.sp,
     ),
 )
@@ -338,4 +373,3 @@ fun ResonanceTheme(
         )
     }
 }
-

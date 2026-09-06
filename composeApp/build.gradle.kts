@@ -7,6 +7,13 @@ val releaseKeystoreProperties = Properties().apply {
     if (propertiesFile.isFile) propertiesFile.inputStream().use(::load)
 }
 
+val versionProperties = Properties().apply {
+    val propertiesFile = rootProject.file("version.properties")
+    if (propertiesFile.isFile) propertiesFile.inputStream().use(::load)
+}
+val appVersionName: String = versionProperties.getProperty("versionName", "0.2.1")
+val appVersionCode: Int = versionProperties.getProperty("versionCode", "9").toIntOrNull() ?: 9
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.compose.multiplatform)
@@ -50,6 +57,7 @@ kotlin {
                 implementation("org.openjfx:javafx-base:21.0.8:win")
                 implementation("org.openjfx:javafx-graphics:21.0.8:win")
                 implementation("org.openjfx:javafx-media:21.0.8:win")
+                implementation("org.xerial:sqlite-jdbc:3.47.1.0")
             }
         }
         val androidMain by getting {
@@ -77,8 +85,8 @@ android {
         applicationId = "com.resonance.player"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.2.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {
@@ -129,7 +137,7 @@ compose.desktop {
             modules("jdk.httpserver")
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Resonance"
-            packageVersion = "0.2.0"
+            packageVersion = appVersionName
             description = "Local music library, player, converter, and device sync"
             vendor = "Resonance"
             windows {
@@ -174,4 +182,35 @@ tasks.register<JavaExec>("lanShareProbe") {
     val testCompilation = kotlin.targets.getByName("desktop").compilations.getByName("test")
     classpath = files(testCompilation.runtimeDependencyFiles, testCompilation.output.allOutputs)
     mainClass.set("com.resonance.player.sync.LanShareProbe")
+}
+
+tasks.register("bumpVersion") {
+    group = "versioning"
+    description = "Automatically bumps the patch version and versionCode in version.properties and LibraryModels.kt"
+    doLast {
+        val file = rootProject.file("version.properties")
+        val props = Properties().apply { if (file.isFile) file.inputStream().use(::load) }
+        val currentName = props.getProperty("versionName", "0.2.0")
+        val currentCode = props.getProperty("versionCode", "8").toIntOrNull() ?: 8
+
+        val parts = currentName.split('.').mapNotNull { it.toIntOrNull() }
+        val nextName = if (parts.size >= 3) {
+            "${parts[0]}.${parts[1]}.${parts[2] + 1}"
+        } else {
+            "$currentName.1"
+        }
+        val nextCode = currentCode + 1
+
+        props.setProperty("versionName", nextName)
+        props.setProperty("versionCode", nextCode.toString())
+        file.outputStream().use { props.store(it, "Resonance build version") }
+
+        val modelFile = project.file("src/commonMain/kotlin/com/resonance/player/model/LibraryModels.kt")
+        if (modelFile.isFile) {
+            val content = modelFile.readText()
+            val updated = content.replace(Regex("""const val APP_VERSION = "[^"]*""""), """const val APP_VERSION = "$nextName"""")
+            modelFile.writeText(updated)
+        }
+        println("Resonance version bumped: $currentName ($currentCode) -> $nextName ($nextCode)")
+    }
 }

@@ -66,6 +66,41 @@ fun App(services: PlatformServices) {
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
         var lanQrPath by remember { mutableStateOf<String?>(null) }
         var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
+        var deepSeekConfig by remember { mutableStateOf(com.resonance.player.model.DeepSeekConfig()) }
+        var customLyricsFolder by remember { mutableStateOf<String?>(null) }
+        var batchEnrichCandidateTracks by remember { mutableStateOf<List<Track>?>(null) }
+        var batchEnrichRunning by remember { mutableStateOf(false) }
+        var batchEnrichProgress by remember { mutableStateOf<com.resonance.player.model.BatchEnrichProgress?>(null) }
+        var batchEnrichReport by remember { mutableStateOf<com.resonance.player.model.BatchEnrichReport?>(null) }
+        var batchEnrichJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+        fun startBatchEnrich(tracks: List<Track>, options: com.resonance.player.model.BatchEnrichOptions) {
+            batchEnrichRunning = true
+            batchEnrichProgress = null
+            batchEnrichReport = null
+            batchEnrichJob = scope.launch {
+                try {
+                    val report = services.batchEnrichTracks(options, tracks) { p ->
+                        batchEnrichProgress = p
+                    }
+                    batchEnrichReport = report
+                    val loadedTracks = services.loadLibrary()
+                    val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
+                    importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
+                    playlists = loadedPlaylists
+                    services.savePlaylists(loadedPlaylists)
+                    player.currentTrack?.let { curr ->
+                        report.updatedTracks.firstOrNull { it.id == curr.id }?.let { updatedCurr ->
+                            player = player.copy(currentTrack = updatedCurr)
+                        }
+                    }
+                } catch (error: Throwable) {
+                    importMessage = "智能补全已停止或遇到问题：${error.message ?: error::class.simpleName.orEmpty()}"
+                } finally {
+                    batchEnrichRunning = false
+                }
+            }
+        }
 
         fun selectPlaylist(playlistId: String?, persist: Boolean = true) {
             selectedPlaylistId = playlistId
@@ -86,6 +121,8 @@ fun App(services: PlatformServices) {
                 importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
                 playlists = loadedPlaylists
                 selectedPlaylistId = restoredPlaylistId
+                deepSeekConfig = services.loadDeepSeekConfig()
+                customLyricsFolder = services.loadCustomLyricsFolder()
                 services.savePlaylists(loadedPlaylists)
                 services.saveLastSelectedPlaylistId(restoredPlaylistId)
             } catch (error: Throwable) {
@@ -170,6 +207,9 @@ fun App(services: PlatformServices) {
         LaunchedEffect(services) {
             services.playbackProgress.collect { progress -> player = player.copy(progress = progress) }
         }
+        LaunchedEffect(services) {
+            services.isPlayingChanges.collect { isPlaying -> player = player.copy(isPlaying = isPlaying) }
+        }
         LaunchedEffect(services, player.currentTrack?.id) {
             val track = player.currentTrack
             if (track == null || track.sourceUri == null) {
@@ -178,6 +218,21 @@ fun App(services: PlatformServices) {
                 lyricsState = LyricsUiState.Loading
                 val result = services.loadLyrics(track)
                 if (player.currentTrack?.id == track.id) lyricsState = lyricsUiState(result)
+            }
+        }
+
+        fun requestAiLyrics() {
+            val track = player.currentTrack ?: return
+            lyricsState = LyricsUiState.Loading
+            scope.launch {
+                try {
+                    val result = services.requestAiLyrics(track)
+                    if (player.currentTrack?.id == track.id) {
+                        lyricsState = lyricsUiState(result)
+                    }
+                } catch (error: Throwable) {
+                    lyricsState = LyricsUiState.Unavailable("AI 检索失败：${error.message ?: error::class.simpleName}", retryable = true)
+                }
             }
         }
         LaunchedEffect(services, playbackQueue) {
@@ -282,6 +337,7 @@ fun App(services: PlatformServices) {
                                 }
                             }
                         },
+                        onRequestAiLyrics = { requestAiLyrics() },
                         libraryLocation = services.libraryLocation,
                         onPrevious = { moveInQueue(direction = -1) },
                         onNext = { moveInQueue(direction = 1) },
@@ -352,6 +408,69 @@ fun App(services: PlatformServices) {
                             scope.launch {
                                 services.saveThemeMode(newMode)
                             }
+                        },
+                        deepSeekConfig = deepSeekConfig,
+                        onSaveDeepSeekConfig = { cfg ->
+                            deepSeekConfig = cfg
+                            scope.launch { services.saveDeepSeekConfig(cfg) }
+                        },
+                        onTestDeepSeek = { cfg -> services.testDeepSeek(cfg) },
+                        customLyricsFolder = customLyricsFolder,
+                        onSaveCustomLyricsFolder = { fld ->
+                            customLyricsFolder = fld
+                            scope.launch { services.saveCustomLyricsFolder(fld) }
+                        },
+                        onOpenBatchEnrich = { candidateTracks ->
+                            batchEnrichCandidateTracks = candidateTracks
+                            batchEnrichProgress = null
+                            batchEnrichReport = null
+                        },
+                        onBatchDelete = { candidateTracks ->
+                            scope.launch {
+                                operationInProgress = true
+                                try {
+                                    if (player.currentTrack?.let { curr -> candidateTracks.any { it.id == curr.id } } == true) {
+                                        services.setPlaying(false)
+                                        player = PlayerState()
+                                    }
+                                    val report = services.batchDeleteTracks(candidateTracks)
+                                    importMessage = report.message
+                                    if (report.success) {
+                                        val loadedTracks = services.loadLibrary()
+                                        val updatedPlaylists = playlists.map { playlist ->
+                                            val remaining = playlist.tracks.filterNot { t -> candidateTracks.any { it.id == t.id } }
+                                            playlist.copy(
+                                                tracks = remaining,
+                                                subtitle = if (playlist.id.startsWith("kugou-")) {
+                                                    "${remaining.size} 首 · 已匹配 ${remaining.count { it.sourceUri != null }} 首本地音乐"
+                                                } else {
+                                                    "${remaining.size} 首 · 自建歌单"
+                                                },
+                                            )
+                                        }
+                                        importedTracks = tracksWithPlaylistArtwork(loadedTracks, updatedPlaylists)
+                                        persistPlaylists(updatedPlaylists)
+                                    }
+                                } catch (error: Throwable) {
+                                    importMessage = "批量删除失败：${error.message ?: error::class.simpleName.orEmpty()}"
+                                } finally {
+                                    operationInProgress = false
+                                }
+                            }
+                        },
+                        onBatchAddToPlaylist = { candidateTracks, playlistId ->
+                            val updated = playlists.map { playlist ->
+                                if (playlist.id != playlistId) playlist
+                                else {
+                                    val combined = (playlist.tracks + candidateTracks).distinctBy(Track::id)
+                                    playlist.copy(
+                                        tracks = combined,
+                                        subtitle = "${combined.size} 首 · 自建歌单",
+                                    )
+                                }
+                            }
+                            persistPlaylists(updated)
+                            importMessage = "已将 ${candidateTracks.size} 首歌曲添加到歌单"
                         },
                         message = importMessage,
                         operationInProgress = operationInProgress || initialLoadInProgress,
@@ -477,6 +596,38 @@ fun App(services: PlatformServices) {
                                 } finally {
                                     operationInProgress = false
                                 }
+                            }
+                        },
+                    )
+                }
+
+                batchEnrichCandidateTracks?.let { candidateTracks ->
+                    com.resonance.player.ui.BatchEnrichDialog(
+                        selectedTracks = candidateTracks,
+                        isRunning = batchEnrichRunning,
+                        progress = batchEnrichProgress,
+                        report = batchEnrichReport,
+                        hasDeepSeekConfigured = deepSeekConfig.isConfigured,
+                        onDismiss = {
+                            batchEnrichJob?.cancel()
+                            batchEnrichJob = null
+                            batchEnrichRunning = false
+                            batchEnrichCandidateTracks = null
+                            batchEnrichProgress = null
+                            batchEnrichReport = null
+                        },
+                        onStartEnrich = { options ->
+                            startBatchEnrich(candidateTracks, options)
+                        },
+                        onCancel = {
+                            batchEnrichJob?.cancel()
+                            batchEnrichJob = null
+                            batchEnrichRunning = false
+                            scope.launch {
+                                val loadedTracks = services.loadLibrary()
+                                val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
+                                importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
+                                playlists = loadedPlaylists
                             }
                         },
                     )

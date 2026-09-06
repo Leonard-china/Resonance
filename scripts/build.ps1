@@ -1,7 +1,57 @@
+param(
+    [switch]$NoBump,
+    [string]$SetVersion
+)
+
 $ErrorActionPreference = "Stop"
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
+
+# ---- 1. 版本号自增逻辑（每次构建均自动变更版本号）----
+$versionFile = Join-Path $projectRoot "version.properties"
+$currentVersion = "0.2.0"
+$currentCode = 8
+
+if (Test-Path -LiteralPath $versionFile) {
+    $propsContent = Get-Content -LiteralPath $versionFile -Encoding UTF8
+    foreach ($line in $propsContent) {
+        if ($line -match '^\s*versionName\s*=\s*(.+)$') { $currentVersion = $Matches[1].Trim() }
+        if ($line -match '^\s*versionCode\s*=\s*(\d+)\s*$') { $currentCode = [int]$Matches[1] }
+    }
+}
+
+$newVersion = $currentVersion
+$newCode = $currentCode
+
+if ($SetVersion) {
+    $newVersion = $SetVersion.Trim()
+    $newCode = $currentCode + 1
+} elseif (-not $NoBump) {
+    $parts = $currentVersion.Split('.')
+    if ($parts.Length -ge 3 -and [int]::TryParse($parts[2], [ref]$null)) {
+        $patch = [int]$parts[2] + 1
+        $newVersion = "$($parts[0]).$($parts[1]).$patch"
+    } else {
+        $newVersion = "$currentVersion.1"
+    }
+    $newCode = $currentCode + 1
+}
+
+if ($newVersion -ne $currentVersion -or $newCode -ne $currentCode) {
+    Write-Host ">>> 自动递增版本: v$currentVersion (code $currentCode) -> v$newVersion (code $newCode)" -ForegroundColor Cyan
+    $versionContent = "versionName=$newVersion`nversionCode=$newCode`n"
+    Set-Content -LiteralPath $versionFile -Value $versionContent -Encoding UTF8
+
+    $modelFile = Join-Path $projectRoot "composeApp\src\commonMain\kotlin\com\resonance\player\model\LibraryModels.kt"
+    if (Test-Path -LiteralPath $modelFile) {
+        $content = Get-Content -LiteralPath $modelFile -Raw -Encoding UTF8
+        $updated = $content -replace 'const val APP_VERSION = "[^"]*"', "const val APP_VERSION = `"$newVersion`""
+        Set-Content -LiteralPath $modelFile -Value $updated -Encoding UTF8 -NoNewline
+    }
+} else {
+    Write-Host ">>> 当前构建版本: v$currentVersion (code $currentCode)" -ForegroundColor Cyan
+}
 
 function Get-CompatibleJavaHome {
     $candidates = @(
@@ -57,4 +107,26 @@ if (-not (Test-Path -LiteralPath $gradle)) {
 
 & $gradle :composeApp:allTests :composeApp:assembleRelease :composeApp:packageReleaseExe --no-configuration-cache
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+Write-Host "`n================ 构建产物汇总 (v$newVersion) ================" -ForegroundColor Green
+
+$apkPath = Join-Path $projectRoot "composeApp\build\outputs\apk\release\Resonance-$newVersion-release.apk"
+if (Test-Path -LiteralPath $apkPath) {
+    $apkItem = Get-Item -LiteralPath $apkPath
+    $apkHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $apkPath).Hash
+    Write-Host "Android APK  : $($apkItem.FullName)" -ForegroundColor Yellow
+    Write-Host "文件大小     : $('{0:N2} MB' -f ($apkItem.Length / 1MB)) ($($apkItem.Length) 字节)"
+    Write-Host "SHA256       : $apkHash"
+}
+
+$exePath = Join-Path $projectRoot "composeApp\build\compose\binaries\main-release\exe\Resonance-$newVersion.exe"
+if (Test-Path -LiteralPath $exePath) {
+    $exeItem = Get-Item -LiteralPath $exePath
+    $exeHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $exePath).Hash
+    Write-Host "Windows EXE  : $($exeItem.FullName)" -ForegroundColor Yellow
+    Write-Host "文件大小     : $('{0:N2} MB' -f ($exeItem.Length / 1MB)) ($($exeItem.Length) 字节)"
+    Write-Host "SHA256       : $exeHash"
+}
+Write-Host "========================================================`n" -ForegroundColor Green
+
 

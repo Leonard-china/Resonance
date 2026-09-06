@@ -41,6 +41,7 @@ fun SyncPackageDialog(
     onConfirm: (String?) -> Unit,
 ) {
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
+    com.resonance.player.platform.ResonanceBackHandler(enabled = true, onBack = onDismiss)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (exporting) "导出同步包" else "导入同步包") },

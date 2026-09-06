@@ -23,7 +23,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,44 +36,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
-import com.resonance.player.design.resonanceGlass
+import com.resonance.player.design.ResonanceShapes
 import com.resonance.player.design.resonancePressable
 
 @Composable
 fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var name by remember { mutableStateOf("") }
     val createInteraction = remember { MutableInteractionSource() }
+    com.resonance.player.platform.ResonanceBackHandler(enabled = true, onBack = onDismiss)
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.72f))
+            .background(Color.Black.copy(alpha = 0.65f))
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        Box(
+        Surface(
             modifier = Modifier
                 .padding(24.dp)
-                .widthIn(max = 440.dp)
+                .widthIn(max = 420.dp)
                 .fillMaxWidth()
-                .resonanceGlass(
-                    shape = RoundedCornerShape(26.dp),
-                    backgroundColor = ResonanceColors.Raised,
-                    shadowElevation = 24.dp,
-                )
                 .clickable(enabled = false) {},
+            shape = ResonanceShapes.Panel,
+            color = ResonanceColors.Raised,
+            tonalElevation = 0.dp,
         ) {
-            Column(Modifier.padding(26.dp)) {
+            Column(Modifier.padding(22.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("新建歌单", style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.Ivory)
-                        Spacer(Modifier.height(3.dp))
-                        Text("稍后可以继续添加和排序歌曲", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+                        Text("新建歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+                        Spacer(Modifier.height(2.dp))
+                        Text("创建后可向歌单添加歌曲", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
                     }
                     IconButton(onClick = onDismiss) {
                         Icon(Icons.Default.Close, contentDescription = "关闭", tint = ResonanceColors.Muted)
                     }
                 }
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(18.dp))
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it.take(60) },
@@ -79,22 +80,28 @@ fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
                     placeholder = { Text("例如：夜行收藏", color = ResonanceColors.Dim) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ResonanceColors.Coral.copy(alpha = 0.6f),
+                        focusedBorderColor = ResonanceColors.Coral,
                         unfocusedBorderColor = ResonanceColors.Divider,
-                        focusedContainerColor = ResonanceColors.GlassLight,
-                        unfocusedContainerColor = ResonanceColors.GlassLight,
+                        focusedContainerColor = ResonanceColors.Canvas,
+                        unfocusedContainerColor = ResonanceColors.Canvas,
                         cursorColor = ResonanceColors.Coral,
                     ),
                 )
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(20.dp))
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = onDismiss) {
+                        Text("取消", color = ResonanceColors.Muted)
+                    }
                     Button(
                         onClick = { onConfirm(name.trim()) },
                         enabled = name.isNotBlank(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Coral, contentColor = Color(0xFF2B0C08)),
+                        shape = ResonanceShapes.Button,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ResonanceColors.Coral,
+                            contentColor = Color.White,
+                        ),
                         modifier = Modifier.resonancePressable(createInteraction),
                         interactionSource = createInteraction,
                     ) {

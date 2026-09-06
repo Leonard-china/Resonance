@@ -3,32 +3,19 @@ package com.resonance.player.ui
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.RepeatMode as AnimationRepeatMode
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,52 +23,68 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import com.resonance.player.model.DeepSeekConfig
+import com.resonance.player.model.DeepSeekTestResult
+import com.resonance.player.model.TrackFilterOption
+import com.resonance.player.model.TrackSortOption
+import com.resonance.player.platform.ResonanceBackHandler
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.RepeatOne
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shuffle
@@ -98,12 +101,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -119,19 +124,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -139,7 +140,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceColors
-import com.resonance.player.design.resonanceGlass
+import com.resonance.player.design.ResonanceShapes
 import com.resonance.player.design.resonancePressable
 import com.resonance.player.model.APP_VERSION
 import com.resonance.player.model.LibraryDestination
@@ -149,14 +150,19 @@ import com.resonance.player.model.Playlist
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.ThemeMode
 import com.resonance.player.model.Track
-
-import com.resonance.player.platform.currentHourOfDay
 import com.resonance.player.platform.decodeArtwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private enum class WindowClass { Compact, Medium, Expanded }
-private enum class LibraryCollection { Playlist, AllTracks, Favorites }
+private enum class LibraryTab(val label: String) { Tracks("歌曲"), Playlists("歌单"), Albums("专辑"), Artists("艺术家") }
+
+private sealed interface LibraryDetail {
+    data object Favorites : LibraryDetail
+    data class PlaylistDetail(val playlistId: String) : LibraryDetail
+    data class AlbumDetail(val album: String) : LibraryDetail
+    data class ArtistDetail(val artist: String) : LibraryDetail
+}
 
 private data class DestinationItem(
     val destination: LibraryDestination,
@@ -166,151 +172,13 @@ private data class DestinationItem(
 
 private val destinationItems = listOf(
     DestinationItem(LibraryDestination.Library, "音乐库", Icons.Default.Home),
-    DestinationItem(LibraryDestination.Explore, "导入", Icons.Default.LibraryMusic),
-    DestinationItem(LibraryDestination.Sync, "同步", Icons.Outlined.Sync),
-    DestinationItem(LibraryDestination.Settings, "设置", Icons.Default.Settings),
+    DestinationItem(LibraryDestination.Discover, "发现", Icons.Default.Search),
+    DestinationItem(LibraryDestination.Playing, "播放", Icons.Default.PlayCircle),
+    DestinationItem(LibraryDestination.Profile, "我的", Icons.Default.Person),
 )
 
 private const val MotionQuick = 160
 private const val MotionStandard = 280
-
-private fun Modifier.pressScale(
-    interactionSource: MutableInteractionSource,
-    pressedScale: Float = 0.96f,
-    restingScale: Float = 1f,
-): Modifier = this.resonancePressable(interactionSource, pressedScale, restingScale)
-
-
-@Composable
-private fun ResonanceBackdrop(
-    seed: Int,
-    energized: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val isDark = ResonanceColors.isDark
-    val coral = ResonanceColors.Coral
-    val violet = ResonanceColors.Violet
-    val violetSoft = ResonanceColors.VioletSoft
-    val mint = ResonanceColors.Mint
-    val azure = ResonanceColors.Azure
-    val canvas = ResonanceColors.Canvas
-
-    val energy by animateFloatAsState(
-        targetValue = if (energized) 1f else 0.85f,
-        animationSpec = tween(700),
-        label = "backdropEnergy",
-    )
-    val transition = rememberInfiniteTransition(label = "backdropAuroraMotion")
-    val angle by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(22000, easing = androidx.compose.animation.core.LinearEasing),
-            repeatMode = AnimationRepeatMode.Restart,
-        ),
-        label = "backdropAuroraAngle",
-    )
-    val rad = (angle * (kotlin.math.PI / 180.0)).toFloat()
-    val cosOffset = kotlin.math.cos(rad)
-    val sinOffset = kotlin.math.sin(rad)
-    val phase = (((seed % 19) + 19) % 19) / 18f
-
-    val bgGradient = if (isDark) {
-        listOf(
-            Color(0xFF090D16),
-            canvas,
-            Color(0xFF04060A),
-        )
-    } else {
-        listOf(
-            Color(0xFFF9FAFD),
-            canvas,
-            Color(0xFFE8EFF9),
-        )
-    }
-
-    val coralAlpha = if (isDark) 0.26f * energy else 0.18f * energy
-    val violetAlpha = if (isDark) 0.22f * energy else 0.16f * energy
-    val mintAlpha = if (isDark) 0.14f * energy else 0.12f * energy
-    val azureAlpha = if (isDark) 0.11f * energy else 0.10f * energy
-
-    Canvas(
-        modifier = modifier.background(
-            Brush.verticalGradient(bgGradient),
-        ),
-    ) {
-        val radius = size.maxDimension * 0.65f
-        val coralCenter = Offset(
-            size.width * (0.20f + phase * 0.12f) + cosOffset * (size.width * 0.08f),
-            size.height * 0.10f + sinOffset * (size.height * 0.08f),
-        )
-        val violetCenter = Offset(
-            size.width * (0.82f - phase * 0.10f) - cosOffset * (size.width * 0.08f),
-            size.height * 0.45f - sinOffset * (size.height * 0.08f),
-        )
-        val mintCenter = Offset(
-            size.width * 0.45f + sinOffset * (size.width * 0.06f),
-            size.height * 0.88f - cosOffset * (size.height * 0.06f),
-        )
-        val azureCenter = Offset(
-            size.width * 0.85f + cosOffset * (size.width * 0.05f),
-            size.height * 0.90f + sinOffset * (size.height * 0.05f),
-        )
-
-        // Aurora Layer 1: Coral Vibrant Bloom
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    coral.copy(alpha = coralAlpha),
-                    coral.copy(alpha = coralAlpha * 0.3f),
-                    Color.Transparent,
-                ),
-                center = coralCenter,
-                radius = radius,
-            ),
-            radius = radius,
-            center = coralCenter,
-        )
-        // Aurora Layer 2: Violet Glow
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    violet.copy(alpha = violetAlpha),
-                    violetSoft.copy(alpha = violetAlpha * 0.3f),
-                    Color.Transparent,
-                ),
-                center = violetCenter,
-                radius = radius * 0.9f,
-            ),
-            radius = radius * 0.9f,
-            center = violetCenter,
-        )
-        // Aurora Layer 3: Mint Electric Floor
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(mint.copy(alpha = mintAlpha), Color.Transparent),
-                center = mintCenter,
-                radius = size.minDimension * 0.55f,
-            ),
-            radius = size.minDimension * 0.55f,
-            center = mintCenter,
-        )
-        // Aurora Layer 4: Azure Accent
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(azure.copy(alpha = azureAlpha), Color.Transparent),
-                center = azureCenter,
-                radius = size.minDimension * 0.42f,
-            ),
-            radius = size.minDimension * 0.42f,
-            center = azureCenter,
-        )
-    }
-}
-
-
-
-
 
 @Composable
 fun LibraryShell(
@@ -337,6 +205,7 @@ fun LibraryShell(
     onDeleteLocalTrack: (Track) -> Unit,
     onToggleFavorite: (Track) -> Unit,
     onRefreshLyrics: () -> Unit,
+    onRequestAiLyrics: () -> Unit = onRefreshLyrics,
     libraryLocation: String,
     onCreatePlaylist: () -> Unit,
     onImport: (Boolean) -> Unit,
@@ -349,39 +218,56 @@ fun LibraryShell(
     previewMode: Boolean,
     themeMode: ThemeMode = ThemeMode.Dark,
     onThemeModeChange: (ThemeMode) -> Unit = {},
+    deepSeekConfig: DeepSeekConfig = DeepSeekConfig(),
+    onSaveDeepSeekConfig: (DeepSeekConfig) -> Unit = {},
+    onTestDeepSeek: suspend (DeepSeekConfig) -> DeepSeekTestResult = { DeepSeekTestResult(false, "") },
+    customLyricsFolder: String? = null,
+    onSaveCustomLyricsFolder: (String?) -> Unit = {},
+    onOpenBatchEnrich: (List<Track>) -> Unit = {},
+    onBatchDelete: (List<Track>) -> Unit = {},
+    onBatchAddToPlaylist: (List<Track>, String) -> Unit = { _, _ -> },
+    onVolumeChange: (Float) -> Unit = {},
+    onSpeedChange: (Float) -> Unit = {},
+    onOpenSleepTimer: () -> Unit = {},
+    onAdjustLyricsOffset: (Long) -> Unit = {},
+    onEmbedLyrics: (Track) -> Unit = {},
+    onToggleFloatingLyrics: (() -> Unit)? = null,
+    floatingLyricsEnabled: Boolean = false,
+    onEditTrack: (track: Track, newTitle: String, newArtist: String, newAlbum: String, embedLyrics: Boolean) -> Unit = { _, _, _, _, _ -> },
     message: String?,
     operationInProgress: Boolean,
 ) {
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    var trackPendingEdit by remember { mutableStateOf<Track?>(null) }
+
+    val handleDestination: (LibraryDestination) -> Unit = { target ->
+        if (target == LibraryDestination.Playing && playerState.currentTrack != null) {
+            showNowPlaying = true
+        } else {
+            onDestinationChange(target)
+        }
+    }
+
+    if (destination in listOf(LibraryDestination.Import, LibraryDestination.Sync, LibraryDestination.Settings)) {
+        ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Profile) }
+    } else if (destination != LibraryDestination.Library) {
+        ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Library) }
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize().background(ResonanceColors.Canvas)) {
         val windowClass = when {
             maxWidth < 720.dp -> WindowClass.Compact
             maxWidth < 1100.dp -> WindowClass.Medium
             else -> WindowClass.Expanded
         }
-        val activeSeed = playerState.currentTrack?.artworkSeed
-            ?: playlists.firstOrNull { it.id == selectedPlaylistId }?.artworkSeed
-            ?: 0
 
-        ResonanceBackdrop(
-            seed = activeSeed,
-            energized = playerState.isPlaying,
-            modifier = Modifier.matchParentSize(),
-        )
-
-        when (windowClass) {
-            WindowClass.Compact -> CompactShell(
+        val sharedContent: @Composable (Boolean) -> Unit = { compact ->
+            DestinationContent(
                 destination = destination,
-                onDestinationChange = onDestinationChange,
+                onDestinationChange = handleDestination,
                 playlists = playlists,
                 libraryTracks = libraryTracks,
                 playerState = playerState,
-                onTogglePlay = onTogglePlay,
-                onPrevious = onPrevious,
-                onNext = onNext,
-                onToggleShuffle = onToggleShuffle,
-                onCycleRepeat = onCycleRepeat,
-                onSeek = onSeek,
                 onTrackSelected = onTrackSelected,
                 selectedPlaylistId = selectedPlaylistId,
                 userPlaylists = userPlaylists,
@@ -391,7 +277,6 @@ fun LibraryShell(
                 onDeletePlaylist = onDeletePlaylist,
                 onDeleteLocalTrack = onDeleteLocalTrack,
                 onToggleFavorite = onToggleFavorite,
-                onOpenNowPlaying = { showNowPlaying = true },
                 libraryLocation = libraryLocation,
                 onCreatePlaylist = onCreatePlaylist,
                 onImport = onImport,
@@ -402,91 +287,75 @@ fun LibraryShell(
                 lanQrPath = lanQrPath,
                 onExitPreview = onExitPreview,
                 previewMode = previewMode,
+                compact = compact,
                 themeMode = themeMode,
                 onThemeModeChange = onThemeModeChange,
-                message = message,
-                operationInProgress = operationInProgress,
-            )
-
-            WindowClass.Medium -> WideShell(
-                compactRail = true,
-                destination = destination,
-                onDestinationChange = onDestinationChange,
-                playlists = playlists,
-                libraryTracks = libraryTracks,
-                playerState = playerState,
-                onTogglePlay = onTogglePlay,
-                onPrevious = onPrevious,
-                onNext = onNext,
-                onToggleShuffle = onToggleShuffle,
-                onCycleRepeat = onCycleRepeat,
-                onSeek = onSeek,
-                onTrackSelected = onTrackSelected,
-                selectedPlaylistId = selectedPlaylistId,
-                userPlaylists = userPlaylists,
-                onPlaylistSelected = onPlaylistSelected,
-                onPlaylistMembershipChange = onPlaylistMembershipChange,
-                onRenamePlaylist = onRenamePlaylist,
-                onDeletePlaylist = onDeletePlaylist,
-                onDeleteLocalTrack = onDeleteLocalTrack,
-                onToggleFavorite = onToggleFavorite,
-                onOpenNowPlaying = { showNowPlaying = true },
-                libraryLocation = libraryLocation,
-                onCreatePlaylist = onCreatePlaylist,
-                onImport = onImport,
-                onImportPlaylist = onImportPlaylist,
-                onExportSync = onExportSync,
-                onImportSync = onImportSync,
-                onStartLanSync = onStartLanSync,
-                lanQrPath = lanQrPath,
-                onExitPreview = onExitPreview,
-                previewMode = previewMode,
-                themeMode = themeMode,
-                onThemeModeChange = onThemeModeChange,
-                message = message,
-                operationInProgress = operationInProgress,
-            )
-
-            WindowClass.Expanded -> WideShell(
-                compactRail = false,
-                destination = destination,
-                onDestinationChange = onDestinationChange,
-                playlists = playlists,
-                libraryTracks = libraryTracks,
-                playerState = playerState,
-                onTogglePlay = onTogglePlay,
-                onPrevious = onPrevious,
-                onNext = onNext,
-                onToggleShuffle = onToggleShuffle,
-                onCycleRepeat = onCycleRepeat,
-                onSeek = onSeek,
-                onTrackSelected = onTrackSelected,
-                selectedPlaylistId = selectedPlaylistId,
-                userPlaylists = userPlaylists,
-                onPlaylistSelected = onPlaylistSelected,
-                onPlaylistMembershipChange = onPlaylistMembershipChange,
-                onRenamePlaylist = onRenamePlaylist,
-                onDeletePlaylist = onDeletePlaylist,
-                onDeleteLocalTrack = onDeleteLocalTrack,
-                onToggleFavorite = onToggleFavorite,
-                onOpenNowPlaying = { showNowPlaying = true },
-                libraryLocation = libraryLocation,
-                onCreatePlaylist = onCreatePlaylist,
-                onImport = onImport,
-                onImportPlaylist = onImportPlaylist,
-                onExportSync = onExportSync,
-                onImportSync = onImportSync,
-                onStartLanSync = onStartLanSync,
-                lanQrPath = lanQrPath,
-                onExitPreview = onExitPreview,
-                previewMode = previewMode,
-                themeMode = themeMode,
-                onThemeModeChange = onThemeModeChange,
+                deepSeekConfig = deepSeekConfig,
+                onSaveDeepSeekConfig = onSaveDeepSeekConfig,
+                onTestDeepSeek = onTestDeepSeek,
+                customLyricsFolder = customLyricsFolder,
+                onSaveCustomLyricsFolder = onSaveCustomLyricsFolder,
+                onOpenBatchEnrich = onOpenBatchEnrich,
+                onBatchDelete = onBatchDelete,
+                onBatchAddToPlaylist = onBatchAddToPlaylist,
                 message = message,
                 operationInProgress = operationInProgress,
             )
         }
 
+        when (windowClass) {
+            WindowClass.Compact -> Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f)) { sharedContent(true) }
+                if (playerState.currentTrack != null) {
+                    MiniPlayer(
+                        playerState = playerState,
+                        onTogglePlay = onTogglePlay,
+                        onPrevious = onPrevious,
+                        onNext = onNext,
+                        onOpenNowPlaying = { showNowPlaying = true },
+                        compact = true,
+                    )
+                }
+                BottomNavigationBar(destination, handleDestination)
+            }
+            WindowClass.Medium -> Row(Modifier.fillMaxSize()) {
+                SideNavigationRail(destination, handleDestination)
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    Box(Modifier.weight(1f)) { sharedContent(true) }
+                    if (playerState.currentTrack != null) {
+                        MiniPlayer(
+                            playerState = playerState,
+                            onTogglePlay = onTogglePlay,
+                            onPrevious = onPrevious,
+                            onNext = onNext,
+                            onOpenNowPlaying = { showNowPlaying = true },
+                            compact = false,
+                        )
+                    }
+                }
+            }
+            WindowClass.Expanded -> Row(Modifier.fillMaxSize()) {
+                DesktopSidebar(
+                    destination = destination,
+                    onDestinationChange = handleDestination,
+                    themeMode = themeMode,
+                    onThemeModeChange = onThemeModeChange,
+                )
+                Column(Modifier.weight(1f).fillMaxHeight()) {
+                    Box(Modifier.weight(1f)) { sharedContent(false) }
+                    if (playerState.currentTrack != null) {
+                        MiniPlayer(
+                            playerState = playerState,
+                            onTogglePlay = onTogglePlay,
+                            onPrevious = onPrevious,
+                            onNext = onNext,
+                            onOpenNowPlaying = { showNowPlaying = true },
+                            compact = false,
+                        )
+                    }
+                }
+            }
+        }
 
         if (showNowPlaying && playerState.currentTrack != null) {
             NowPlayingOverlay(
@@ -500,132 +369,78 @@ fun LibraryShell(
                 onToggleShuffle = onToggleShuffle,
                 onCycleRepeat = onCycleRepeat,
                 onSeek = onSeek,
+                onVolumeChange = onVolumeChange,
+                onSpeedChange = onSpeedChange,
+                onOpenSleepTimer = onOpenSleepTimer,
+                onAdjustLyricsOffset = onAdjustLyricsOffset,
+                onEmbedLyrics = { onEmbedLyrics(playerState.currentTrack) },
+                onToggleFloatingLyrics = onToggleFloatingLyrics,
+                floatingLyricsEnabled = floatingLyricsEnabled,
                 onTrackSelected = onTrackSelected,
                 onToggleFavorite = onToggleFavorite,
                 onRefreshLyrics = onRefreshLyrics,
+                onRequestAiLyrics = onRequestAiLyrics,
+                onDeleteLocalTrack = { track ->
+                    showNowPlaying = false
+                    onDeleteLocalTrack(track)
+                },
+            )
+        }
+
+        trackPendingEdit?.let { track ->
+            EditTrackDialog(
+                track = track,
+                hasLyrics = lyricsState is LyricsUiState.Ready,
+                onDismiss = { trackPendingEdit = null },
+                onConfirm = { newTitle, newArtist, newAlbum, embedLyrics ->
+                    onEditTrack(track, newTitle, newArtist, newAlbum, embedLyrics)
+                    trackPendingEdit = null
+                },
             )
         }
     }
 }
 
+private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
+    LibraryDestination.Import, LibraryDestination.Sync, LibraryDestination.Settings -> LibraryDestination.Profile
+    else -> destination
+}
+
 @Composable
-private fun CompactShell(
+private fun BottomNavigationBar(
     destination: LibraryDestination,
     onDestinationChange: (LibraryDestination) -> Unit,
-    playlists: List<Playlist>,
-    libraryTracks: List<Track>,
-    playerState: PlayerState,
-    onTogglePlay: () -> Unit,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit,
-    onSeek: (Float) -> Unit,
-    onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String?,
-    userPlaylists: List<Playlist>,
-    onPlaylistSelected: (String) -> Unit,
-    onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
-    onRenamePlaylist: (String, String) -> Unit,
-    onDeletePlaylist: (String) -> Unit,
-    onDeleteLocalTrack: (Track) -> Unit,
-    onToggleFavorite: (Track) -> Unit,
-    onOpenNowPlaying: () -> Unit,
-    libraryLocation: String,
-    onCreatePlaylist: () -> Unit,
-    onImport: (Boolean) -> Unit,
-    onImportPlaylist: () -> Unit,
-    onExportSync: () -> Unit,
-    onImportSync: () -> Unit,
-    onStartLanSync: () -> Unit,
-    lanQrPath: String?,
-    onExitPreview: () -> Unit,
-    previewMode: Boolean,
-    themeMode: ThemeMode = ThemeMode.Dark,
-    onThemeModeChange: (ThemeMode) -> Unit = {},
-    message: String?,
-    operationInProgress: Boolean,
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(1f)) {
-            DestinationContent(
-                destination = destination,
-                playlists = playlists,
-                libraryTracks = libraryTracks,
-                playerState = playerState,
-                onTrackSelected = onTrackSelected,
-                selectedPlaylistId = selectedPlaylistId,
-                userPlaylists = userPlaylists,
-                onPlaylistSelected = onPlaylistSelected,
-                onPlaylistMembershipChange = onPlaylistMembershipChange,
-                onRenamePlaylist = onRenamePlaylist,
-                onDeletePlaylist = onDeletePlaylist,
-                onDeleteLocalTrack = onDeleteLocalTrack,
-                onToggleFavorite = onToggleFavorite,
-                libraryLocation = libraryLocation,
-                onCreatePlaylist = onCreatePlaylist,
-                onImport = onImport,
-                onImportPlaylist = onImportPlaylist,
-                onExportSync = onExportSync,
-                onImportSync = onImportSync,
-                onStartLanSync = onStartLanSync,
-                lanQrPath = lanQrPath,
-                onExitPreview = onExitPreview,
-                previewMode = previewMode,
-                compact = true,
-                themeMode = themeMode,
-                onThemeModeChange = onThemeModeChange,
-                message = message,
-                operationInProgress = operationInProgress,
-            )
-        }
-        if (playerState.currentTrack != null) {
-            MiniPlayer(
-                playerState,
-                onTogglePlay,
-                onPrevious,
-                onNext,
-                onToggleShuffle,
-                onCycleRepeat,
-                onSeek,
-                onOpenNowPlaying,
-                compact = true,
-                horizontalPadding = 8.dp,
-            )
-        }
+    val activeTab = tabDestinationOf(destination)
+    Column(Modifier.fillMaxWidth().background(ResonanceColors.CanvasElevated)) {
+        HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
         NavigationBar(
-            containerColor = ResonanceColors.Glass,
+            containerColor = ResonanceColors.CanvasElevated,
             tonalElevation = 0.dp,
-            modifier = Modifier
-                .heightIn(min = 74.dp)
-                .resonanceGlass(
-                    shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 0.dp, bottomEnd = 0.dp),
-                    backgroundColor = ResonanceColors.Glass,
-                    shadowElevation = 10.dp,
-                ),
         ) {
             destinationItems.forEach { item ->
-                val selected = destination == item.destination
-                val iconScale by animateFloatAsState(
-                    targetValue = if (selected) 1.15f else 1f,
-                    animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                    label = "bottomNavIcon",
-                )
+                val selected = activeTab == item.destination
                 NavigationBarItem(
                     selected = selected,
                     onClick = { onDestinationChange(item.destination) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = ResonanceColors.Coral,
+                        selectedTextColor = ResonanceColors.Coral,
+                        unselectedIconColor = ResonanceColors.Dim,
+                        unselectedTextColor = ResonanceColors.Dim,
+                        indicatorColor = Color.Transparent,
+                    ),
                     icon = {
                         Icon(
                             item.icon,
                             contentDescription = item.label,
-                            tint = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Dim,
-                            modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+                            modifier = Modifier.size(23.dp),
                         )
                     },
                     label = {
                         Text(
                             item.label,
-                            color = if (selected) ResonanceColors.Ivory else ResonanceColors.Dim,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     },
@@ -636,123 +451,30 @@ private fun CompactShell(
 }
 
 @Composable
-private fun WideShell(
-    compactRail: Boolean,
+private fun SideNavigationRail(
     destination: LibraryDestination,
     onDestinationChange: (LibraryDestination) -> Unit,
-    playlists: List<Playlist>,
-    libraryTracks: List<Track>,
-    playerState: PlayerState,
-    onTogglePlay: () -> Unit,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit,
-    onSeek: (Float) -> Unit,
-    onTrackSelected: (Track) -> Unit,
-    selectedPlaylistId: String?,
-    userPlaylists: List<Playlist>,
-    onPlaylistSelected: (String) -> Unit,
-    onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
-    onRenamePlaylist: (String, String) -> Unit,
-    onDeletePlaylist: (String) -> Unit,
-    onDeleteLocalTrack: (Track) -> Unit,
-    onToggleFavorite: (Track) -> Unit,
-    onOpenNowPlaying: () -> Unit,
-    libraryLocation: String,
-    onCreatePlaylist: () -> Unit,
-    onImport: (Boolean) -> Unit,
-    onImportPlaylist: () -> Unit,
-    onExportSync: () -> Unit,
-    onImportSync: () -> Unit,
-    onStartLanSync: () -> Unit,
-    lanQrPath: String?,
-    onExitPreview: () -> Unit,
-    previewMode: Boolean,
-    themeMode: ThemeMode = ThemeMode.Dark,
-    onThemeModeChange: (ThemeMode) -> Unit = {},
-    message: String?,
-    operationInProgress: Boolean,
 ) {
-    Row(modifier = Modifier.fillMaxSize()) {
-        if (compactRail) {
-            NavigationRail(
-                containerColor = ResonanceColors.Glass,
-                header = {
-                    BrandMark(modifier = Modifier.padding(vertical = 20.dp))
-                },
-            ) {
-                destinationItems.forEach { item ->
-                    val selected = destination == item.destination
-                    val iconScale by animateFloatAsState(
-                        targetValue = if (selected) 1.12f else 1f,
-                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
-                        label = "railIcon",
-                    )
-                    NavigationRailItem(
-                        selected = selected,
-                        onClick = { onDestinationChange(item.destination) },
-                        icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.graphicsLayer { scaleX = iconScale; scaleY = iconScale }) },
-                        label = { Text(item.label) },
-                    )
-                }
-            }
-        } else {
-            DesktopSidebar(
-                destination = destination,
-                onDestinationChange = onDestinationChange,
-                themeMode = themeMode,
-                onThemeModeChange = onThemeModeChange,
+    val activeTab = tabDestinationOf(destination)
+    NavigationRail(
+        containerColor = ResonanceColors.CanvasElevated,
+        header = { BrandMark(modifier = Modifier.padding(vertical = 16.dp)) },
+    ) {
+        destinationItems.forEach { item ->
+            val selected = activeTab == item.destination
+            NavigationRailItem(
+                selected = selected,
+                onClick = { onDestinationChange(item.destination) },
+                colors = NavigationRailItemDefaults.colors(
+                    selectedIconColor = ResonanceColors.Coral,
+                    selectedTextColor = ResonanceColors.Coral,
+                    unselectedIconColor = ResonanceColors.Dim,
+                    unselectedTextColor = ResonanceColors.Dim,
+                    indicatorColor = Color.Transparent,
+                ),
+                icon = { Icon(item.icon, contentDescription = item.label, modifier = Modifier.size(23.dp)) },
+                label = { Text(item.label, style = MaterialTheme.typography.labelMedium) },
             )
-        }
-
-        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-            Box(modifier = Modifier.weight(1f)) {
-                DestinationContent(
-                    destination = destination,
-                    playlists = playlists,
-                    libraryTracks = libraryTracks,
-                    playerState = playerState,
-                    onTrackSelected = onTrackSelected,
-                    selectedPlaylistId = selectedPlaylistId,
-                    userPlaylists = userPlaylists,
-                    onPlaylistSelected = onPlaylistSelected,
-                    onPlaylistMembershipChange = onPlaylistMembershipChange,
-                    onRenamePlaylist = onRenamePlaylist,
-                    onDeletePlaylist = onDeletePlaylist,
-                    onDeleteLocalTrack = onDeleteLocalTrack,
-                    onToggleFavorite = onToggleFavorite,
-                    libraryLocation = libraryLocation,
-                    onCreatePlaylist = onCreatePlaylist,
-                    onImport = onImport,
-                    onImportPlaylist = onImportPlaylist,
-                    onExportSync = onExportSync,
-                    onImportSync = onImportSync,
-                    onStartLanSync = onStartLanSync,
-                    lanQrPath = lanQrPath,
-                    onExitPreview = onExitPreview,
-                    previewMode = previewMode,
-                    compact = compactRail,
-                    themeMode = themeMode,
-                    onThemeModeChange = onThemeModeChange,
-                    message = message,
-                    operationInProgress = operationInProgress,
-                )
-            }
-            if (playerState.currentTrack != null) {
-                MiniPlayer(
-                    playerState,
-                    onTogglePlay,
-                    onPrevious,
-                    onNext,
-                    onToggleShuffle,
-                    onCycleRepeat,
-                    onSeek,
-                    onOpenNowPlaying,
-                    compact = false,
-                    horizontalPadding = 16.dp,
-                )
-            }
         }
     }
 }
@@ -765,152 +487,89 @@ private fun DesktopSidebar(
     onThemeModeChange: (ThemeMode) -> Unit = {},
 ) {
     val isDark = ResonanceColors.isDark
-    val sidebarBg = if (isDark) {
-        listOf(
-            Color(0xFF131826),
-            ResonanceColors.Raised,
-            Color(0xFF090D14),
-        )
-    } else {
-        listOf(
-            Color(0xFFFFFFFF),
-            ResonanceColors.Canvas,
-            Color(0xFFF0F4FA),
-        )
-    }
-
+    val activeTab = tabDestinationOf(destination)
     Column(
         modifier = Modifier
-            .width(236.dp)
+            .width(232.dp)
             .fillMaxHeight()
-            .background(Brush.verticalGradient(sidebarBg))
-            .border(
-                BorderStroke(
-                    1.dp,
-                    Brush.verticalGradient(
-                        listOf(ResonanceColors.GlassBorder, ResonanceColors.DividerStrong.copy(alpha = 0.35f)),
-                    ),
-                ),
-            )
-            .padding(horizontal = 18.dp, vertical = 24.dp),
+            .background(ResonanceColors.CanvasElevated)
+            .padding(horizontal = 14.dp, vertical = 20.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             BrandMark()
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("RESONANCE", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                Text("LOCAL MUSIC", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Mint)
-            }
+            Spacer(Modifier.width(10.dp))
+            Text("Resonance", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             val nextMode = when (themeMode) {
                 ThemeMode.Dark -> ThemeMode.Light
                 ThemeMode.Light -> ThemeMode.Dark
                 ThemeMode.System -> if (isDark) ThemeMode.Light else ThemeMode.Dark
             }
-            IconButton(
-                onClick = { onThemeModeChange(nextMode) },
-                modifier = Modifier.size(36.dp),
-            ) {
+            IconButton(onClick = { onThemeModeChange(nextMode) }, modifier = Modifier.size(36.dp)) {
                 Icon(
                     if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
                     contentDescription = "切换主题模式",
-                    tint = ResonanceColors.CoralGlow,
-                    modifier = Modifier.size(20.dp),
+                    tint = ResonanceColors.Muted,
+                    modifier = Modifier.size(19.dp),
                 )
             }
         }
-        Spacer(Modifier.height(34.dp))
+        Spacer(Modifier.height(24.dp))
         destinationItems.forEach { item ->
             SidebarDestination(
                 item = item,
-                selected = destination == item.destination,
+                selected = activeTab == item.destination,
                 onClick = { onDestinationChange(item.destination) },
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
         }
         Spacer(Modifier.weight(1f))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .resonanceGlass(
-                    shape = RoundedCornerShape(18.dp),
-                    backgroundColor = ResonanceColors.GlassUltra,
-                    shadowElevation = 4.dp,
-                ),
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(ResonanceColors.Mint))
-                    Spacer(Modifier.width(8.dp))
-                    Text("本地优先", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.Ivory)
-                }
-                Spacer(Modifier.height(6.dp))
-                Text("音乐只在你的设备之间安全流动", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-            }
-        }
+        Text(
+            "v$APP_VERSION · 本地音乐库",
+            style = MaterialTheme.typography.labelMedium,
+            color = ResonanceColors.Dimmer,
+            modifier = Modifier.padding(start = 10.dp, bottom = 4.dp),
+        )
     }
 }
-
-
-
 
 @Composable
 private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick: () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val background by animateColorAsState(
-        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.95f) else Color.Transparent,
+        if (selected) ResonanceColors.CoralSoft else Color.Transparent,
         animationSpec = tween(MotionQuick),
         label = "sidebarBackground",
-    )
-    val foreground by animateColorAsState(
-        if (selected) ResonanceColors.CoralGlow else ResonanceColors.Muted,
-        animationSpec = tween(MotionQuick),
-        label = "sidebarForeground",
     )
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .pressScale(interactionSource, pressedScale = 0.975f)
-            .clip(RoundedCornerShape(14.dp))
+            .resonancePressable(interactionSource, pressedScale = 0.98f)
+            .clip(RoundedCornerShape(10.dp))
             .background(background)
-            .border(
-                width = 1.dp,
-                color = if (selected) ResonanceColors.Coral.copy(alpha = 0.4f) else Color.Transparent,
-                shape = RoundedCornerShape(14.dp),
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                role = Role.Tab,
-                onClick = onClick,
-            )
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .clickable(interactionSource = interactionSource, indication = null, role = Role.Tab, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
     ) {
-        if (selected) {
-            Box(
-                Modifier
-                    .width(3.5.dp)
-                    .height(18.dp)
-                    .clip(CircleShape)
-                    .background(ResonanceColors.Coral),
-            )
-            Spacer(Modifier.width(9.dp))
-        }
-        Icon(item.icon, contentDescription = null, tint = foreground, modifier = Modifier.size(21.dp))
+        Icon(
+            item.icon,
+            contentDescription = null,
+            tint = if (selected) ResonanceColors.Coral else ResonanceColors.Dim,
+            modifier = Modifier.size(20.dp),
+        )
         Spacer(Modifier.width(12.dp))
         Text(
             item.label,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (selected) ResonanceColors.Ivory else foreground,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (selected) ResonanceColors.Coral else ResonanceColors.Muted,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
         )
     }
 }
 
-
 @Composable
 private fun DestinationContent(
     destination: LibraryDestination,
+    onDestinationChange: (LibraryDestination) -> Unit,
     playlists: List<Playlist>,
     libraryTracks: List<Track>,
     playerState: PlayerState,
@@ -936,74 +595,226 @@ private fun DestinationContent(
     compact: Boolean,
     themeMode: ThemeMode = ThemeMode.Dark,
     onThemeModeChange: (ThemeMode) -> Unit = {},
+    deepSeekConfig: DeepSeekConfig = DeepSeekConfig(),
+    onSaveDeepSeekConfig: (DeepSeekConfig) -> Unit = {},
+    onTestDeepSeek: suspend (DeepSeekConfig) -> DeepSeekTestResult = { DeepSeekTestResult(false, "") },
+    customLyricsFolder: String? = null,
+    onSaveCustomLyricsFolder: (String?) -> Unit = {},
+    onOpenBatchEnrich: (List<Track>) -> Unit = {},
+    onBatchDelete: (List<Track>) -> Unit = {},
+    onBatchAddToPlaylist: (List<Track>, String) -> Unit = { _, _ -> },
     message: String?,
     operationInProgress: Boolean,
 ) {
     AnimatedContent(
         targetState = destination,
         transitionSpec = {
-            val movingForward = targetState.ordinal >= initialState.ordinal
-            val enter = fadeIn(tween(MotionStandard)) + slideInHorizontally(
-                animationSpec = tween(MotionStandard),
-                initialOffsetX = { width -> if (movingForward) width / 12 else -width / 12 },
-            )
-            val exit = fadeOut(tween(MotionQuick)) + slideOutHorizontally(
-                animationSpec = tween(MotionQuick),
-                targetOffsetX = { width -> if (movingForward) -width / 18 else width / 18 },
-            )
-            enter togetherWith exit using SizeTransform(clip = false)
+            (fadeIn(tween(MotionStandard))) togetherWith (fadeOut(tween(MotionQuick))) using
+                SizeTransform(clip = false)
         },
         label = "destinationContent",
     ) { activeDestination ->
         when (activeDestination) {
-        LibraryDestination.Library -> LibraryScreen(
-            playlists = playlists,
-            libraryTracks = libraryTracks,
-            playerState = playerState,
-            onTrackSelected = onTrackSelected,
-            selectedPlaylistId = selectedPlaylistId,
-            userPlaylists = userPlaylists,
-            onPlaylistSelected = onPlaylistSelected,
-            onPlaylistMembershipChange = onPlaylistMembershipChange,
-            onRenamePlaylist = onRenamePlaylist,
-            onDeletePlaylist = onDeletePlaylist,
-            onDeleteLocalTrack = onDeleteLocalTrack,
-            onToggleFavorite = onToggleFavorite,
-            onCreatePlaylist = onCreatePlaylist,
-            onImport = onImport,
-            onExitPreview = onExitPreview,
-            previewMode = previewMode,
-            compact = compact,
-            themeMode = themeMode,
-            onThemeModeChange = onThemeModeChange,
-            message = message,
-            operationInProgress = operationInProgress,
-        )
-        LibraryDestination.Explore -> ImportScreen(
-            compact = compact,
-            onImport = { onImport(false) },
-            onConvert = { onImport(true) },
-            onImportPlaylist = onImportPlaylist,
-            message = message,
-            operationInProgress = operationInProgress,
-        )
-        LibraryDestination.Sync -> SyncScreen(
-            compact = compact,
-            onExportSync = onExportSync,
-            onImportSync = onImportSync,
-            onStartLanSync = onStartLanSync,
-            lanQrPath = lanQrPath,
-            message = message,
-        )
-        LibraryDestination.Settings -> SettingsScreen(
-            compact = compact,
-            libraryLocation = libraryLocation,
-            themeMode = themeMode,
-            onThemeModeChange = onThemeModeChange,
-        )
+            LibraryDestination.Library -> LibraryScreen(
+                playlists = playlists,
+                libraryTracks = libraryTracks,
+                playerState = playerState,
+                onTrackSelected = onTrackSelected,
+                selectedPlaylistId = selectedPlaylistId,
+                userPlaylists = userPlaylists,
+                onPlaylistSelected = onPlaylistSelected,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onRenamePlaylist = onRenamePlaylist,
+                onDeletePlaylist = onDeletePlaylist,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                onCreatePlaylist = onCreatePlaylist,
+                onImport = onImport,
+                onExitPreview = onExitPreview,
+                previewMode = previewMode,
+                compact = compact,
+                onOpenBatchEnrich = onOpenBatchEnrich,
+                onBatchDelete = onBatchDelete,
+                onBatchAddToPlaylist = onBatchAddToPlaylist,
+                message = message,
+                operationInProgress = operationInProgress,
+            )
+            LibraryDestination.Discover -> DiscoverScreen(
+                libraryTracks = libraryTracks,
+                playlists = playlists,
+                playerState = playerState,
+                onTrackSelected = onTrackSelected,
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                compact = compact,
+            )
+            LibraryDestination.Playing -> PlayingPlaceholderScreen(
+                onOpenLibrary = { onDestinationChange(LibraryDestination.Library) },
+            )
+            LibraryDestination.Profile -> ProfileScreen(
+                compact = compact,
+                onOpenImport = { onDestinationChange(LibraryDestination.Import) },
+                onOpenSync = { onDestinationChange(LibraryDestination.Sync) },
+                onOpenSettings = { onDestinationChange(LibraryDestination.Settings) },
+            )
+            LibraryDestination.Import -> ImportScreen(
+                compact = compact,
+                onBack = { onDestinationChange(LibraryDestination.Profile) },
+                onImport = { onImport(false) },
+                onConvert = { onImport(true) },
+                onImportPlaylist = onImportPlaylist,
+                message = message,
+                operationInProgress = operationInProgress,
+            )
+            LibraryDestination.Sync -> SyncScreen(
+                compact = compact,
+                onBack = { onDestinationChange(LibraryDestination.Profile) },
+                onExportSync = onExportSync,
+                onImportSync = onImportSync,
+                onStartLanSync = onStartLanSync,
+                lanQrPath = lanQrPath,
+                message = message,
+            )
+            LibraryDestination.Settings -> SettingsScreen(
+                compact = compact,
+                onBack = { onDestinationChange(LibraryDestination.Profile) },
+                libraryLocation = libraryLocation,
+                onOpenImport = { onDestinationChange(LibraryDestination.Import) },
+                themeMode = themeMode,
+                onThemeModeChange = onThemeModeChange,
+                deepSeekConfig = deepSeekConfig,
+                onSaveDeepSeekConfig = onSaveDeepSeekConfig,
+                onTestDeepSeek = onTestDeepSeek,
+                customLyricsFolder = customLyricsFolder,
+                onSaveCustomLyricsFolder = onSaveCustomLyricsFolder,
+            )
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// 批量操作栏（多选模式）
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun MultiSelectToolbar(
+    selectedCount: Int,
+    currentViewTracks: List<Track>,
+    selectedTrackIds: Set<String>,
+    onSelectAll: () -> Unit,
+    onDeselectAll: () -> Unit,
+    onSelectMissingOnly: () -> Unit,
+    onEnrichSelected: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onDeleteSelected: () -> Unit,
+    onExitMultiSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val missingInView = remember(currentViewTracks) { currentViewTracks.count { it.isMissingAnyMetadata } }
+    Surface(
+        color = ResonanceColors.Raised,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 4.dp,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    "已选 $selectedCount / ${currentViewTracks.size} 首",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = ResonanceColors.Ivory,
+                    fontWeight = FontWeight.Bold,
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = onSelectAll, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)) {
+                        Text("全选", color = ResonanceColors.Coral, style = MaterialTheme.typography.labelMedium)
+                    }
+                    TextButton(onClick = onDeselectAll, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)) {
+                        Text("清空", color = ResonanceColors.Muted, style = MaterialTheme.typography.labelMedium)
+                    }
+                    if (missingInView > 0) {
+                        TextButton(onClick = onSelectMissingOnly, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)) {
+                            Text("仅选缺失 ($missingInView)", color = ResonanceColors.Coral, style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    IconButton(onClick = onExitMultiSelect, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "退出多选", tint = ResonanceColors.Muted, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Button(
+                    onClick = onEnrichSelected,
+                    enabled = selectedCount > 0,
+                    shape = ResonanceShapes.Button,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ResonanceColors.Coral,
+                        contentColor = Color.White,
+                        disabledContainerColor = ResonanceColors.Soft,
+                        disabledContentColor = ResonanceColors.Dim,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.weight(1.3f),
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("AI 智能补全", style = MaterialTheme.typography.labelMedium)
+                }
+                Button(
+                    onClick = onAddToPlaylist,
+                    enabled = selectedCount > 0,
+                    shape = ResonanceShapes.Button,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ResonanceColors.Soft,
+                        contentColor = ResonanceColors.Ivory,
+                        disabledContainerColor = ResonanceColors.Soft,
+                        disabledContentColor = ResonanceColors.Dim,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("加入歌单", style = MaterialTheme.typography.labelMedium)
+                }
+                Button(
+                    onClick = onDeleteSelected,
+                    enabled = selectedCount > 0,
+                    shape = ResonanceShapes.Button,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ResonanceColors.CoralSoft,
+                        contentColor = ResonanceColors.Coral,
+                        disabledContainerColor = ResonanceColors.Soft,
+                        disabledContentColor = ResonanceColors.Dim,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.weight(0.9f),
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("删除", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 音乐库（首页）
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun LibraryScreen(
@@ -1024,794 +835,1602 @@ private fun LibraryScreen(
     onExitPreview: () -> Unit,
     previewMode: Boolean,
     compact: Boolean,
-    themeMode: ThemeMode = ThemeMode.Dark,
-    onThemeModeChange: (ThemeMode) -> Unit = {},
+    onOpenBatchEnrich: (List<Track>) -> Unit = {},
+    onBatchDelete: (List<Track>) -> Unit = {},
+    onBatchAddToPlaylist: (List<Track>, String) -> Unit = { _, _ -> },
     message: String?,
     operationInProgress: Boolean,
 ) {
     if (playlists.isEmpty() && libraryTracks.isEmpty()) {
-        if (operationInProgress) LibraryLoading() else EmptyLibrary(onCreatePlaylist, { onImport(false) }, compact, message)
+        if (operationInProgress) LibraryLoading() else EmptyLibrary(onCreatePlaylist, { onImport(false) }, message)
         return
     }
 
-    val selectedPlaylist = playlists.firstOrNull { it.id == selectedPlaylistId } ?: playlists.firstOrNull()
-    var collection by remember { mutableStateOf(if (selectedPlaylist == null) LibraryCollection.AllTracks else LibraryCollection.Playlist) }
-    val activeCollection = if (collection == LibraryCollection.Playlist && selectedPlaylist == null) {
-        LibraryCollection.AllTracks
-    } else {
-        collection
-    }
-    var showRenameDialog by remember(selectedPlaylist?.id) { mutableStateOf(false) }
-    var showDeleteDialog by remember(selectedPlaylist?.id) { mutableStateOf(false) }
+    var tab by rememberSaveable { mutableStateOf(LibraryTab.Tracks.name) }
+    val activeTab = LibraryTab.entries.firstOrNull { it.name == tab } ?: LibraryTab.Tracks
+    var searchActive by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    val trimmedQuery = searchQuery.trim()
+    var detail by remember { mutableStateOf<LibraryDetail?>(null) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    var isMultiSelectMode by rememberSaveable { mutableStateOf(false) }
+    var selectedTrackIds by remember { mutableStateOf(setOf<String>()) }
+    var showBatchDeleteDialog by remember { mutableStateOf(false) }
+    var showBatchAddToPlaylistDialog by remember { mutableStateOf(false) }
+
     val allKnownTracks = (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
-    val searchResults = if (trimmedQuery.isEmpty()) {
-        emptyList()
-    } else {
-        allKnownTracks
-            .filter { track ->
-                track.title.contains(trimmedQuery, ignoreCase = true) ||
-                    track.artist.contains(trimmedQuery, ignoreCase = true) ||
-                    track.album.contains(trimmedQuery, ignoreCase = true)
+    val favoriteTracks = allKnownTracks.filter(Track::isFavorite)
+    val allLibraryMissingTracks = remember(allKnownTracks) { allKnownTracks.filter { it.isMissingAnyMetadata } }
+    val pagePadding = if (compact) 16.dp else 32.dp
+
+    val detailPlaylist = (detail as? LibraryDetail.PlaylistDetail)?.let { d ->
+        playlists.firstOrNull { it.id == d.playlistId }
+    }
+
+    val currentViewTracks = remember(tab, activeTab, detail, searchActive, searchQuery, allKnownTracks, libraryTracks, favoriteTracks, playlists) {
+        if (searchActive) {
+            val q = searchQuery.trim()
+            if (q.isEmpty()) emptyList()
+            else allKnownTracks.filter { it.title.contains(q, ignoreCase = true) || it.artist.contains(q, ignoreCase = true) || it.album.contains(q, ignoreCase = true) }
+        } else if (detail != null) {
+            when (val d = detail) {
+                LibraryDetail.Favorites -> favoriteTracks
+                is LibraryDetail.PlaylistDetail -> playlists.firstOrNull { it.id == d.playlistId }?.tracks.orEmpty()
+                is LibraryDetail.AlbumDetail -> allKnownTracks.filter { it.album.ifBlank { "未知专辑" } == d.album }
+                is LibraryDetail.ArtistDetail -> allKnownTracks.filter { it.artist.ifBlank { "未知艺术家" } == d.artist }
+                null -> emptyList()
             }
+        } else {
+            when (activeTab) {
+                LibraryTab.Tracks -> libraryTracks
+                LibraryTab.Albums -> allKnownTracks
+                LibraryTab.Artists -> allKnownTracks
+                LibraryTab.Playlists -> emptyList()
+            }
+        }
     }
-    val collectionTracks = when (activeCollection) {
-        LibraryCollection.Playlist -> selectedPlaylist?.tracks.orEmpty()
-        LibraryCollection.AllTracks -> libraryTracks
-        LibraryCollection.Favorites -> allKnownTracks.filter(Track::isFavorite)
+
+    val selectedTracks = remember(selectedTrackIds, allKnownTracks) {
+        allKnownTracks.filter { it.id in selectedTrackIds }
     }
-    val collectionTitle = when (activeCollection) {
-        LibraryCollection.Playlist -> selectedPlaylist?.name.orEmpty()
-        LibraryCollection.AllTracks -> "全部歌曲"
-        LibraryCollection.Favorites -> "我的收藏"
+
+    fun toggleTrackSelect(trackId: String) {
+        selectedTrackIds = if (trackId in selectedTrackIds) {
+            selectedTrackIds - trackId
+        } else {
+            selectedTrackIds + trackId
+        }
     }
-    val collectionSubtitle = when (activeCollection) {
-        LibraryCollection.Playlist -> selectedPlaylist?.subtitle.orEmpty()
-        LibraryCollection.AllTracks -> "${collectionTracks.size} 首 · 本机可播放"
-        LibraryCollection.Favorites -> "${collectionTracks.size} 首 · 随时回来听"
+
+    fun selectAllInView() {
+        selectedTrackIds = selectedTrackIds + currentViewTracks.map(Track::id)
     }
-    val collectionSeed = when (activeCollection) {
-        LibraryCollection.Playlist -> selectedPlaylist?.artworkSeed ?: 0
-        LibraryCollection.AllTracks -> libraryTracks.firstOrNull()?.artworkSeed ?: 4
-        LibraryCollection.Favorites -> collectionTracks.firstOrNull()?.artworkSeed ?: 9
+
+    fun deselectAll() {
+        selectedTrackIds = emptySet()
     }
-    val pagePadding = if (compact) 20.dp else 36.dp
-    LazyColumn(
-        contentPadding = PaddingValues(start = pagePadding, end = pagePadding, top = 24.dp, bottom = 36.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item {
-            LibraryHeader(
-                compact = compact,
-                previewMode = previewMode,
-                onExitPreview = onExitPreview,
-                onCreatePlaylist = onCreatePlaylist,
-                themeMode = themeMode,
-                onThemeModeChange = onThemeModeChange,
+
+    fun selectMissingInView() {
+        selectedTrackIds = currentViewTracks.filter { it.isMissingAnyMetadata }.map(Track::id).toSet()
+    }
+
+    if (isMultiSelectMode) {
+        ResonanceBackHandler(enabled = true) {
+            isMultiSelectMode = false
+            selectedTrackIds = emptySet()
+        }
+    } else if (searchActive) {
+        ResonanceBackHandler(enabled = true) {
+            searchQuery = ""
+            searchActive = false
+        }
+    } else if (detail != null) {
+        ResonanceBackHandler(enabled = true) {
+            detail = null
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        // 顶部栏
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = pagePadding, end = pagePadding - 8.dp, top = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                if (isMultiSelectMode) "批量选择" else if (searchActive) "搜索" else "音乐库",
+                style = MaterialTheme.typography.headlineLarge,
+                color = ResonanceColors.Ivory,
+                modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.height(if (compact) 16.dp else 20.dp))
-            LibrarySearchBar(query = searchQuery, onQueryChange = { searchQuery = it })
-            Spacer(Modifier.height(if (compact) 20.dp else 24.dp))
+            if (previewMode) {
+                TextButton(onClick = onExitPreview) { Text("清空预览", color = ResonanceColors.Muted) }
+            }
+            if (!isMultiSelectMode) {
+                if (allLibraryMissingTracks.isNotEmpty() && !searchActive && detail == null) {
+                    Surface(
+                        color = ResonanceColors.CoralSoft,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .clickable { onOpenBatchEnrich(allLibraryMissingTracks) }
+                            .padding(end = 6.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(15.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                "一键补全缺失 (${allLibraryMissingTracks.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ResonanceColors.Coral,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
+                IconButton(onClick = {
+                    isMultiSelectMode = true
+                    selectedTrackIds = emptySet()
+                }) {
+                    Icon(Icons.Default.Checklist, contentDescription = "多选", tint = ResonanceColors.Muted)
+                }
+                IconButton(onClick = {
+                    if (searchActive) searchQuery = ""
+                    searchActive = !searchActive
+                }) {
+                    Icon(
+                        if (searchActive) Icons.Default.Close else Icons.Default.Search,
+                        contentDescription = if (searchActive) "关闭搜索" else "搜索",
+                        tint = ResonanceColors.Muted,
+                    )
+                }
+                if (!searchActive) {
+                    IconButton(onClick = onCreatePlaylist) {
+                        Icon(Icons.Default.Add, contentDescription = "新建歌单", tint = ResonanceColors.Muted)
+                    }
+                }
+            } else {
+                TextButton(onClick = {
+                    isMultiSelectMode = false
+                    selectedTrackIds = emptySet()
+                }) {
+                    Text("退出多选", color = ResonanceColors.Coral, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+
+        if (isMultiSelectMode) {
+            MultiSelectToolbar(
+                selectedCount = selectedTrackIds.size,
+                currentViewTracks = currentViewTracks,
+                selectedTrackIds = selectedTrackIds,
+                onSelectAll = { selectAllInView() },
+                onDeselectAll = { deselectAll() },
+                onSelectMissingOnly = { selectMissingInView() },
+                onEnrichSelected = {
+                    if (selectedTracks.isNotEmpty()) {
+                        onOpenBatchEnrich(selectedTracks)
+                    }
+                },
+                onAddToPlaylist = {
+                    if (selectedTracks.isNotEmpty()) {
+                        showBatchAddToPlaylistDialog = true
+                    }
+                },
+                onDeleteSelected = {
+                    if (selectedTracks.isNotEmpty()) {
+                        showBatchDeleteDialog = true
+                    }
+                },
+                onExitMultiSelect = {
+                    isMultiSelectMode = false
+                    selectedTrackIds = emptySet()
+                },
+                modifier = Modifier.padding(horizontal = pagePadding),
+            )
         }
 
         if (message != null) {
-            item {
-                Surface(
-                    color = ResonanceColors.CoralSoft.copy(alpha = 0.92f),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.24f)),
-                    shadowElevation = 2.dp,
-                ) {
-                    Text(message, color = ResonanceColors.Coral, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
-                }
-                Spacer(Modifier.height(18.dp))
+            Surface(
+                color = ResonanceColors.CoralSoft,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = pagePadding, vertical = 6.dp),
+            ) {
+                Text(
+                    message,
+                    color = ResonanceColors.Coral,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                )
             }
         }
-        if (trimmedQuery.isEmpty()) {
-            item {
-                Text("快速访问", style = MaterialTheme.typography.headlineMedium)
-                Spacer(Modifier.height(14.dp))
-                LibraryQuickAccess(
-                    allTrackCount = libraryTracks.size,
-                    favoriteCount = allKnownTracks.count(Track::isFavorite),
-                    selected = activeCollection,
-                    onSelect = { collection = it },
-                )
-                Spacer(Modifier.height(if (compact) 26.dp else 32.dp))
-            }
-            if (playlists.isNotEmpty()) {
-                item {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("你的歌单", style = MaterialTheme.typography.headlineMedium)
-                        Spacer(Modifier.width(10.dp))
-                        Surface(
-                            color = ResonanceColors.Soft,
-                            shape = CircleShape,
-                            border = BorderStroke(1.dp, ResonanceColors.Divider),
-                        ) {
-                            Text(
-                                playlists.size.toString(),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = ResonanceColors.Muted,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                            )
+
+        if (searchActive) {
+            // 搜索模式
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = pagePadding, vertical = 8.dp),
+                placeholder = { Text("搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.Dim) },
+                trailingIcon = if (searchQuery.isNotEmpty()) {
+                    {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "清空", tint = ResonanceColors.Muted)
                         }
                     }
-                    Spacer(Modifier.height(14.dp))
-                    PlaylistStrip(
-                        playlists = playlists,
-                        compact = compact,
-                        selectedPlaylistId = if (activeCollection == LibraryCollection.Playlist) selectedPlaylist?.id else null,
-                        onPlaylistSelected = { playlistId ->
-                            collection = LibraryCollection.Playlist
-                            onPlaylistSelected(playlistId)
-                        },
-                    )
-                    Spacer(Modifier.height(if (compact) 30.dp else 38.dp))
-                }
-            }
-            item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = ResonanceColors.Glass,
-                    shape = RoundedCornerShape(22.dp),
-                    border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.9f)),
-                    shadowElevation = 6.dp,
-                ) {
-                    Row(
-                        modifier = Modifier.padding(if (compact) 14.dp else 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        AlbumArtwork(
-                            seed = collectionSeed,
-                            modifier = Modifier.size(if (compact) 58.dp else 68.dp).shadow(8.dp, RoundedCornerShape(15.dp)),
-                            cornerRadius = 15.dp,
-                            artworkPath = collectionTracks.firstNotNullOfOrNull(Track::artworkPath),
-                        )
-                        Spacer(Modifier.width(15.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(collectionTitle, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Spacer(Modifier.height(4.dp))
-                            Text(collectionSubtitle, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-                        }
-                        if (!previewMode && activeCollection == LibraryCollection.Playlist && selectedPlaylist != null) {
-                            IconButton(onClick = { showRenameDialog = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "重命名歌单", tint = ResonanceColors.Muted)
-                            }
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(Icons.Default.Delete, contentDescription = "删除歌单", tint = ResonanceColors.Muted)
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-            }
-            if (collectionTracks.isEmpty()) {
-                item {
-                    EmptyPlaylistNotice(
-                        canAddMusic = activeCollection == LibraryCollection.Playlist &&
-                            userPlaylists.any { it.id != selectedPlaylist?.id && it.tracks.isNotEmpty() },
-                        onImport = { onImport(false) },
-                    )
-                }
-            }
-            itemsIndexed(collectionTracks, key = { index, track -> "${activeCollection.name}-${track.id}-$index" }) { _, track ->
-                TrackRow(
-                    track = track,
-                    selected = playerState.currentTrack?.id == track.id,
-                    isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
-                    onClick = { onTrackSelected(track) },
-                    compact = compact,
-                    userPlaylists = userPlaylists,
-                    onPlaylistMembershipChange = onPlaylistMembershipChange,
-                    onDeleteLocalTrack = onDeleteLocalTrack,
-                    onToggleFavorite = onToggleFavorite,
-                    modifier = Modifier.animateItem(),
-                )
-            }
+                } else null,
+                singleLine = true,
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ResonanceColors.Coral,
+                    unfocusedBorderColor = ResonanceColors.Divider,
+                    focusedContainerColor = ResonanceColors.Raised,
+                    unfocusedContainerColor = ResonanceColors.Raised,
+                    cursorColor = ResonanceColors.Coral,
+                ),
+            )
+            SearchResultList(
+                query = searchQuery,
+                tracks = allKnownTracks,
+                playerState = playerState,
+                onTrackSelected = onTrackSelected,
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                isMultiSelectMode = isMultiSelectMode,
+                selectedTrackIds = selectedTrackIds,
+                onToggleTrackSelect = ::toggleTrackSelect,
+                contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+            )
+            return@Column
+        }
+
+        val currentDetail = detail
+        if (currentDetail != null) {
+            // 详情视图（歌单 / 专辑 / 艺术家 / 收藏）
+            LibraryDetailView(
+                detail = currentDetail,
+                playlists = playlists,
+                libraryTracks = libraryTracks,
+                favoriteTracks = favoriteTracks,
+                playerState = playerState,
+                onBack = { detail = null },
+                onTrackSelected = onTrackSelected,
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                onToggleShufflePlay = { tracks ->
+                    tracks.filter { it.sourceUri != null }.takeIf { it.isNotEmpty() }?.random()?.let(onTrackSelected)
+                },
+                onRenamePlaylist = if (detailPlaylist != null && !previewMode) { { showRenameDialog = true } } else null,
+                onDeletePlaylist = if (detailPlaylist != null && !previewMode) { { showDeleteDialog = true } } else null,
+                isMultiSelectMode = isMultiSelectMode,
+                selectedTrackIds = selectedTrackIds,
+                onToggleTrackSelect = ::toggleTrackSelect,
+                pagePadding = pagePadding,
+            )
         } else {
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("搜索结果", style = MaterialTheme.typography.headlineMedium)
-                    Spacer(Modifier.width(10.dp))
-                    Surface(
-                        color = ResonanceColors.Soft,
-                        shape = CircleShape,
-                        border = BorderStroke(1.dp, ResonanceColors.Divider),
-                    ) {
-                        Text(
-                            searchResults.size.toString(),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = ResonanceColors.Muted,
-                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(14.dp))
-            }
-            if (searchResults.isEmpty()) {
-                item {
-                    Surface(
-                        color = ResonanceColors.Soft,
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Column(Modifier.padding(22.dp)) {
-                            Text("没有找到「$trimmedQuery」", style = MaterialTheme.typography.titleLarge)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "换个关键词试试，支持歌名、歌手和专辑的模糊匹配。",
-                                color = ResonanceColors.Muted,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                }
-            }
-            itemsIndexed(searchResults, key = { index, track -> "search-${track.id}-$index" }) { _, track ->
-                TrackRow(
-                    track = track,
-                    selected = playerState.currentTrack?.id == track.id,
-                    isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
-                    onClick = { onTrackSelected(track) },
-                    compact = compact,
+            // 标签页
+            LibraryTabRow(
+                activeTab = activeTab,
+                onSelect = { tab = it.name },
+                modifier = Modifier.padding(horizontal = pagePadding),
+            )
+            when (activeTab) {
+                LibraryTab.Tracks -> TrackListTab(
+                    tracks = libraryTracks,
+                    favoriteCount = favoriteTracks.size,
+                    playerState = playerState,
+                    onTrackSelected = onTrackSelected,
+                    onOpenFavorites = { detail = LibraryDetail.Favorites },
                     userPlaylists = userPlaylists,
                     onPlaylistMembershipChange = onPlaylistMembershipChange,
                     onDeleteLocalTrack = onDeleteLocalTrack,
                     onToggleFavorite = onToggleFavorite,
-                    modifier = Modifier.animateItem(),
+                    isMultiSelectMode = isMultiSelectMode,
+                    selectedTrackIds = selectedTrackIds,
+                    onToggleTrackSelect = ::toggleTrackSelect,
+                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                )
+                LibraryTab.Playlists -> PlaylistListTab(
+                    playlists = playlists,
+                    onOpenPlaylist = { playlist ->
+                        onPlaylistSelected(playlist.id)
+                        detail = LibraryDetail.PlaylistDetail(playlist.id)
+                    },
+                    onCreatePlaylist = onCreatePlaylist,
+                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                )
+                LibraryTab.Albums -> AlbumListTab(
+                    tracks = allKnownTracks,
+                    onOpenAlbum = { detail = LibraryDetail.AlbumDetail(it) },
+                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                )
+                LibraryTab.Artists -> ArtistListTab(
+                    tracks = allKnownTracks,
+                    onOpenArtist = { detail = LibraryDetail.ArtistDetail(it) },
+                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
                 )
             }
         }
     }
 
-    if (showRenameDialog && selectedPlaylist != null) {
+    if (showRenameDialog && detailPlaylist != null) {
         RenamePlaylistDialog(
-            currentName = selectedPlaylist.name,
+            currentName = detailPlaylist.name,
             onDismiss = { showRenameDialog = false },
             onConfirm = { name ->
-                onRenamePlaylist(selectedPlaylist.id, name)
+                onRenamePlaylist(detailPlaylist.id, name)
                 showRenameDialog = false
             },
         )
     }
-    if (showDeleteDialog && selectedPlaylist != null) {
+    if (showDeleteDialog && detailPlaylist != null) {
         DeletePlaylistDialog(
-            playlistName = selectedPlaylist.name,
+            playlistName = detailPlaylist.name,
             onDismiss = { showDeleteDialog = false },
             onConfirm = {
-                onDeletePlaylist(selectedPlaylist.id)
+                onDeletePlaylist(detailPlaylist.id)
                 showDeleteDialog = false
+                detail = null
             },
         )
+    }
+    if (showBatchDeleteDialog && selectedTracks.isNotEmpty()) {
+        BatchDeleteTracksDialog(
+            count = selectedTracks.size,
+            onDismiss = { showBatchDeleteDialog = false },
+            onConfirm = {
+                val toDelete = selectedTracks
+                showBatchDeleteDialog = false
+                isMultiSelectMode = false
+                selectedTrackIds = emptySet()
+                onBatchDelete(toDelete)
+            },
+        )
+    }
+    if (showBatchAddToPlaylistDialog && selectedTracks.isNotEmpty()) {
+        BatchAddToPlaylistDialog(
+            playlists = userPlaylists,
+            trackCount = selectedTracks.size,
+            onDismiss = { showBatchAddToPlaylistDialog = false },
+            onSelectPlaylist = { playlistId ->
+                val toAdd = selectedTracks
+                showBatchAddToPlaylistDialog = false
+                isMultiSelectMode = false
+                selectedTrackIds = emptySet()
+                onBatchAddToPlaylist(toAdd, playlistId)
+            },
+            onCreateNewPlaylist = {
+                showBatchAddToPlaylistDialog = false
+                onCreatePlaylist()
+            },
+        )
+    }
+}
+
+@Composable
+private fun LibraryTabRow(
+    activeTab: LibraryTab,
+    onSelect: (LibraryTab) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier.fillMaxWidth()) {
+        LibraryTab.entries.forEach { tab ->
+            val selected = tab == activeTab
+            Column(
+                modifier = Modifier
+                    .padding(end = 22.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        role = Role.Tab,
+                    ) { onSelect(tab) }
+                    .padding(vertical = 10.dp),
+            ) {
+                Text(
+                    tab.label,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = if (selected) ResonanceColors.Ivory else ResonanceColors.Dim,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                )
+                Spacer(Modifier.height(5.dp))
+                Box(
+                    Modifier
+                        .width(18.dp)
+                        .height(2.dp)
+                        .clip(CircleShape)
+                        .background(if (selected) ResonanceColors.Coral else Color.Transparent),
+                )
+            }
+        }
+    }
+    HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+}
+
+@Composable
+private fun TrackListTab(
+    tracks: List<Track>,
+    favoriteCount: Int,
+    playerState: PlayerState,
+    onTrackSelected: (Track) -> Unit,
+    onOpenFavorites: () -> Unit,
+    userPlaylists: List<Playlist>,
+    onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
+    onDeleteLocalTrack: (Track) -> Unit,
+    onToggleFavorite: (Track) -> Unit,
+    isMultiSelectMode: Boolean = false,
+    selectedTrackIds: Set<String> = emptySet(),
+    onToggleTrackSelect: (String) -> Unit = {},
+    contentPadding: PaddingValues,
+) {
+    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenFavorites)
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(ResonanceShapes.ArtworkSmall)
+                        .background(ResonanceColors.CoralSoft),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Favorite, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("我的收藏", style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Ivory)
+                    Text("$favoriteCount 首", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = ResonanceColors.Dimmer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+        }
+        itemsIndexed(tracks, key = { index, track -> "tracks-${track.id}-$index" }) { _, track ->
+            TrackRow(
+                track = track,
+                selected = playerState.currentTrack?.id == track.id,
+                isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
+                onClick = { onTrackSelected(track) },
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                isMultiSelectMode = isMultiSelectMode,
+                isMultiSelected = selectedTrackIds.contains(track.id),
+                onToggleMultiSelect = { onToggleTrackSelect(track.id) },
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PlaylistListTab(
+    playlists: List<Playlist>,
+    onOpenPlaylist: (Playlist) -> Unit,
+    onCreatePlaylist: () -> Unit,
+    contentPadding: PaddingValues,
+) {
+    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(playlists, key = { _, playlist -> playlist.id }) { _, playlist ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenPlaylist(playlist) }
+                    .padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AlbumArtwork(
+                    seed = playlist.artworkSeed,
+                    modifier = Modifier.size(48.dp),
+                    cornerRadius = 8.dp,
+                    artworkPath = playlist.tracks.firstNotNullOfOrNull(Track::artworkPath),
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        playlist.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = ResonanceColors.Ivory,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        playlist.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ResonanceColors.Dim,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = ResonanceColors.Dimmer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline, modifier = Modifier.padding(start = 60.dp))
+        }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onCreatePlaylist)
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(ResonanceShapes.ArtworkSmall)
+                        .background(ResonanceColors.Soft),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, tint = ResonanceColors.Muted, modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Text("新建歌单", style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Muted)
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlbumListTab(
+    tracks: List<Track>,
+    onOpenAlbum: (String) -> Unit,
+    contentPadding: PaddingValues,
+) {
+    val albums = tracks
+        .groupBy { it.album.ifBlank { "未知专辑" } }
+        .toList()
+        .sortedBy { (name, _) -> name }
+    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(albums, key = { index, album -> "album-${album.first}-$index" }) { _, (album, albumTracks) ->
+            val first = albumTracks.first()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenAlbum(album) }
+                    .padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                AlbumArtwork(
+                    seed = first.artworkSeed,
+                    modifier = Modifier.size(48.dp),
+                    cornerRadius = 8.dp,
+                    artworkPath = first.artworkPath,
+                )
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        album,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = ResonanceColors.Ivory,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "${first.artist.ifBlank { "未知艺术家" }} · ${albumTracks.size} 首",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ResonanceColors.Dim,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = ResonanceColors.Dimmer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline, modifier = Modifier.padding(start = 60.dp))
+        }
+    }
+}
+
+@Composable
+private fun ArtistListTab(
+    tracks: List<Track>,
+    onOpenArtist: (String) -> Unit,
+    contentPadding: PaddingValues,
+) {
+    val artists = tracks
+        .groupBy { it.artist.ifBlank { "未知艺术家" } }
+        .toList()
+        .sortedBy { (name, _) -> name }
+    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+        itemsIndexed(artists, key = { index, artist -> "artist-${artist.first}-$index" }) { _, (artist, artistTracks) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onOpenArtist(artist) }
+                    .padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(ResonanceColors.Soft),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.Person, contentDescription = null, tint = ResonanceColors.Dim, modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        artist,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = ResonanceColors.Ivory,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        "${artistTracks.size} 首",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = ResonanceColors.Dim,
+                    )
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = ResonanceColors.Dimmer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline, modifier = Modifier.padding(start = 60.dp))
+        }
+    }
+}
+
+@Composable
+private fun LibraryDetailView(
+    detail: LibraryDetail,
+    playlists: List<Playlist>,
+    libraryTracks: List<Track>,
+    favoriteTracks: List<Track>,
+    playerState: PlayerState,
+    onBack: () -> Unit,
+    onTrackSelected: (Track) -> Unit,
+    userPlaylists: List<Playlist>,
+    onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
+    onDeleteLocalTrack: (Track) -> Unit,
+    onToggleFavorite: (Track) -> Unit,
+    onToggleShufflePlay: (List<Track>) -> Unit,
+    onRenamePlaylist: (() -> Unit)?,
+    onDeletePlaylist: (() -> Unit)?,
+    isMultiSelectMode: Boolean = false,
+    selectedTrackIds: Set<String> = emptySet(),
+    onToggleTrackSelect: (String) -> Unit = {},
+    pagePadding: Dp,
+) {
+    val title: String
+    val subtitle: String
+    val tracks: List<Track>
+    val artworkSeed: Int
+    val artworkPath: String?
+    when (detail) {
+        LibraryDetail.Favorites -> {
+            title = "我的收藏"
+            subtitle = "${favoriteTracks.size} 首歌曲"
+            tracks = favoriteTracks
+            artworkSeed = favoriteTracks.firstOrNull()?.artworkSeed ?: 9
+            artworkPath = favoriteTracks.firstNotNullOfOrNull(Track::artworkPath)
+        }
+        is LibraryDetail.PlaylistDetail -> {
+            val playlist = playlists.firstOrNull { it.id == detail.playlistId }
+            title = playlist?.name.orEmpty()
+            subtitle = playlist?.subtitle ?: "0 首歌曲"
+            tracks = playlist?.tracks.orEmpty()
+            artworkSeed = playlist?.artworkSeed ?: 0
+            artworkPath = tracks.firstNotNullOfOrNull(Track::artworkPath)
+        }
+        is LibraryDetail.AlbumDetail -> {
+            val albumTracks = (libraryTracks + playlists.flatMap(Playlist::tracks))
+                .distinctBy(Track::id)
+                .filter { it.album.ifBlank { "未知专辑" } == detail.album }
+            title = detail.album
+            subtitle = "${albumTracks.firstOrNull()?.artist?.ifBlank { "未知艺术家" }.orEmpty()} · ${albumTracks.size} 首歌曲"
+            tracks = albumTracks
+            artworkSeed = albumTracks.firstOrNull()?.artworkSeed ?: 0
+            artworkPath = albumTracks.firstNotNullOfOrNull(Track::artworkPath)
+        }
+        is LibraryDetail.ArtistDetail -> {
+            val artistTracks = (libraryTracks + playlists.flatMap(Playlist::tracks))
+                .distinctBy(Track::id)
+                .filter { it.artist.ifBlank { "未知艺术家" } == detail.artist }
+            title = detail.artist
+            subtitle = "${artistTracks.size} 首歌曲"
+            tracks = artistTracks
+            artworkSeed = artistTracks.firstOrNull()?.artworkSeed ?: 0
+            artworkPath = artistTracks.firstNotNullOfOrNull(Track::artworkPath)
+        }
+    }
+    val playable = tracks.filter { it.sourceUri != null }
+
+    LazyColumn(
+        contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = ResonanceColors.Ivory)
+                }
+                Spacer(Modifier.weight(1f))
+                if (onRenamePlaylist != null) {
+                    TextButton(onClick = onRenamePlaylist) { Text("重命名", color = ResonanceColors.Muted) }
+                }
+                if (onDeletePlaylist != null) {
+                    TextButton(onClick = onDeletePlaylist) { Text("删除歌单", color = ResonanceColors.Coral) }
+                }
+            }
+        }
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                AlbumArtwork(
+                    seed = artworkSeed,
+                    modifier = Modifier.size(168.dp),
+                    cornerRadius = 14.dp,
+                    artworkPath = artworkPath,
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = ResonanceColors.Ivory,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
+                Spacer(Modifier.height(16.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = { playable.firstOrNull()?.let(onTrackSelected) },
+                        enabled = playable.isNotEmpty(),
+                        shape = ResonanceShapes.Button,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ResonanceColors.Coral,
+                            contentColor = Color.White,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 11.dp),
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("播放全部", style = MaterialTheme.typography.labelLarge)
+                    }
+                    Button(
+                        onClick = { onToggleShufflePlay(tracks) },
+                        enabled = playable.isNotEmpty(),
+                        shape = ResonanceShapes.Button,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ResonanceColors.Soft,
+                            contentColor = ResonanceColors.Ivory,
+                        ),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 11.dp),
+                    ) {
+                        Icon(Icons.Default.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("随机播放", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+        }
+        if (tracks.isEmpty()) {
+            item {
+                Text(
+                    "这里还没有歌曲",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ResonanceColors.Dim,
+                    modifier = Modifier.padding(vertical = 28.dp),
+                )
+            }
+        }
+        itemsIndexed(tracks, key = { index, track -> "detail-${track.id}-$index" }) { index, track ->
+            TrackRow(
+                track = track,
+                selected = playerState.currentTrack?.id == track.id,
+                isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
+                onClick = { onTrackSelected(track) },
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                index = index + 1,
+                isMultiSelectMode = isMultiSelectMode,
+                isMultiSelected = selectedTrackIds.contains(track.id),
+                onToggleMultiSelect = { onToggleTrackSelect(track.id) },
+                modifier = Modifier.animateItem(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchResultList(
+    query: String,
+    tracks: List<Track>,
+    playerState: PlayerState,
+    onTrackSelected: (Track) -> Unit,
+    userPlaylists: List<Playlist>,
+    onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
+    onDeleteLocalTrack: (Track) -> Unit,
+    onToggleFavorite: (Track) -> Unit,
+    isMultiSelectMode: Boolean = false,
+    selectedTrackIds: Set<String> = emptySet(),
+    onToggleTrackSelect: (String) -> Unit = {},
+    contentPadding: PaddingValues,
+) {
+    val trimmed = query.trim()
+    val results = if (trimmed.isEmpty()) {
+        emptyList()
+    } else {
+        tracks.filter { track ->
+            com.resonance.player.util.PinyinUtils.matches(track.title, trimmed) ||
+                com.resonance.player.util.PinyinUtils.matches(track.artist, trimmed) ||
+                com.resonance.player.util.PinyinUtils.matches(track.album, trimmed)
+        }
+    }
+    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+        if (trimmed.isNotEmpty() && results.isEmpty()) {
+            item {
+                Column(Modifier.fillMaxWidth().padding(vertical = 36.dp)) {
+                    Text("没有找到「$trimmed」", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory)
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "换个关键词试试，支持歌名、歌手、专辑及拼音首字母缩写。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ResonanceColors.Dim,
+                    )
+                }
+            }
+        }
+        itemsIndexed(results, key = { index, track -> "search-${track.id}-$index" }) { _, track ->
+            TrackRow(
+                track = track,
+                selected = playerState.currentTrack?.id == track.id,
+                isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
+                onClick = { onTrackSelected(track) },
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                isMultiSelectMode = isMultiSelectMode,
+                isMultiSelected = selectedTrackIds.contains(track.id),
+                onToggleMultiSelect = { onToggleTrackSelect(track.id) },
+                modifier = Modifier.animateItem(),
+            )
+        }
     }
 }
 
 @Composable
 private fun LibraryLoading() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Surface(
-            color = ResonanceColors.Glass,
-            shape = RoundedCornerShape(24.dp),
-            border = BorderStroke(1.dp, ResonanceColors.Divider),
-            shadowElevation = 8.dp,
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 32.dp, vertical = 28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                CircularProgressIndicator(color = ResonanceColors.Coral, modifier = Modifier.size(36.dp))
-                Spacer(Modifier.height(16.dp))
-                Text("正在整理音乐库…", style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.height(6.dp))
-                Text("读取曲目、封面与歌单", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-            }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(color = ResonanceColors.Coral, modifier = Modifier.size(32.dp))
+            Spacer(Modifier.height(14.dp))
+            Text("正在整理音乐库…", style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Muted)
         }
     }
 }
 
 @Composable
-private fun LibraryHeader(
-    compact: Boolean,
-    previewMode: Boolean,
-    onExitPreview: () -> Unit,
-    onCreatePlaylist: () -> Unit,
-    themeMode: ThemeMode = ThemeMode.Dark,
-    onThemeModeChange: (ThemeMode) -> Unit = {},
-) {
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val lowProfile = compact && maxWidth > 500.dp
-        val shape = RoundedCornerShape(if (compact) 24.dp else 30.dp)
-        val addInteraction = remember { MutableInteractionSource() }
-        val greeting = when (currentHourOfDay()) {
-            in 5..10 -> "早上好"
-            in 11..13 -> "中午好"
-            in 14..18 -> "下午好"
-            else -> "晚上好"
+private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, message: String?) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 28.dp, vertical = 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        if (message != null) {
+            Surface(color = ResonanceColors.CoralSoft, shape = RoundedCornerShape(10.dp)) {
+                Text(
+                    message,
+                    color = ResonanceColors.Coral,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                )
+            }
+            Spacer(Modifier.height(20.dp))
         }
-        val isDark = ResonanceColors.isDark
-        val coral = ResonanceColors.Coral
-        val violet = ResonanceColors.Violet
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .resonanceGlass(
-                    shape = shape,
-                    backgroundColor = ResonanceColors.Glass,
-                    borderColors = listOf(ResonanceColors.GlassBorderGlow, ResonanceColors.GlassBorder),
-                    shadowElevation = 14.dp,
-                ),
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(ResonanceColors.CoralSoft),
+            contentAlignment = Alignment.Center,
         ) {
-            Canvas(Modifier.matchParentSize()) {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        listOf(coral.copy(alpha = 0.22f), Color.Transparent),
-                        center = Offset(size.width * 0.88f, size.height * 0.10f),
-                        radius = size.maxDimension * 0.65f,
-                    ),
-                    radius = size.maxDimension * 0.65f,
-                    center = Offset(size.width * 0.88f, size.height * 0.10f),
-                )
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        listOf(violet.copy(alpha = 0.16f), Color.Transparent),
-                        center = Offset(size.width * 0.10f, size.height * 0.95f),
-                        radius = size.minDimension * 0.55f,
-                    ),
-                    radius = size.minDimension * 0.55f,
-                    center = Offset(size.width * 0.10f, size.height * 0.95f),
-                )
-            }
-
-            Row(
-                modifier = Modifier.padding(horizontal = if (compact) 20.dp else 28.dp, vertical = if (compact) 20.dp else 26.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(ResonanceColors.CoralSoft)
-                                .border(1.dp, ResonanceColors.Coral.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 9.dp, vertical = 4.dp),
-                        ) {
-                            Text(
-                                "✦ RESONANCE 0.2.0 · HIFI",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.8.sp),
-                                color = ResonanceColors.CoralGlow,
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text("· $greeting", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        if (lowProfile) "你的音乐，留在身边。" else "你的音乐，\n留在身边。",
-                        style = when {
-                            lowProfile -> MaterialTheme.typography.headlineLarge
-                            compact -> MaterialTheme.typography.displaySmall
-                            else -> MaterialTheme.typography.displayLarge
-                        },
-                        color = ResonanceColors.Ivory,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    )
-                    if (!compact) {
-                        Spacer(Modifier.height(10.dp))
-                        Text("本地优先 · 无损音质 · 跨设备自由同步", style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted)
-                    }
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val nextMode = when (themeMode) {
-                            ThemeMode.Dark -> ThemeMode.Light
-                            ThemeMode.Light -> ThemeMode.Dark
-                            ThemeMode.System -> if (isDark) ThemeMode.Light else ThemeMode.Dark
-                        }
-                        IconButton(
-                            onClick = { onThemeModeChange(nextMode) },
-                            modifier = Modifier.size(46.dp),
-                        ) {
-                            Icon(
-                                if (isDark) Icons.Default.LightMode else Icons.Default.DarkMode,
-                                contentDescription = "切换明暗主题",
-                                tint = ResonanceColors.CoralGlow,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
-                        Spacer(Modifier.width(6.dp))
-                        FilledIconButton(
-                            onClick = onCreatePlaylist,
-                            interactionSource = addInteraction,
-                            modifier = Modifier
-                                .size(54.dp)
-                                .pressScale(addInteraction, pressedScale = 0.88f)
-                                .shadow(12.dp, CircleShape, ambientColor = ResonanceColors.Coral.copy(alpha = 0.5f), spotColor = ResonanceColors.CoralGlow),
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = ResonanceColors.Coral,
-                                contentColor = Color(0xFF2A0B07),
-                            ),
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "新建歌单", modifier = Modifier.size(26.dp))
-                        }
-                    }
-                    if (previewMode) {
-                        Spacer(Modifier.height(6.dp))
-                        TextButton(onClick = onExitPreview) { Text("清空预览", color = ResonanceColors.Muted) }
-                    }
-                }
-            }
+            Icon(Icons.Default.MusicNote, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(34.dp))
+        }
+        Spacer(Modifier.height(20.dp))
+        Text("从第一首歌开始", style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.Ivory)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "扫描本机音乐，或新建一个歌单。原文件不会被覆盖，转换后的 MP3 将收进你的音乐库。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = ResonanceColors.Muted,
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = onImport,
+            shape = ResonanceShapes.Button,
+            colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Coral, contentColor = Color.White),
+            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("扫描或导入音乐", style = MaterialTheme.typography.labelLarge)
+        }
+        Spacer(Modifier.height(10.dp))
+        Button(
+            onClick = onCreatePlaylist,
+            shape = ResonanceShapes.Button,
+            colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Soft, contentColor = ResonanceColors.Ivory),
+            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("新建空歌单", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
+// ---------------------------------------------------------------------------
+// 发现（全局搜索）
+// ---------------------------------------------------------------------------
 
 @Composable
-private fun LibraryQuickAccess(
-    allTrackCount: Int,
-    favoriteCount: Int,
-    selected: LibraryCollection,
-    onSelect: (LibraryCollection) -> Unit,
+private fun DiscoverScreen(
+    libraryTracks: List<Track>,
+    playlists: List<Playlist>,
+    playerState: PlayerState,
+    onTrackSelected: (Track) -> Unit,
+    userPlaylists: List<Playlist>,
+    onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
+    onDeleteLocalTrack: (Track) -> Unit,
+    onToggleFavorite: (Track) -> Unit,
+    compact: Boolean,
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            QuickAccessCard(
-                title = "全部歌曲",
-                subtitle = "$allTrackCount 首本地音乐",
-                icon = Icons.Default.Headphones,
-                selected = selected == LibraryCollection.AllTracks,
-                isMint = true,
-                onClick = { onSelect(LibraryCollection.AllTracks) },
-            )
-        }
-        item {
-            QuickAccessCard(
-                title = "我的收藏",
-                subtitle = "$favoriteCount 首喜欢的歌",
-                icon = Icons.Default.Favorite,
-                selected = selected == LibraryCollection.Favorites,
-                isMint = false,
-                onClick = { onSelect(LibraryCollection.Favorites) },
+    var query by remember { mutableStateOf("") }
+    val pagePadding = if (compact) 16.dp else 32.dp
+    val allKnownTracks = (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
+
+    Column(Modifier.fillMaxSize()) {
+        Text(
+            "发现",
+            style = MaterialTheme.typography.headlineLarge,
+            color = ResonanceColors.Ivory,
+            modifier = Modifier.padding(start = pagePadding, end = pagePadding, top = 14.dp, bottom = 10.dp),
+        )
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = pagePadding),
+            placeholder = { Text("搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.Dim) },
+            trailingIcon = if (query.isNotEmpty()) {
+                {
+                    IconButton(onClick = { query = "" }) {
+                        Icon(Icons.Default.Close, contentDescription = "清空", tint = ResonanceColors.Muted)
+                    }
+                }
+            } else null,
+            singleLine = true,
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = ResonanceColors.Coral,
+                unfocusedBorderColor = ResonanceColors.Divider,
+                focusedContainerColor = ResonanceColors.Raised,
+                unfocusedContainerColor = ResonanceColors.Raised,
+                cursorColor = ResonanceColors.Coral,
+            ),
+        )
+        Spacer(Modifier.height(6.dp))
+        if (query.trim().isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(40.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text("搜索你的音乐库", style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Dim)
+                }
+            }
+        } else {
+            SearchResultList(
+                query = query,
+                tracks = allKnownTracks,
+                playerState = playerState,
+                onTrackSelected = onTrackSelected,
+                userPlaylists = userPlaylists,
+                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                onDeleteLocalTrack = onDeleteLocalTrack,
+                onToggleFavorite = onToggleFavorite,
+                contentPadding = PaddingValues(horizontal = pagePadding, vertical = 10.dp),
             )
         }
     }
 }
 
 @Composable
-private fun QuickAccessCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    selected: Boolean,
-    isMint: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val accentColor = if (isMint) ResonanceColors.Mint else ResonanceColors.Coral
-    val accentSoft = if (isMint) ResonanceColors.MintSoft else ResonanceColors.CoralSoft
-    val accentGlow = if (isMint) ResonanceColors.MintGlow else ResonanceColors.CoralGlow
-
-    val container by animateColorAsState(
-        targetValue = if (selected) accentSoft.copy(alpha = 0.95f) else ResonanceColors.Glass,
-        animationSpec = tween(MotionQuick),
-        label = "quickAccessContainer",
-    )
-    val elevation by animateDpAsState(
-        targetValue = if (selected) 10.dp else 3.dp,
-        animationSpec = tween(MotionQuick),
-        label = "quickAccessElevation",
-    )
-
-    Box(
-        modifier = Modifier
-            .widthIn(min = 168.dp)
-            .heightIn(min = 84.dp)
-            .pressScale(interactionSource, pressedScale = 0.97f)
-            .resonanceGlass(
-                shape = RoundedCornerShape(20.dp),
-                backgroundColor = container,
-                borderColors = if (selected) listOf(accentColor.copy(alpha = 0.7f), accentColor.copy(alpha = 0.25f)) else listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                shadowElevation = elevation,
-                shadowColor = if (selected) accentColor.copy(alpha = 0.35f) else ResonanceColors.Shadow,
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                role = androidx.compose.ui.semantics.Role.Tab,
-                onClick = onClick,
-            )
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+private fun PlayingPlaceholderScreen(onOpenLibrary: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(accentSoft)
-                    .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(icon, contentDescription = null, tint = accentGlow, modifier = Modifier.size(22.dp))
-            }
-            Spacer(Modifier.width(13.dp))
-            Column {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                Spacer(Modifier.height(2.dp))
-                Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = if (selected) accentGlow else ResonanceColors.Muted)
-            }
+        Icon(Icons.Default.PlayCircle, contentDescription = null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(52.dp))
+        Spacer(Modifier.height(14.dp))
+        Text("还没有在播放的音乐", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory)
+        Spacer(Modifier.height(6.dp))
+        Text("去音乐库挑一首开始播放", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
+        Spacer(Modifier.height(20.dp))
+        Button(
+            onClick = onOpenLibrary,
+            shape = ResonanceShapes.Button,
+            colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Coral, contentColor = Color.White),
+        ) {
+            Text("打开音乐库", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
 
+// ---------------------------------------------------------------------------
+// 我的 / 工具页（导入、同步、设置）
+// ---------------------------------------------------------------------------
 
 @Composable
-private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, compact: Boolean, message: String?) {
-    if (compact) {
+private fun ProfileScreen(
+    compact: Boolean,
+    onOpenImport: () -> Unit,
+    onOpenSync: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
+    val pagePadding = if (compact) 16.dp else 32.dp
+    Column(Modifier.fillMaxSize().padding(horizontal = pagePadding)) {
+        Text(
+            "我的",
+            style = MaterialTheme.typography.headlineLarge,
+            color = ResonanceColors.Ivory,
+            modifier = Modifier.padding(top = 14.dp, bottom = 10.dp),
+        )
+        SettingRow(
+            icon = Icons.Default.LibraryMusic,
+            title = "导入音乐",
+            subtitle = "扫描本机、转换 KGMA/KGG、导入歌单",
+            onClick = onOpenImport,
+        )
+        SettingRow(
+            icon = Icons.Outlined.Sync,
+            title = "设备同步",
+            subtitle = "局域网扫码同步 / 同步包导入导出",
+            onClick = onOpenSync,
+        )
+        SettingRow(
+            icon = Icons.Default.Settings,
+            title = "设置",
+            subtitle = "外观、音乐库与播放偏好",
+            onClick = onOpenSettings,
+        )
+        SettingRow(
+            icon = Icons.Default.Info,
+            title = "关于 Resonance",
+            subtitle = "版本 v$APP_VERSION · 本地优先",
+            onClick = onOpenSettings,
+        )
+    }
+}
+
+@Composable
+private fun ToolPage(
+    title: String,
+    onBack: () -> Unit,
+    compact: Boolean,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    val pagePadding = if (compact) 16.dp else 32.dp
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(start = pagePadding - 12.dp, end = pagePadding, top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = ResonanceColors.Ivory)
+            }
+            Text(title, style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.Ivory)
+        }
+        HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 28.dp),
-            horizontalAlignment = Alignment.Start,
+                .padding(horizontal = pagePadding, vertical = 12.dp),
         ) {
-            if (message != null) {
-                EmptyLibraryMessage(message)
-                Spacer(Modifier.height(18.dp))
-            }
-            EmptyLibraryArtwork(size = 164.dp)
-            Spacer(Modifier.height(24.dp))
-            Text("从第一首歌开始", style = MaterialTheme.typography.headlineLarge)
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "扫描本机音乐，或新建一个歌单。原文件不会被覆盖，转换后的 MP3 将整齐收进你的音乐库。",
-                style = MaterialTheme.typography.bodyLarge,
-                color = ResonanceColors.Muted,
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ImportScreen(
+    compact: Boolean,
+    onBack: () -> Unit,
+    onImport: () -> Unit,
+    onConvert: () -> Unit,
+    onImportPlaylist: () -> Unit,
+    message: String?,
+    operationInProgress: Boolean,
+) {
+    ToolPage(title = "导入音乐", onBack = onBack, compact = compact) {
+        if (operationInProgress) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth(),
+                color = ResonanceColors.Coral,
+                trackColor = ResonanceColors.Soft,
             )
-            Spacer(Modifier.height(24.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                PrimaryAction("扫描或导入音乐", Icons.Default.FolderOpen, onImport, Modifier.fillMaxWidth())
-                SecondaryAction("新建空歌单", Icons.Default.Add, onCreatePlaylist, Modifier.fillMaxWidth())
+            Spacer(Modifier.height(12.dp))
+        }
+        if (message != null) {
+            Surface(color = ResonanceColors.CoralSoft, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    message,
+                    color = ResonanceColors.Coral,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                )
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
+        }
+        SectionHeader("来源")
+        SettingRow(
+            icon = Icons.Default.Headphones,
+            title = "扫描本机音乐",
+            subtitle = "自动查找 MP3 / FLAC / M4A 等音频文件",
+            onClick = onImport,
+        )
+        SettingRow(
+            icon = Icons.Default.FolderOpen,
+            title = "选择文件夹并转换 KGMA/KGG",
+            subtitle = "递归转换为 320 kbps MP3，保留源文件",
+            onClick = onConvert,
+        )
+        SettingRow(
+            icon = Icons.AutoMirrored.Filled.QueueMusic,
+            title = "导入酷狗歌单链接",
+            subtitle = "读取公开歌单目录并匹配本机已有歌曲",
+            onClick = onImportPlaylist,
+        )
+    }
+}
+
+@Composable
+private fun SyncScreen(
+    compact: Boolean,
+    onBack: () -> Unit,
+    onExportSync: () -> Unit,
+    onImportSync: () -> Unit,
+    onStartLanSync: () -> Unit,
+    lanQrPath: String?,
+    message: String?,
+) {
+    ToolPage(title = "设备同步", onBack = onBack, compact = compact) {
+        if (message != null) {
+            Surface(color = ResonanceColors.CoralSoft, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    message,
+                    color = ResonanceColors.Coral,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+        SectionHeader("局域网")
+        SettingRow(
+            icon = Icons.Default.Devices,
+            title = "生成配对二维码",
+            subtitle = "10 分钟内有效，另一台设备扫码即可加密同步",
+            onClick = onStartLanSync,
+        )
+        if (lanQrPath != null) {
+            Spacer(Modifier.height(16.dp))
+            AlbumArtwork(
+                seed = 0,
+                modifier = Modifier.size(220.dp).align(Alignment.CenterHorizontally),
+                cornerRadius = 12.dp,
+                artworkPath = lanQrPath,
+            )
+            Spacer(Modifier.height(8.dp))
             Text(
-                "LOCAL · PRIVATE · YOURS",
-                style = MaterialTheme.typography.labelMedium,
+                "二维码已保存：$lanQrPath",
+                style = MaterialTheme.typography.bodySmall,
                 color = ResonanceColors.Dim,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
-        return
-    }
-    Box(modifier = Modifier.fillMaxSize().padding(if (compact) 24.dp else 48.dp)) {
-        Column(
-            modifier = Modifier.align(Alignment.Center).widthIn(max = 560.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (message != null) {
-                EmptyLibraryMessage(message)
-                Spacer(Modifier.height(20.dp))
-            }
-            EmptyLibraryArtwork(size = 232.dp)
-            Spacer(Modifier.height(30.dp))
-            Text(
-                "从第一首歌开始",
-                style = MaterialTheme.typography.displaySmall,
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                "扫描本机音乐，或新建一个歌单。原文件不会被覆盖，转换后的 MP3 将整齐收进你的音乐库。",
-                style = MaterialTheme.typography.bodyLarge,
-                color = ResonanceColors.Muted,
-                modifier = Modifier.widthIn(max = 500.dp),
-            )
-            Spacer(Modifier.height(26.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                PrimaryAction("扫描或导入音乐", Icons.Default.FolderOpen, onImport)
-                SecondaryAction("新建空歌单", Icons.Default.Add, onCreatePlaylist)
-            }
-        }
-        Text(
-            "LOCAL · PRIVATE · YOURS",
-            style = MaterialTheme.typography.labelMedium,
-            color = ResonanceColors.Dim,
-            modifier = Modifier.align(Alignment.BottomCenter),
+        SectionHeader("同步包")
+        SettingRow(
+            icon = Icons.Default.FolderOpen,
+            title = "导出同步包",
+            subtitle = "打包 MP3、封面与元数据为 .resonance 文件",
+            onClick = onExportSync,
+        )
+        SettingRow(
+            icon = Icons.AutoMirrored.Filled.QueueMusic,
+            title = "导入同步包",
+            subtitle = "校验完整性后合并到本机音乐库",
+            onClick = onImportSync,
         )
     }
 }
 
 @Composable
-private fun EmptyLibraryMessage(message: String) {
-    Surface(
-        color = ResonanceColors.CoralSoft,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.35f)),
-    ) {
-        Text(
-            message,
-            color = ResonanceColors.CoralGlow,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
-        )
-    }
-}
-
-@Composable
-private fun PrimaryAction(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Button(
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
-        modifier = modifier
-            .heightIn(min = 52.dp)
-            .pressScale(interactionSource)
-            .shadow(6.dp, RoundedCornerShape(14.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow),
-    ) {
-        Icon(icon, contentDescription = null)
-        Spacer(Modifier.width(9.dp))
-        Text(label)
-    }
-}
-
-@Composable
-private fun SecondaryAction(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val interactionSource = remember { MutableInteractionSource() }
-    Button(
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 15.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Soft, contentColor = ResonanceColors.Ivory),
-        border = BorderStroke(1.dp, ResonanceColors.Divider),
-        modifier = modifier.heightIn(min = 52.dp).pressScale(interactionSource),
-    ) {
-        Icon(icon, contentDescription = null)
-        Spacer(Modifier.width(9.dp))
-        Text(label)
-    }
-}
-
-@Composable
-private fun PlaylistStrip(
-    playlists: List<Playlist>,
+private fun SettingsScreen(
     compact: Boolean,
-    selectedPlaylistId: String?,
-    onPlaylistSelected: (String) -> Unit,
+    onBack: () -> Unit,
+    libraryLocation: String,
+    onOpenImport: () -> Unit,
+    themeMode: ThemeMode = ThemeMode.Dark,
+    onThemeModeChange: (ThemeMode) -> Unit = {},
+    deepSeekConfig: DeepSeekConfig = DeepSeekConfig(),
+    onSaveDeepSeekConfig: (DeepSeekConfig) -> Unit = {},
+    onTestDeepSeek: suspend (DeepSeekConfig) -> DeepSeekTestResult = { DeepSeekTestResult(false, "") },
+    customLyricsFolder: String? = null,
+    onSaveCustomLyricsFolder: (String?) -> Unit = {},
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 14.dp else 18.dp),
-        contentPadding = PaddingValues(vertical = 8.dp),
-    ) {
-        items(playlists, key = { it.id }) { playlist ->
-            val selected = playlist.id == selectedPlaylistId
-            val interactionSource = remember { MutableInteractionSource() }
-            val borderColor by animateColorAsState(
-                targetValue = if (selected) ResonanceColors.Coral.copy(alpha = 0.7f) else ResonanceColors.GlassBorderSubtle,
-                animationSpec = tween(MotionStandard),
-                label = "playlistBorder",
-            )
-            val titleColor by animateColorAsState(
-                targetValue = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Ivory,
-                animationSpec = tween(MotionStandard),
-                label = "playlistTitle",
-            )
-            val elevation by animateDpAsState(
-                targetValue = if (selected) 12.dp else 4.dp,
-                animationSpec = tween(MotionStandard),
-                label = "playlistElevation",
-            )
-            Column(
-                modifier = Modifier
-                    .width(if (compact) 160.dp else 192.dp)
-                    .pressScale(
-                        interactionSource = interactionSource,
-                        pressedScale = 0.955f,
-                        restingScale = if (selected) 1.02f else 1f,
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    var apiKey by remember(deepSeekConfig.apiKey) { mutableStateOf(deepSeekConfig.apiKey) }
+    var baseUrl by remember(deepSeekConfig.baseUrl) { mutableStateOf(deepSeekConfig.baseUrl) }
+    var model by remember(deepSeekConfig.model) { mutableStateOf(deepSeekConfig.model) }
+    var showApiKey by remember { mutableStateOf(false) }
+    var testInProgress by remember { mutableStateOf(false) }
+    var testResult by remember { mutableStateOf<DeepSeekTestResult?>(null) }
+    var lyricsFolder by remember(customLyricsFolder) { mutableStateOf(customLyricsFolder ?: "D:\\Music\\Kugou\\Leonard\\Lyrics") }
+    var folderSavedMessage by remember { mutableStateOf<String?>(null) }
+
+    ToolPage(title = "设置", onBack = onBack, compact = compact) {
+        SectionHeader("外观")
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ThemeOption("深色", Icons.Default.DarkMode, themeMode == ThemeMode.Dark, { onThemeModeChange(ThemeMode.Dark) }, Modifier.weight(1f))
+            ThemeOption("浅色", Icons.Default.LightMode, themeMode == ThemeMode.Light, { onThemeModeChange(ThemeMode.Light) }, Modifier.weight(1f))
+            ThemeOption("跟随系统", Icons.Default.BrightnessAuto, themeMode == ThemeMode.System, { onThemeModeChange(ThemeMode.System) }, Modifier.weight(1f))
+        }
+
+        SectionHeader("DeepSeek AI 增强")
+        Text(
+            "当本地歌词和 LRCLIB 均无结果时，自动调用 DeepSeek AI 搜索或生成精准逐行时间轴歌词与专辑视觉。",
+            style = MaterialTheme.typography.bodySmall,
+            color = ResonanceColors.Dim,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        OutlinedTextField(
+            value = apiKey,
+            onValueChange = {
+                apiKey = it.trim()
+                onSaveDeepSeekConfig(DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model))
+            },
+            label = { Text("DeepSeek API Key") },
+            placeholder = { Text("sk-...", color = ResonanceColors.Dim) },
+            singleLine = true,
+            visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { showApiKey = !showApiKey }) {
+                    Icon(
+                        if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (showApiKey) "隐藏" else "显示",
+                        tint = ResonanceColors.Dim,
                     )
-                    .shadow(
-                        elevation = elevation,
-                        shape = RoundedCornerShape(24.dp),
-                        ambientColor = if (selected) ResonanceColors.Coral.copy(alpha = 0.35f) else ResonanceColors.Shadow,
-                        spotColor = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Shadow,
-                    )
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(
-                        Brush.verticalGradient(
-                            if (selected) {
-                                listOf(Color(0xE62A1D2A), Color(0xCC161422))
-                            } else {
-                                listOf(Color(0xD9182030), Color(0xB3101624))
-                            },
-                        ),
-                    )
-                    .border(
-                        width = if (selected) 1.5.dp else 1.dp,
-                        color = borderColor,
-                        shape = RoundedCornerShape(24.dp),
-                    )
-                    .semantics { this.selected = selected }
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        role = Role.Tab,
-                    ) { onPlaylistSelected(playlist.id) }
-                    .padding(10.dp),
-            ) {
-                Box {
-                    AlbumArtwork(
-                        seed = playlist.artworkSeed,
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                        cornerRadius = 18.dp,
-                        artworkPath = playlist.tracks.firstNotNullOfOrNull(Track::artworkPath),
-                    )
-                    if (selected) {
-                        Surface(
-                            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                            color = ResonanceColors.CoralSoft,
-                            shape = CircleShape,
-                            border = BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.4f)),
-                        ) {
-                            Text(
-                                "当前歌单",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
-                                color = ResonanceColors.CoralGlow,
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                            )
-                        }
-                    }
                 }
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    playlist.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = titleColor,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    playlist.subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = ResonanceColors.Muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(4.dp))
+            },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = ResonanceColors.Coral,
+                unfocusedBorderColor = ResonanceColors.Divider,
+                focusedContainerColor = ResonanceColors.Canvas,
+                unfocusedContainerColor = ResonanceColors.Canvas,
+                cursorColor = ResonanceColors.Coral,
+            ),
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = model,
+                onValueChange = {
+                    model = it.trim()
+                    onSaveDeepSeekConfig(DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model))
+                },
+                label = { Text("模型") },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ResonanceColors.Coral,
+                    unfocusedBorderColor = ResonanceColors.Divider,
+                    focusedContainerColor = ResonanceColors.Canvas,
+                    unfocusedContainerColor = ResonanceColors.Canvas,
+                    cursorColor = ResonanceColors.Coral,
+                ),
+            )
+            OutlinedTextField(
+                value = baseUrl,
+                onValueChange = {
+                    baseUrl = it.trim()
+                    onSaveDeepSeekConfig(DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model))
+                },
+                label = { Text("API 接口地址") },
+                singleLine = true,
+                modifier = Modifier.weight(1.3f),
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = ResonanceColors.Coral,
+                    unfocusedBorderColor = ResonanceColors.Divider,
+                    focusedContainerColor = ResonanceColors.Canvas,
+                    unfocusedContainerColor = ResonanceColors.Canvas,
+                    cursorColor = ResonanceColors.Coral,
+                ),
+            )
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.OutlinedButton(
+                onClick = {
+                    testInProgress = true
+                    testResult = null
+                    coroutineScope.launch {
+                        val config = DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model)
+                        onSaveDeepSeekConfig(config)
+                        testResult = onTestDeepSeek(config)
+                        testInProgress = false
+                    }
+                },
+                enabled = apiKey.isNotBlank() && !testInProgress,
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                if (testInProgress) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = ResonanceColors.Coral, strokeWidth = 2.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text("正在测试…")
+                } else {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Coral)
+                    Spacer(Modifier.width(6.dp))
+                    Text("测试 DeepSeek 连接", color = ResonanceColors.Coral)
+                }
             }
         }
+
+        testResult?.let { res ->
+            Spacer(Modifier.height(6.dp))
+            Surface(
+                color = if (res.success) ResonanceColors.Soft else ResonanceColors.CoralSoft,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    res.message,
+                    color = if (res.success) ResonanceColors.Ivory else ResonanceColors.Coral,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+        }
+
+        SectionHeader("本地歌词与酷狗下载目录")
+        Text(
+            "桌面端自动识别同一目录下的 .krc 与 .lrc 歌词，以及酷狗默认下载歌词文件夹。",
+            style = MaterialTheme.typography.bodySmall,
+            color = ResonanceColors.Dim,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        OutlinedTextField(
+            value = lyricsFolder,
+            onValueChange = { lyricsFolder = it },
+            label = { Text("本地歌词文件夹绝对路径") },
+            placeholder = { Text("例如：D:\\Music\\Kugou\\Leonard\\Lyrics", color = ResonanceColors.Dim) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = ResonanceColors.Coral,
+                unfocusedBorderColor = ResonanceColors.Divider,
+                focusedContainerColor = ResonanceColors.Canvas,
+                unfocusedContainerColor = ResonanceColors.Canvas,
+                cursorColor = ResonanceColors.Coral,
+            ),
+        )
+
+        Spacer(Modifier.height(6.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            androidx.compose.material3.Button(
+                onClick = {
+                    onSaveCustomLyricsFolder(lyricsFolder.trim().takeIf(String::isNotBlank))
+                    folderSavedMessage = "歌词目录已保存"
+                },
+                shape = RoundedCornerShape(8.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = ResonanceColors.Coral,
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                ),
+            ) {
+                Text("保存目录")
+            }
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    lyricsFolder = "D:\\Music\\Kugou\\Leonard\\Lyrics"
+                    onSaveCustomLyricsFolder(lyricsFolder)
+                    folderSavedMessage = "已重置为默认酷狗歌词目录"
+                },
+            ) {
+                Text("恢复默认路径", color = ResonanceColors.Muted)
+            }
+        }
+
+        folderSavedMessage?.let { msg ->
+            Spacer(Modifier.height(4.dp))
+            Text(msg, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Coral)
+        }
+
+        SectionHeader("音乐库")
+        SettingRow(Icons.Default.LibraryMusic, "扫描音乐", "查找并导入本机音频文件", onClick = onOpenImport)
+        SettingRow(Icons.Default.FolderOpen, "音乐库位置", libraryLocation, onClick = null)
+
+        SectionHeader("播放与解码")
+        SettingRow(Icons.Default.GraphicEq, "转换质量", "默认 MP3 320 kbps · 原 MP3 不重新编码", onClick = null)
+        SettingRow(Icons.Default.MusicNote, "KRC / LRC 解密", "支持酷狗原生 KRC 解密、LRCLIB 自动匹配及本地多级模糊索引", onClick = null)
+        SettingRow(Icons.Default.Shuffle, "播放与队列", "记住随机 / 循环模式和上次选中的歌单", onClick = null)
+
+        SectionHeader("关于")
+        SettingRow(Icons.Default.Info, "Resonance", "版本 v$APP_VERSION · 本地优先的跨平台音乐播放器", onClick = null)
+        Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun LibrarySearchBar(query: String, onQueryChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.CoralGlow) },
-        trailingIcon = if (query.isNotEmpty()) {
-            {
-                IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Close, contentDescription = "清空搜索", tint = ResonanceColors.Muted)
-                }
-            }
-        } else null,
-        singleLine = true,
-        shape = RoundedCornerShape(18.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = ResonanceColors.Coral.copy(alpha = 0.65f),
-            unfocusedBorderColor = ResonanceColors.GlassBorderSubtle,
-            focusedContainerColor = ResonanceColors.Glass,
-            unfocusedContainerColor = ResonanceColors.Glass,
-            cursorColor = ResonanceColors.Coral,
-        ),
+private fun ThemeOption(
+    label: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val background by animateColorAsState(
+        if (selected) ResonanceColors.CoralSoft else ResonanceColors.Raised,
+        animationSpec = tween(MotionQuick),
+        label = "themeOptionBg",
+    )
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(background)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = if (selected) ResonanceColors.Coral else ResonanceColors.Dim,
+            modifier = Modifier.size(20.dp),
+        )
+        Spacer(Modifier.height(5.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = if (selected) ResonanceColors.Coral else ResonanceColors.Muted,
+        )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        title,
+        style = MaterialTheme.typography.labelMedium,
+        color = ResonanceColors.Dim,
+        modifier = Modifier.padding(top = 18.dp, bottom = 4.dp),
     )
 }
+
+@Composable
+private fun SettingRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: (() -> Unit)?,
+) {
+    val clickableModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(clickableModifier)
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icon, contentDescription = null, tint = ResonanceColors.Muted, modifier = Modifier.size(21.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Ivory)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ResonanceColors.Dim,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (onClick != null) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = ResonanceColors.Dimmer,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 歌曲列表项（核心组件，扁平化）
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun TrackRow(
@@ -1819,167 +2438,203 @@ private fun TrackRow(
     selected: Boolean,
     isPlaying: Boolean,
     onClick: () -> Unit,
-    compact: Boolean,
     userPlaylists: List<Playlist>,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
     onDeleteLocalTrack: (Track) -> Unit,
     onToggleFavorite: (Track) -> Unit,
     modifier: Modifier = Modifier,
+    index: Int? = null,
+    isMultiSelectMode: Boolean = false,
+    isMultiSelected: Boolean = false,
+    onToggleMultiSelect: () -> Unit = {},
+    onEditTrack: ((Track) -> Unit)? = null,
 ) {
     val available = track.sourceUri != null
     var menuExpanded by remember(track.id) { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
-    val isFlac = track.mimeType == "audio/flac" || track.title.endsWith(".flac", ignoreCase = true)
+    val dividerIndent = if (isMultiSelectMode) 44.dp else if (index != null) 34.dp else 58.dp
 
-    val background by animateColorAsState(
-        if (selected) ResonanceColors.CoralSoft.copy(alpha = 0.92f) else ResonanceColors.GlassLight.copy(alpha = 0.20f),
-        animationSpec = tween(MotionQuick),
-        label = "trackBackground",
-    )
-    val elevation by animateDpAsState(
-        targetValue = if (selected) 6.dp else 0.dp,
-        animationSpec = tween(MotionQuick),
-        label = "trackElevation",
-    )
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.5.dp)
-            .pressScale(interactionSource, pressedScale = 0.988f)
-            .shadow(elevation, RoundedCornerShape(16.dp), ambientColor = if (selected) ResonanceColors.Coral.copy(alpha = 0.3f) else ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
-            .clip(RoundedCornerShape(16.dp))
-            .background(background)
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    if (selected) listOf(ResonanceColors.Coral.copy(alpha = 0.6f), ResonanceColors.Coral.copy(alpha = 0.2f))
-                    else listOf(ResonanceColors.GlassBorderSubtle, Color.Transparent),
-                ),
-                shape = RoundedCornerShape(16.dp),
-            )
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                role = Role.Button,
-                onClick = onClick,
-            )
-            .padding(horizontal = if (compact) 10.dp else 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AlbumArtwork(
-            track.artworkSeed,
-            Modifier
-                .size(if (compact) 52.dp else 56.dp)
-                .shadow(6.dp, RoundedCornerShape(13.dp)),
-            13.dp,
-            track.artworkPath,
-        )
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (selected) {
-                    NowPlayingIndicator(isPlaying = isPlaying)
-                    Spacer(Modifier.width(8.dp))
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    role = Role.Button,
+                    onClick = {
+                        if (isMultiSelectMode) {
+                            onToggleMultiSelect()
+                        } else {
+                            onClick()
+                        }
+                    },
+                )
+                .padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (isMultiSelectMode) {
+                Checkbox(
+                    checked = isMultiSelected,
+                    onCheckedChange = { onToggleMultiSelect() },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = ResonanceColors.Coral,
+                        uncheckedColor = ResonanceColors.Dim,
+                        checkmarkColor = Color.White,
+                    ),
+                    modifier = Modifier.padding(end = 4.dp),
+                )
+            }
+            if (index != null && !isMultiSelectMode) {
+                Box(Modifier.width(34.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        "%02d".format(index),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (selected) ResonanceColors.Coral else ResonanceColors.Dim,
+                    )
                 }
+            } else {
+                AlbumArtwork(
+                    track.artworkSeed,
+                    Modifier.size(46.dp),
+                    8.dp,
+                    track.artworkPath,
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (selected && !isMultiSelectMode) {
+                        NowPlayingIndicator(isPlaying = isPlaying)
+                        Spacer(Modifier.width(7.dp))
+                    }
+                    Text(
+                        track.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (isMultiSelected || selected) ResonanceColors.Coral else ResonanceColors.Ivory,
+                        fontWeight = if (isMultiSelected || selected) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (!available) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "待匹配",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ResonanceColors.Dim,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(ResonanceColors.Soft)
+                                .padding(horizontal = 5.dp, vertical = 1.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
                 Text(
-                    track.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Ivory,
-                    fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal,
+                    track.artist.ifBlank { "未知艺术家" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ResonanceColors.Dim,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.width(8.dp))
-                if (!available) {
-                    Surface(color = ResonanceColors.Soft, shape = RoundedCornerShape(6.dp)) {
-                        Text("待匹配", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                    }
-                } else {
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isFlac) ResonanceColors.VioletSoft else ResonanceColors.SurfaceSubtle)
-                            .border(0.5.dp, if (isFlac) ResonanceColors.Violet.copy(alpha = 0.4f) else ResonanceColors.GlassBorderSubtle, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
-                    ) {
-                        Text(
-                            if (isFlac) "FLAC" else "320K",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold),
-                            color = if (isFlac) ResonanceColors.VioletGlow else ResonanceColors.Mint,
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                track.durationText,
+                style = MaterialTheme.typography.bodySmall,
+                color = ResonanceColors.Dim,
+            )
+            if (!isMultiSelectMode) {
+                Box {
+                    IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(38.dp)) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = "更多操作",
+                            tint = ResonanceColors.Dim,
+                            modifier = Modifier.size(19.dp),
                         )
                     }
-                }
-            }
-            Spacer(Modifier.height(3.dp))
-            Text(
-                if (compact) track.artist else "${track.artist}  ·  ${track.album}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = ResonanceColors.Muted,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        IconButton(onClick = { onToggleFavorite(track) }, modifier = Modifier.size(46.dp)) {
-            Icon(
-                if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                contentDescription = if (track.isFavorite) "取消收藏" else "收藏",
-                tint = if (track.isFavorite) ResonanceColors.Coral else ResonanceColors.Dim,
-                modifier = Modifier.size(19.dp),
-            )
-        }
-        Text(track.durationText, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
-        Box {
-            IconButton(onClick = { menuExpanded = true }) {
-                Icon(Icons.Default.MoreHoriz, contentDescription = "歌单选项", tint = ResonanceColors.Muted)
-            }
-            DropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false },
-            ) {
-                if (userPlaylists.isEmpty()) {
-                    DropdownMenuItem(
-                        text = { Text("先新建一个歌单") },
-                        onClick = { menuExpanded = false },
-                        enabled = false,
-                    )
-                } else {
-                    userPlaylists.forEach { playlist ->
-                        val included = playlist.tracks.any { it.id == track.id }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false },
+                    ) {
                         DropdownMenuItem(
-                            text = {
-                                Text(
-                                    if (included) "从「${playlist.name}」移出" else "加入「${playlist.name}」",
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
+                            text = { Text(if (track.isFavorite) "取消收藏" else "收藏") },
+                            leadingIcon = {
+                                Icon(
+                                    if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (track.isFavorite) ResonanceColors.Coral else ResonanceColors.Muted,
                                 )
                             },
-                            leadingIcon = if (included) {
-                                { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ResonanceColors.Coral) }
-                            } else null,
                             onClick = {
-                                onPlaylistMembershipChange(track, playlist.id, !included)
+                                onToggleFavorite(track)
                                 menuExpanded = false
                             },
                         )
+                        if (onEditTrack != null) {
+                            DropdownMenuItem(
+                                text = { Text("编辑歌曲信息") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Edit,
+                                        contentDescription = null,
+                                        tint = ResonanceColors.Ivory,
+                                    )
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    onEditTrack(track)
+                                },
+                            )
+                        }
+                        if (userPlaylists.isEmpty()) {
+                            DropdownMenuItem(
+                                text = { Text("先新建一个歌单") },
+                                onClick = { menuExpanded = false },
+                                enabled = false,
+                            )
+                        } else {
+                            userPlaylists.forEach { playlist ->
+                                val included = playlist.tracks.any { it.id == track.id }
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            if (included) "从「${playlist.name}」移出" else "加入「${playlist.name}」",
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    },
+                                    leadingIcon = if (included) {
+                                        { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ResonanceColors.Coral) }
+                                    } else null,
+                                    onClick = {
+                                        onPlaylistMembershipChange(track, playlist.id, !included)
+                                        menuExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                        if (available && !track.sourceUri.isNullOrBlank()) {
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("删除本地音频文件", color = ResonanceColors.Coral) },
+                                leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ResonanceColors.Coral) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDeleteLocalTrack(track)
+                                },
+                            )
+                        }
                     }
-                }
-                if (available && track.mimeType == "audio/mpeg") {
-                    HorizontalDivider()
-                    DropdownMenuItem(
-                        text = { Text("删除本地 MP3", color = ResonanceColors.Coral) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ResonanceColors.Coral) },
-                        onClick = {
-                            menuExpanded = false
-                            onDeleteLocalTrack(track)
-                        },
-                    )
                 }
             }
         }
+        HorizontalDivider(
+            color = ResonanceColors.Divider,
+            thickness = Dp.Hairline,
+            modifier = Modifier.padding(start = dividerIndent),
+        )
     }
 }
-
 
 @Composable
 private fun NowPlayingIndicator(isPlaying: Boolean) {
@@ -1988,7 +2643,7 @@ private fun NowPlayingIndicator(isPlaying: Boolean) {
             Icons.Default.GraphicEq,
             contentDescription = "当前曲目",
             tint = ResonanceColors.Coral,
-            modifier = Modifier.size(16.dp),
+            modifier = Modifier.size(15.dp),
         )
         return
     }
@@ -2012,7 +2667,7 @@ private fun NowPlayingIndicator(isPlaying: Boolean) {
         label = "playingBarThree",
     )
     Row(
-        modifier = Modifier.width(16.dp).height(16.dp),
+        modifier = Modifier.width(15.dp).height(15.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -2028,26 +2683,9 @@ private fun NowPlayingIndicator(isPlaying: Boolean) {
     }
 }
 
-@Composable
-private fun EmptyPlaylistNotice(canAddMusic: Boolean, onImport: () -> Unit) {
-    Surface(
-        color = ResonanceColors.Soft,
-        shape = RoundedCornerShape(18.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(22.dp)) {
-            Text("这个歌单还没有歌曲", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                if (canAddMusic) "打开其他歌单的歌曲菜单，即可加入这里。" else "导入公开歌单并匹配本机音乐，或先扫描本机曲库。",
-                color = ResonanceColors.Muted,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.height(12.dp))
-            TextButton(onClick = onImport) { Text("导入音乐") }
-        }
-    }
-}
+// ---------------------------------------------------------------------------
+// Mini Player（扁平窄条）
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun MiniPlayer(
@@ -2055,184 +2693,71 @@ private fun MiniPlayer(
     onTogglePlay: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
-    onToggleShuffle: () -> Unit,
-    onCycleRepeat: () -> Unit,
-    onSeek: (Float) -> Unit,
     onOpenNowPlaying: () -> Unit,
     compact: Boolean,
-    horizontalPadding: Dp,
 ) {
     val track = playerState.currentTrack ?: return
-    val shuffleInteraction = remember { MutableInteractionSource() }
-    val previousInteraction = remember { MutableInteractionSource() }
-    val playInteraction = remember { MutableInteractionSource() }
-    val nextInteraction = remember { MutableInteractionSource() }
-    val repeatInteraction = remember { MutableInteractionSource() }
-    val artworkScale by animateFloatAsState(
-        targetValue = if (playerState.isPlaying) 1.04f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "miniArtworkScale",
-    )
-    Column(
-        modifier = Modifier
-            .padding(horizontal = horizontalPadding, vertical = 8.dp)
-            .fillMaxWidth()
-            .resonanceGlass(
-                shape = RoundedCornerShape(22.dp),
-                backgroundColor = ResonanceColors.Glass,
-                borderColors = listOf(ResonanceColors.Coral.copy(alpha = 0.35f), ResonanceColors.GlassBorderSubtle),
-                shadowElevation = 12.dp,
-            ),
-    ) {
+    Column(Modifier.fillMaxWidth().background(ResonanceColors.CanvasElevated)) {
+        LinearProgressIndicator(
+            progress = { playerState.progress.coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(2.dp),
+            color = ResonanceColors.Coral,
+            trackColor = Color.Transparent,
+            drawStopIndicator = {},
+        )
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(58.dp)
+                .clickable(role = Role.Button, onClick = onOpenNowPlaying)
+                .semantics { contentDescription = "打开正在播放详情与歌词" }
+                .padding(start = 12.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable(role = Role.Button, onClick = onOpenNowPlaying)
-                    .semantics { contentDescription = "打开正在播放详情与歌词" },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AlbumArtwork(
-                    track.artworkSeed,
-                    Modifier
-                        .size(52.dp)
-                        .graphicsLayer { scaleX = artworkScale; scaleY = artworkScale }
-                        .shadow(10.dp, RoundedCornerShape(14.dp), ambientColor = ResonanceColors.Coral.copy(alpha = 0.3f), spotColor = ResonanceColors.Shadow),
-                    14.dp,
-                    track.artworkPath,
+            AlbumArtwork(
+                track.artworkSeed,
+                Modifier.size(40.dp),
+                8.dp,
+                track.artworkPath,
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    track.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = ResonanceColors.Ivory,
                 )
-                Spacer(Modifier.width(13.dp))
-                AnimatedContent(
-                    targetState = track,
-                    modifier = Modifier.weight(1f),
-                    transitionSpec = {
-                        (fadeIn(tween(MotionStandard)) + slideInVertically(tween(MotionStandard)) { it / 3 }) togetherWith
-                            (fadeOut(tween(MotionQuick)) + slideOutVertically(tween(MotionQuick)) { -it / 3 })
-                    },
-                    contentKey = Track::id,
-                    label = "miniTrack",
-                ) { activeTrack ->
-                    Column {
-                        Text(
-                            activeTrack.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = ResonanceColors.Ivory,
-                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            activeTrack.artist.ifBlank { "未知歌手" },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ResonanceColors.Muted,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
+                Text(
+                    track.artist.ifBlank { "未知艺术家" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ResonanceColors.Dim,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
             if (!compact) {
-                IconButton(
-                    onClick = onToggleShuffle,
-                    interactionSource = shuffleInteraction,
-                    modifier = Modifier.size(46.dp).pressScale(shuffleInteraction, pressedScale = 0.85f),
-                ) {
-                    Icon(
-                        Icons.Default.Shuffle,
-                        contentDescription = if (playerState.shuffleEnabled) "关闭随机播放" else "开启随机播放",
-                        tint = if (playerState.shuffleEnabled) ResonanceColors.Coral else ResonanceColors.Dim,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                IconButton(
-                    onClick = onPrevious,
-                    interactionSource = previousInteraction,
-                    modifier = Modifier.size(46.dp).pressScale(previousInteraction, pressedScale = 0.85f),
-                ) {
-                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一首", tint = ResonanceColors.Ivory)
+                IconButton(onClick = onPrevious) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "上一首", tint = ResonanceColors.Muted)
                 }
             }
             FilledIconButton(
                 onClick = onTogglePlay,
-                interactionSource = playInteraction,
-                modifier = Modifier
-                    .size(50.dp)
-                    .pressScale(playInteraction, pressedScale = 0.88f)
-                    .shadow(10.dp, CircleShape, ambientColor = ResonanceColors.Coral.copy(alpha = 0.45f), spotColor = ResonanceColors.CoralGlow),
+                modifier = Modifier.size(38.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = ResonanceColors.Coral,
-                    contentColor = Color(0xFF2A0B07),
+                    contentColor = Color.White,
                 ),
             ) {
-                AnimatedContent(
-                    targetState = playerState.isPlaying,
-                    transitionSpec = { scaleIn(tween(MotionQuick)) togetherWith scaleOut(tween(MotionQuick)) },
-                    label = "playPause",
-                ) { playing ->
-                    Icon(
-                        if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (playing) "暂停" else "播放",
-                        modifier = Modifier.size(26.dp),
-                    )
-                }
-            }
-            IconButton(
-                onClick = onNext,
-                interactionSource = nextInteraction,
-                modifier = Modifier.size(46.dp).pressScale(nextInteraction, pressedScale = 0.85f),
-            ) {
-                Icon(Icons.Default.SkipNext, contentDescription = "下一首", tint = ResonanceColors.Ivory)
-            }
-            if (!compact) {
-                IconButton(
-                    onClick = onCycleRepeat,
-                    interactionSource = repeatInteraction,
-                    modifier = Modifier.size(46.dp).pressScale(repeatInteraction, pressedScale = 0.85f),
-                ) {
-                    Icon(
-                        if (playerState.repeatMode == RepeatMode.One) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                        contentDescription = when (playerState.repeatMode) {
-                            RepeatMode.Off -> "开启列表循环"
-                            RepeatMode.All -> "开启单曲循环"
-                            RepeatMode.One -> "关闭循环"
-                        },
-                        tint = if (playerState.repeatMode == RepeatMode.Off) ResonanceColors.Dim else ResonanceColors.Coral,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        }
-        Slider(
-            value = playerState.progress.coerceIn(0f, 1f),
-            onValueChange = onSeek,
-            modifier = Modifier.fillMaxWidth().height(16.dp).padding(horizontal = 6.dp),
-            colors = SliderDefaults.colors(
-                thumbColor = ResonanceColors.CoralGlow,
-                activeTrackColor = ResonanceColors.Coral,
-                inactiveTrackColor = ResonanceColors.DividerStrong.copy(alpha = 0.7f),
-            ),
-        )
-        if (!compact) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 18.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(
-                    formatPlaybackPosition(track.durationText, playerState.progress),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = ResonanceColors.Muted,
+                Icon(
+                    if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (playerState.isPlaying) "暂停" else "播放",
+                    modifier = Modifier.size(20.dp),
                 )
-                Text(
-                    track.durationText,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = ResonanceColors.Dim,
-                )
+            }
+            IconButton(onClick = onNext) {
+                Icon(Icons.Default.SkipNext, contentDescription = "下一首", tint = ResonanceColors.Muted)
             }
         }
     }
@@ -2245,468 +2770,25 @@ internal fun formatPlaybackPosition(durationText: String, progress: Float): Stri
     return "%d:%02d".format(elapsed / 60, elapsed % 60)
 }
 
-@Composable
-private fun ImportScreen(
-    compact: Boolean,
-    onImport: () -> Unit,
-    onConvert: () -> Unit,
-    onImportPlaylist: () -> Unit,
-    message: String?,
-    operationInProgress: Boolean,
-) {
-    FeaturePage(
-        eyebrow = "导入音乐",
-        title = "把散落的音乐\n带回一个地方",
-        body = "扫描系统音乐、选择 KGMA 所在文件夹，或导入酷狗公开歌单目录。",
-        compact = compact,
-    ) {
-        if (operationInProgress) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Spacer(Modifier.height(12.dp))
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (message != null) {
-                Surface(
-                    color = ResonanceColors.CoralSoft,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        message,
-                        color = ResonanceColors.Coral,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(14.dp),
-                    )
-                }
-            }
-            ActionList(
-                actions = listOf(
-                    Triple(Icons.Default.Headphones, "扫描本机音乐", "查找 MP3、FLAC、M4A 等系统可见音频"),
-                    Triple(Icons.Default.FolderOpen, "选择文件夹并转换 KGMA", "递归转为 320 kbps MP3；保留源文件"),
-                    Triple(Icons.AutoMirrored.Filled.QueueMusic, "导入酷狗歌单链接", "读取公开歌单目录并匹配本机已有歌曲"),
-                ),
-                onClick = { index ->
-                    when (index) {
-                        0 -> onImport()
-                        1 -> onConvert()
-                        else -> onImportPlaylist()
-                    }
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun SyncScreen(
-    compact: Boolean,
-    onExportSync: () -> Unit,
-    onImportSync: () -> Unit,
-    onStartLanSync: () -> Unit,
-    lanQrPath: String?,
-    message: String?,
-) {
-    FeaturePage(
-        eyebrow = "设备同步",
-        title = "不经过云端，\n只在设备之间",
-        body = "同一局域网内加密同步歌单、封面和缺失的 MP3。第一次连接使用二维码配对。",
-        compact = compact,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            if (message != null) {
-                Surface(color = ResonanceColors.CoralSoft, shape = RoundedCornerShape(12.dp)) {
-                    Text(message, color = ResonanceColors.Coral, modifier = Modifier.padding(14.dp))
-                }
-            }
-            ActionList(
-                actions = listOf(
-                    Triple(Icons.Default.Devices, "开启局域网扫码同步", "Windows 生成 10 分钟一次性二维码，手机系统相机扫码即传"),
-                    Triple(Icons.Default.Devices, "导出同步包", "选择歌单或整个音乐库，打包 MP3、封面与元数据（普通 Zip，无需密码）"),
-                    Triple(Icons.Default.FolderOpen, "导入同步包", "选择 .resonance 同步包，校验完整性后合并到本机音乐库"),
-                ),
-                onClick = { index ->
-                    when (index) {
-                        0 -> onStartLanSync()
-                        1 -> onExportSync()
-                        else -> onImportSync()
-                    }
-                },
-            )
-            if (lanQrPath != null) {
-                AlbumArtwork(
-                    seed = 0,
-                    modifier = Modifier.size(if (compact) 220.dp else 260.dp),
-                    cornerRadius = 16.dp,
-                    artworkPath = lanQrPath,
-                )
-                Text("二维码已保存：$lanQrPath", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsScreen(
-    compact: Boolean,
-    libraryLocation: String,
-    themeMode: ThemeMode = ThemeMode.Dark,
-    onThemeModeChange: (ThemeMode) -> Unit = {},
-) {
-    FeaturePage(
-        eyebrow = "设置",
-        title = "音乐库偏好",
-        body = "查看导入质量、外观主题、文件位置与应用信息。",
-        compact = compact,
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ThemeModeSelector(currentMode = themeMode, onModeSelect = onThemeModeChange)
-            SettingsInfoRow(Icons.Default.GraphicEq, "转换质量", "默认 MP3 320 kbps · 原 MP3 不重新编码")
-            SettingsInfoRow(Icons.Default.MusicNote, "自动歌词", "LRCLIB 自动匹配逐行歌词 · 结果仅缓存在本机")
-            SettingsInfoRow(Icons.Default.FolderOpen, "音乐库位置", libraryLocation)
-            SettingsInfoRow(Icons.Default.Shuffle, "播放与队列", "记住随机 / 循环模式和上次选中的歌单")
-            Spacer(Modifier.height(8.dp))
-            Surface(
-                color = ResonanceColors.Soft,
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, ResonanceColors.Divider.copy(alpha = 0.8f)),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.padding(20.dp)) {
-                    Text("关于 Resonance", style = MaterialTheme.typography.titleLarge)
-                    Spacer(Modifier.height(8.dp))
-                    Text("版本 v$APP_VERSION", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "本地优先的跨平台音乐播放器。音乐、歌单与封面只保存在你的设备上。",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = ResonanceColors.Muted,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemeModeSelector(
-    currentMode: ThemeMode,
-    onModeSelect: (ThemeMode) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .resonanceGlass(
-                shape = RoundedCornerShape(20.dp),
-                backgroundColor = ResonanceColors.Glass,
-                borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                shadowElevation = 6.dp,
-            )
-            .padding(18.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(ResonanceColors.CoralSoft),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Default.Palette, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(20.dp))
-            }
-            Spacer(Modifier.width(14.dp))
-            Column {
-                Text("界面主题风格", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(2.dp))
-                Text("即时切换深色极光或纯净浅色磨砂质感", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-            }
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            ThemeOptionButton(
-                label = "深色模式",
-                icon = Icons.Default.DarkMode,
-                selected = currentMode == ThemeMode.Dark,
-                onClick = { onModeSelect(ThemeMode.Dark) },
-                modifier = Modifier.weight(1f),
-            )
-            ThemeOptionButton(
-                label = "浅色模式",
-                icon = Icons.Default.LightMode,
-                selected = currentMode == ThemeMode.Light,
-                onClick = { onModeSelect(ThemeMode.Light) },
-                modifier = Modifier.weight(1f),
-            )
-            ThemeOptionButton(
-                label = "跟随系统",
-                icon = Icons.Default.BrightnessAuto,
-                selected = currentMode == ThemeMode.System,
-                onClick = { onModeSelect(ThemeMode.System) },
-                modifier = Modifier.weight(1f),
-            )
-        }
-    }
-}
-
-@Composable
-private fun ThemeOptionButton(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val borderColor by animateColorAsState(
-        targetValue = if (selected) ResonanceColors.Coral.copy(alpha = 0.7f) else ResonanceColors.GlassBorderSubtle,
-        animationSpec = tween(150),
-        label = "themeBorder",
-    )
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) ResonanceColors.CoralSoft else ResonanceColors.Raised,
-        animationSpec = tween(150),
-        label = "themeContainer",
-    )
-
-    Surface(
-        onClick = onClick,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(14.dp),
-        color = containerColor,
-        border = BorderStroke(if (selected) 1.5.dp else 1.dp, borderColor),
-        modifier = modifier
-            .pressScale(interactionSource, pressedScale = 0.96f)
-            .shadow(if (selected) 6.dp else 1.dp, RoundedCornerShape(14.dp), ambientColor = if (selected) ResonanceColors.Coral else ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow),
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Dim,
-                modifier = Modifier.size(22.dp),
-            )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal),
-                color = if (selected) ResonanceColors.CoralGlow else ResonanceColors.Muted,
-            )
-        }
-    }
-}
-
-
-@Composable
-private fun SettingsInfoRow(icon: ImageVector, title: String, detail: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .resonanceGlass(
-                shape = RoundedCornerShape(18.dp),
-                backgroundColor = ResonanceColors.Glass,
-                borderColors = listOf(ResonanceColors.GlassBorderSubtle, Color.Transparent),
-                shadowElevation = 4.dp,
-            )
-            .padding(horizontal = 16.dp, vertical = 15.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(ResonanceColors.Soft),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(20.dp))
-        }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-            Spacer(Modifier.height(2.dp))
-            Text(detail, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-        }
-    }
-}
-
-@Composable
-private fun FeaturePage(
-    eyebrow: String,
-    title: String,
-    body: String,
-    compact: Boolean,
-    content: @Composable () -> Unit,
-) {
-    val violet = ResonanceColors.Violet
-    val coral = ResonanceColors.Coral
-    LazyColumn(
-        contentPadding = PaddingValues(if (compact) 24.dp else 48.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        item {
-            val shape = RoundedCornerShape(if (compact) 24.dp else 30.dp)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .widthIn(max = 840.dp)
-                    .resonanceGlass(
-                        shape = shape,
-                        backgroundColor = ResonanceColors.Glass,
-                        borderColors = listOf(ResonanceColors.VioletGlow.copy(alpha = 0.5f), ResonanceColors.GlassBorder),
-                        shadowElevation = 14.dp,
-                    ),
-            ) {
-                Canvas(Modifier.matchParentSize()) {
-                    val center = Offset(size.width * 0.90f, size.height * 0.15f)
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(violet.copy(alpha = 0.22f), Color.Transparent),
-                            center = center,
-                            radius = size.maxDimension * 0.65f,
-                        ),
-                        radius = size.maxDimension * 0.65f,
-                        center = center,
-                    )
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            listOf(coral.copy(alpha = 0.15f), Color.Transparent),
-                            center = Offset(size.width * 0.12f, size.height * 0.90f),
-                            radius = size.minDimension * 0.55f,
-                        ),
-                        radius = size.minDimension * 0.55f,
-                        center = Offset(size.width * 0.12f, size.height * 0.90f),
-                    )
-                }
-                Column(Modifier.padding(if (compact) 22.dp else 32.dp)) {
-                    Box(
-                        Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(ResonanceColors.VioletSoft)
-                            .border(1.dp, ResonanceColors.Violet.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 9.dp, vertical = 4.dp),
-                    ) {
-                        Text(
-                            eyebrow.uppercase(),
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, letterSpacing = 0.8.sp),
-                            color = ResonanceColors.VioletGlow,
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        title,
-                        style = if (compact) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge,
-                        color = ResonanceColors.Ivory,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(body, style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.Muted, modifier = Modifier.widthIn(max = 620.dp))
-                }
-            }
-        }
-        item { Column(Modifier.widthIn(max = 760.dp)) { content() } }
-    }
-}
-
-@Composable
-private fun ActionList(actions: List<Triple<ImageVector, String, String>>, onClick: (Int) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        actions.forEachIndexed { index, action ->
-            val interactionSource = remember { MutableInteractionSource() }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .pressScale(interactionSource, pressedScale = 0.985f)
-                    .resonanceGlass(
-                        shape = RoundedCornerShape(20.dp),
-                        backgroundColor = ResonanceColors.Glass,
-                        borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                        shadowElevation = 6.dp,
-                    )
-                    .clickable(interactionSource = interactionSource, indication = null) { onClick(index) }
-                    .padding(horizontal = 16.dp, vertical = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Box(
-                    Modifier
-                        .size(50.dp)
-                        .shadow(6.dp, RoundedCornerShape(15.dp), ambientColor = ResonanceColors.Coral.copy(alpha = 0.3f), spotColor = ResonanceColors.Shadow)
-                        .clip(RoundedCornerShape(15.dp))
-                        .background(Brush.linearGradient(listOf(ResonanceColors.CoralSoft, Color(0xFF261E38))))
-                        .border(1.dp, ResonanceColors.Coral.copy(alpha = 0.3f), RoundedCornerShape(15.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(action.first, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(24.dp))
-                }
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(action.second, style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                    Spacer(Modifier.height(3.dp))
-                    Text(action.third, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
-                }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = ResonanceColors.CoralGlow, modifier = Modifier.size(20.dp))
-            }
-        }
-    }
-}
-
+// ---------------------------------------------------------------------------
+// 通用组件
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun BrandMark(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .size(40.dp)
-            .shadow(5.dp, RoundedCornerShape(13.dp), ambientColor = ResonanceColors.Shadow, spotColor = ResonanceColors.Shadow)
-            .clip(RoundedCornerShape(13.dp))
-            .background(Brush.linearGradient(listOf(ResonanceColors.CoralGlow, ResonanceColors.Coral))),
+            .size(34.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(ResonanceColors.Coral),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color(0xFF2B0C08), modifier = Modifier.size(22.dp))
+        Icon(Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
     }
 }
 
 @Composable
-private fun EmptyLibraryArtwork(size: Dp) {
-    val coral = ResonanceColors.Coral
-    val soft = ResonanceColors.Soft
-    val divider = ResonanceColors.Divider
-    Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawCircle(
-                brush = Brush.radialGradient(listOf(coral.copy(alpha = 0.26f), Color.Transparent)),
-                radius = this.size.minDimension * 0.52f,
-            )
-            drawCircle(color = Color(0xFF090C10), radius = this.size.minDimension * 0.37f)
-            drawCircle(color = soft, radius = this.size.minDimension * 0.17f)
-            drawCircle(color = coral, radius = this.size.minDimension * 0.055f)
-            repeat(5) { index ->
-                drawCircle(
-                    color = divider.copy(alpha = 0.55f),
-                    radius = this.size.minDimension * (0.21f + index * 0.026f),
-                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
-                )
-            }
-        }
-
-        Box(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .size(size * 0.28f)
-                .clip(CircleShape)
-                .background(ResonanceColors.Coral),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null, tint = Color(0xFF2B0C08), modifier = Modifier.size(size * 0.14f))
-        }
-    }
-}
-
-@Composable
-fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 16.dp, artworkPath: String? = null) {
+fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 12.dp, artworkPath: String? = null) {
     val decoded by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artworkPath) {
         value = artworkPath?.let { path -> withContext(Dispatchers.Default) { decodeArtwork(path) } }
     }

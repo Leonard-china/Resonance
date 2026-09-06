@@ -18,9 +18,26 @@ import java.util.TreeMap
 
 class KugouPlaylistImporter {
     fun import(link: String, localTracks: List<Track>, installationId: String): PlaylistImportReport {
-        val globalCollectionId = resolveWithRetry(link)
-        val response = requestPlaylistWithRetry(globalCollectionId, installationId)
-        return parseOfficialResponse(response, globalCollectionId, localTracks)
+        val extractedLink = extractUrlFromText(link)
+        val target = resolveWithRetry(extractedLink)
+        return when (target) {
+            is ImportTarget.Collection -> {
+                val response = requestPlaylistWithRetry(target.collectionId, installationId)
+                parseOfficialResponse(response, target.collectionId, localTracks)
+            }
+            is ImportTarget.SingleSong -> {
+                parseSingleSongResponse(target.hash, target.albumId, localTracks)
+            }
+            is ImportTarget.EmbeddedPlaylist -> {
+                parseEmbeddedPlaylistResponse(target.name, target.id, target.songs, localTracks)
+            }
+        }
+    }
+
+    fun extractUrlFromText(raw: String): String {
+        val regex = Regex("""https?://[A-Za-z0-9_.\-~%!$&'()*+,;=:@/?#]+""")
+        val match = regex.find(raw)
+        return match?.value ?: raw.trim()
     }
 
     private fun requestPlaylistWithRetry(globalCollectionId: String, installationId: String): String {
@@ -37,11 +54,11 @@ class KugouPlaylistImporter {
         throw requireNotNull(lastError)
     }
 
-    private fun resolveWithRetry(link: String): String {
+    private fun resolveWithRetry(link: String): ImportTarget {
         var lastError: Throwable? = null
         repeat(3) { attempt ->
             try {
-                return resolveGlobalCollectionId(link)
+                return resolveTarget(link)
             } catch (error: Throwable) {
                 lastError = error
                 if (!error.isTransientNetworkFailure() || attempt == 2) throw error
@@ -55,6 +72,131 @@ class KugouPlaylistImporter {
         is UnknownHostException -> true
         is IOException -> true
         else -> cause?.isTransientNetworkFailure() == true
+    }
+
+    internal fun parseSingleSongResponse(
+        hash: String,
+        albumId: String?,
+        localTracks: List<Track>,
+    ): PlaylistImportReport {
+        val songInfo = requestSongInfo(hash, albumId)
+        val rawTitle = songInfo.optString("song_name").ifBlank {
+            songInfo.optString("songName").ifBlank {
+                songInfo.optString("audio_name").ifBlank { "未知曲目" }
+            }
+        }
+        val title = rawTitle.substringAfter(" - ", rawTitle).ifBlank { "未知曲目" }
+        val artist = songInfo.optString("author_name").ifBlank {
+            songInfo.optString("singerName").ifBlank {
+                songInfo.optString("singer_name").ifBlank {
+                    rawTitle.substringBefore(" - ", "未知歌手")
+                }
+            }
+        }.ifBlank { "未知歌手" }
+        val album = songInfo.optString("album_name").ifBlank { "未知专辑" }
+        val timelenSec = songInfo.optLong("timelength", 0L).takeIf { it > 0 }?.div(1000L)
+            ?: songInfo.optLong("timeLength", 0L).takeIf { it > 0 }
+            ?: (songInfo.optLong("timelen", 0L) / 1000L)
+        val artwork = songInfo.optString("img").ifBlank {
+            songInfo.optString("imgUrl").ifBlank {
+                songInfo.optString("cover")
+            }
+        }.takeIf(String::isNotBlank)?.replace("{size}", "400")?.replaceFirst("http://", "https://")
+
+        val local = localTracks.firstOrNull { matchesTrack(it, title, artist) }
+
+        val track = if (local != null) {
+            local.copy(
+                artworkPath = local.artworkPath ?: artwork,
+                artworkSeed = if (local.artworkPath == null) hash.hashCode() else local.artworkSeed,
+            )
+        } else {
+            Track(
+                id = "catalog-kugou-${hash.lowercase()}",
+                title = title,
+                artist = artist,
+                album = album,
+                durationText = "%d:%02d".format(timelenSec / 60, timelenSec % 60),
+                artworkSeed = hash.hashCode(),
+                sourceUri = null,
+                artworkPath = artwork,
+                mimeType = CATALOG_MIME_TYPE,
+            )
+        }
+
+        val matched = if (local != null) 1 else 0
+        val playlist = Playlist(
+            id = "kugou-single-${sha256(hash).take(20)}",
+            name = "单曲: $title",
+            subtitle = if (matched > 0) "1 首 · 已匹配本地音乐" else "1 首 · 待匹配",
+            tracks = listOf(track),
+            artworkSeed = hash.hashCode(),
+        )
+
+        return PlaylistImportReport(
+            playlist = playlist,
+            catalogTrackCount = 1,
+            matchedTrackCount = matched,
+            message = "已导入单曲「$title」${if (matched > 0) "（已匹配本地音乐）" else ""}",
+        )
+    }
+
+    private fun requestSongInfo(hash: String, albumId: String?): JSONObject {
+        val query = buildString {
+            append("r=play/getdata&hash=").append(hash)
+            if (!albumId.isNullOrBlank()) append("&album_id=").append(albumId)
+            append("&dfid=-&mid=-&platid=4")
+        }
+        val uri = URI("https://wwwapi.kugou.com/yy/index.php?$query")
+        return runCatching {
+            val conn = openKugouConnection(uri).apply {
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", USER_AGENT)
+            }
+            conn.useConnection {
+                val body = inputStream.buffered().use { it.readUpTo(MAX_RESPONSE_BYTES).toString(StandardCharsets.UTF_8) }
+                val root = JSONObject(body)
+                if (root.optInt("status", -1) == 1) root.getJSONObject("data") else JSONObject()
+            }
+        }.getOrElse {
+            // 备用接口
+            val fallbackUri = URI("https://m.kugou.com/app/i/getSongInfo.php?cmd=playInfo&hash=$hash")
+            val conn = openKugouConnection(fallbackUri).apply {
+                connectTimeout = CONNECT_TIMEOUT_MS
+                readTimeout = READ_TIMEOUT_MS
+                requestMethod = "GET"
+                setRequestProperty("User-Agent", USER_AGENT)
+            }
+            conn.useConnection {
+                val body = inputStream.buffered().use { it.readUpTo(MAX_RESPONSE_BYTES).toString(StandardCharsets.UTF_8) }
+                val root = JSONObject(body)
+                if (root.optInt("error_code", 0) == 0 && root.has("data")) root.getJSONObject("data") else root
+            }
+        }
+    }
+
+    internal fun parseEmbeddedPlaylistResponse(
+        name: String,
+        id: String,
+        songs: org.json.JSONArray,
+        localTracks: List<Track>,
+    ): PlaylistImportReport {
+        val (tracks, matched) = parseSongs(songs, id, localTracks)
+        val playlist = Playlist(
+            id = "kugou-${sha256(id).take(24)}",
+            name = name,
+            subtitle = "${tracks.size} 首 · 已匹配 $matched 首本地音乐",
+            tracks = tracks,
+            artworkSeed = id.hashCode(),
+        )
+        return PlaylistImportReport(
+            playlist = playlist,
+            catalogTrackCount = tracks.size,
+            matchedTrackCount = matched,
+            message = "已导入「$name」：${tracks.size} 首，$matched 首可直接播放",
+        )
     }
 
     internal fun parseOfficialResponse(
@@ -71,11 +213,32 @@ class KugouPlaylistImporter {
         val songs = data.getJSONArray("songs")
         require(songs.length() in 0..MAX_TRACKS) { "歌单曲目数量异常" }
 
-        val localByTitle = localTracks.groupBy { normalize(it.title) }
+        val (tracks, matched) = parseSongs(songs, globalCollectionId, localTracks)
+        val name = listInfo.optString("name").ifBlank { "酷狗歌单" }.take(80)
+        val playlist = Playlist(
+            id = "kugou-${sha256(globalCollectionId).take(24)}",
+            name = name,
+            subtitle = "${tracks.size} 首 · 已匹配 $matched 首本地音乐",
+            tracks = tracks,
+            artworkSeed = globalCollectionId.hashCode(),
+        )
+        return PlaylistImportReport(
+            playlist = playlist,
+            catalogTrackCount = tracks.size,
+            matchedTrackCount = matched,
+            message = "已导入「$name」：${tracks.size} 首，$matched 首可直接播放",
+        )
+    }
+
+    private fun parseSongs(
+        songs: org.json.JSONArray,
+        collectionId: String,
+        localTracks: List<Track>,
+    ): Pair<List<Track>, Int> {
         var matched = 0
         val tracks = buildList {
             for (index in 0 until songs.length()) {
-                val song = songs.getJSONObject(index)
+                val song = songs.optJSONObject(index) ?: continue
                 val displayName = song.optString("name")
                 val singerInfo = song.optJSONArray("singerinfo")
                 val artist = singerInfo?.optJSONObject(0)?.optString("name")
@@ -88,26 +251,24 @@ class KugouPlaylistImporter {
                     .takeIf(String::isNotBlank)
                     ?.replace("{size}", "400")
                     ?.replaceFirst("http://", "https://")
-                val local = localByTitle[normalize(title)]?.firstOrNull { candidate ->
-                    val localArtist = normalize(candidate.artist)
-                    val remoteArtist = normalize(artist)
-                    localArtist == remoteArtist || localArtist.contains(remoteArtist) || remoteArtist.contains(localArtist)
-                }
+                val local = localTracks.firstOrNull { matchesTrack(it, title, artist) }
                 if (local != null) {
                     matched += 1
                     add(
                         local.copy(
                             artworkPath = local.artworkPath ?: artwork,
                             artworkSeed = if (local.artworkPath == null) {
-                                song.optString("hash").ifBlank { "$globalCollectionId-$index" }.hashCode()
+                                song.optString("hash").ifBlank { "$collectionId-$index" }.hashCode()
                             } else {
                                 local.artworkSeed
                             },
                         ),
                     )
                 } else {
-                    val hash = song.optString("hash").ifBlank { "$globalCollectionId-$index" }
-                    val milliseconds = song.optLong("timelen", 0L).coerceAtLeast(0L)
+                    val hash = song.optString("hash").ifBlank { "$collectionId-$index" }
+                    val milliseconds = song.optLong("timelen", 0L).takeIf { it > 0 }
+                        ?: song.optLong("time_len", 0L).takeIf { it > 0 }
+                        ?: (song.optLong("duration", 0L) * 1000L).coerceAtLeast(0L)
                     val seconds = milliseconds / 1_000L
                     add(
                         Track(
@@ -125,43 +286,114 @@ class KugouPlaylistImporter {
                 }
             }
         }
-        val name = listInfo.optString("name").ifBlank { "酷狗歌单" }.take(80)
-        val playlist = Playlist(
-            id = "kugou-${sha256(globalCollectionId).take(24)}",
-            name = name,
-            subtitle = "${tracks.size} 首 · 已匹配 $matched 首本地音乐",
-            tracks = tracks,
-            artworkSeed = globalCollectionId.hashCode(),
-        )
-        return PlaylistImportReport(
-            playlist = playlist,
-            catalogTrackCount = tracks.size,
-            matchedTrackCount = matched,
-            message = "已导入「$name」：${tracks.size} 首，$matched 首可直接播放",
-        )
+        return Pair(tracks, matched)
     }
 
-    internal fun resolveGlobalCollectionId(link: String): String {
+    internal fun resolveTarget(link: String): ImportTarget {
         var uri = parseAllowedLink(link)
         repeat(MAX_REDIRECTS + 1) { redirectCount ->
-            queryParameter(uri, "global_collection_id")?.takeIf(::isValidCollectionId)?.let { return it }
+            // 1. 检查官方歌单 ID
+            extractOfficialCollectionId(uri)?.let { return ImportTarget.Collection(it) }
+
+            // 2. 检查单曲 Hash
+            extractSongHash(uri)?.let { return it }
+
             require(redirectCount < MAX_REDIRECTS) { "酷狗分享链接重定向次数过多" }
             val connection = openKugouConnection(uri).apply {
                 instanceFollowRedirects = false
                 connectTimeout = CONNECT_TIMEOUT_MS
                 readTimeout = READ_TIMEOUT_MS
                 requestMethod = "GET"
-                setRequestProperty("User-Agent", USER_AGENT)
+                setRequestProperty("User-Agent", "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15")
             }
             connectWithFriendlyDnsError(connection, uri.host)
             connection.useConnection {
                 val code = responseCode
-                require(code in 300..399) { "无法从该酷狗链接读取歌单标识（HTTP $code）" }
-                val location = getHeaderField("Location") ?: error("酷狗分享链接缺少跳转地址")
-                uri = parseAllowedLink(uri.resolve(location).toString())
+                if (code in 300..399) {
+                    val location = getHeaderField("Location") ?: error("酷狗分享链接缺少跳转地址")
+                    uri = parseAllowedLink(uri.resolve(location).toString())
+                } else if (code == 200) {
+                    // 读取页面 HTML 内容判断是否包含 SSR window.$output、单曲 hash 或 collection ID
+                    val body = inputStream.buffered().use {
+                        it.readUpTo(MAX_RESPONSE_BYTES).toString(StandardCharsets.UTF_8)
+                    }
+
+                    // 检查 window.$output
+                    val outputMarker = "window.\$output = "
+                    val startIndex = body.indexOf(outputMarker)
+                    if (startIndex != -1) {
+                        val jsonStart = startIndex + outputMarker.length
+                        val jsonEnd = body.indexOf("};\n", jsonStart).let { if (it != -1) it + 1 else body.indexOf("};", jsonStart) + 1 }
+                        if (jsonEnd > jsonStart) {
+                            val jsonStr = body.substring(jsonStart, jsonEnd)
+                            val root = runCatching { JSONObject(jsonStr) }.getOrNull()
+                            if (root != null) {
+                                val info = root.optJSONObject("info")
+                                val listinfo = info?.optJSONObject("listinfo")
+                                val songs = info?.optJSONArray("songs")
+                                val gcid = listinfo?.optString("global_collection_id")?.takeIf(::isValidOfficialCollectionId)
+                                if (gcid != null) {
+                                    return ImportTarget.Collection(gcid)
+                                }
+                                if (listinfo != null && songs != null && songs.length() > 0) {
+                                    val name = listinfo.optString("name").ifBlank { "酷狗歌单" }
+                                    val id = root.optString("encode_gic").ifBlank { "ugc-${System.currentTimeMillis()}" }
+                                    return ImportTarget.EmbeddedPlaylist(name = name, id = id, songs = songs)
+                                }
+                            }
+                        }
+                    }
+
+                    val hashMatch = Regex("""["']hash["']\s*:\s*["']([A-Fa-f0-9]{32})["']""").find(body)
+                    if (hashMatch != null) {
+                        return ImportTarget.SingleSong(hashMatch.groupValues[1], null)
+                    }
+                    val gcidMatch = Regex("""["']global_collection_id["']\s*:\s*["'](collection_[0-9]+_[0-9]+[^"']*)["']""").find(body)
+                    if (gcidMatch != null) {
+                        return ImportTarget.Collection(gcidMatch.groupValues[1])
+                    }
+                }
             }
         }
-        error("无法识别酷狗歌单")
+
+        // 最终检查
+        extractOfficialCollectionId(uri)?.let { return ImportTarget.Collection(it) }
+        extractSongHash(uri)?.let { return it }
+
+        error("无法识别酷狗歌单或单曲链接")
+    }
+
+    private fun extractOfficialCollectionId(uri: URI): String? {
+        queryParameter(uri, "global_collection_id")?.takeIf(::isValidOfficialCollectionId)?.let { return it }
+        val path = uri.path.orEmpty()
+        val collectionInPath = Regex("""/(collection_[0-9]+_[0-9]+[A-Za-z0-9_-]*)""").find(path)
+        if (collectionInPath != null) {
+            return collectionInPath.groupValues[1]
+        }
+        return null
+    }
+
+    private fun isValidOfficialCollectionId(value: String): Boolean =
+        value.matches(Regex("collection_\\d+_\\d+[A-Za-z0-9_-]*"))
+
+    private fun extractSongHash(uri: URI): ImportTarget.SingleSong? {
+        val fragment = uri.fragment.orEmpty()
+        val hash = queryParameter(uri, "hash")?.takeIf { it.matches(Regex("[A-Fa-f0-9]{32}")) }
+            ?: Regex("""hash=([A-Fa-f0-9]{32})""").find(fragment)?.groupValues?.get(1)
+        val albumId = queryParameter(uri, "album_id")
+            ?: queryParameter(uri, "album_audio_id")
+            ?: Regex("""album_id=([0-9]+)""").find(fragment)?.groupValues?.get(1)
+            ?: Regex("""album_audio_id=([0-9]+)""").find(fragment)?.groupValues?.get(1)
+
+        if (hash != null) {
+            return ImportTarget.SingleSong(hash, albumId)
+        }
+        val path = uri.path.orEmpty()
+        val hashInPath = Regex("""/mixsong/([A-Fa-f0-9]{32})""").find(path)
+        if (hashInPath != null) {
+            return ImportTarget.SingleSong(hashInPath.groupValues[1], albumId)
+        }
+        return null
     }
 
     private fun openKugouConnection(uri: URI): HttpURLConnection {
@@ -176,8 +408,6 @@ class KugouPlaylistImporter {
         try {
             connection.connect()
         } catch (error: UnknownHostException) {
-            // Trigger a second resolver lookup so Android's resolver cache is refreshed;
-            // the caller can then retry without seeing a raw Java networking exception.
             runCatching { InetAddress.getAllByName(host) }
             throw IllegalStateException("暂时无法解析酷狗服务器 $host；请检查 VPN、私人 DNS 或网络后重试", error)
         }
@@ -200,7 +430,7 @@ class KugouPlaylistImporter {
         return first.toString()
     }
 
-    private fun requestOfficialPlaylist(globalCollectionId: String, installationId: String, beginIndex: Int): String {
+    internal fun requestOfficialPlaylist(globalCollectionId: String, installationId: String, beginIndex: Int): String {
         val identity = md5Hex(installationId)
         val mid = BigInteger(1, md5(installationId.toByteArray(StandardCharsets.UTF_8))).toString()
         val params = TreeMap<String, String>().apply {
@@ -250,10 +480,10 @@ class KugouPlaylistImporter {
     }
 
     private fun parseAllowedLink(raw: String): URI {
-        val uri = runCatching { URI(raw.trim()) }.getOrElse { error("歌单链接格式无效") }
-        require(uri.scheme.equals("https", true) || uri.scheme.equals("http", true)) { "只支持 HTTP/HTTPS 歌单链接" }
-        val host = uri.host?.lowercase() ?: error("歌单链接缺少域名")
-        require(host == "kugou.com" || host.endsWith(".kugou.com")) { "当前版本仅支持酷狗公开歌单链接" }
+        val uri = runCatching { URI(raw.trim()) }.getOrElse { error("链接格式无效") }
+        require(uri.scheme.equals("https", true) || uri.scheme.equals("http", true)) { "只支持 HTTP/HTTPS 链接" }
+        val host = uri.host?.lowercase() ?: error("链接缺少域名")
+        require(host == "kugou.com" || host.endsWith(".kugou.com")) { "当前版本仅支持酷狗公开歌单与单曲链接" }
         return uri
     }
 
@@ -268,7 +498,36 @@ class KugouPlaylistImporter {
     private fun isValidCollectionId(value: String): Boolean =
         value.matches(Regex("collection_[A-Za-z0-9_-]{3,120}"))
 
-    private fun normalize(value: String): String = value.lowercase().filter(Char::isLetterOrDigit)
+    private fun matchesTrack(candidate: Track, title: String, artist: String): Boolean {
+        val localArtist = normalize(candidate.artist)
+        val remoteArtist = normalize(artist)
+        val artistMatches = localArtist == remoteArtist || localArtist.contains(remoteArtist) || remoteArtist.contains(localArtist)
+        if (!artistMatches) return false
+
+        val nTitle = normalize(title)
+        val nLocalTitle = normalize(candidate.title)
+        if (nTitle == nLocalTitle) return true
+
+        val cleanRemote = normalize(title.replace(Regex("""\([^)]*\)|\[[^\]]*\]"""), ""))
+        val cleanLocal = normalize(candidate.title.replace(Regex("""\([^)]*\)|\[[^\]]*\]"""), ""))
+        if (cleanRemote.isNotBlank() && cleanRemote == cleanLocal) return true
+
+        val fileName = candidate.sourceUri?.substringAfterLast('/')?.substringAfterLast('\\')
+        val fileNameTitle = fileName
+            ?.substringBeforeLast('.')
+            ?.replace(Regex("""\s*\[[0-9a-fA-F]{10}\]$"""), "")
+            ?.substringAfter(" - ")
+        if (fileNameTitle != null) {
+            val nFile = normalize(fileNameTitle)
+            val cleanFile = normalize(fileNameTitle.replace(Regex("""\([^)]*\)|\[[^\]]*\]"""), ""))
+            if (nFile == nTitle || (cleanFile.isNotBlank() && cleanFile == cleanRemote)) return true
+        }
+
+        return false
+    }
+
+    private fun normalize(value: String): String =
+        value.replace(Regex("""\s*\[[0-9a-fA-F]{10}\]$"""), "").lowercase().filter(Char::isLetterOrDigit)
     private fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20")
     private fun md5(value: ByteArray): ByteArray = MessageDigest.getInstance("MD5").digest(value)
     private fun md5Hex(value: String): String = md5(value.toByteArray(StandardCharsets.UTF_8)).toHex()
@@ -278,6 +537,12 @@ class KugouPlaylistImporter {
 
     private inline fun <T> HttpURLConnection.useConnection(block: HttpURLConnection.() -> T): T =
         try { block() } finally { disconnect() }
+
+    sealed interface ImportTarget {
+        data class Collection(val collectionId: String) : ImportTarget
+        data class SingleSong(val hash: String, val albumId: String?) : ImportTarget
+        data class EmbeddedPlaylist(val name: String, val id: String, val songs: org.json.JSONArray) : ImportTarget
+    }
 
     companion object {
         const val CATALOG_MIME_TYPE = "application/vnd.resonance.catalog+audio"

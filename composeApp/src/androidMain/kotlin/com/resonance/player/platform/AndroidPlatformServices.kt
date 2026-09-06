@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
     private val lyricsRepository = LrclibLyricsRepository(activity.filesDir.toPath().resolve("lyrics-cache"))
+    private val deepSeekClient = com.resonance.player.ai.DeepSeekClient()
     private val controllerFuture = MediaController.Builder(
         activity,
         SessionToken(activity, ComponentName(activity, PlaybackService::class.java)),
@@ -109,11 +110,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private var cachedTracks = emptyList<Track>()
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
+    private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
     private val trackEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override val playbackEnded: Flow<Unit> = endedEvents
     override val playbackProgress: Flow<Float> = progressEvents
+    override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     override val activeTrackChanges: Flow<String> = trackEvents
     override val incomingLanLinks: Flow<String> = LanSyncLinkBus.links
 
@@ -124,7 +127,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             player = controller
             controller.addListener(object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_ENDED) endedEvents.tryEmit(Unit)
+                    if (playbackState == Player.STATE_ENDED) {
+                        isPlayingEvents.tryEmit(false)
+                        endedEvents.tryEmit(Unit)
+                    }
+                }
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    isPlayingEvents.tryEmit(isPlaying)
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -260,8 +270,65 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         Unit
     }
 
+    override suspend fun loadDeepSeekConfig(): com.resonance.player.model.DeepSeekConfig = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_deepseek", android.content.Context.MODE_PRIVATE)
+        com.resonance.player.model.DeepSeekConfig(
+            apiKey = prefs.getString("apiKey", "") ?: "",
+            baseUrl = prefs.getString("baseUrl", "https://api.deepseek.com/v1") ?: "https://api.deepseek.com/v1",
+            model = prefs.getString("model", "deepseek-chat") ?: "deepseek-chat",
+            enabled = prefs.getBoolean("enabled", true),
+        )
+    }
+
+    override suspend fun saveDeepSeekConfig(config: com.resonance.player.model.DeepSeekConfig): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_deepseek", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString("apiKey", config.apiKey)
+            .putString("baseUrl", config.baseUrl)
+            .putString("model", config.model)
+            .putBoolean("enabled", config.enabled)
+            .commit()
+        Unit
+    }
+
+    override suspend fun testDeepSeek(config: com.resonance.player.model.DeepSeekConfig): com.resonance.player.model.DeepSeekTestResult =
+        deepSeekClient.testConnection(config)
+
+    override suspend fun loadCustomLyricsFolder(): String? = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .getString("lyrics.customFolder", null)
+            ?.takeIf(String::isNotBlank)
+    }
+
+    override suspend fun saveCustomLyricsFolder(folder: String?): Unit = withContext(Dispatchers.IO) {
+        val editor = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE).edit()
+        if (folder.isNullOrBlank()) editor.remove("lyrics.customFolder")
+        else editor.putString("lyrics.customFolder", folder)
+        editor.commit()
+        Unit
+    }
+
     override suspend fun loadLyrics(track: Track, forceRefresh: Boolean): LyricsFetchResult =
-        lyricsRepository.fetch(track, forceRefresh)
+        lyricsRepository.fetch(
+            track = track,
+            forceRefresh = forceRefresh,
+            customLyricsFolder = loadCustomLyricsFolder(),
+            aiFallback = { reqTrack ->
+                val config = loadDeepSeekConfig()
+                if (config.isConfigured && config.enabled) {
+                    deepSeekClient.generateLyrics(config, reqTrack)
+                } else null
+            },
+        )
+
+    override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
+        val config = loadDeepSeekConfig()
+        val result = deepSeekClient.generateLyrics(config, track)
+        if (result is LyricsFetchResult.Found) {
+            lyricsRepository.writeCache(track, result)
+        }
+        result
+    }
 
     private fun favoriteIds(): Set<String> =
         activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
@@ -399,13 +466,21 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
         if (ActivityCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
             if (!requestAudioPermission(permission)) {
-                return ImportReport(emptyList(), warnings = listOf("未获得音频读取权限；你仍可使用“选择文件夹”授权单个目录"))
+                return ImportReport(emptyList(), warnings = listOf("未获得系统音频读取权限；请在系统设置中允许应用读取音频，或使用“选择文件夹”授权音乐目录"))
             }
         }
-        cachedTracks = withContext(Dispatchers.IO) { scanMediaStore() }
+        val mediaTracks = withContext(Dispatchers.IO) { scanMediaStore() }
+        val syncedTracks = withContext(Dispatchers.IO) { loadSyncedTracks() }
+        val combined = (mediaTracks + syncedTracks).associateBy(Track::id).values.toList()
+        cachedTracks = withContext(Dispatchers.IO) { applyFavorites(combined) }
+        val warnings = if (cachedTracks.isEmpty()) {
+            listOf("未在系统媒体库中扫描到音频；若音乐存放在下载目录、微信/QQ或特定文件夹，请点击“选择文件夹”授权扫描该目录")
+        } else {
+            emptyList()
+        }
         return ImportReport(
             tracks = cachedTracks,
-            warnings = emptyList(),
+            warnings = warnings,
         )
     }
 
@@ -418,19 +493,33 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {
-        val rawSource = track.sourceUri ?: return@withContext DeleteTrackReport(false, false, "这首歌曲没有本地 MP3")
+        val rawSource = track.sourceUri ?: return@withContext DeleteTrackReport(false, false, "这首歌曲没有本地音频文件")
         val source = Uri.parse(rawSource)
         val fileDeleted = when (source.scheme?.lowercase()) {
             "content" -> if (Build.VERSION.SDK_INT >= 29) deleteContentUriWithRecovery(source, track) else deleteContentUri(source)
             "file" -> {
                 val path = source.path?.let(Paths::get) ?: error("本地文件路径无效")
-                require(isAppManagedPath(path)) { "为保护原始音乐，只能删除 Resonance 转换或同步生成的 MP3" }
-                Files.deleteIfExists(path)
+                val deleted = runCatching { Files.deleteIfExists(path) }.getOrDefault(false)
+                runCatching {
+                    activity.contentResolver.delete(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        "${MediaStore.Audio.Media.DATA} = ?",
+                        arrayOf(path.toAbsolutePath().toString()),
+                    )
+                }
+                deleted
             }
             null -> {
                 val path = Paths.get(rawSource)
-                require(isAppManagedPath(path)) { "为保护原始音乐，只能删除 Resonance 转换或同步生成的 MP3" }
-                Files.deleteIfExists(path)
+                val deleted = runCatching { Files.deleteIfExists(path) }.getOrDefault(false)
+                runCatching {
+                    activity.contentResolver.delete(
+                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                        "${MediaStore.Audio.Media.DATA} = ?",
+                        arrayOf(path.toAbsolutePath().toString()),
+                    )
+                }
+                deleted
             }
             else -> error("不支持删除该存储位置")
         }
@@ -440,17 +529,66 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         track.artworkPath?.takeIf { !it.startsWith("content://") && !it.startsWith("http") }?.let { artwork ->
             runCatching { Files.deleteIfExists(Paths.get(artwork)) }
         }
-        DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地 MP3" else "已从音乐库移除「${track.title}」")
+        DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地音频文件" else "已从音乐库移除「${track.title}」")
     }
 
-    private fun isAppManagedPath(path: Path): Boolean {
-        val normalized = path.toAbsolutePath().normalize()
-        val roots = listOfNotNull(
-            activity.filesDir.toPath(),
-            activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.toPath(),
-            activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS)?.toPath(),
-        ).map { it.toAbsolutePath().normalize() }
-        return roots.any(normalized::startsWith)
+    private val enricher by lazy {
+        com.resonance.player.enrich.MetadataEnricher(
+            artworkDirectory = activity.filesDir.toPath().resolve("artwork"),
+            lyricsRepository = lyricsRepository,
+            deepSeekClient = deepSeekClient,
+        )
+    }
+
+    override suspend fun updateTracks(tracks: List<Track>): Unit = withContext(Dispatchers.IO) {
+        val updatedById = tracks.associateBy(Track::id)
+        val synced = loadSyncedTracks().map { current -> updatedById[current.id] ?: current }
+        saveSyncedTracks(synced)
+        cachedTracks = cachedTracks.map { current -> updatedById[current.id] ?: current }
+        val playlists = loadPlaylists().map { playlist ->
+            playlist.copy(
+                tracks = playlist.tracks.map { track ->
+                    updatedById[track.id]?.let { u ->
+                        track.copy(
+                            title = u.title,
+                            artist = u.artist,
+                            album = u.album,
+                            artworkPath = u.artworkPath ?: track.artworkPath,
+                            artworkSeed = if (u.artworkPath != null) u.artworkSeed else track.artworkSeed,
+                        )
+                    } ?: track
+                }
+            )
+        }
+        savePlaylists(playlists)
+    }
+
+    override suspend fun batchEnrichTracks(
+        options: com.resonance.player.model.BatchEnrichOptions,
+        tracks: List<Track>,
+        onProgress: (com.resonance.player.model.BatchEnrichProgress) -> Unit,
+    ): com.resonance.player.model.BatchEnrichReport = withContext(Dispatchers.IO) {
+        val config = loadDeepSeekConfig()
+        val customFolder = loadCustomLyricsFolder()
+        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress)
+        if (report.updatedTracks.isNotEmpty()) {
+            updateTracks(report.updatedTracks)
+        }
+        report
+    }
+
+    override suspend fun batchDeleteTracks(tracks: List<Track>): DeleteTrackReport = withContext(Dispatchers.IO) {
+        if (tracks.isEmpty()) return@withContext DeleteTrackReport(true, false, "未选择任何歌曲")
+        var fileDeletedCount = 0
+        tracks.forEach { track ->
+            val report = deleteLocalTrack(track)
+            if (report.fileDeleted) fileDeletedCount++
+        }
+        DeleteTrackReport(
+            success = true,
+            fileDeleted = fileDeletedCount > 0,
+            message = "已批量删除 ${tracks.size} 首歌曲${if (fileDeletedCount > 0) "（含 $fileDeletedCount 首本地文件）" else ""}",
+        )
     }
 
     private suspend fun deleteContentUri(uri: Uri): Boolean {
@@ -563,6 +701,40 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
     override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
         withPlayer { applyPlaybackMode(it, shuffle, repeatMode) }
+    }
+
+    override fun setVolume(volume: Float) {
+        withPlayer { it.volume = volume.coerceIn(0f, 1f) }
+    }
+
+    override fun setPlaybackSpeed(speed: Float) {
+        withPlayer { it.setPlaybackSpeed(speed.coerceIn(0.25f, 3f)) }
+    }
+
+    override suspend fun saveLyricsOffset(track: Track, offsetMs: Long): com.resonance.player.model.Lyrics? = withContext(Dispatchers.IO) {
+        lyricsRepository.updateOffset(track, offsetMs)
+    }
+
+    override suspend fun embedLyricsToAudioFile(track: Track, lyrics: com.resonance.player.model.Lyrics): Boolean {
+        return false
+    }
+
+    override suspend fun editTrackMetadata(track: Track, newTitle: String, newArtist: String, newAlbum: String): Track = withContext(Dispatchers.IO) {
+        val cleanTitle = newTitle.trim().ifBlank { track.title }
+        val cleanArtist = newArtist.trim().ifBlank { track.artist }
+        val cleanAlbum = newAlbum.trim().ifBlank { track.album }
+        val updated = track.copy(
+            title = cleanTitle,
+            artist = cleanArtist,
+            album = cleanAlbum,
+        )
+        cachedTracks = cachedTracks.map { if (it.id == track.id) updated else it }
+        val playlists = loadPlaylists()
+        val updatedPlaylists = playlists.map { pl ->
+            pl.copy(tracks = pl.tracks.map { if (it.id == track.id) updated else it })
+        }
+        savePlaylists(updatedPlaylists)
+        updated
     }
 
     override fun seekTo(fraction: Float) {
@@ -711,13 +883,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             if (!seenDocumentIds.add(document.uri.toString())) continue
             val extension = document.name.orEmpty().substringAfterLast('.', "").lowercase()
             when (extension) {
-                "mp3" -> runCatching { readAndroidTrack(document.uri) }
+                "mp3", "flac", "wav", "m4a", "aac", "ogg", "ape", "wma", "opus" -> runCatching { readAndroidTrack(document) }
                     .onSuccess(tracks::add)
                     .onFailure {
                         skipped++
                         if (warnings.size < 5) warnings += "无法读取 ${document.name}: ${it.message.orEmpty()}"
                     }
-                "kgma" -> kgmaFiles += document
+                "kgma", "kgm", "kgg" -> kgmaFiles += document
             }
         }
         kgmaFiles.forEachIndexed { index, document ->
@@ -737,31 +909,51 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         )
     }
 
-    private fun readAndroidTrack(uri: Uri): Track {
-        val id = sha256Content(uri)
+    private fun readAndroidTrack(document: DocumentFile): Track =
+        readAndroidTrack(document.uri, document.name.orEmpty(), document.length(), document.lastModified())
+
+    private fun readAndroidTrack(uri: Uri, name: String = "", size: Long = 0L, modified: Long = 0L): Track {
+        val cleanName = name.ifBlank { uri.lastPathSegment?.substringAfterLast('/').orEmpty() }
+        val id = md5Hex("${uri}:$size:$modified:$cleanName")
         val retriever = MediaMetadataRetriever()
         try {
             retriever.setDataSource(activity, uri)
-            val title = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-                ?.takeIf(String::isNotBlank) ?: "未知歌曲"
-            val artist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-                ?.takeIf(String::isNotBlank) ?: "未知歌手"
-            val album = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)
-                ?.takeIf(String::isNotBlank) ?: "未知专辑"
+            val rawTitle = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)?.takeIf(String::isNotBlank)
+            val rawArtist = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)?.takeIf { it.isNotBlank() && it != "<unknown>" }
+            val rawAlbum = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ALBUM)?.takeIf { it.isNotBlank() && it != "<unknown>" }
             val durationMs = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
                 ?.toLongOrNull()?.coerceAtLeast(0) ?: 0
+
+            var title = rawTitle
+            var artist = rawArtist
+            if (title == null || artist == null) {
+                val cleanBaseName = cleanName.substringBeforeLast('.').trim()
+                if (cleanBaseName.contains(" - ")) {
+                    val parsedArtist = cleanBaseName.substringBefore(" - ").trim()
+                    val parsedTitle = cleanBaseName.substringAfter(" - ").trim()
+                    if (artist == null && parsedArtist.isNotBlank()) artist = parsedArtist
+                    if (title == null && parsedTitle.isNotBlank()) title = parsedTitle
+                } else if (title == null && cleanBaseName.isNotBlank()) {
+                    title = cleanBaseName
+                }
+            }
+            val finalTitle = title ?: "未知歌曲"
+            val finalArtist = artist ?: "未知歌手"
+            val finalAlbum = rawAlbum ?: "本地音乐"
+
             val artworkPath = retriever.embeddedPicture?.takeIf(ByteArray::isNotEmpty)?.let { bytes ->
                 val directory = activity.filesDir.toPath().resolve("artwork")
                 Files.createDirectories(directory)
                 directory.resolve("$id.cover").also { Files.write(it, bytes) }.toString()
             }
+            val seconds = durationMs / 1_000L
             return Track(
                 id = id,
-                title = title,
-                artist = artist,
-                album = album,
-                durationText = "%d:%02d".format(durationMs / 60_000, durationMs / 1_000 % 60),
-                artworkSeed = id.take(8).toLong(16).toInt(),
+                title = finalTitle,
+                artist = finalArtist,
+                album = finalAlbum,
+                durationText = "%d:%02d".format(seconds / 60, seconds % 60),
+                artworkSeed = (id.hashCode()),
                 sourceUri = uri.toString(),
                 artworkPath = artworkPath,
                 mimeType = if (uri.scheme == "file") "audio/mpeg" else activity.contentResolver.getType(uri).orEmpty().ifBlank { "audio/mpeg" },
@@ -990,12 +1182,33 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             MediaStore.Audio.Media.SIZE,
             MediaStore.Audio.Media.DATE_MODIFIED,
             MediaStore.Audio.Media.MIME_TYPE,
+            MediaStore.Audio.Media.DISPLAY_NAME,
         )
+        val selection = buildString {
+            append("(")
+            append("${MediaStore.Audio.Media.IS_MUSIC} != 0")
+            append(" OR ${MediaStore.Audio.Media.MIME_TYPE} LIKE 'audio/%'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.mp3'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.flac'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.wav'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.m4a'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.aac'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.ogg'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.ape'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.wma'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.opus'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.kgma'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.kgm'")
+            append(" OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE '%.kgg'")
+            append(")")
+            append(" AND (${MediaStore.Audio.Media.SIZE} >= 50000 OR ${MediaStore.Audio.Media.DURATION} >= 5000)")
+        }
+
         val tracks = mutableListOf<Track>()
         activity.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             projection,
-            "${MediaStore.Audio.Media.IS_MUSIC} != 0",
+            selection,
             null,
             "${MediaStore.Audio.Media.DATE_ADDED} DESC",
         )?.use { cursor ->
@@ -1008,49 +1221,63 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
             val modifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATE_MODIFIED)
             val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.MIME_TYPE)
-            val hashCache = activity.getSharedPreferences("resonance_audio_hashes", android.content.Context.MODE_PRIVATE)
-            val hashEditor = hashCache.edit()
+            val displayNameColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)
+
             while (cursor.moveToNext()) {
                 val id = cursor.getLong(idColumn)
                 val albumId = cursor.getLong(albumIdColumn)
                 val durationMs = cursor.getLong(durationColumn).coerceAtLeast(0)
+                val size = cursor.getLong(sizeColumn)
+                val modified = cursor.getLong(modifiedColumn)
                 val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
-                val cacheKey = "$id:${cursor.getLong(sizeColumn)}:${cursor.getLong(modifiedColumn)}"
-                val stableId = hashCache.getString(cacheKey, null) ?: sha256Content(uri).also {
-                    hashEditor.putString(cacheKey, it)
-                }
+                val stableId = md5Hex("android-media-$id:$size:$modified")
                 val albumArtwork = ContentUris.withAppendedId(ALBUM_ART_URI, albumId).toString()
                 AndroidArtworkResolver.audioArtwork[albumArtwork] = uri.toString()
+
+                val rawDisplayName = if (displayNameColumn >= 0) cursor.getString(displayNameColumn).orEmpty() else ""
+                val rawTitle = cursor.getString(titleColumn)?.takeIf(String::isNotBlank)
+                val rawArtist = cursor.getString(artistColumn)?.takeIf { it.isNotBlank() && it != "<unknown>" && it != "未知艺术家" }
+                val rawAlbum = cursor.getString(albumColumn)?.takeIf { it.isNotBlank() && it != "<unknown>" && it != "未知唱片" }
+
+                var title = rawTitle
+                var artist = rawArtist
+
+                if (title == null || title == rawDisplayName || artist == null) {
+                    val cleanBaseName = rawDisplayName.substringBeforeLast('.').trim()
+                    if (cleanBaseName.contains(" - ")) {
+                        val parsedArtist = cleanBaseName.substringBefore(" - ").trim()
+                        val parsedTitle = cleanBaseName.substringAfter(" - ").trim()
+                        if (artist == null && parsedArtist.isNotBlank()) artist = parsedArtist
+                        if ((title == null || title == rawDisplayName) && parsedTitle.isNotBlank()) title = parsedTitle
+                    } else if (title == null && cleanBaseName.isNotBlank()) {
+                        title = cleanBaseName
+                    }
+                }
+
+                val finalTitle = title ?: "未知歌曲"
+                val finalArtist = artist ?: "未知歌手"
+                val finalAlbum = rawAlbum ?: "本地音乐"
+                val seconds = durationMs / 1_000L
+
                 tracks += Track(
                     id = stableId,
-                    title = cursor.getString(titleColumn)?.takeIf(String::isNotBlank) ?: "未知歌曲",
-                    artist = cursor.getString(artistColumn)?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: "未知歌手",
-                    album = cursor.getString(albumColumn)?.takeIf { it.isNotBlank() && it != "<unknown>" } ?: "未知专辑",
-                    durationText = "%d:%02d".format(durationMs / 60_000, durationMs / 1_000 % 60),
+                    title = finalTitle,
+                    artist = finalArtist,
+                    album = finalAlbum,
+                    durationText = "%d:%02d".format(seconds / 60, seconds % 60),
                     artworkSeed = id.toInt(),
                     sourceUri = uri.toString(),
                     artworkPath = albumArtwork,
                     mimeType = cursor.getString(mimeColumn)?.takeIf(String::isNotBlank) ?: "audio/mpeg",
                 )
             }
-            hashEditor.apply()
         }
         return tracks
     }
 
-    private fun sha256Content(uri: android.net.Uri): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        activity.contentResolver.openInputStream(uri).use { input ->
-            requireNotNull(input) { "无法读取音频：$uri" }
-            val buffer = ByteArray(256 * 1024)
-            while (true) {
-                val read = input.read(buffer)
-                if (read < 0) break
-                digest.update(buffer, 0, read)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
+    private fun md5(value: ByteArray): ByteArray = MessageDigest.getInstance("MD5").digest(value)
+    private fun md5Hex(value: String): String = md5(value.toByteArray(StandardCharsets.UTF_8)).toHex()
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
 
     private companion object {
         const val MAX_DOCUMENTS = 100_000

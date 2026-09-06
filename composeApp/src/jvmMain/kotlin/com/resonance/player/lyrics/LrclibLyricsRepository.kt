@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
@@ -20,16 +21,30 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import kotlin.math.abs
 
-/** Fetches synchronized lyrics without requiring users to paste lyric text. */
+/** Fetches synchronized lyrics with local disk matching, LRCLIB integration, and AI fallback. */
 class LrclibLyricsRepository(
     private val cacheDirectory: Path,
     private val apiBase: URI = URI("https://lrclib.net"),
     private val nowMillis: () -> Long = System::currentTimeMillis,
 ) {
-    suspend fun fetch(track: Track, forceRefresh: Boolean = false): LyricsFetchResult = withContext(Dispatchers.IO) {
-        if (!forceRefresh) readCache(track)?.let { return@withContext it }
+    suspend fun fetch(
+        track: Track,
+        forceRefresh: Boolean = false,
+        customLyricsFolder: String? = null,
+        aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
+    ): LyricsFetchResult = withContext(Dispatchers.IO) {
+        // 1. 本地歌词文件（同级目录、Lyrics 目录、用户自定义歌词目录）
+        if (!forceRefresh) {
+            findLocalLyrics(track, customLyricsFolder)?.let { return@withContext it }
+        }
 
-        val result = try {
+        // 2. 本地缓存
+        if (!forceRefresh) {
+            readCache(track)?.let { return@withContext it }
+        }
+
+        // 3. LRCLIB 远程检索
+        var result: LyricsFetchResult = try {
             fetchRemote(track)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -42,11 +57,135 @@ class LrclibLyricsRepository(
                 retryable = true,
             )
         }
+
+        // 4. AI 备用检索/生成（若 LRCLIB 未找到且提供了 AI 回退）
+        if (result is LyricsFetchResult.Unavailable && aiFallback != null) {
+            val aiResult = runCatching { aiFallback(track) }.getOrNull()
+            if (aiResult is LyricsFetchResult.Found) {
+                result = aiResult
+            }
+        }
+
         if (result is LyricsFetchResult.Found || (result is LyricsFetchResult.Unavailable && !result.retryable)) {
             writeCache(track, result)
         }
         result
     }
+
+    fun findLocalLyrics(track: Track, customLyricsFolder: String? = null): LyricsFetchResult.Found? {
+        val candidates = mutableListOf<Path>()
+
+        // 检查音频同级目录及子目录 Lyrics
+        val rawSource = track.sourceUri
+        if (!rawSource.isNullOrBlank() && !rawSource.startsWith("http://") && !rawSource.startsWith("https://") && !rawSource.startsWith("content://")) {
+            val audioPath = runCatching {
+                if (rawSource.startsWith("file:/")) Path.of(URI(rawSource)) else Path.of(rawSource)
+            }.getOrNull()
+            if (audioPath != null) {
+                val parent = audioPath.parent
+                val baseName = audioPath.fileName.toString().substringBeforeLast('.')
+                if (parent != null) {
+                    candidates.add(parent.resolve("$baseName.lrc"))
+                    candidates.add(parent.resolve("$baseName.krc"))
+                    candidates.add(parent.resolve("$baseName.txt"))
+                    val parentLyrics = parent.resolve("Lyrics")
+                    if (Files.isDirectory(parentLyrics)) {
+                        candidates.add(parentLyrics.resolve("$baseName.lrc"))
+                        candidates.add(parentLyrics.resolve("$baseName.krc"))
+                    }
+                    val grandParentLyrics = parent.parent?.resolve("Lyrics")
+                    if (grandParentLyrics != null && Files.isDirectory(grandParentLyrics)) {
+                        candidates.add(grandParentLyrics.resolve("$baseName.lrc"))
+                        candidates.add(grandParentLyrics.resolve("$baseName.krc"))
+                    }
+                }
+            }
+        }
+
+        // 检查常用酷狗歌词目录及用户自定义歌词目录
+        val foldersToCheck = listOfNotNull(
+            customLyricsFolder?.takeIf(String::isNotBlank)?.let { runCatching { Path.of(it) }.getOrNull() },
+            Path.of("D:\\Music\\Kugou\\Leonard\\Lyrics"),
+            Path.of("D:\\Music\\Lyrics"),
+            Path.of(System.getProperty("user.home"), "Music", "Lyrics"),
+        ).filter { Files.isDirectory(it) }
+
+        val trackTitleNorm = normalize(track.title)
+        val trackArtistNorm = normalize(track.artist)
+
+        for (dir in foldersToCheck) {
+            candidates.add(dir.resolve("${track.title}.lrc"))
+            candidates.add(dir.resolve("${track.title}.krc"))
+            candidates.add(dir.resolve("${track.artist} - ${track.title}.lrc"))
+            candidates.add(dir.resolve("${track.artist} - ${track.title}.krc"))
+            candidates.add(dir.resolve("${track.title} - ${track.artist}.lrc"))
+            candidates.add(dir.resolve("${track.title} - ${track.artist}.krc"))
+        }
+
+        for (candidate in candidates.distinct()) {
+            if (Files.isRegularFile(candidate)) {
+                val lines = readLyricsFromFile(candidate)
+                if (lines.isNotEmpty()) {
+                    return LyricsFetchResult.Found(
+                        Lyrics(
+                            trackId = track.id,
+                            lines = lines,
+                            synchronized = lines.any { it.timestampMs != null },
+                            instrumental = false,
+                            source = "本地歌词 (${candidate.fileName})",
+                            fromCache = false,
+                        )
+                    )
+                }
+            }
+        }
+
+        // 若直接匹配未命中，在歌词文件夹中模糊匹配文件名
+        for (dir in foldersToCheck) {
+            val matchedFile = runCatching {
+                Files.list(dir).use { stream ->
+                    stream.filter { file ->
+                        val name = file.fileName.toString().lowercase()
+                        name.endsWith(".lrc") || name.endsWith(".krc")
+                    }.filter { file ->
+                        val norm = normalize(file.fileName.toString().substringBeforeLast('.'))
+                        (norm.contains(trackTitleNorm) && (trackArtistNorm.isBlank() || norm.contains(trackArtistNorm))) ||
+                            (trackTitleNorm.contains(norm) && norm.length >= 3)
+                    }.findFirst().orElse(null)
+                }
+            }.getOrNull()
+
+            if (matchedFile != null) {
+                val lines = readLyricsFromFile(matchedFile)
+                if (lines.isNotEmpty()) {
+                    return LyricsFetchResult.Found(
+                        Lyrics(
+                            trackId = track.id,
+                            lines = lines,
+                            synchronized = lines.any { it.timestampMs != null },
+                            instrumental = false,
+                            source = "本地歌词 (${matchedFile.fileName})",
+                            fromCache = false,
+                        )
+                    )
+                }
+            }
+        }
+
+        return null
+    }
+
+    private fun readLyricsFromFile(path: Path): List<LyricLine> = runCatching {
+        val bytes = Files.readAllBytes(path)
+        if (path.fileName.toString().endsWith(".krc", ignoreCase = true) || (bytes.size >= 4 && bytes[0] == 0x6B.toByte() && bytes[1] == 0x72.toByte())) {
+            KrcDecoder.decode(bytes)
+        } else {
+            val text = String(bytes, StandardCharsets.UTF_8)
+            parseLrc(text).ifEmpty {
+                KrcDecoder.parseKrcOrLrcText(text)
+            }
+        }
+    }.getOrElse { emptyList() }
 
     private fun fetchRemote(track: Track): LyricsFetchResult {
         val duration = durationTextToSeconds(track.durationText)
@@ -122,6 +261,7 @@ class LrclibLyricsRepository(
     private fun parseRecord(raw: String, track: Track, fromCache: Boolean): Lyrics? {
         val record = JSONObject(raw)
         val instrumental = record.optBoolean("instrumental", false)
+        val offsetMs = record.optLong("offsetMs", 0L)
         val synchronizedLines = parseLrc(record.optString("syncedLyrics"))
         val lines = if (synchronizedLines.isNotEmpty()) {
             synchronizedLines
@@ -141,6 +281,7 @@ class LrclibLyricsRepository(
             instrumental = instrumental,
             source = "LRCLIB",
             fromCache = fromCache,
+            offsetMs = offsetMs,
         )
     }
 
@@ -172,7 +313,7 @@ class LrclibLyricsRepository(
         return score
     }
 
-    private fun readCache(track: Track): LyricsFetchResult? {
+    fun readCache(track: Track): LyricsFetchResult? {
         val file = cacheFile(track)
         if (!Files.isRegularFile(file)) return null
         return runCatching {
@@ -195,15 +336,15 @@ class LrclibLyricsRepository(
         }.getOrNull()
     }
 
-    private fun writeCache(track: Track, result: LyricsFetchResult) {
+    fun writeCache(track: Track, result: LyricsFetchResult) {
         runCatching {
             Files.createDirectories(cacheDirectory)
             val root = JSONObject().put("fetchedAt", nowMillis())
             when (result) {
                 is LyricsFetchResult.Found -> {
-                    // Re-fetching the selected record keeps the on-disk format identical to the API contract.
                     val record = JSONObject()
                         .put("instrumental", result.lyrics.instrumental)
+                        .put("offsetMs", result.lyrics.offsetMs)
                         .put(
                             "syncedLyrics",
                             if (result.lyrics.synchronized) result.lyrics.lines.joinToString("\n") { line ->
@@ -234,6 +375,16 @@ class LrclibLyricsRepository(
         }
     }
 
+    fun updateOffset(track: Track, offsetMs: Long): Lyrics? {
+        val cached = readCache(track)
+        if (cached is LyricsFetchResult.Found) {
+            val updated = cached.lyrics.copy(offsetMs = offsetMs)
+            writeCache(track, LyricsFetchResult.Found(updated))
+            return updated
+        }
+        return null
+    }
+
     private fun cacheFile(track: Track): Path {
         val signature = "${track.id}\u0000${track.title}\u0000${track.artist}\u0000${track.album}\u0000${track.durationText}"
         val name = MessageDigest.getInstance("SHA-256")
@@ -253,7 +404,7 @@ class LrclibLyricsRepository(
     }
 
     companion object {
-        private const val USER_AGENT = "Resonance/0.2.0 (https://github.com/Leonard-china/Resonance)"
+        private val USER_AGENT = "Resonance/${com.resonance.player.model.APP_VERSION} (https://github.com/Leonard-china/Resonance)"
         private const val CONNECT_TIMEOUT_MS = 8_000
         private const val READ_TIMEOUT_MS = 18_000
         private const val MAX_RESPONSE_BYTES = 1_500_000

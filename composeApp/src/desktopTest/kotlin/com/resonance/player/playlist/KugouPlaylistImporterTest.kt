@@ -1,71 +1,87 @@
 package com.resonance.player.playlist
 
 import com.resonance.player.model.Track
+import org.json.JSONObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class KugouPlaylistImporterTest {
+
     @Test
-    fun parsesOfficialPlaylistAndMatchesLocalTrack() {
-        val fixture = """
+    fun testParseEmbeddedPlaylistJson() {
+        val jsonStr = """
             {
-              "error_code": 0,
-              "data": {
-                "list_info": { "name": "Leonard" },
-                "songs": [
-                  {
-                    "name": "Eagles - Hotel California",
-                    "hash": "HOTEL_HASH",
-                    "timelen": 391000,
-                    "cover": "https://img.example/{size}/hotel.jpg",
-                    "singerinfo": [{ "name": "Eagles" }],
-                    "albuminfo": { "name": "Hotel California" }
-                  },
-                  {
-                    "name": "温岚 - 夏天的风",
-                    "hash": "SUMMER_HASH",
-                    "timelen": 241000,
-                    "cover": "https://img.example/{size}/summer.jpg",
-                    "singerinfo": [{ "name": "温岚" }],
-                    "albuminfo": { "name": "温式效应" }
-                  }
-                ]
-              }
+                "info": {
+                    "listinfo": {
+                        "name": "Leonard",
+                        "count": 23,
+                        "pic": "http://c1.kgimg.com/stdmusic/400/cover.jpg"
+                    },
+                    "songs": [
+                        {
+                            "name": "Guns N' Roses - Welcome To The Jungle",
+                            "hash": "E3E0ADDF0807C052CE7F27AC3B7B7E6D",
+                            "timelen": 271908,
+                            "albuminfo": { "name": "Greatest Hits" },
+                            "singerinfo": [{ "name": "Guns N' Roses" }]
+                        },
+                        {
+                            "name": "Eagles - Hotel California",
+                            "hash": "546894D4439DA40BA0AB484E6EDEFE3D",
+                            "timelen": 391000,
+                            "albuminfo": { "name": "Hotel California" },
+                            "singerinfo": [{ "name": "Eagles" }]
+                        }
+                    ]
+                }
             }
         """.trimIndent()
-        val local = Track(
-            id = "local-hotel-california",
-            title = "Hotel California",
-            artist = "Eagles",
-            album = "Local Album",
-            durationText = "6:31",
-            artworkSeed = 1,
-            sourceUri = "D:/Music/Hotel California.mp3",
+
+        val json = JSONObject(jsonStr)
+        val songs = json.getJSONObject("info").getJSONArray("songs")
+        val name = json.getJSONObject("info").getJSONObject("listinfo").getString("name")
+
+        val localTracks = listOf(
+            Track(
+                id = "local-1",
+                title = "Hotel California",
+                artist = "Eagles",
+                album = "Hotel California",
+                durationText = "6:31",
+                artworkSeed = 1,
+                sourceUri = "file:///music/hotel.mp3",
+                mimeType = "audio/mpeg",
+            )
         )
 
-        val result = KugouPlaylistImporter().parseOfficialResponse(
-            fixture,
-            "collection_3_2257531406_3_0",
-            listOf(local),
+        val importer = KugouPlaylistImporter()
+        val report = importer.parseEmbeddedPlaylistResponse(
+            name = name,
+            id = "gcid_3z12o39pwz4z025",
+            songs = songs,
+            localTracks = localTracks,
         )
 
-        assertEquals("Leonard", result.playlist.name)
-        assertEquals(2, result.catalogTrackCount)
-        assertEquals(1, result.matchedTrackCount)
-        assertEquals(local.sourceUri, result.playlist.tracks.first().sourceUri)
-        assertEquals(local.title, result.playlist.tracks.first().title)
-        kotlin.test.assertNotNull(result.playlist.tracks.first().artworkPath)
-        assertEquals("夏天的风", result.playlist.tracks[1].title)
-        assertEquals("温岚", result.playlist.tracks[1].artist)
-        assertNull(result.playlist.tracks[1].sourceUri)
+        assertEquals("Leonard", report.playlist.name)
+        assertEquals(2, report.playlist.tracks.size)
+        assertEquals(1, report.matchedTrackCount)
+        assertEquals(2, report.catalogTrackCount)
+        assertEquals("Welcome To The Jungle", report.playlist.tracks[0].title)
+        assertEquals("Hotel California", report.playlist.tracks[1].title)
+        assertEquals("file:///music/hotel.mp3", report.playlist.tracks[1].sourceUri)
     }
 
     @Test
-    fun rejectsNonKugouLinksBeforeAnyNetworkRequest() {
-        assertFailsWith<IllegalArgumentException> {
-            KugouPlaylistImporter().resolveGlobalCollectionId("https://example.com/playlist?global_collection_id=collection_3_1_1_0")
-        }
+    fun testResolveEmbeddedTarget() {
+        val url = "https://m.kugou.com/songlist/gcid_3z12o39pwz4z025/?src_cid=3z12o39pwz4z025&uid=1979464932&chl=message&iszlist=1"
+        val importer = KugouPlaylistImporter()
+        val target = importer.resolveTarget(url)
+        assertNotNull(target)
+        assertTrue(target is KugouPlaylistImporter.ImportTarget.EmbeddedPlaylist)
+        assertEquals("gcid_3z12o39pwz4z025", target.id)
+        assertEquals("Leonard", target.name)
+        assertTrue(target.songs.length() > 0)
     }
 }

@@ -2,25 +2,14 @@ package com.resonance.player.ui
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -38,19 +27,26 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeMute
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Album
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.automirrored.filled.FeaturedPlayList
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -60,18 +56,23 @@ import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,7 +84,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -93,11 +93,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.resonance.player.design.ResonanceColors
-import com.resonance.player.design.resonanceGlass
+import com.resonance.player.design.ResonanceShapes
 import com.resonance.player.design.resonancePressable
 import com.resonance.player.model.LyricLine
 import com.resonance.player.model.Lyrics
@@ -106,14 +105,21 @@ import com.resonance.player.model.PlayerState
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Track
 import com.resonance.player.model.durationTextToSeconds
-import kotlin.math.cos
-import kotlin.math.sin
+import com.resonance.player.platform.ResonanceBackHandler
 
 private enum class PlayerPane(val label: String, val icon: ImageVector) {
     Cover("封面", Icons.Default.Album),
     Lyrics("歌词", Icons.Default.GraphicEq),
     Queue("队列", Icons.AutoMirrored.Filled.QueueMusic),
 }
+
+/** 与 AlbumArtwork 占位封面一致的调色板，用于背景的氛围衍生。 */
+private val backdropPalettes = listOf(
+    Color(0xFFE96B55),
+    Color(0xFF5FD19B),
+    Color(0xFFF2BD5B),
+    Color(0xFF8EA7FF),
+)
 
 @Composable
 internal fun NowPlayingOverlay(
@@ -127,13 +133,24 @@ internal fun NowPlayingOverlay(
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
     onSeek: (Float) -> Unit,
+    onVolumeChange: (Float) -> Unit = {},
+    onSpeedChange: (Float) -> Unit = {},
+    onOpenSleepTimer: (() -> Unit)? = null,
+    onAdjustLyricsOffset: ((Long) -> Unit)? = null,
+    onEmbedLyrics: (() -> Unit)? = null,
+    onToggleFloatingLyrics: (() -> Unit)? = null,
+    floatingLyricsEnabled: Boolean = false,
     onTrackSelected: (Track) -> Unit,
     onToggleFavorite: (Track) -> Unit,
     onRefreshLyrics: () -> Unit,
+    onRequestAiLyrics: () -> Unit = onRefreshLyrics,
+    onDeleteLocalTrack: ((Track) -> Unit)? = null,
 ) {
     val track = playerState.currentTrack ?: return
     var paneName by rememberSaveable { mutableStateOf(PlayerPane.Cover.name) }
     val pane = PlayerPane.entries.firstOrNull { it.name == paneName } ?: PlayerPane.Cover
+
+    ResonanceBackHandler(enabled = true, onBack = onDismiss)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -142,24 +159,46 @@ internal fun NowPlayingOverlay(
         Surface(modifier = Modifier.fillMaxSize(), color = ResonanceColors.Canvas) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wide = maxWidth >= 720.dp || maxWidth > maxHeight * 1.35f
-                NowPlayingBackdrop(track.artworkSeed, playerState.isPlaying, Modifier.matchParentSize())
+                NowPlayingBackdrop(track.artworkSeed, Modifier.matchParentSize())
                 Column(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 32.dp else 18.dp, vertical = 14.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 32.dp else 20.dp, vertical = 10.dp),
                 ) {
-                    NowPlayingTopBar(track, onDismiss, onToggleFavorite)
-                    Spacer(Modifier.height(8.dp))
+                    NowPlayingTopBar(
+                        track = track,
+                        playerState = playerState,
+                        onDismiss = onDismiss,
+                        onToggleFavorite = onToggleFavorite,
+                        onDeleteLocalTrack = onDeleteLocalTrack,
+                        onOpenSleepTimer = onOpenSleepTimer,
+                        onToggleFloatingLyrics = onToggleFloatingLyrics,
+                        floatingLyricsEnabled = floatingLyricsEnabled,
+                    )
                     if (wide) {
                         Row(
                             modifier = Modifier.weight(1f).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(36.dp),
+                            horizontalArrangement = Arrangement.spacedBy(40.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            ArtworkPane(track, playerState.isPlaying, Modifier.weight(0.95f).fillMaxHeight())
+                            Column(
+                                modifier = Modifier.weight(0.95f).fillMaxHeight(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                ArtworkPane(track, playerState.isPlaying, Modifier.weight(1f))
+                                Spacer(Modifier.height(12.dp))
+                                HeroSyncedLyricsPreview(
+                                    track = track,
+                                    progress = playerState.progress,
+                                    lyricsState = lyricsState,
+                                    onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                )
+                            }
                             Column(Modifier.weight(1.05f).fillMaxHeight()) {
                                 TrackIdentity(track)
-                                Spacer(Modifier.height(14.dp))
-                                PlayerPaneSelector(pane, onSelect = { paneName = it.name })
-                                Spacer(Modifier.height(12.dp))
+                                Spacer(Modifier.height(10.dp))
+                                PaneSwitcher(pane, onSelect = { paneName = it.name })
+                                Spacer(Modifier.height(8.dp))
                                 PaneContent(
                                     pane = pane,
                                     track = track,
@@ -169,17 +208,20 @@ internal fun NowPlayingOverlay(
                                     onSeek = onSeek,
                                     onTrackSelected = onTrackSelected,
                                     onRefreshLyrics = onRefreshLyrics,
+                                    onRequestAiLyrics = onRequestAiLyrics,
+                                    onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
+                                    onAdjustOffset = onAdjustLyricsOffset,
+                                    onEmbedLyrics = onEmbedLyrics,
                                     modifier = Modifier.weight(1f),
                                 )
-                                Spacer(Modifier.height(10.dp))
+                                Spacer(Modifier.height(8.dp))
                                 PlaybackProgress(track, playerState.progress, onSeek)
-                                Spacer(Modifier.height(6.dp))
                                 PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                                Spacer(Modifier.height(2.dp))
+                                VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange)
                             }
                         }
                     } else {
-                        PlayerPaneSelector(pane, onSelect = { paneName = it.name })
-                        Spacer(Modifier.height(10.dp))
                         PaneContent(
                             pane = pane,
                             track = track,
@@ -189,14 +231,22 @@ internal fun NowPlayingOverlay(
                             onSeek = onSeek,
                             onTrackSelected = onTrackSelected,
                             onRefreshLyrics = onRefreshLyrics,
+                            onRequestAiLyrics = onRequestAiLyrics,
+                            onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
+                            onAdjustOffset = onAdjustLyricsOffset,
+                            onEmbedLyrics = onEmbedLyrics,
                             modifier = Modifier.weight(1f),
                         )
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
                         TrackIdentity(track)
-                        Spacer(Modifier.height(10.dp))
-                        PlaybackProgress(track, playerState.progress, onSeek)
                         Spacer(Modifier.height(6.dp))
+                        PlaybackProgress(track, playerState.progress, onSeek)
                         PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                        Spacer(Modifier.height(2.dp))
+                        VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange)
+                        Spacer(Modifier.height(4.dp))
+                        PaneSwitcher(pane, onSelect = { paneName = it.name })
+                        Spacer(Modifier.height(4.dp))
                     }
                 }
             }
@@ -204,215 +254,124 @@ internal fun NowPlayingOverlay(
     }
 }
 
+/** 深色背景 + 封面种子色衍生的轻微顶部渐变（Now Playing 专属，克制使用）。 */
 @Composable
-private fun NowPlayingBackdrop(seed: Int, playing: Boolean, modifier: Modifier = Modifier) {
-    val isDark = ResonanceColors.isDark
-    val coral = ResonanceColors.Coral
-    val violet = ResonanceColors.Violet
-    val violetSoft = ResonanceColors.VioletSoft
-    val mint = ResonanceColors.Mint
-    val canvas = ResonanceColors.Canvas
-
-    val energy by animateFloatAsState(
-        targetValue = if (playing) 1f else 0.65f,
-        animationSpec = tween(600),
-        label = "playerBackdropEnergy",
-    )
-    
-    val infiniteTransition = rememberInfiniteTransition(label = "auroraMotion")
-    val angle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(24000, easing = LinearEasing),
-            repeatMode = AnimRepeatMode.Restart,
+private fun NowPlayingBackdrop(seed: Int, modifier: Modifier = Modifier) {
+    val accent = backdropPalettes[((seed % backdropPalettes.size) + backdropPalettes.size) % backdropPalettes.size]
+    val topAlpha = if (ResonanceColors.isDark) 0.16f else 0.10f
+    Box(
+        modifier.background(
+            Brush.verticalGradient(
+                0f to accent.copy(alpha = topAlpha),
+                0.45f to ResonanceColors.Canvas,
+                1f to ResonanceColors.Canvas,
+            ),
         ),
-        label = "auroraAngle",
     )
-
-    val phase = (((seed % 17) + 17) % 17) / 16f
-    val rad = (angle * (kotlin.math.PI / 180.0)).toFloat()
-
-    val bgGradient = if (isDark) {
-        listOf(
-            Color(0xFF0F1626),
-            canvas,
-            Color(0xFF04060A),
-        )
-    } else {
-        listOf(
-            Color(0xFFF9FAFD),
-            canvas,
-            Color(0xFFE8EFF9),
-        )
-    }
-
-    val coralAlpha = if (isDark) 0.32f * energy else 0.20f * energy
-    val violetAlpha = if (isDark) 0.28f * energy else 0.18f * energy
-    val mintAlpha = if (isDark) 0.16f * energy else 0.12f * energy
-
-    Canvas(
-        modifier.background(Brush.verticalGradient(bgGradient)),
-    ) {
-        val radius = size.maxDimension * 0.70f
-        val cosOffset = cos(rad) * (size.width * 0.10f)
-        val sinOffset = sin(rad) * (size.height * 0.10f)
-
-        val first = Offset(size.width * (0.22f + phase * 0.14f) + cosOffset, size.height * 0.15f + sinOffset)
-        val second = Offset(size.width * (0.80f - phase * 0.12f) - cosOffset, size.height * 0.70f - sinOffset)
-        val third = Offset(size.width * 0.50f, size.height * 0.45f)
-
-        // Aurora Ambient Bleed Layer 1: Vibrant Coral
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    coral.copy(alpha = coralAlpha),
-                    coral.copy(alpha = coralAlpha * 0.3f),
-                    Color.Transparent,
-                ),
-                center = first,
-                radius = radius,
-            ),
-            center = first,
-            radius = radius,
-        )
-
-        // Aurora Ambient Bleed Layer 2: Electric Violet
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    violet.copy(alpha = violetAlpha),
-                    violetSoft.copy(alpha = violetAlpha * 0.3f),
-                    Color.Transparent,
-                ),
-                center = second,
-                radius = radius * 0.9f,
-            ),
-            center = second,
-            radius = radius * 0.9f,
-        )
-
-        // Aurora Ambient Bleed Layer 3: Subtle Mint Center
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    mint.copy(alpha = mintAlpha),
-                    Color.Transparent,
-                ),
-                center = third,
-                radius = radius * 0.75f,
-            ),
-            center = third,
-            radius = radius * 0.75f,
-        )
-    }
 }
 
-
-
 @Composable
-private fun NowPlayingTopBar(track: Track, onDismiss: () -> Unit, onToggleFavorite: (Track) -> Unit) {
-    val closeInteraction = remember { MutableInteractionSource() }
-    val favInteraction = remember { MutableInteractionSource() }
-
+private fun NowPlayingTopBar(
+    track: Track,
+    playerState: PlayerState,
+    onDismiss: () -> Unit,
+    onToggleFavorite: (Track) -> Unit,
+    onDeleteLocalTrack: ((Track) -> Unit)? = null,
+    onOpenSleepTimer: (() -> Unit)? = null,
+    onToggleFloatingLyrics: (() -> Unit)? = null,
+    floatingLyricsEnabled: Boolean = false,
+) {
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onDismiss,
-            modifier = Modifier.size(44.dp).resonancePressable(closeInteraction),
-            interactionSource = closeInteraction,
-        ) {
-            Icon(Icons.Default.Close, contentDescription = "关闭正在播放", tint = ResonanceColors.Ivory)
+        IconButton(onClick = onDismiss) {
+            Icon(Icons.Default.KeyboardArrowDown, contentDescription = "关闭正在播放", tint = ResonanceColors.Ivory)
         }
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(ResonanceColors.Coral),
-                )
-                Spacer(Modifier.width(6.dp))
-                Text("正在播放", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.CoralGlow)
-            }
-            Spacer(Modifier.height(2.dp))
+            Text(
+                "正在播放",
+                style = MaterialTheme.typography.labelMedium,
+                color = ResonanceColors.Dim,
+            )
             Text(
                 track.album.ifBlank { "本地曲目" },
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = ResonanceColors.Muted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        IconButton(
-            onClick = { onToggleFavorite(track) },
-            modifier = Modifier.size(44.dp).resonancePressable(favInteraction),
-            interactionSource = favInteraction,
-        ) {
+
+        if (onToggleFloatingLyrics != null) {
+            IconButton(onClick = onToggleFloatingLyrics) {
+                Icon(
+                    Icons.AutoMirrored.Filled.FeaturedPlayList,
+                    contentDescription = if (floatingLyricsEnabled) "关闭桌面歌词" else "开启桌面歌词",
+                    tint = if (floatingLyricsEnabled) ResonanceColors.Coral else ResonanceColors.Dim,
+                )
+            }
+        }
+
+        if (onOpenSleepTimer != null) {
+            val hasTimer = playerState.sleepTimerRemainingSeconds != null && playerState.sleepTimerRemainingSeconds > 0
+            IconButton(onClick = onOpenSleepTimer) {
+                Icon(
+                    Icons.Default.Timer,
+                    contentDescription = "睡眠定时器",
+                    tint = if (hasTimer) ResonanceColors.Coral else ResonanceColors.Dim,
+                )
+            }
+        }
+
+        IconButton(onClick = { onToggleFavorite(track) }) {
             Icon(
                 if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (track.isFavorite) "取消收藏" else "收藏",
                 tint = if (track.isFavorite) ResonanceColors.Coral else ResonanceColors.Muted,
             )
         }
+        if (!track.sourceUri.isNullOrBlank() && onDeleteLocalTrack != null) {
+            IconButton(onClick = { onDeleteLocalTrack(track) }) {
+                Icon(
+                    Icons.Default.DeleteOutline,
+                    contentDescription = "删除本地音频",
+                    tint = ResonanceColors.Dim,
+                )
+            }
+        }
     }
 }
 
+/** 底部平面页签切换（封面 / 歌词 / 队列），无玻璃容器。 */
 @Composable
-private fun PlayerPaneSelector(selected: PlayerPane, onSelect: (PlayerPane) -> Unit) {
+private fun PaneSwitcher(selected: PlayerPane, onSelect: (PlayerPane) -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .resonanceGlass(
-                shape = RoundedCornerShape(18.dp),
-                backgroundColor = ResonanceColors.Glass,
-                shadowElevation = 4.dp,
-            )
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         PlayerPane.entries.forEach { pane ->
             val active = pane == selected
-            val interactionSource = remember { MutableInteractionSource() }
-            val color by animateColorAsState(
-                targetValue = if (active) ResonanceColors.CoralSoft else Color.Transparent,
-                animationSpec = tween(180),
-                label = "playerPaneBg",
-            )
-            val borderColor = if (active) ResonanceColors.Coral.copy(alpha = 0.5f) else Color.Transparent
-
-            Surface(
-                onClick = { onSelect(pane) },
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 46.dp)
-                    .resonancePressable(interactionSource, pressedScale = 0.95f),
-                color = color,
-                shape = RoundedCornerShape(14.dp),
-                border = if (active) BorderStroke(1.dp, borderColor) else null,
-                interactionSource = interactionSource,
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Tab) { onSelect(pane) }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp).padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        pane.icon,
-                        contentDescription = null,
-                        tint = if (active) ResonanceColors.CoralGlow else ResonanceColors.Muted,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        pane.label,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = if (active) ResonanceColors.Ivory else ResonanceColors.Muted,
-                        fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                    )
-                }
+                Icon(
+                    pane.icon,
+                    contentDescription = null,
+                    tint = if (active) ResonanceColors.Coral else ResonanceColors.Dim,
+                    modifier = Modifier.size(17.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    pane.label,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (active) ResonanceColors.Coral else ResonanceColors.Dim,
+                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
+                )
             }
         }
     }
@@ -428,21 +387,147 @@ private fun PaneContent(
     onSeek: (Float) -> Unit,
     onTrackSelected: (Track) -> Unit,
     onRefreshLyrics: () -> Unit,
+    onRequestAiLyrics: () -> Unit,
+    onOpenFullLyrics: () -> Unit,
+    onAdjustOffset: ((Long) -> Unit)? = null,
+    onEmbedLyrics: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     AnimatedContent(
         targetState = pane,
         modifier = modifier.fillMaxWidth(),
         transitionSpec = {
-            (fadeIn(tween(220)) + slideInHorizontally(tween(220)) { it / 14 }) togetherWith
-                (fadeOut(tween(160)) + slideOutHorizontally(tween(160)) { -it / 14 })
+            fadeIn(tween(200)) togetherWith fadeOut(tween(140))
         },
         label = "playerPaneContent",
     ) { active ->
         when (active) {
-            PlayerPane.Cover -> ArtworkPane(track, playerState.isPlaying, Modifier.fillMaxSize())
-            PlayerPane.Lyrics -> LyricsPane(track, playerState.progress, lyricsState, onSeek, onRefreshLyrics)
+            PlayerPane.Cover -> {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    ArtworkPane(track, playerState.isPlaying, Modifier.weight(1f))
+                    Spacer(Modifier.height(8.dp))
+                    HeroSyncedLyricsPreview(
+                        track = track,
+                        progress = playerState.progress,
+                        lyricsState = lyricsState,
+                        onOpenFullLyrics = onOpenFullLyrics,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    )
+                }
+            }
+            PlayerPane.Lyrics -> LyricsPane(
+                track = track,
+                progress = playerState.progress,
+                state = lyricsState,
+                onSeek = onSeek,
+                onRefresh = onRefreshLyrics,
+                onRequestAi = onRequestAiLyrics,
+                onAdjustOffset = onAdjustOffset,
+                onEmbedLyrics = onEmbedLyrics,
+            )
             PlayerPane.Queue -> QueuePane(queue, track.id, onTrackSelected)
+        }
+    }
+}
+
+@Composable
+private fun HeroSyncedLyricsPreview(
+    track: Track,
+    progress: Float,
+    lyricsState: LyricsUiState,
+    onOpenFullLyrics: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
+    val positionMs = (durationMs * progress.coerceIn(0f, 1f)).toLong()
+
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(ResonanceColors.Raised.copy(alpha = 0.55f))
+            .clickable(role = Role.Button, onClick = onOpenFullLyrics)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        when (lyricsState) {
+            is LyricsUiState.Ready -> {
+                val lyrics = lyricsState.lyrics
+                if (lyrics.instrumental) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = ResonanceColors.Dim, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("纯音乐 · 请享受旋律", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+                    }
+                } else if (lyrics.synchronized && lyrics.lines.isNotEmpty()) {
+                    val activeIndex = lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
+                    val prevLine = if (activeIndex > 0) lyrics.lines.getOrNull(activeIndex - 1)?.text else null
+                    val currentLine = if (activeIndex >= 0) lyrics.lines.getOrNull(activeIndex)?.text else lyrics.lines.firstOrNull()?.text
+                    val nextLine = if (activeIndex >= 0) lyrics.lines.getOrNull(activeIndex + 1)?.text else lyrics.lines.getOrNull(1)?.text
+
+                    if (prevLine != null) {
+                        Text(
+                            prevLine,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ResonanceColors.Dim.copy(alpha = 0.5f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                        Spacer(Modifier.height(1.dp))
+                    }
+                    Text(
+                        currentLine ?: "…",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ResonanceColors.Coral,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                    if (nextLine != null) {
+                        Spacer(Modifier.height(1.dp))
+                        Text(
+                            nextLine,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ResonanceColors.Dim.copy(alpha = 0.5f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                } else {
+                    val firstLine = lyrics.lines.firstOrNull()?.text ?: "…"
+                    Text(
+                        firstLine,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ResonanceColors.Ivory,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+            is LyricsUiState.Loading -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    CircularProgressIndicator(color = ResonanceColors.Coral, modifier = Modifier.size(13.dp), strokeWidth = 2.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("正在匹配歌词…", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
+                }
+            }
+            is LyricsUiState.Unavailable -> {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ResonanceColors.Dim, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("暂无歌词 · 点击查看或使用 AI 检索", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
+                }
+            }
+            LyricsUiState.Idle -> {
+                Text("点击查看歌词", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
+            }
         }
     }
 }
@@ -450,41 +535,28 @@ private fun PaneContent(
 @Composable
 private fun ArtworkPane(track: Track, playing: Boolean, modifier: Modifier = Modifier) {
     val scale by animateFloatAsState(
-        targetValue = if (playing) 1f else 0.95f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        targetValue = if (playing) 1f else 0.96f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
         label = "heroArtworkScale",
     )
 
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-        val artworkSize = minOf(maxWidth - 20.dp, maxHeight - 20.dp, 360.dp).coerceAtLeast(140.dp)
+        val artworkSize = minOf(maxWidth - 24.dp, maxHeight - 16.dp, 330.dp).coerceAtLeast(130.dp)
         Box(
             modifier = Modifier
                 .size(artworkSize)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
-                    cameraDistance = 16f * density
                 }
                 .shadow(
-                    elevation = 32.dp,
-                    shape = RoundedCornerShape(28.dp),
-                    ambientColor = ResonanceColors.Coral.copy(alpha = 0.25f),
-                    spotColor = ResonanceColors.Shadow,
-                )
-                .border(
-                    BorderStroke(
-                        1.dp,
-                        Brush.linearGradient(
-                            listOf(
-                                Color(0x66FFFFFF),
-                                ResonanceColors.DividerStrong.copy(alpha = 0.4f),
-                            ),
-                        ),
-                    ),
-                    RoundedCornerShape(28.dp),
+                    elevation = 18.dp,
+                    shape = ResonanceShapes.ArtworkLarge,
+                    ambientColor = Color.Black,
+                    spotColor = Color.Black,
                 ),
         ) {
-            AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 28.dp, track.artworkPath)
+            AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 20.dp, track.artworkPath)
         }
     }
 }
@@ -497,7 +569,7 @@ private fun TrackIdentity(track: Track) {
     ) {
         Text(
             track.title,
-            style = MaterialTheme.typography.headlineLarge,
+            style = MaterialTheme.typography.headlineMedium,
             textAlign = TextAlign.Center,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -505,34 +577,25 @@ private fun TrackIdentity(track: Track) {
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(4.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                track.artist.ifBlank { "未知歌手" },
-                style = MaterialTheme.typography.bodyLarge,
+                track.artist.ifBlank { "未知艺术家" },
+                style = MaterialTheme.typography.bodyMedium,
                 color = ResonanceColors.Muted,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Spacer(Modifier.width(8.dp))
-            // Audio specs quality badge
-            Box(
+            Text(
+                text = if (track.mimeType.contains("flac", ignoreCase = true)) "FLAC" else "320K",
+                style = MaterialTheme.typography.labelSmall,
+                color = ResonanceColors.Dim,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(ResonanceColors.SurfaceSubtle)
-                    .border(1.dp, ResonanceColors.GlassBorderSubtle, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-            ) {
-                Text(
-                    text = if (track.mimeType.contains("flac", ignoreCase = true)) "FLAC LOSSLESS" else "320K MP3",
-                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 10.sp, letterSpacing = 0.5.sp),
-                    color = ResonanceColors.Mint,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(ResonanceColors.Soft)
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+            )
         }
     }
 }
@@ -543,15 +606,15 @@ private fun PlaybackProgress(track: Track, progress: Float, onSeek: (Float) -> U
         Slider(
             value = progress.coerceIn(0f, 1f),
             onValueChange = onSeek,
-            modifier = Modifier.fillMaxWidth().height(32.dp),
+            modifier = Modifier.fillMaxWidth().height(28.dp),
             colors = SliderDefaults.colors(
-                thumbColor = ResonanceColors.CoralGlow,
+                thumbColor = ResonanceColors.Coral,
                 activeTrackColor = ResonanceColors.Coral,
-                inactiveTrackColor = ResonanceColors.DividerStrong.copy(alpha = 0.8f),
+                inactiveTrackColor = ResonanceColors.DividerStrong,
             ),
         )
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 6.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
@@ -578,79 +641,54 @@ private fun PlaybackControls(
     onCycleRepeat: () -> Unit,
 ) {
     val playInteraction = remember { MutableInteractionSource() }
-    val prevInteraction = remember { MutableInteractionSource() }
-    val nextInteraction = remember { MutableInteractionSource() }
-    val shuffleInteraction = remember { MutableInteractionSource() }
-    val repeatInteraction = remember { MutableInteractionSource() }
 
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 68.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(
-            onClick = onToggleShuffle,
-            modifier = Modifier.size(48.dp).resonancePressable(shuffleInteraction),
-            interactionSource = shuffleInteraction,
-        ) {
+        IconButton(onClick = onToggleShuffle, modifier = Modifier.size(46.dp)) {
             Icon(
                 Icons.Default.Shuffle,
                 contentDescription = if (playerState.shuffleEnabled) "关闭随机播放" else "开启随机播放",
                 tint = if (playerState.shuffleEnabled) ResonanceColors.Coral else ResonanceColors.Dim,
+                modifier = Modifier.size(21.dp),
             )
         }
-        IconButton(
-            onClick = onPrevious,
-            modifier = Modifier.size(52.dp).resonancePressable(prevInteraction),
-            interactionSource = prevInteraction,
-        ) {
+        IconButton(onClick = onPrevious, modifier = Modifier.size(50.dp)) {
             Icon(
                 Icons.Default.SkipPrevious,
                 contentDescription = "上一首",
                 tint = ResonanceColors.Ivory,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(30.dp),
             )
         }
         FilledIconButton(
             onClick = onTogglePlay,
             modifier = Modifier
-                .size(66.dp)
-                .resonancePressable(playInteraction, pressedScale = 0.92f)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = CircleShape,
-                    ambientColor = ResonanceColors.Coral.copy(alpha = 0.5f),
-                    spotColor = ResonanceColors.CoralGlow,
-                ),
+                .size(62.dp)
+                .resonancePressable(playInteraction, pressedScale = 0.94f),
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = ResonanceColors.Coral,
-                contentColor = Color(0xFF2A0B07),
+                contentColor = Color.White,
             ),
             interactionSource = playInteraction,
         ) {
             Icon(
                 if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                 contentDescription = if (playerState.isPlaying) "暂停" else "播放",
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(32.dp),
             )
         }
-        IconButton(
-            onClick = onNext,
-            modifier = Modifier.size(52.dp).resonancePressable(nextInteraction),
-            interactionSource = nextInteraction,
-        ) {
+        IconButton(onClick = onNext, modifier = Modifier.size(50.dp)) {
             Icon(
                 Icons.Default.SkipNext,
                 contentDescription = "下一首",
                 tint = ResonanceColors.Ivory,
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(30.dp),
             )
         }
-        IconButton(
-            onClick = onCycleRepeat,
-            modifier = Modifier.size(48.dp).resonancePressable(repeatInteraction),
-            interactionSource = repeatInteraction,
-        ) {
+        IconButton(onClick = onCycleRepeat, modifier = Modifier.size(46.dp)) {
             Icon(
                 if (playerState.repeatMode == RepeatMode.One) Icons.Default.RepeatOne else Icons.Default.Repeat,
                 contentDescription = when (playerState.repeatMode) {
@@ -659,10 +697,101 @@ private fun PlaybackControls(
                     RepeatMode.One -> "关闭循环"
                 },
                 tint = if (playerState.repeatMode == RepeatMode.Off) ResonanceColors.Dim else ResonanceColors.Coral,
+                modifier = Modifier.size(21.dp),
             )
         }
     }
 }
+
+@Composable
+private fun VolumeAndSpeedRow(
+    volume: Float,
+    speed: Float,
+    onVolumeChange: (Float) -> Unit,
+    onSpeedChange: (Float) -> Unit,
+) {
+    var showSpeedMenu by remember { mutableStateOf(false) }
+    var previousVolume by remember { mutableStateOf(1f) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = {
+                if (volume > 0.01f) {
+                    previousVolume = volume
+                    onVolumeChange(0f)
+                } else {
+                    onVolumeChange(if (previousVolume > 0.05f) previousVolume else 1f)
+                }
+            },
+            modifier = Modifier.size(32.dp),
+        ) {
+            Icon(
+                when {
+                    volume <= 0.01f -> Icons.AutoMirrored.Filled.VolumeOff
+                    volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
+                    else -> Icons.AutoMirrored.Filled.VolumeUp
+                },
+                contentDescription = "音量调节与静音",
+                tint = if (volume <= 0.01f) ResonanceColors.Dim else ResonanceColors.Ivory,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+
+        Slider(
+            value = volume.coerceIn(0f, 1f),
+            onValueChange = onVolumeChange,
+            modifier = Modifier.weight(1f).height(20.dp),
+            colors = SliderDefaults.colors(
+                thumbColor = ResonanceColors.Ivory,
+                activeTrackColor = ResonanceColors.Ivory,
+                inactiveTrackColor = ResonanceColors.DividerStrong,
+            ),
+        )
+
+        Spacer(Modifier.width(10.dp))
+
+        Box {
+            TextButton(
+                onClick = { showSpeedMenu = true },
+                modifier = Modifier.height(28.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+            ) {
+                Icon(Icons.Default.Speed, contentDescription = null, tint = if (speed != 1.0f) ResonanceColors.Coral else ResonanceColors.Dim, modifier = Modifier.size(15.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    text = "${if (speed == 1.0f) "1.0" else speed}x",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (speed != 1.0f) ResonanceColors.Coral else ResonanceColors.Ivory,
+                )
+            }
+            DropdownMenu(
+                expanded = showSpeedMenu,
+                onDismissRequest = { showSpeedMenu = false },
+            ) {
+                listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { s ->
+                    DropdownMenuItem(
+                        text = { Text("${s}x 倍速", color = if (s == speed) ResonanceColors.Coral else ResonanceColors.Ivory) },
+                        onClick = {
+                            onSpeedChange(s)
+                            showSpeedMenu = false
+                        },
+                        trailingIcon = if (s == speed) {
+                            { Icon(Icons.Default.Check, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(16.dp)) }
+                        } else null,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 歌词（平面列表，无玻璃容器）
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun LyricsPane(
@@ -671,25 +800,22 @@ private fun LyricsPane(
     state: LyricsUiState,
     onSeek: (Float) -> Unit,
     onRefresh: () -> Unit,
+    onRequestAi: () -> Unit,
+    onAdjustOffset: ((Long) -> Unit)? = null,
+    onEmbedLyrics: (() -> Unit)? = null,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color.Transparent,
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .resonanceGlass(
-                    shape = RoundedCornerShape(24.dp),
-                    backgroundColor = ResonanceColors.GlassLight,
-                    shadowElevation = 8.dp,
-                ),
-        ) {
-            when (state) {
-                LyricsUiState.Idle, LyricsUiState.Loading -> LyricsLoading()
-                is LyricsUiState.Unavailable -> LyricsUnavailable(state.message, onRefresh)
-                is LyricsUiState.Ready -> LyricsContent(track, progress, state.lyrics, onSeek)
-            }
+    Box(Modifier.fillMaxSize()) {
+        when (state) {
+            LyricsUiState.Idle, LyricsUiState.Loading -> LyricsLoading()
+            is LyricsUiState.Unavailable -> LyricsUnavailable(state.message, onRefresh, onRequestAi)
+            is LyricsUiState.Ready -> LyricsContent(
+                track = track,
+                progress = progress,
+                lyrics = state.lyrics,
+                onSeek = onSeek,
+                onAdjustOffset = onAdjustOffset,
+                onEmbedLyrics = onEmbedLyrics,
+            )
         }
     }
 }
@@ -701,58 +827,62 @@ private fun LyricsLoading() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator(color = ResonanceColors.Coral, modifier = Modifier.size(36.dp))
-        Spacer(Modifier.height(18.dp))
-        Text("正在自动匹配云端与本地歌词…", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory)
-        Spacer(Modifier.height(6.dp))
-        Text("LRCLIB 实时检索 · 纯净播放体验", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+        CircularProgressIndicator(color = ResonanceColors.Coral, modifier = Modifier.size(32.dp))
+        Spacer(Modifier.height(14.dp))
+        Text("正在匹配歌词…", style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Muted)
     }
 }
 
 @Composable
-private fun LyricsUnavailable(message: String, onRefresh: () -> Unit) {
+private fun LyricsUnavailable(message: String, onRefresh: () -> Unit, onRequestAi: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ResonanceColors.Dim, modifier = Modifier.size(48.dp))
-        Spacer(Modifier.height(14.dp))
-        Text(message, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, color = ResonanceColors.Ivory)
+        Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(40.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(message, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = ResonanceColors.Muted)
         Spacer(Modifier.height(16.dp))
-        Button(
-            onClick = onRefresh,
-            colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.CoralSoft, contentColor = ResonanceColors.CoralGlow),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-            shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.4f)),
-        ) {
-            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("重新匹配歌词")
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            TextButton(onClick = onRefresh) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Coral)
+                Spacer(Modifier.width(6.dp))
+                Text("重试检索", color = ResonanceColors.Coral)
+            }
+            OutlinedButton(onClick = onRequestAi) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Coral)
+                Spacer(Modifier.width(6.dp))
+                Text("DeepSeek AI 检索", color = ResonanceColors.Coral)
+            }
         }
     }
 }
 
 @Composable
-private fun LyricsContent(track: Track, progress: Float, lyrics: Lyrics, onSeek: (Float) -> Unit) {
+private fun LyricsContent(
+    track: Track,
+    progress: Float,
+    lyrics: Lyrics,
+    onSeek: (Float) -> Unit,
+    onAdjustOffset: ((Long) -> Unit)? = null,
+    onEmbedLyrics: (() -> Unit)? = null,
+) {
     if (lyrics.instrumental) {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Default.MusicNote, contentDescription = null, tint = ResonanceColors.Mint, modifier = Modifier.size(54.dp))
-            Spacer(Modifier.height(16.dp))
-            Text("纯音乐 · 请享受旋律", style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.Ivory)
-            Spacer(Modifier.height(8.dp))
-            Text("歌词来源：${lyrics.source}", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+            Icon(Icons.Default.MusicNote, contentDescription = null, tint = ResonanceColors.Dim, modifier = Modifier.size(44.dp))
+            Spacer(Modifier.height(14.dp))
+            Text("纯音乐 · 请享受旋律", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Ivory)
         }
         return
     }
 
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
-    val positionMs = (durationMs * progress.coerceIn(0f, 1f)).toLong()
+    val positionMs = (durationMs * progress.coerceIn(0f, 1f)).toLong() + lyrics.offsetMs
     val activeIndex = if (lyrics.synchronized) {
         lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
     } else {
@@ -762,39 +892,64 @@ private fun LyricsContent(track: Track, progress: Float, lyrics: Lyrics, onSeek:
     LaunchedEffect(activeIndex) {
         if (activeIndex >= 0) listState.animateScrollToItem((activeIndex - 2).coerceAtLeast(0))
     }
-    LazyColumn(
-        state = listState,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 26.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(7.dp).clip(CircleShape).background(ResonanceColors.Mint),
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    if (lyrics.synchronized) "逐行歌词 · 点按任意行跳转" else "歌词",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = ResonanceColors.Mint,
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (lyrics.synchronized && onAdjustOffset != null) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("时间轴", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
+                    TextButton(onClick = { onAdjustOffset(-500L) }, modifier = Modifier.height(24.dp), contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
+                        Text("-0.5s", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Coral)
+                    }
+                    TextButton(
+                        onClick = { onAdjustOffset(-lyrics.offsetMs) },
+                        modifier = Modifier.height(24.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                        enabled = lyrics.offsetMs != 0L,
+                    ) {
+                        val offsetSec = lyrics.offsetMs / 1000.0
+                        Text(
+                            if (lyrics.offsetMs == 0L) "正常" else "%+.1fs".format(offsetSec),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (lyrics.offsetMs == 0L) ResonanceColors.Dim else ResonanceColors.Ivory,
+                        )
+                    }
+                    TextButton(onClick = { onAdjustOffset(500L) }, modifier = Modifier.height(24.dp), contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) {
+                        Text("+0.5s", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Coral)
+                    }
+                }
+
+                if (onEmbedLyrics != null && !track.sourceUri.isNullOrBlank()) {
+                    TextButton(
+                        onClick = onEmbedLyrics,
+                        modifier = Modifier.height(24.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                    ) {
+                        Text("嵌入到音频文件", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted)
+                    }
+                }
+            }
+        }
+
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            itemsIndexed(lyrics.lines, key = { index, line -> "${line.timestampMs}-$index" }) { index, line ->
+                LyricRow(
+                    line = line,
+                    active = index == activeIndex,
+                    onClick = line.timestampMs?.let { timestamp -> { onSeek((timestamp - lyrics.offsetMs).coerceAtLeast(0L).toFloat() / durationMs.toFloat()) } },
                 )
             }
-            Text(
-                "${lyrics.source} 匹配${if (lyrics.fromCache) " · 已本地缓存" else ""}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = ResonanceColors.Dim,
-            )
-            Spacer(Modifier.height(16.dp))
+            item { Spacer(Modifier.height(48.dp)) }
         }
-        itemsIndexed(lyrics.lines, key = { index, line -> "${line.timestampMs}-$index" }) { index, line ->
-            LyricRow(
-                line = line,
-                active = index == activeIndex,
-                onClick = line.timestampMs?.let { timestamp -> { onSeek(timestamp.toFloat() / durationMs.toFloat()) } },
-            )
-        }
-        item { Spacer(Modifier.height(96.dp)) }
     }
 }
 
@@ -805,16 +960,6 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
         targetValue = if (active) ResonanceColors.Ivory else ResonanceColors.Dim,
         animationSpec = tween(200),
         label = "lyricColor",
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (active) 1.03f else 0.97f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMedium),
-        label = "lyricScale",
-    )
-    val backgroundAlpha by animateFloatAsState(
-        targetValue = if (active) 0.85f else 0f,
-        animationSpec = tween(200),
-        label = "lyricBgAlpha",
     )
 
     val interaction = if (onClick != null) {
@@ -829,102 +974,64 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 54.dp)
-            .clip(RoundedCornerShape(16.dp))
+            .heightIn(min = 44.dp)
+            .clip(RoundedCornerShape(8.dp))
             .then(interaction)
-            .background(
-                if (backgroundAlpha > 0f) {
-                    ResonanceColors.CoralSoft.copy(alpha = backgroundAlpha)
-                } else Color.Transparent,
-            )
-            .border(
-                if (active) BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.35f)) else BorderStroke(0.dp, Color.Transparent),
-                RoundedCornerShape(16.dp),
-            )
-            .padding(horizontal = 16.dp, vertical = 12.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            },
+            .background(if (active) ResonanceColors.CoralSoft else Color.Transparent)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (active) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(ResonanceColors.CoralGlow),
-            )
-            Spacer(Modifier.width(10.dp))
-        }
         Text(
             line.text,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
             color = color,
-            lineHeight = 28.sp,
         )
     }
 }
+
+// ---------------------------------------------------------------------------
+// 播放队列（平面列表）
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun QueuePane(queue: List<Track>, currentTrackId: String, onTrackSelected: (Track) -> Unit) {
     if (queue.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("播放队列为空", color = ResonanceColors.Muted)
+            Text("播放队列为空", color = ResonanceColors.Dim, style = MaterialTheme.typography.bodyMedium)
         }
         return
     }
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .resonanceGlass(
-                shape = RoundedCornerShape(24.dp),
-                backgroundColor = ResonanceColors.GlassLight,
-                shadowElevation = 8.dp,
-            ),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(vertical = 8.dp),
     ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(ResonanceColors.Coral))
-                Spacer(Modifier.width(8.dp))
-                Text("播放队列 · 共 ${queue.size} 首", style = MaterialTheme.typography.labelLarge, color = ResonanceColors.CoralGlow)
-            }
-        }
         itemsIndexed(queue, key = { index, item -> "queue-${item.id}-$index" }) { _, item ->
             val current = item.id == currentTrackId
-            val interactionSource = remember { MutableInteractionSource() }
-
-            Surface(
-                onClick = { onTrackSelected(item) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 62.dp)
-                    .resonancePressable(interactionSource),
-                color = if (current) ResonanceColors.CoralSoft else Color.Transparent,
-                shape = RoundedCornerShape(16.dp),
-                border = if (current) BorderStroke(1.dp, ResonanceColors.Coral.copy(alpha = 0.45f)) else null,
-                interactionSource = interactionSource,
-            ) {
-                Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    AlbumArtwork(item.artworkSeed, Modifier.size(46.dp), 12.dp, item.artworkPath)
+            Column {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onTrackSelected(item) }
+                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AlbumArtwork(item.artworkSeed, Modifier.size(42.dp), 8.dp, item.artworkPath)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             item.title,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            color = if (current) ResonanceColors.Ivory else ResonanceColors.Ivory.copy(alpha = 0.85f),
-                            fontWeight = if (current) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (current) ResonanceColors.Coral else ResonanceColors.Ivory,
+                            fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            item.artist.ifBlank { "未知歌手" },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = ResonanceColors.Muted,
+                            item.artist.ifBlank { "未知艺术家" },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ResonanceColors.Dim,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -933,13 +1040,17 @@ private fun QueuePane(queue: List<Track>, currentTrackId: String, onTrackSelecte
                         Icon(
                             Icons.Default.GraphicEq,
                             contentDescription = "当前播放",
-                            tint = ResonanceColors.CoralGlow,
-                            modifier = Modifier.size(20.dp),
+                            tint = ResonanceColors.Coral,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
                 }
+                HorizontalDivider(
+                    color = ResonanceColors.Divider,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(start = 60.dp),
+                )
             }
         }
     }
 }
-
