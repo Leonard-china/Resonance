@@ -22,6 +22,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -34,10 +36,9 @@ import androidx.compose.ui.unit.sp
 import com.resonance.player.model.ThemeMode
 
 /**
- * Resonance Design System — Minimal / Music-first / Hi-Fi.
+ * Resonance Design System — 现代声学磨砂玻璃 & 水润流体动效 (Acoustic Glassmorphism & Juicy Motion).
  *
- * 克制、高信息密度、封面优先。页面背景为纯色（浅 #FAFAFA / 深 #101010），
- * 珊瑚红仅作强调色。不允许大面积渐变、厚阴影与玻璃拟态。
+ * 界面呈现通透光学折射感、双重物理高光倒角描边、微光环境阴影与带有生命力呼吸律动的果冻级弹性物理动效。
  */
 data class ResonanceColorTokens(
     val isDark: Boolean,
@@ -74,67 +75,67 @@ data class ResonanceColorTokens(
 
 val DarkResonanceColors = ResonanceColorTokens(
     isDark = true,
-    Canvas = Color(0xFF101010),
-    CanvasElevated = Color(0xFF161616),
-    Raised = Color(0xFF1B1B1B),
-    Soft = Color(0xFF242424),
-    SurfaceSubtle = Color(0xFF2E2E2E),
-    Glass = Color(0xFF1A1A1A),
-    GlassLight = Color(0xFF222222),
-    GlassUltra = Color(0xFF2A2A2A),
-    GlassBorder = Color(0x1FFFFFFF),
-    GlassBorderSubtle = Color(0x12FFFFFF),
-    GlassBorderGlow = Color(0x66FF6B55),
+    Canvas = Color(0xFF0C0D14),
+    CanvasElevated = Color(0xFF131522),
+    Raised = Color(0xFF1B1E30),
+    Soft = Color(0x33282E47),
+    SurfaceSubtle = Color(0x38333D5E),
+    Glass = Color(0x401D2136),
+    GlassLight = Color(0x59272D4A),
+    GlassUltra = Color(0x73323B61),
+    GlassBorder = Color(0x47FFFFFF),
+    GlassBorderSubtle = Color(0x1AFFFFFF),
+    GlassBorderGlow = Color(0x73FF6B55),
     Divider = Color(0x1FFFFFFF),
     DividerStrong = Color(0x33FFFFFF),
-    Ivory = Color(0xFFF5F5F5),
-    Muted = Color(0xFFA6A6A6),
-    Dim = Color(0xFF757575),
-    Dimmer = Color(0xFF545454),
+    Ivory = Color(0xFFF6F8FC),
+    Muted = Color(0xFFAAB2C8),
+    Dim = Color(0xFF78829C),
+    Dimmer = Color(0xFF555D74),
     Coral = Color(0xFFFF6B55),
-    CoralGlow = Color(0xFFFF8A76),
-    CoralSoft = Color(0x2EFF6B55),
+    CoralGlow = Color(0xFFFF8E7C),
+    CoralSoft = Color(0x33FF6B55),
     Mint = Color(0xFF4EE3B0),
     MintGlow = Color(0xFF88F2CE),
-    MintSoft = Color(0x2E4EE3B0),
+    MintSoft = Color(0x334EE3B0),
     Amber = Color(0xFFFFB84D),
-    Violet = Color(0xFF9885FF),
-    VioletGlow = Color(0xFFBFB2FF),
-    VioletSoft = Color(0x2E9885FF),
-    Azure = Color(0xFF4AC4F3),
+    Violet = Color(0xFF9E8DFF),
+    VioletGlow = Color(0xFFC3B8FF),
+    VioletSoft = Color(0x339E8DFF),
+    Azure = Color(0xFF38BDF8),
     Shadow = Color(0xFF000000),
 )
 
 val LightResonanceColors = ResonanceColorTokens(
     isDark = false,
-    Canvas = Color(0xFFFAFAFA),
+    Canvas = Color(0xFFF3F5FA),
     CanvasElevated = Color(0xFFFFFFFF),
     Raised = Color(0xFFFFFFFF),
-    Soft = Color(0xFFF0F0F0),
-    SurfaceSubtle = Color(0xFFE6E6E6),
-    Glass = Color(0xFFFFFFFF),
-    GlassLight = Color(0xFFF4F4F4),
-    GlassUltra = Color(0xFFECECEC),
-    GlassBorder = Color(0x14000000),
-    GlassBorderSubtle = Color(0x0D000000),
-    GlassBorderGlow = Color(0x40FF5238),
+    Soft = Color(0xFFE8EDF7),
+    SurfaceSubtle = Color(0xFFDEE5F5),
+    Glass = Color(0xD9FFFFFF),
+    GlassLight = Color(0xE6FFFFFF),
+    GlassUltra = Color(0xF2FFFFFF),
+    GlassBorder = Color(0x66FFFFFF),
+    GlassBorderSubtle = Color(0x14000000),
+    GlassBorderGlow = Color(0x4DFF5238),
     Divider = Color(0x14000000),
     DividerStrong = Color(0x24000000),
-    Ivory = Color(0xFF1A1A1A),
-    Muted = Color(0xFF5F5F5F),
-    Dim = Color(0xFF8A8A8A),
-    Dimmer = Color(0xFFB4B4B4),
+    Ivory = Color(0xFF111420),
+    Muted = Color(0xFF535B70),
+    Dim = Color(0xFF7E879E),
+    Dimmer = Color(0xFFA8B2C8),
     Coral = Color(0xFFFF5238),
-    CoralGlow = Color(0xFFFF5238),
-    CoralSoft = Color(0x1AFF5238),
+    CoralGlow = Color(0xFFFF6E57),
+    CoralSoft = Color(0x1FFF5238),
     Mint = Color(0xFF0FB883),
-    MintGlow = Color(0xFF0FB883),
-    MintSoft = Color(0x1A0FB883),
+    MintGlow = Color(0xFF24D49D),
+    MintSoft = Color(0x1F0FB883),
     Amber = Color(0xFFE68A00),
     Violet = Color(0xFF735BF2),
-    VioletGlow = Color(0xFF735BF2),
-    VioletSoft = Color(0x1A735BF2),
-    Azure = Color(0xFF0EA5E9),
+    VioletGlow = Color(0xFF8F7BFA),
+    VioletSoft = Color(0x1F735BF2),
+    Azure = Color(0xFF0284C7),
     Shadow = Color(0xFF000000),
 )
 
@@ -174,13 +175,15 @@ object ResonanceColors {
     val Shadow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Shadow
 }
 
-/** 统一圆角尺度 —— 克制使用。 */
+/** 统一圆角尺度 —— 优雅水润大圆角。 */
 object ResonanceShapes {
-    val Button = RoundedCornerShape(12.dp)
-    val ArtworkSmall = RoundedCornerShape(8.dp)
-    val Artwork = RoundedCornerShape(12.dp)
-    val ArtworkLarge = RoundedCornerShape(20.dp)
-    val Panel = RoundedCornerShape(14.dp)
+    val Button = RoundedCornerShape(14.dp)
+    val ArtworkSmall = RoundedCornerShape(10.dp)
+    val Artwork = RoundedCornerShape(16.dp)
+    val ArtworkLarge = RoundedCornerShape(24.dp)
+    val Panel = RoundedCornerShape(18.dp)
+    val Card = RoundedCornerShape(20.dp)
+    val Capsule = RoundedCornerShape(999.dp)
 }
 
 /** 统一间距尺度。 */
@@ -193,18 +196,18 @@ object ResonanceSpacing {
     val Xxl = 28.dp
 }
 
-/** 按压反馈：轻微的即时缩放。 */
+/** 果冻级按压弹性物理反馈：触感灵动水润。 */
 fun Modifier.resonancePressable(
     interactionSource: MutableInteractionSource,
-    pressedScale: Float = 0.97f,
+    pressedScale: Float = 0.94f,
     restingScale: Float = 1f,
 ): Modifier = composed {
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
         targetValue = if (pressed) pressedScale else restingScale,
         animationSpec = spring(
-            dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessMedium,
+            dampingRatio = 0.65f, // 果冻级弹性阻尼，松手过冲回弹
+            stiffness = Spring.StiffnessMediumLow,
         ),
         label = "resonancePressScale",
     )
@@ -215,20 +218,55 @@ fun Modifier.resonancePressable(
 }
 
 /**
- * 平面面板（原玻璃拟态的替代品）：纯色背景 + 细分隔描边，无阴影、无渐变。
- * 保留原函数签名，所有既有调用点自动变为扁平风格。
+ * 现代声学磨砂玻璃修饰符（Frosted Glassmorphism）：
+ * - 柔和漫反射环境阴影（Soft Drop Shadow）
+ * - 半透明光感倾斜渐变（Translucent Specular Gradient）
+ * - 物理高光双重倒角描边（Dual-stop Beveled Highlight Border）
  */
 @Composable
 fun Modifier.resonanceGlass(
     shape: Shape = ResonanceShapes.Panel,
     backgroundColor: Color = ResonanceColors.Glass,
+    backgroundGradient: List<Color>? = null,
     borderColors: List<Color> = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-    shadowElevation: Dp = 0.dp,
-    shadowColor: Color = ResonanceColors.Shadow,
-): Modifier = this
-    .clip(shape)
-    .background(backgroundColor)
-    .border(Dp.Hairline, borderColors.first(), shape)
+    borderWidth: Dp = 1.dp,
+    shadowElevation: Dp = 10.dp,
+    shadowColor: Color = ResonanceColors.Shadow.copy(alpha = if (ResonanceColors.isDark) 0.35f else 0.08f),
+): Modifier {
+    val gradient = backgroundGradient ?: if (ResonanceColors.isDark) {
+        listOf(
+            backgroundColor.copy(alpha = (backgroundColor.alpha * 1.22f).coerceAtMost(0.95f)),
+            backgroundColor.copy(alpha = (backgroundColor.alpha * 0.72f).coerceAtLeast(0.12f)),
+        )
+    } else {
+        listOf(
+            backgroundColor.copy(alpha = 0.95f),
+            backgroundColor.copy(alpha = 0.78f),
+        )
+    }
+
+    return this
+        .then(
+            if (shadowElevation > 0.dp) {
+                Modifier.shadow(
+                    elevation = shadowElevation,
+                    shape = shape,
+                    spotColor = shadowColor,
+                    ambientColor = shadowColor,
+                )
+            } else Modifier
+        )
+        .clip(shape)
+        .background(Brush.verticalGradient(gradient))
+        .border(
+            width = borderWidth,
+            brush = Brush.verticalGradient(
+                if (borderColors.size >= 2) borderColors
+                else listOf(borderColors.first(), borderColors.first().copy(alpha = 0.2f))
+            ),
+            shape = shape,
+        )
+}
 
 private val resonanceTypography = Typography(
     displayLarge = TextStyle(

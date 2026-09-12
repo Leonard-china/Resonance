@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
 
 @Composable
@@ -47,19 +48,21 @@ fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.65f))
+            .background(Color.Black.copy(alpha = 0.55f))
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .padding(24.dp)
                 .widthIn(max = 420.dp)
                 .fillMaxWidth()
+                .resonanceGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                    shadowElevation = 16.dp,
+                )
                 .clickable(enabled = false) {},
-            shape = ResonanceShapes.Panel,
-            color = ResonanceColors.Raised,
-            tonalElevation = 0.dp,
         ) {
             Column(Modifier.padding(22.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

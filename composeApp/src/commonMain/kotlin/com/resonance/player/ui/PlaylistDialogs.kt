@@ -41,8 +41,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.clip
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
 import com.resonance.player.model.Track
 
@@ -226,11 +228,14 @@ fun BatchAddToPlaylistDialog(
                 LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
                     items(playlists.size) { index ->
                         val playlist = playlists[index]
+                        val itemInteraction = remember { MutableInteractionSource() }
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onSelectPlaylist(playlist.id) }
-                                .padding(vertical = 10.dp),
+                                .clip(RoundedCornerShape(10.dp))
+                                .resonancePressable(itemInteraction, pressedScale = 0.98f)
+                                .clickable(interactionSource = itemInteraction, indication = null) { onSelectPlaylist(playlist.id) }
+                                .padding(horizontal = 8.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(18.dp))
@@ -258,19 +263,21 @@ private fun DialogScrim(onDismiss: () -> Unit, content: @Composable () -> Unit) 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.65f))
+            .background(Color.Black.copy(alpha = 0.55f))
             .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .padding(24.dp)
                 .widthIn(max = 420.dp)
                 .fillMaxWidth()
+                .resonanceGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                    shadowElevation = 16.dp,
+                )
                 .clickable(enabled = false) {},
-            shape = ResonanceShapes.Panel,
-            color = ResonanceColors.Raised,
-            tonalElevation = 0.dp,
         ) {
             content()
         }

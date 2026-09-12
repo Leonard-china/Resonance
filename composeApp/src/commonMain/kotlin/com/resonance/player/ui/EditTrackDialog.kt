@@ -1,6 +1,8 @@
 package com.resonance.player.ui
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,8 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Icon
@@ -35,6 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.resonanceGlass
+import com.resonance.player.design.resonancePressable
 import com.resonance.player.model.Track
 
 @Composable
@@ -50,12 +53,15 @@ fun EditTrackDialog(
     var embedLyrics by remember { mutableStateOf(hasLyrics) }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = ResonanceColors.Surface,
-            ),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .resonanceGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                    shadowElevation = 16.dp,
+                ),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(22.dp),
@@ -166,15 +172,19 @@ fun EditTrackDialog(
                         Text("取消", color = ResonanceColors.Muted)
                     }
                     Spacer(Modifier.width(8.dp))
+                    val saveInteraction = remember { MutableInteractionSource() }
                     Button(
                         onClick = {
                             onConfirm(title, artist, album, embedLyrics)
                             onDismiss()
                         },
+                        shape = ResonanceShapes.Button,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ResonanceColors.Coral,
                             contentColor = androidx.compose.ui.graphics.Color.White,
                         ),
+                        modifier = Modifier.resonancePressable(saveInteraction),
+                        interactionSource = saveInteraction,
                     ) {
                         Text("保存")
                     }

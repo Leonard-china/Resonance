@@ -1,8 +1,11 @@
 package com.resonance.player.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,13 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.resonanceGlass
+import com.resonance.player.design.resonancePressable
 import com.resonance.player.model.SleepTimerOption
 
 @Composable
@@ -40,12 +44,15 @@ fun SleepTimerDialog(
     onSelectOption: (SleepTimerOption) -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = ResonanceColors.Surface,
-            ),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .resonanceGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                    shadowElevation = 16.dp,
+                ),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(22.dp),
@@ -85,15 +92,23 @@ fun SleepTimerDialog(
 
                 SleepTimerOption.entries.forEach { option ->
                     val isSelected = option == currentOption
+                    val interaction = remember { MutableInteractionSource() }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable(role = Role.RadioButton) {
+                            .clip(RoundedCornerShape(12.dp))
+                            .then(
+                                if (isSelected) {
+                                    Modifier
+                                        .background(ResonanceColors.CoralSoft)
+                                        .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                                } else Modifier
+                            )
+                            .resonancePressable(interaction, pressedScale = 0.98f)
+                            .clickable(interactionSource = interaction, indication = null, role = Role.RadioButton) {
                                 onSelectOption(option)
                                 onDismiss()
                             }
-                            .background(if (isSelected) ResonanceColors.CoralSoft else androidx.compose.ui.graphics.Color.Transparent)
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,

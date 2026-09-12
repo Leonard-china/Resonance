@@ -53,6 +53,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.resonanceGlass
 import com.resonance.player.model.BatchEnrichOptions
 import com.resonance.player.model.BatchEnrichProgress
 import com.resonance.player.model.BatchEnrichReport
@@ -83,14 +84,15 @@ fun BatchEnrichDialog(
         onDismissRequest = { if (!isRunning) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Surface(
+        Box(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .padding(vertical = 24.dp)
-                .clip(RoundedCornerShape(18.dp)),
-            color = ResonanceColors.CanvasElevated,
-            shape = RoundedCornerShape(18.dp),
-            tonalElevation = 6.dp,
+                .resonanceGlass(
+                    shape = RoundedCornerShape(22.dp),
+                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                    shadowElevation = 16.dp,
+                ),
         ) {
             Column(
                 modifier = Modifier
@@ -184,10 +186,14 @@ private fun EnrichConfigView(
     Spacer(Modifier.height(14.dp))
 
     // 缺失统计小卡片
-    Surface(
-        color = ResonanceColors.Soft,
-        shape = RoundedCornerShape(10.dp),
-        modifier = Modifier.fillMaxWidth(),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .resonanceGlass(
+                shape = RoundedCornerShape(12.dp),
+                borderColors = listOf(ResonanceColors.GlassBorderSubtle, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 0.dp,
+            ),
     ) {
         Row(
             modifier = Modifier
@@ -352,10 +358,14 @@ private fun EnrichCompletedView(
         Text(report.message, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim, modifier = Modifier.padding(horizontal = 8.dp))
         Spacer(Modifier.height(16.dp))
 
-        Surface(
-            color = ResonanceColors.Soft,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier.fillMaxWidth(),
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .resonanceGlass(
+                    shape = RoundedCornerShape(12.dp),
+                    borderColors = listOf(ResonanceColors.GlassBorderSubtle, ResonanceColors.GlassBorderSubtle),
+                    shadowElevation = 0.dp,
+                ),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ResultRow("已处理歌曲", "${report.totalProcessed} 首")

@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -95,9 +96,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.border
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
+import com.resonance.player.ui.common.FluidAmbientCanvas
 import com.resonance.player.model.LyricLine
 import com.resonance.player.model.Lyrics
 import com.resonance.player.model.LyricsUiState
@@ -159,7 +163,7 @@ internal fun NowPlayingOverlay(
         Surface(modifier = Modifier.fillMaxSize(), color = ResonanceColors.Canvas) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wide = maxWidth >= 720.dp || maxWidth > maxHeight * 1.35f
-                NowPlayingBackdrop(track.artworkSeed, Modifier.matchParentSize())
+                NowPlayingBackdrop(track.artworkSeed, playerState.isPlaying, Modifier.matchParentSize())
                 Column(
                     modifier = Modifier.fillMaxSize().padding(horizontal = if (wide) 32.dp else 20.dp, vertical = 10.dp),
                 ) {
@@ -254,20 +258,16 @@ internal fun NowPlayingOverlay(
     }
 }
 
-/** 深色背景 + 封面种子色衍生的轻微顶部渐变（Now Playing 专属，克制使用）。 */
+/** 封面种子色衍生的流动极光光晕背景（Now Playing 沉浸专属）。 */
 @Composable
-private fun NowPlayingBackdrop(seed: Int, modifier: Modifier = Modifier) {
-    val accent = backdropPalettes[((seed % backdropPalettes.size) + backdropPalettes.size) % backdropPalettes.size]
-    val topAlpha = if (ResonanceColors.isDark) 0.16f else 0.10f
-    Box(
-        modifier.background(
-            Brush.verticalGradient(
-                0f to accent.copy(alpha = topAlpha),
-                0.45f to ResonanceColors.Canvas,
-                1f to ResonanceColors.Canvas,
-            ),
-        ),
-    )
+private fun NowPlayingBackdrop(seed: Int, isPlaying: Boolean, modifier: Modifier = Modifier) {
+    Box(modifier.fillMaxSize().background(ResonanceColors.Canvas)) {
+        FluidAmbientCanvas(
+            seed = seed,
+            isPlaying = isPlaying,
+            intensity = 1.35f,
+        )
+    }
 }
 
 @Composable
@@ -343,35 +343,68 @@ private fun NowPlayingTopBar(
     }
 }
 
-/** 底部平面页签切换（封面 / 歌词 / 队列），无玻璃容器。 */
+/** 底部磨砂浮动胶囊页签切换（封面 / 歌词 / 队列）。 */
 @Composable
 private fun PaneSwitcher(selected: PlayerPane, onSelect: (PlayerPane) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .resonanceGlass(
+                shape = ResonanceShapes.Capsule,
+                borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 8.dp,
+            )
+            .padding(horizontal = 4.dp, vertical = 4.dp),
     ) {
-        PlayerPane.entries.forEach { pane ->
-            val active = pane == selected
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable(role = Role.Tab) { onSelect(pane) }
-                    .padding(horizontal = 16.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    pane.icon,
-                    contentDescription = null,
-                    tint = if (active) ResonanceColors.Coral else ResonanceColors.Dim,
-                    modifier = Modifier.size(17.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            PlayerPane.entries.forEach { pane ->
+                val active = pane == selected
+                val interaction = remember { MutableInteractionSource() }
+                val scale by animateFloatAsState(
+                    targetValue = if (active) 1.0f else 0.96f,
+                    animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow),
+                    label = "paneTabScale",
                 )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    pane.label,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (active) ResonanceColors.Coral else ResonanceColors.Dim,
-                    fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
-                )
+                Row(
+                    modifier = Modifier
+                        .graphicsLayer { scaleX = scale; scaleY = scale }
+                        .resonancePressable(interaction, pressedScale = 0.94f)
+                        .clip(ResonanceShapes.Capsule)
+                        .then(
+                            if (active) {
+                                Modifier
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(
+                                                ResonanceColors.CoralSoft,
+                                                ResonanceColors.CoralSoft.copy(alpha = 0.25f),
+                                            )
+                                        )
+                                    )
+                                    .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.5f), ResonanceShapes.Capsule)
+                            } else Modifier
+                        )
+                        .clickable(interactionSource = interaction, indication = null, role = Role.Tab) { onSelect(pane) }
+                        .padding(horizontal = 18.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        pane.icon,
+                        contentDescription = null,
+                        tint = if (active) ResonanceColors.Coral else ResonanceColors.Dim,
+                        modifier = Modifier.size(17.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        pane.label,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (active) ResonanceColors.Coral else ResonanceColors.Dim,
+                        fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                    )
+                }
             }
         }
     }
@@ -444,13 +477,18 @@ private fun HeroSyncedLyricsPreview(
 ) {
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
     val positionMs = (durationMs * progress.coerceIn(0f, 1f)).toLong()
+    val lyricsInteraction = remember { MutableInteractionSource() }
 
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(ResonanceColors.Raised.copy(alpha = 0.55f))
-            .clickable(role = Role.Button, onClick = onOpenFullLyrics)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .resonancePressable(lyricsInteraction, pressedScale = 0.98f)
+            .resonanceGlass(
+                shape = RoundedCornerShape(18.dp),
+                borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 8.dp,
+            )
+            .clickable(interactionSource = lyricsInteraction, indication = null, role = Role.Button, onClick = onOpenFullLyrics)
+            .padding(horizontal = 18.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         when (lyricsState) {
@@ -535,8 +573,8 @@ private fun HeroSyncedLyricsPreview(
 @Composable
 private fun ArtworkPane(track: Track, playing: Boolean, modifier: Modifier = Modifier) {
     val scale by animateFloatAsState(
-        targetValue = if (playing) 1f else 0.96f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessLow),
+        targetValue = if (playing) 1f else 0.93f,
+        animationSpec = spring(dampingRatio = 0.62f, stiffness = Spring.StiffnessMediumLow),
         label = "heroArtworkScale",
     )
 
@@ -550,13 +588,13 @@ private fun ArtworkPane(track: Track, playing: Boolean, modifier: Modifier = Mod
                     scaleY = scale
                 }
                 .shadow(
-                    elevation = 18.dp,
+                    elevation = if (playing) 24.dp else 12.dp,
                     shape = ResonanceShapes.ArtworkLarge,
-                    ambientColor = Color.Black,
-                    spotColor = Color.Black,
+                    ambientColor = ResonanceColors.Shadow.copy(alpha = 0.35f),
+                    spotColor = ResonanceColors.Coral.copy(alpha = if (playing) 0.55f else 0.20f),
                 ),
         ) {
-            AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 20.dp, track.artworkPath)
+            AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 24.dp, track.artworkPath)
         }
     }
 }
@@ -641,9 +679,15 @@ private fun PlaybackControls(
     onCycleRepeat: () -> Unit,
 ) {
     val playInteraction = remember { MutableInteractionSource() }
+    val isPlaying = playerState.isPlaying
+    val playPopScale by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else 0.94f,
+        animationSpec = spring(dampingRatio = 0.58f, stiffness = Spring.StiffnessMediumLow),
+        label = "playPopScale",
+    )
 
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 68.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -655,19 +699,28 @@ private fun PlaybackControls(
                 modifier = Modifier.size(21.dp),
             )
         }
-        IconButton(onClick = onPrevious, modifier = Modifier.size(50.dp)) {
+        IconButton(onClick = onPrevious, modifier = Modifier.size(52.dp)) {
             Icon(
                 Icons.Default.SkipPrevious,
                 contentDescription = "上一首",
                 tint = ResonanceColors.Ivory,
-                modifier = Modifier.size(30.dp),
+                modifier = Modifier.size(32.dp),
             )
         }
         FilledIconButton(
             onClick = onTogglePlay,
             modifier = Modifier
-                .size(62.dp)
-                .resonancePressable(playInteraction, pressedScale = 0.94f),
+                .size(66.dp)
+                .graphicsLayer {
+                    scaleX = playPopScale
+                    scaleY = playPopScale
+                }
+                .resonancePressable(playInteraction, pressedScale = 0.88f)
+                .shadow(
+                    elevation = 16.dp,
+                    shape = CircleShape,
+                    spotColor = ResonanceColors.Coral.copy(alpha = 0.60f),
+                ),
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = ResonanceColors.Coral,
                 contentColor = Color.White,
@@ -675,17 +728,17 @@ private fun PlaybackControls(
             interactionSource = playInteraction,
         ) {
             Icon(
-                if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (playerState.isPlaying) "暂停" else "播放",
-                modifier = Modifier.size(32.dp),
+                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "暂停" else "播放",
+                modifier = Modifier.size(34.dp),
             )
         }
-        IconButton(onClick = onNext, modifier = Modifier.size(50.dp)) {
+        IconButton(onClick = onNext, modifier = Modifier.size(52.dp)) {
             Icon(
                 Icons.Default.SkipNext,
                 contentDescription = "下一首",
                 tint = ResonanceColors.Ivory,
-                modifier = Modifier.size(30.dp),
+                modifier = Modifier.size(32.dp),
             )
         }
         IconButton(onClick = onCycleRepeat, modifier = Modifier.size(46.dp)) {
@@ -790,7 +843,7 @@ private fun VolumeAndSpeedRow(
 }
 
 // ---------------------------------------------------------------------------
-// 歌词（平面列表，无玻璃容器）
+// 歌词（磨砂玻璃卡片悬浮容器）
 // ---------------------------------------------------------------------------
 
 @Composable
@@ -804,7 +857,16 @@ private fun LyricsPane(
     onAdjustOffset: ((Long) -> Unit)? = null,
     onEmbedLyrics: (() -> Unit)? = null,
 ) {
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .resonanceGlass(
+                shape = RoundedCornerShape(22.dp),
+                borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 8.dp,
+            )
+            .padding(8.dp)
+    ) {
         when (state) {
             LyricsUiState.Idle, LyricsUiState.Loading -> LyricsLoading()
             is LyricsUiState.Unavailable -> LyricsUnavailable(state.message, onRefresh, onRequestAi)
@@ -961,6 +1023,11 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
         animationSpec = tween(200),
         label = "lyricColor",
     )
+    val activeScale by animateFloatAsState(
+        targetValue = if (active) 1.02f else 1.0f,
+        animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow),
+        label = "lyricScale",
+    )
 
     val interaction = if (onClick != null) {
         Modifier.clickable(
@@ -975,10 +1042,19 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 44.dp)
-            .clip(RoundedCornerShape(8.dp))
+            .graphicsLayer {
+                scaleX = activeScale
+                scaleY = activeScale
+            }
+            .clip(RoundedCornerShape(12.dp))
             .then(interaction)
             .background(if (active) ResonanceColors.CoralSoft else Color.Transparent)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .then(
+                if (active) {
+                    Modifier.border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                } else Modifier
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -991,29 +1067,48 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
 }
 
 // ---------------------------------------------------------------------------
-// 播放队列（平面列表）
+// 播放队列（磨砂玻璃卡片容器）
 // ---------------------------------------------------------------------------
 
 @Composable
 private fun QueuePane(queue: List<Track>, currentTrackId: String, onTrackSelected: (Track) -> Unit) {
-    if (queue.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("播放队列为空", color = ResonanceColors.Dim, style = MaterialTheme.typography.bodyMedium)
-        }
-        return
-    }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(vertical = 8.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .resonanceGlass(
+                shape = RoundedCornerShape(22.dp),
+                borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                shadowElevation = 8.dp,
+            )
+            .padding(8.dp)
     ) {
-        itemsIndexed(queue, key = { index, item -> "queue-${item.id}-$index" }) { _, item ->
-            val current = item.id == currentTrackId
-            Column {
+        if (queue.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("播放队列为空", color = ResonanceColors.Dim, style = MaterialTheme.typography.bodyMedium)
+            }
+            return@Box
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 4.dp),
+        ) {
+            itemsIndexed(queue, key = { index, item -> "queue-${item.id}-$index" }) { _, item ->
+                val current = item.id == currentTrackId
+                val interactionSource = remember { MutableInteractionSource() }
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .clickable { onTrackSelected(item) }
-                        .padding(horizontal = 6.dp, vertical = 8.dp),
+                        .clip(RoundedCornerShape(12.dp))
+                        .then(
+                            if (current) {
+                                Modifier
+                                    .background(ResonanceColors.CoralSoft)
+                                    .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                            } else Modifier
+                        )
+                        .resonancePressable(interactionSource, pressedScale = 0.98f)
+                        .clickable(interactionSource = interactionSource, indication = null) { onTrackSelected(item) }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AlbumArtwork(item.artworkSeed, Modifier.size(42.dp), 8.dp, item.artworkPath)
@@ -1037,19 +1132,10 @@ private fun QueuePane(queue: List<Track>, currentTrackId: String, onTrackSelecte
                         )
                     }
                     if (current) {
-                        Icon(
-                            Icons.Default.GraphicEq,
-                            contentDescription = "当前播放",
-                            tint = ResonanceColors.Coral,
-                            modifier = Modifier.size(18.dp),
-                        )
+                        NowPlayingIndicator(isPlaying = true)
                     }
                 }
-                HorizontalDivider(
-                    color = ResonanceColors.Divider,
-                    thickness = 0.5.dp,
-                    modifier = Modifier.padding(start = 60.dp),
-                )
+                Spacer(Modifier.height(2.dp))
             }
         }
     }
