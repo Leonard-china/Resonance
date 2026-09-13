@@ -1,8 +1,16 @@
 package com.resonance.player.ui
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -111,6 +119,7 @@ private fun FloatingLyricsView(
     // 计算当前歌词行与下一行
     var currentLine = if (track != null) "《${track.title}》- ${track.artist}" else "Resonance 音乐播放器"
     var nextLine = ""
+    var activeIndex = -1
 
     if (track != null && lyricsState is LyricsUiState.Ready) {
         val lyrics = lyricsState.lyrics
@@ -120,7 +129,7 @@ private fun FloatingLyricsView(
         } else if (lyrics.synchronized && lyrics.lines.isNotEmpty()) {
             val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
             val positionMs = (durationMs * playerState.progress.coerceIn(0f, 1f)).toLong() + lyrics.offsetMs
-            val activeIndex = lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
+            activeIndex = lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
             if (activeIndex >= 0) {
                 currentLine = lyrics.lines.getOrNull(activeIndex)?.text.orEmpty().ifBlank { "…" }
                 nextLine = lyrics.lines.getOrNull(activeIndex + 1)?.text.orEmpty()
@@ -154,31 +163,43 @@ private fun FloatingLyricsView(
     ) {
         val content = @Composable {
             Box(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
-                // 歌词内容显示
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Text(
-                        text = currentLine,
-                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
-                        fontWeight = FontWeight.Bold,
-                        color = ResonanceColors.Coral,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (nextLine.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
+                // 歌词内容显示（带纵向滚动动效）
+                AnimatedContent(
+                    targetState = Triple(track?.id, activeIndex, currentLine),
+                    transitionSpec = {
+                        (slideInVertically(animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)) { height -> (height * 0.45f).toInt() } + fadeIn(tween(240)))
+                            .togetherWith(
+                                slideOutVertically(animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)) { height -> -(height * 0.45f).toInt() } + fadeOut(tween(180))
+                            )
+                    },
+                    label = "desktopFloatingLyricsScroll",
+                    modifier = Modifier.fillMaxSize().clipToBounds(),
+                ) { (_, _, text) ->
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Text(
-                            text = nextLine,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-                            color = ResonanceColors.Dim,
+                            text = text,
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = ResonanceColors.Coral,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                        if (nextLine.isNotBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = nextLine,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                                color = ResonanceColors.Dim,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
 

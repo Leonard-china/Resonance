@@ -8,10 +8,13 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -84,7 +87,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -501,41 +507,75 @@ private fun HeroSyncedLyricsPreview(
                         Text("纯音乐 · 请享受旋律", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
                     }
                 } else if (lyrics.synchronized && lyrics.lines.isNotEmpty()) {
-                    val activeIndex = lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
-                    val prevLine = if (activeIndex > 0) lyrics.lines.getOrNull(activeIndex - 1)?.text else null
-                    val currentLine = if (activeIndex >= 0) lyrics.lines.getOrNull(activeIndex)?.text else lyrics.lines.firstOrNull()?.text
-                    val nextLine = if (activeIndex >= 0) lyrics.lines.getOrNull(activeIndex + 1)?.text else lyrics.lines.getOrNull(1)?.text
+                    val positionWithOffset = positionMs + lyrics.offsetMs
+                    val activeIndex = lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionWithOffset }
 
-                    if (prevLine != null) {
-                        Text(
-                            prevLine,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ResonanceColors.Dim.copy(alpha = 0.5f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(Modifier.height(1.dp))
-                    }
-                    Text(
-                        currentLine ?: "…",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = ResonanceColors.Coral,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                    )
-                    if (nextLine != null) {
-                        Spacer(Modifier.height(1.dp))
-                        Text(
-                            nextLine,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ResonanceColors.Dim.copy(alpha = 0.5f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.Center,
-                        )
+                    AnimatedContent(
+                        targetState = activeIndex,
+                        transitionSpec = {
+                            if (targetState > initialState) {
+                                (slideInVertically(
+                                    animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                ) { height -> (height * 0.45f).toInt() } + fadeIn(tween(240)))
+                                    .togetherWith(
+                                        slideOutVertically(
+                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                        ) { height -> -(height * 0.45f).toInt() } + fadeOut(tween(180))
+                                    )
+                            } else {
+                                (slideInVertically(
+                                    animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                ) { height -> -(height * 0.45f).toInt() } + fadeIn(tween(240)))
+                                    .togetherWith(
+                                        slideOutVertically(
+                                            animationSpec = spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)
+                                        ) { height -> (height * 0.45f).toInt() } + fadeOut(tween(180))
+                                    )
+                            }
+                        },
+                        label = "heroSyncedLyricsScroll",
+                        modifier = Modifier.fillMaxWidth().clipToBounds(),
+                    ) { targetIdx ->
+                        val prevLine = if (targetIdx > 0) lyrics.lines.getOrNull(targetIdx - 1)?.text else null
+                        val currentLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx)?.text else lyrics.lines.firstOrNull()?.text
+                        val nextLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx + 1)?.text else lyrics.lines.getOrNull(1)?.text
+
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (prevLine != null) {
+                                Text(
+                                    prevLine,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ResonanceColors.Dim.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                                Spacer(Modifier.height(1.dp))
+                            }
+                            Text(
+                                currentLine ?: "…",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = ResonanceColors.Coral,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center,
+                            )
+                            if (nextLine != null) {
+                                Spacer(Modifier.height(1.dp))
+                                Text(
+                                    nextLine,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ResonanceColors.Dim.copy(alpha = 0.5f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
                     }
                 } else {
                     val firstLine = lyrics.lines.firstOrNull()?.text ?: "…"
@@ -951,8 +991,23 @@ private fun LyricsContent(
         -1
     }
     val listState = rememberLazyListState()
+    val isDragged by listState.interactionSource.collectIsDraggedAsState()
+    var lastUserDragMark by remember { mutableStateOf<TimeMark?>(null) }
+
+    LaunchedEffect(isDragged) {
+        if (isDragged) {
+            lastUserDragMark = TimeSource.Monotonic.markNow()
+        }
+    }
+
     LaunchedEffect(activeIndex) {
-        if (activeIndex >= 0) listState.animateScrollToItem((activeIndex - 2).coerceAtLeast(0))
+        if (activeIndex >= 0) {
+            val mark = lastUserDragMark
+            val allowAutoScroll = !isDragged && (mark == null || mark.elapsedNow().inWholeMilliseconds >= 3000L)
+            if (allowAutoScroll) {
+                listState.animateScrollToItem(activeIndex)
+            }
+        }
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -997,20 +1052,29 @@ private fun LyricsContent(
             }
         }
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            itemsIndexed(lyrics.lines, key = { index, line -> "${line.timestampMs}-$index" }) { index, line ->
-                LyricRow(
-                    line = line,
-                    active = index == activeIndex,
-                    onClick = line.timestampMs?.let { timestamp -> { onSeek((timestamp - lyrics.offsetMs).coerceAtLeast(0L).toFloat() / durationMs.toFloat()) } },
-                )
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            val centerPadding = (maxHeight / 2 - 28.dp).coerceAtLeast(20.dp)
+
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = centerPadding, bottom = centerPadding, start = 8.dp, end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                itemsIndexed(lyrics.lines, key = { index, line -> "${line.timestampMs}-$index" }) { index, line ->
+                    val isActive = index == activeIndex
+                    LyricRow(
+                        line = line,
+                        active = isActive,
+                        onClick = line.timestampMs?.let { timestamp ->
+                            {
+                                lastUserDragMark = null
+                                onSeek((timestamp - lyrics.offsetMs).coerceAtLeast(0L).toFloat() / durationMs.toFloat())
+                            }
+                        },
+                    )
+                }
             }
-            item { Spacer(Modifier.height(48.dp)) }
         }
     }
 }
@@ -1019,14 +1083,24 @@ private fun LyricsContent(
 private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
     val interactionSource = remember { MutableInteractionSource() }
     val color by animateColorAsState(
-        targetValue = if (active) ResonanceColors.Ivory else ResonanceColors.Dim,
-        animationSpec = tween(200),
+        targetValue = if (active) ResonanceColors.Ivory else ResonanceColors.Dim.copy(alpha = 0.55f),
+        animationSpec = tween(280),
         label = "lyricColor",
     )
     val activeScale by animateFloatAsState(
-        targetValue = if (active) 1.02f else 1.0f,
+        targetValue = if (active) 1.04f else 0.98f,
         animationSpec = spring(dampingRatio = 0.65f, stiffness = Spring.StiffnessMediumLow),
         label = "lyricScale",
+    )
+    val backgroundColor by animateColorAsState(
+        targetValue = if (active) ResonanceColors.CoralSoft else Color.Transparent,
+        animationSpec = tween(280),
+        label = "lyricBgColor",
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (active) ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f) else Color.Transparent,
+        animationSpec = tween(280),
+        label = "lyricBorderColor",
     )
 
     val interaction = if (onClick != null) {
@@ -1048,18 +1122,14 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
             }
             .clip(RoundedCornerShape(12.dp))
             .then(interaction)
-            .background(if (active) ResonanceColors.CoralSoft else Color.Transparent)
-            .then(
-                if (active) {
-                    Modifier.border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                } else Modifier
-            )
+            .background(backgroundColor)
+            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             line.text,
-            style = MaterialTheme.typography.titleMedium,
+            style = if (active) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
             color = color,
         )
