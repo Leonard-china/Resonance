@@ -73,7 +73,7 @@ fun EditTrackDialog(
                     Icon(
                         Icons.Default.Edit,
                         contentDescription = null,
-                        tint = ResonanceColors.Coral,
+                        tint = ResonanceColors.Primary,
                         modifier = Modifier.size(24.dp),
                     )
                     Spacer(Modifier.width(10.dp))
@@ -81,7 +81,7 @@ fun EditTrackDialog(
                         "编辑歌曲信息",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = ResonanceColors.Ivory,
+                        color = ResonanceColors.TextPrimary,
                     )
                 }
 
@@ -94,12 +94,12 @@ fun EditTrackDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ResonanceColors.Coral,
+                        focusedBorderColor = ResonanceColors.Primary,
                         unfocusedBorderColor = ResonanceColors.Divider,
-                        focusedLabelColor = ResonanceColors.Coral,
+                        focusedLabelColor = ResonanceColors.Primary,
                         unfocusedLabelColor = ResonanceColors.Muted,
-                        focusedTextColor = ResonanceColors.Ivory,
-                        unfocusedTextColor = ResonanceColors.Ivory,
+                        focusedTextColor = ResonanceColors.TextPrimary,
+                        unfocusedTextColor = ResonanceColors.TextPrimary,
                     ),
                 )
 
@@ -112,12 +112,12 @@ fun EditTrackDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ResonanceColors.Coral,
+                        focusedBorderColor = ResonanceColors.Primary,
                         unfocusedBorderColor = ResonanceColors.Divider,
-                        focusedLabelColor = ResonanceColors.Coral,
+                        focusedLabelColor = ResonanceColors.Primary,
                         unfocusedLabelColor = ResonanceColors.Muted,
-                        focusedTextColor = ResonanceColors.Ivory,
-                        unfocusedTextColor = ResonanceColors.Ivory,
+                        focusedTextColor = ResonanceColors.TextPrimary,
+                        unfocusedTextColor = ResonanceColors.TextPrimary,
                     ),
                 )
 
@@ -130,12 +130,12 @@ fun EditTrackDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ResonanceColors.Coral,
+                        focusedBorderColor = ResonanceColors.Primary,
                         unfocusedBorderColor = ResonanceColors.Divider,
-                        focusedLabelColor = ResonanceColors.Coral,
+                        focusedLabelColor = ResonanceColors.Primary,
                         unfocusedLabelColor = ResonanceColors.Muted,
-                        focusedTextColor = ResonanceColors.Ivory,
-                        unfocusedTextColor = ResonanceColors.Ivory,
+                        focusedTextColor = ResonanceColors.TextPrimary,
+                        unfocusedTextColor = ResonanceColors.TextPrimary,
                     ),
                 )
 
@@ -149,7 +149,7 @@ fun EditTrackDialog(
                             checked = embedLyrics,
                             onCheckedChange = { embedLyrics = it },
                             colors = CheckboxDefaults.colors(
-                                checkedColor = ResonanceColors.Coral,
+                                checkedColor = ResonanceColors.Primary,
                                 uncheckedColor = ResonanceColors.Dim,
                             ),
                         )
@@ -157,7 +157,7 @@ fun EditTrackDialog(
                         Text(
                             "同时将当前歌词写入音频文件 ID3 标签",
                             style = MaterialTheme.typography.bodySmall,
-                            color = ResonanceColors.Ivory,
+                            color = ResonanceColors.TextPrimary,
                         )
                     }
                 }
@@ -180,7 +180,7 @@ fun EditTrackDialog(
                         },
                         shape = ResonanceShapes.Button,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ResonanceColors.Coral,
+                            containerColor = ResonanceColors.Primary,
                             contentColor = androidx.compose.ui.graphics.Color.White,
                         ),
                         modifier = Modifier.resonancePressable(saveInteraction),

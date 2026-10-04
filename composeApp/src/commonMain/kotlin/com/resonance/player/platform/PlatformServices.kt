@@ -27,6 +27,18 @@ interface PlatformServices {
     suspend fun saveLastSelectedPlaylistId(playlistId: String?)
     suspend fun loadThemeMode(): com.resonance.player.model.ThemeMode
     suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode)
+    val foreground: kotlinx.coroutines.flow.StateFlow<Boolean>
+    val systemReduceMotion: Boolean get() = false
+    fun updateSystemBars(isDark: Boolean) {}
+    fun currentTimeMillis(): Long
+    suspend fun loadAppearance(): com.resonance.player.model.AppearancePreferences
+    suspend fun saveAppearance(preferences: com.resonance.player.model.AppearancePreferences)
+    suspend fun loadWeatherSnapshot(): com.resonance.player.model.WeatherSnapshot?
+    suspend fun saveWeatherSnapshot(snapshot: com.resonance.player.model.WeatherSnapshot)
+    suspend fun weatherLocation(requestPermission: Boolean = false): com.resonance.player.model.WeatherLocation?
+    suspend fun searchWeatherCities(query: String): List<com.resonance.player.model.WeatherLocation>
+    suspend fun fetchWeather(location: com.resonance.player.model.WeatherLocation, previous: com.resonance.player.model.WeatherPalette): com.resonance.player.model.WeatherSnapshot
+    suspend fun chooseLyricsFolder(): String?
     val libraryLocation: String
 
     suspend fun loadDeepSeekConfig(): DeepSeekConfig

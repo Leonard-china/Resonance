@@ -1,42 +1,43 @@
-# Resonance design direction
+# Resonance 原生设计规范
 
-## Visual thesis
+有效日期：2026-10-04。用户方向见 [UI-DIRECTION-2026-10-04.md](UI-DIRECTION-2026-10-04.md)。适用于 Android 与 Windows 的 Kotlin Multiplatform / Compose。
 
-A quiet midnight record room: near-black blue surfaces, warm ivory type, and one coral signal color. Album art carries the emotion; interface chrome stays restrained.
+## 视觉与信息层级
 
-## Interaction thesis
+- 默认浅色乳白磨砂，灰绿或冰蓝作为主要强调色；保留已有用户的深色/浅色/跟随系统设置，新安装默认浅色。
+- 首页展示用户创建/导入的真实歌单，封面、名称、曲目数依次呈现。不合成「本地音乐」歌单。
+- 导航：「音乐库」「搜索」「工具」；正在播放由持久迷你播放器打开。搜索限定本地歌曲、歌手与专辑。
+- 真实封面保留原色。占位封面使用冷灰、绿色、蓝色，UI 不使用橘黄/珊瑚装饰色。
+- 玻璃用于结构层、迷你播放器及播放器面板；正文、曲目和封面保持清晰，避免所有曲目都加厚重卡片。
 
-- Navigation transitions are short fades with small shared-axis movement (180–240 ms).
-- Album artwork expands into the player instead of opening a disconnected page.
-- Playback and sync state use subtle continuous motion only while work is active.
+## Token 与材质
 
-## Layout rules
+- 唯一颜色实现：`design/ResonanceTheme.kt`，使用 `Primary`、`TextPrimary`、`Muted`、`Positive`、`Info` 等语义 token。
+- 浅绿背景 `#F1F6F3`，强调 `#2F7467`；浅蓝背景 `#F3F7FB`，强调 `#315FD0`。蓝色已根据浅色选中背景的文字对比度加深，对比度以实际合成背景为准。
+- 深色采用灰绿黑背景和较亮的同系强调色；主按钮前景使用 Material `onPrimary`。
+- 4/8/12/16/24/32dp 间距、12–24dp 表面圆角、轻阴影。Haze / haze-blur `2.0.0-alpha02` 提供局部原生背景模糊，不支持模糊时使用高不透明度染色回退。该版本与当前 Compose 1.11.0 的运行时兼容；预发布依赖的限制见实施报告。
+- 系统 sans 字体；长歌名和歌单名避免固定高度裁切，次要文字不用低透明度模拟禁用。
 
-- Compact (< 720 dp): bottom navigation, edge-to-edge content, persistent mini-player.
-- Medium (720–1099 dp): navigation rail, two-column library where useful.
-- Expanded (>= 1100 dp): fixed sidebar, content workspace, optional now-playing inspector.
-- Use an 8 dp spacing rhythm and 48 dp minimum interactive targets.
-- Avoid generic card grids; cards exist only when the whole surface is interactive.
+## 响应式
 
-## Color tokens
+- 紧凑 `<720dp`：底部导航，歌单两列为主，迷你播放器保持可见。
+- 中等 `720–1099dp`：导航 rail，内容随宽度重排，Windows 最小窗口不能直接套用手机布局。
+- 展开 `≥1100dp`：桌面侧栏、自适应封面网格，工具正文限制行宽。
+- 宽屏播放器采用封面与操作双栏；竖屏依次呈现封面、曲目、进度、主播放控制、次级操作和页签。矮屏采用可滚动的有界内容区。
+- 播放器主要内容居中，宽屏最大宽度 1280dp、最大高度 900dp，避免平板把进度与主播放按钮推到屏幕底部。矮屏优先展示进度与播放控制，歌词与队列可继续滚动访问。
+- 使用 dp 判断布局；Windows 像素/AWT 尺寸不等同 dp。检查 DPI、长文本与放大字体。
 
-- Canvas: `#0D1117`
-- Raised surface: `#151B23`
-- Soft surface: `#1C2430`
-- Primary text: `#F7F2E8`
-- Secondary text: `#A9B1BD`
-- Accent: `#FF735C`
-- Positive: `#5FD19B`
-- Warning: `#F2BD5B`
+## 动效与可访问性
 
-## Typography
+- 操作立即反馈，按压缩放不小于 0.96，使用临界阻尼，避免反复弹跳。
+- 页面淡入淡出约 160–240ms；天气色约 260ms。持续环境动画仅在播放且应用前台时运行。
+- 尊重系统减少动画信号，另提供「减少动态效果」开关，关闭环境漂移与弹性位移。
+- 交互目标至少 48dp；图标操作提供语义名称，选中项提供文字/勾选/语义反馈。
+- 一般文字至少 4.5:1，较大文字和关键非文字边界至少 3:1；检查玻璃合成后的背景。
+- 解码、天气请求、定位等待、扫描和转换不能阻塞 UI 线程。
 
-Use the platform's high-quality system sans family initially. Titles are compact and confident; body text remains neutral and highly legible. A bundled open font may be added only after Chinese glyph coverage and package cost are verified.
+## 行为约束
 
-## Performance and accessibility gates
+播放、歌词、收藏、歌单、多选、导入/转换、同步、AI 配置沿用现有状态所有者和平台服务。天气配色独立于已有 ThemeMode 数据。歌词目录初始为空，使用自动查找或用户选择目录。
 
-- No file scanning, hashing, decoding, or artwork extraction on the UI thread.
-- Avoid blur-heavy effects and unbounded artwork decoding.
-- All icon-only controls require semantic labels/tooltips.
-- Respect reduced-motion preferences where available.
-- Verify compact and expanded screenshots for every significant UI change.
+概念图不能代替实际应用截图。最终构建与检查范围见 [实施报告](UI-IMPLEMENTATION-2026-10-04.md)。

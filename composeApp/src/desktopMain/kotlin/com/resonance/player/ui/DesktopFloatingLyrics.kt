@@ -184,7 +184,7 @@ private fun FloatingLyricsView(
                             text = text,
                             style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
                             fontWeight = FontWeight.Bold,
-                            color = ResonanceColors.Coral,
+                            color = ResonanceColors.Primary,
                             textAlign = TextAlign.Center,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -219,24 +219,24 @@ private fun FloatingLyricsView(
                             .padding(2.dp),
                     ) {
                         IconButton(onClick = onPrevious, modifier = Modifier.size(26.dp)) {
-                            Icon(Icons.Default.SkipPrevious, contentDescription = "上一首", tint = ResonanceColors.Ivory, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.SkipPrevious, contentDescription = "上一首", tint = ResonanceColors.TextPrimary, modifier = Modifier.size(16.dp))
                         }
                         IconButton(onClick = onTogglePlay, modifier = Modifier.size(26.dp)) {
                             Icon(
                                 if (playerState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (playerState.isPlaying) "暂停" else "播放",
-                                tint = ResonanceColors.Coral,
+                                tint = ResonanceColors.Primary,
                                 modifier = Modifier.size(18.dp),
                             )
                         }
                         IconButton(onClick = onNext, modifier = Modifier.size(26.dp)) {
-                            Icon(Icons.Default.SkipNext, contentDescription = "下一首", tint = ResonanceColors.Ivory, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.SkipNext, contentDescription = "下一首", tint = ResonanceColors.TextPrimary, modifier = Modifier.size(16.dp))
                         }
                         IconButton(onClick = onToggleLock, modifier = Modifier.size(26.dp)) {
                             Icon(
                                 if (isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
                                 contentDescription = if (isLocked) "已锁定" else "锁定位置",
-                                tint = if (isLocked) ResonanceColors.Coral else ResonanceColors.Dim,
+                                tint = if (isLocked) ResonanceColors.Primary else ResonanceColors.Dim,
                                 modifier = Modifier.size(15.dp),
                             )
                         }

@@ -171,14 +171,14 @@ private fun EnrichConfigView(
             modifier = Modifier
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(ResonanceColors.CoralSoft),
+                .background(ResonanceColors.PrimarySoft),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(20.dp))
+            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column {
-            Text("智能补全与 AI 检索", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory, fontWeight = FontWeight.Bold)
+            Text("智能补全与 AI 检索", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary, fontWeight = FontWeight.Bold)
             Text("已选 $totalTracks 首歌曲 · 节省 Token 优化设计", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
         }
     }
@@ -264,8 +264,8 @@ private fun EnrichConfigView(
             onClick = onStart,
             shape = ResonanceShapes.Button,
             colors = ButtonDefaults.buttonColors(
-                containerColor = ResonanceColors.Coral,
-                contentColor = Color.White,
+                containerColor = ResonanceColors.Primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
         ) {
             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -291,7 +291,7 @@ private fun EnrichRunningView(
     ) {
         CircularProgressIndicator(
             progress = { fraction },
-            color = ResonanceColors.Coral,
+            color = ResonanceColors.Primary,
             trackColor = ResonanceColors.Soft,
             modifier = Modifier.size(54.dp),
             strokeWidth = 4.dp,
@@ -300,14 +300,14 @@ private fun EnrichRunningView(
         Text(
             "正在智能处理 ($current / $total)",
             style = MaterialTheme.typography.titleLarge,
-            color = ResonanceColors.Ivory,
+            color = ResonanceColors.TextPrimary,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(6.dp))
         Text(
             progress?.currentTrack?.title ?: "准备中…",
             style = MaterialTheme.typography.bodyMedium,
-            color = ResonanceColors.Coral,
+            color = ResonanceColors.Primary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -320,7 +320,7 @@ private fun EnrichRunningView(
         Spacer(Modifier.height(16.dp))
         LinearProgressIndicator(
             progress = { fraction },
-            color = ResonanceColors.Coral,
+            color = ResonanceColors.Primary,
             trackColor = ResonanceColors.Soft,
             modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
         )
@@ -347,13 +347,13 @@ private fun EnrichCompletedView(
             modifier = Modifier
                 .size(52.dp)
                 .clip(CircleShape)
-                .background(ResonanceColors.CoralSoft),
+                .background(ResonanceColors.PrimarySoft),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Check, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(28.dp))
+            Icon(Icons.Default.Check, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(28.dp))
         }
         Spacer(Modifier.height(16.dp))
-        Text("补全处理完成", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory, fontWeight = FontWeight.Bold)
+        Text("补全处理完成", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(6.dp))
         Text(report.message, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim, modifier = Modifier.padding(horizontal = 8.dp))
         Spacer(Modifier.height(16.dp))
@@ -381,8 +381,8 @@ private fun EnrichCompletedView(
             onClick = onFinish,
             shape = ResonanceShapes.Button,
             colors = ButtonDefaults.buttonColors(
-                containerColor = ResonanceColors.Coral,
-                contentColor = Color.White,
+                containerColor = ResonanceColors.Primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -411,9 +411,9 @@ private fun EnrichOptionItem(
             onCheckedChange = if (enabled) onCheckedChange else null,
             enabled = enabled,
             colors = CheckboxDefaults.colors(
-                checkedColor = ResonanceColors.Coral,
+                checkedColor = ResonanceColors.Primary,
                 uncheckedColor = ResonanceColors.Dim,
-                checkmarkColor = Color.White,
+                checkmarkColor = MaterialTheme.colorScheme.onPrimary,
             ),
         )
         Spacer(Modifier.width(8.dp))
@@ -422,7 +422,7 @@ private fun EnrichOptionItem(
                 title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = if (enabled) ResonanceColors.Ivory else ResonanceColors.Dim,
+                color = if (enabled) ResonanceColors.TextPrimary else ResonanceColors.Dim,
             )
             Text(
                 description,
@@ -442,7 +442,7 @@ private fun StatBadge(label: String, value: String, icon: ImageVector) {
             Text(label, style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
         }
         Spacer(Modifier.height(2.dp))
-        Text(value, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Ivory, fontWeight = FontWeight.Bold)
+        Text(value, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.TextPrimary, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -454,6 +454,6 @@ private fun ResultRow(label: String, value: String) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
-        Text(value, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Ivory, fontWeight = FontWeight.SemiBold)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.TextPrimary, fontWeight = FontWeight.SemiBold)
     }
 }

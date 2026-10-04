@@ -67,7 +67,7 @@ fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
             Column(Modifier.padding(22.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("新建歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+                        Text("新建歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
                         Spacer(Modifier.height(2.dp))
                         Text("创建后可向歌单添加歌曲", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
                     }
@@ -85,11 +85,11 @@ fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = ResonanceColors.Coral,
+                        focusedBorderColor = ResonanceColors.Primary,
                         unfocusedBorderColor = ResonanceColors.Divider,
                         focusedContainerColor = ResonanceColors.Canvas,
                         unfocusedContainerColor = ResonanceColors.Canvas,
-                        cursorColor = ResonanceColors.Coral,
+                        cursorColor = ResonanceColors.Primary,
                     ),
                 )
                 Spacer(Modifier.height(20.dp))
@@ -102,8 +102,8 @@ fun CreatePlaylistDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
                         enabled = name.isNotBlank(),
                         shape = ResonanceShapes.Button,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = ResonanceColors.Coral,
-                            contentColor = Color.White,
+                            containerColor = ResonanceColors.Primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                         ),
                         modifier = Modifier.resonancePressable(createInteraction),
                         interactionSource = createInteraction,

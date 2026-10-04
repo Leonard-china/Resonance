@@ -1,6 +1,6 @@
 package com.resonance.player.model
 
-const val APP_VERSION = "0.2.3"
+const val APP_VERSION = "0.2.4"
 
 data class Track(
     val id: String,

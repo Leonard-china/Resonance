@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.resonance.player.data.PreviewLibrary
 import com.resonance.player.design.ResonanceTheme
+import com.resonance.player.design.WeatherAppearanceTheme
 import com.resonance.player.model.LibraryDestination
 import com.resonance.player.model.ImportReport
 import com.resonance.player.model.LyricsFetchResult
@@ -41,7 +42,7 @@ private enum class SyncAction { Export, Import }
 
 @Composable
 fun App(services: PlatformServices) {
-    var themeMode by remember { mutableStateOf(ThemeMode.Dark) }
+    var themeMode by remember { mutableStateOf(ThemeMode.Light) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(services) {
@@ -50,7 +51,7 @@ fun App(services: PlatformServices) {
         } catch (_: Throwable) {}
     }
 
-    ResonanceTheme(themeMode = themeMode) {
+    WeatherAppearanceTheme(services, themeMode) {
         var destination by remember { mutableStateOf(LibraryDestination.Library) }
         var playlists by remember { mutableStateOf(emptyList<Playlist>()) }
         var importedTracks by remember { mutableStateOf(emptyList<com.resonance.player.model.Track>()) }

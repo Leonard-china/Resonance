@@ -3,6 +3,12 @@ package com.resonance.player.design
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
+import com.resonance.player.model.WeatherPalette
+import dev.chrisbanes.haze.*
+import dev.chrisbanes.haze.blur.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -36,9 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.resonance.player.model.ThemeMode
 
 /**
- * Resonance Design System — 现代声学磨砂玻璃 & 水润流体动效 (Acoustic Glassmorphism & Juicy Motion).
- *
- * 界面呈现通透光学折射感、双重物理高光倒角描边、微光环境阴影与带有生命力呼吸律动的果冻级弹性物理动效。
+ * Native sage / ice-blue surfaces, legible text and restrained frosted glass.
  */
 data class ResonanceColorTokens(
     val isDark: Boolean,
@@ -55,89 +59,66 @@ data class ResonanceColorTokens(
     val GlassBorderGlow: Color,
     val Divider: Color,
     val DividerStrong: Color,
-    val Ivory: Color,
+    val TextPrimary: Color,
     val Muted: Color,
     val Dim: Color,
     val Dimmer: Color,
-    val Coral: Color,
-    val CoralGlow: Color,
-    val CoralSoft: Color,
-    val Mint: Color,
-    val MintGlow: Color,
-    val MintSoft: Color,
-    val Amber: Color,
-    val Violet: Color,
-    val VioletGlow: Color,
-    val VioletSoft: Color,
-    val Azure: Color,
+    val Primary: Color,
+    val PrimaryGlow: Color,
+    val PrimarySoft: Color,
+    val Positive: Color,
+    val PositiveGlow: Color,
+    val PositiveSoft: Color,
+    val Notice: Color,
+    val Secondary: Color,
+    val SecondaryGlow: Color,
+    val SecondarySoft: Color,
+    val Info: Color,
     val Shadow: Color,
 )
 
-val DarkResonanceColors = ResonanceColorTokens(
-    isDark = true,
-    Canvas = Color(0xFF0C0D14),
-    CanvasElevated = Color(0xFF131522),
-    Raised = Color(0xFF1B1E30),
-    Soft = Color(0x33282E47),
-    SurfaceSubtle = Color(0x38333D5E),
-    Glass = Color(0x401D2136),
-    GlassLight = Color(0x59272D4A),
-    GlassUltra = Color(0x73323B61),
-    GlassBorder = Color(0x47FFFFFF),
-    GlassBorderSubtle = Color(0x1AFFFFFF),
-    GlassBorderGlow = Color(0x73FF6B55),
-    Divider = Color(0x1FFFFFFF),
-    DividerStrong = Color(0x33FFFFFF),
-    Ivory = Color(0xFFF6F8FC),
-    Muted = Color(0xFFAAB2C8),
-    Dim = Color(0xFF78829C),
-    Dimmer = Color(0xFF555D74),
-    Coral = Color(0xFFFF6B55),
-    CoralGlow = Color(0xFFFF8E7C),
-    CoralSoft = Color(0x33FF6B55),
-    Mint = Color(0xFF4EE3B0),
-    MintGlow = Color(0xFF88F2CE),
-    MintSoft = Color(0x334EE3B0),
-    Amber = Color(0xFFFFB84D),
-    Violet = Color(0xFF9E8DFF),
-    VioletGlow = Color(0xFFC3B8FF),
-    VioletSoft = Color(0x339E8DFF),
-    Azure = Color(0xFF38BDF8),
-    Shadow = Color(0xFF000000),
-)
+private fun colors(dark: Boolean, palette: WeatherPalette): ResonanceColorTokens {
+    val blue = palette == WeatherPalette.IceBlue
+    val primary = Color(if (dark) { if (blue) 0xFFA9C5FF else 0xFF8CD0BC } else { if (blue) 0xFF315FD0 else 0xFF2F7467 })
+    return ResonanceColorTokens(
+        isDark = dark,
+        Canvas = Color(if (dark) 0xFF111A1D else if (blue) 0xFFF3F7FB else 0xFFF1F6F3),
+        CanvasElevated = Color(if (dark) 0xFF182327 else 0xFFFCFDFC),
+        Raised = Color(if (dark) 0xFF1E2B30 else 0xFFFCFDFC),
+        Soft = Color(if (dark) 0xFF26363C else if (blue) 0xFFE6EDF8 else 0xFFE5EFE9),
+        SurfaceSubtle = Color(if (dark) 0xFF26363C else 0xFFE8EEEB),
+        Glass = Color(if (dark) 0xDE1C292E else 0xDEFFFFFF),
+        GlassLight = Color(if (dark) 0xE626353A else 0xE6FFFFFF),
+        GlassUltra = Color(if (dark) 0xF226353A else 0xF2FFFFFF),
+        GlassBorder = Color(if (dark) 0x32FFFFFF else 0xCFFFFFFF),
+        GlassBorderSubtle = Color(if (dark) 0x1CFFFFFF else 0x18243C33),
+        GlassBorderGlow = primary.copy(alpha = 0.30f),
+        Divider = Color(if (dark) 0x24FFFFFF else 0x18243C33),
+        DividerStrong = Color(if (dark) 0x40FFFFFF else 0x30243C33),
+        TextPrimary = Color(if (dark) 0xFFF1F7F5 else if (blue) 0xFF172B3A else 0xFF1C302B),
+        Muted = Color(if (dark) 0xFFB6C7C3 else 0xFF50645D),
+        Dim = Color(if (dark) 0xFFACBCB7 else 0xFF596D66),
+        Dimmer = Color(if (dark) 0xFF92A7A0 else 0xFF596D66),
+        Primary = primary, PrimaryGlow = primary, PrimarySoft = primary.copy(alpha = if (dark) 0.16f else 0.10f),
+        Positive = Color(if (dark) 0xFF8CD0BC else 0xFF2F7467),
+        PositiveGlow = primary, PositiveSoft = primary.copy(alpha = 0.12f),
+        Notice = Color(if (dark) 0xFFA9C5FF else 0xFF365FA8),
+        Secondary = primary, SecondaryGlow = primary, SecondarySoft = primary.copy(alpha = 0.10f),
+        Info = Color(if (dark) 0xFFA9C5FF else 0xFF365FA8),
+        Shadow = Color(0xFF10281F),
+    )
+}
 
-val LightResonanceColors = ResonanceColorTokens(
-    isDark = false,
-    Canvas = Color(0xFFF3F5FA),
-    CanvasElevated = Color(0xFFFFFFFF),
-    Raised = Color(0xFFFFFFFF),
-    Soft = Color(0xFFE8EDF7),
-    SurfaceSubtle = Color(0xFFDEE5F5),
-    Glass = Color(0xD9FFFFFF),
-    GlassLight = Color(0xE6FFFFFF),
-    GlassUltra = Color(0xF2FFFFFF),
-    GlassBorder = Color(0x66FFFFFF),
-    GlassBorderSubtle = Color(0x14000000),
-    GlassBorderGlow = Color(0x4DFF5238),
-    Divider = Color(0x14000000),
-    DividerStrong = Color(0x24000000),
-    Ivory = Color(0xFF111420),
-    Muted = Color(0xFF535B70),
-    Dim = Color(0xFF7E879E),
-    Dimmer = Color(0xFFA8B2C8),
-    Coral = Color(0xFFFF5238),
-    CoralGlow = Color(0xFFFF6E57),
-    CoralSoft = Color(0x1FFF5238),
-    Mint = Color(0xFF0FB883),
-    MintGlow = Color(0xFF24D49D),
-    MintSoft = Color(0x1F0FB883),
-    Amber = Color(0xFFE68A00),
-    Violet = Color(0xFF735BF2),
-    VioletGlow = Color(0xFF8F7BFA),
-    VioletSoft = Color(0x1F735BF2),
-    Azure = Color(0xFF0284C7),
-    Shadow = Color(0xFF000000),
-)
+val DarkResonanceColors = colors(true, WeatherPalette.Sage)
+val LightResonanceColors = colors(false, WeatherPalette.Sage)
+val LocalGlassState = staticCompositionLocalOf<HazeState?> { null }
+
+@Composable
+fun <T> resonanceSpring(): FiniteAnimationSpec<T> = if (LocalReducedMotion.current) tween(0)
+    else spring(dampingRatio = 1f, stiffness = Spring.StiffnessMedium)
+
+@Composable
+fun motionDuration(duration: Int): Int = if (LocalReducedMotion.current) 0 else duration
 
 val LocalResonanceColors = staticCompositionLocalOf { DarkResonanceColors }
 
@@ -157,21 +138,21 @@ object ResonanceColors {
     val GlassBorderGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.GlassBorderGlow
     val Divider: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Divider
     val DividerStrong: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.DividerStrong
-    val Ivory: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Ivory
+    val TextPrimary: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.TextPrimary
     val Muted: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Muted
     val Dim: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Dim
     val Dimmer: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Dimmer
-    val Coral: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Coral
-    val CoralGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.CoralGlow
-    val CoralSoft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.CoralSoft
-    val Mint: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Mint
-    val MintGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.MintGlow
-    val MintSoft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.MintSoft
-    val Amber: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Amber
-    val Violet: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Violet
-    val VioletGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.VioletGlow
-    val VioletSoft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.VioletSoft
-    val Azure: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Azure
+    val Primary: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Primary
+    val PrimaryGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.PrimaryGlow
+    val PrimarySoft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.PrimarySoft
+    val Positive: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Positive
+    val PositiveGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.PositiveGlow
+    val PositiveSoft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.PositiveSoft
+    val Notice: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Notice
+    val Secondary: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Secondary
+    val SecondaryGlow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.SecondaryGlow
+    val SecondarySoft: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.SecondarySoft
+    val Info: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Info
     val Shadow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Shadow
 }
 
@@ -199,16 +180,13 @@ object ResonanceSpacing {
 /** 果冻级按压弹性物理反馈：触感灵动水润。 */
 fun Modifier.resonancePressable(
     interactionSource: MutableInteractionSource,
-    pressedScale: Float = 0.94f,
+    pressedScale: Float = 0.97f,
     restingScale: Float = 1f,
 ): Modifier = composed {
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) pressedScale else restingScale,
-        animationSpec = spring(
-            dampingRatio = 0.65f, // 果冻级弹性阻尼，松手过冲回弹
-            stiffness = Spring.StiffnessMediumLow,
-        ),
+        targetValue = if (LocalReducedMotion.current) 1f else if (pressed) pressedScale.coerceAtLeast(0.96f) else restingScale,
+        animationSpec = resonanceSpring(),
         label = "resonancePressScale",
     )
     this.graphicsLayer {
@@ -230,18 +208,19 @@ fun Modifier.resonanceGlass(
     backgroundGradient: List<Color>? = null,
     borderColors: List<Color> = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
     borderWidth: Dp = 1.dp,
-    shadowElevation: Dp = 10.dp,
+    shadowElevation: Dp = 5.dp,
     shadowColor: Color = ResonanceColors.Shadow.copy(alpha = if (ResonanceColors.isDark) 0.35f else 0.08f),
 ): Modifier {
+    val glassState = LocalGlassState.current
     val gradient = backgroundGradient ?: if (ResonanceColors.isDark) {
         listOf(
             backgroundColor.copy(alpha = (backgroundColor.alpha * 1.22f).coerceAtMost(0.95f)),
-            backgroundColor.copy(alpha = (backgroundColor.alpha * 0.72f).coerceAtLeast(0.12f)),
+            backgroundColor.copy(alpha = 0.86f),
         )
     } else {
         listOf(
             backgroundColor.copy(alpha = 0.95f),
-            backgroundColor.copy(alpha = 0.78f),
+            backgroundColor.copy(alpha = 0.86f),
         )
     }
 
@@ -257,7 +236,16 @@ fun Modifier.resonanceGlass(
             } else Modifier
         )
         .clip(shape)
-        .background(Brush.verticalGradient(gradient))
+        .then(if (glassState != null) {
+            val glassStyle = HazeBlurStyle(
+            backgroundColor = ResonanceColors.Canvas,
+            colorEffects = listOf(HazeColorEffect.tint(Brush.verticalGradient(gradient))),
+            blurRadius = 18.dp,
+            noiseFactor = 0.025f,
+            fallbackColorEffect = HazeColorEffect.tint(backgroundColor.copy(alpha = 0.96f)),
+            )
+            Modifier.hazeEffect(glassState) { blurEffect { style = glassStyle } }
+        } else Modifier.background(Brush.verticalGradient(gradient)))
         .border(
             width = borderWidth,
             brush = Brush.verticalGradient(
@@ -355,7 +343,9 @@ private val resonanceTypography = Typography(
 
 @Composable
 fun ResonanceTheme(
-    themeMode: ThemeMode = ThemeMode.Dark,
+    themeMode: ThemeMode = ThemeMode.Light,
+    palette: WeatherPalette = WeatherPalette.Sage,
+    reducedMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val isSystemDark = isSystemInDarkTheme()
@@ -365,19 +355,36 @@ fun ResonanceTheme(
         ThemeMode.System -> isSystemDark
     }
 
-    val colorTokens = if (isDark) DarkResonanceColors else LightResonanceColors
+    val target = colors(isDark, palette)
+    val accent by animateColorAsState(target.Primary, tween(if (reducedMotion) 0 else 260), label = "weatherAccent")
+    val canvas by animateColorAsState(target.Canvas, tween(if (reducedMotion) 0 else 260), label = "weatherCanvas")
+    val colorTokens = target.copy(Primary = accent, PrimaryGlow = accent,
+        PrimarySoft = accent.copy(alpha = if (isDark) 0.16f else 0.10f), Canvas = canvas)
 
     val colorScheme: ColorScheme = if (isDark) {
         darkColorScheme(
-            primary = colorTokens.Coral,
-            onPrimary = Color(0xFF2B0C08),
-            primaryContainer = colorTokens.CoralSoft,
-            onPrimaryContainer = Color(0xFFFFDAD3),
-            secondary = colorTokens.Mint,
+            primary = colorTokens.Primary,
+            onPrimary = colorTokens.Canvas,
+            primaryContainer = colorTokens.PrimarySoft,
+            onPrimaryContainer = colorTokens.TextPrimary,
+            secondary = colorTokens.Positive,
+            onSecondary = if (isDark) colorTokens.Canvas else Color.White,
+            secondaryContainer = colorTokens.Soft,
+            onSecondaryContainer = colorTokens.TextPrimary,
+            tertiary = colorTokens.Info,
+            onTertiary = if (isDark) colorTokens.Canvas else Color.White,
+            tertiaryContainer = colorTokens.Soft,
+            onTertiaryContainer = colorTokens.TextPrimary,
+            surfaceTint = colorTokens.Primary,
+            surfaceContainerLowest = colorTokens.Canvas,
+            surfaceContainerLow = colorTokens.CanvasElevated,
+            surfaceContainer = colorTokens.Raised,
+            surfaceContainerHigh = colorTokens.Soft,
+            surfaceContainerHighest = colorTokens.Soft,
             background = colorTokens.Canvas,
-            onBackground = colorTokens.Ivory,
+            onBackground = colorTokens.TextPrimary,
             surface = colorTokens.Raised,
-            onSurface = colorTokens.Ivory,
+            onSurface = colorTokens.TextPrimary,
             surfaceVariant = colorTokens.Soft,
             onSurfaceVariant = colorTokens.Muted,
             outline = colorTokens.Divider,
@@ -386,15 +393,28 @@ fun ResonanceTheme(
         )
     } else {
         lightColorScheme(
-            primary = colorTokens.Coral,
+            primary = colorTokens.Primary,
             onPrimary = Color.White,
-            primaryContainer = colorTokens.CoralSoft,
-            onPrimaryContainer = Color(0xFF3F0400),
-            secondary = colorTokens.Mint,
+            primaryContainer = colorTokens.PrimarySoft,
+            onPrimaryContainer = colorTokens.Primary,
+            secondary = colorTokens.Positive,
+            onSecondary = if (isDark) colorTokens.Canvas else Color.White,
+            secondaryContainer = colorTokens.Soft,
+            onSecondaryContainer = colorTokens.TextPrimary,
+            tertiary = colorTokens.Info,
+            onTertiary = if (isDark) colorTokens.Canvas else Color.White,
+            tertiaryContainer = colorTokens.Soft,
+            onTertiaryContainer = colorTokens.TextPrimary,
+            surfaceTint = colorTokens.Primary,
+            surfaceContainerLowest = colorTokens.Canvas,
+            surfaceContainerLow = colorTokens.CanvasElevated,
+            surfaceContainer = colorTokens.Raised,
+            surfaceContainerHigh = colorTokens.Soft,
+            surfaceContainerHighest = colorTokens.Soft,
             background = colorTokens.Canvas,
-            onBackground = colorTokens.Ivory,
+            onBackground = colorTokens.TextPrimary,
             surface = colorTokens.Raised,
-            onSurface = colorTokens.Ivory,
+            onSurface = colorTokens.TextPrimary,
             surfaceVariant = colorTokens.Soft,
             onSurfaceVariant = colorTokens.Muted,
             outline = colorTokens.Divider,

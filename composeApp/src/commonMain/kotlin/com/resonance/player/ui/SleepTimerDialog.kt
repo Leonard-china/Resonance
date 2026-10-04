@@ -64,7 +64,7 @@ fun SleepTimerDialog(
                     Icon(
                         Icons.Default.Timer,
                         contentDescription = null,
-                        tint = ResonanceColors.Coral,
+                        tint = ResonanceColors.Primary,
                         modifier = Modifier.size(24.dp),
                     )
                     Spacer(Modifier.width(10.dp))
@@ -72,7 +72,7 @@ fun SleepTimerDialog(
                         "睡眠定时器",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = ResonanceColors.Ivory,
+                        color = ResonanceColors.TextPrimary,
                     )
                 }
 
@@ -83,7 +83,7 @@ fun SleepTimerDialog(
                     Text(
                         "剩余时间：%02d:%02d".format(minutes, seconds),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = ResonanceColors.Coral,
+                        color = ResonanceColors.Primary,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
@@ -100,7 +100,7 @@ fun SleepTimerDialog(
                             .then(
                                 if (isSelected) {
                                     Modifier
-                                        .background(ResonanceColors.CoralSoft)
+                                        .background(ResonanceColors.PrimarySoft)
                                         .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
                                 } else Modifier
                             )
@@ -116,14 +116,14 @@ fun SleepTimerDialog(
                         Text(
                             option.label,
                             style = MaterialTheme.typography.bodyLarge,
-                            color = if (isSelected) ResonanceColors.Ivory else ResonanceColors.Dim,
+                            color = if (isSelected) ResonanceColors.TextPrimary else ResonanceColors.Dim,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         )
                         if (isSelected) {
                             Icon(
                                 Icons.Default.Check,
                                 contentDescription = "已选择",
-                                tint = ResonanceColors.Coral,
+                                tint = ResonanceColors.Primary,
                                 modifier = Modifier.size(20.dp),
                             )
                         }

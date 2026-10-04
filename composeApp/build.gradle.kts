@@ -36,6 +36,9 @@ kotlin {
                 implementation(libs.compose.resources)
                 implementation(libs.compose.preview)
                 implementation(libs.kotlinx.coroutines.core)
+                // This release matches the project's Compose 1.11.0 / Kotlin 2.3.20 ABI.
+                implementation("dev.chrisbanes.haze:haze:2.0.0-alpha02")
+                implementation("dev.chrisbanes.haze:haze-blur:2.0.0-alpha02")
             }
         }
         commonTest.dependencies {

@@ -1,5 +1,7 @@
 # Resonance UI 重构基线（2026）
 
+> 2026-10-04 更新：有效规范见 [DESIGN.md](DESIGN.md) 和 [UI-DIRECTION-2026-10-04.md](UI-DIRECTION-2026-10-04.md)。下文深色/珊瑚及果冻动效方向已被替换，真实歌单和持久化约束继续有效。
+
 ## 参考素材
 
 - [Material 3 Expressive](https://m3.material.io/)：参考其强调层级、形变反馈与 motion physics 的方向，不照搬组件外观。

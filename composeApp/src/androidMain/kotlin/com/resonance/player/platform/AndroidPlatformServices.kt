@@ -60,8 +60,30 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import com.resonance.player.model.*
+import com.resonance.player.weather.AppearanceStorage
+import com.resonance.player.weather.WeatherClient
+import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
+    override val foreground = MutableStateFlow(false)
+    override val systemReduceMotion: Boolean get() = !android.animation.ValueAnimator.areAnimatorsEnabled()
+    override fun updateSystemBars(isDark: Boolean) {
+        androidx.core.view.WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
+            isAppearanceLightStatusBars = !isDark
+            isAppearanceLightNavigationBars = !isDark
+        }
+    }
+    private val foregroundObserver = LifecycleEventObserver { _, _ ->
+        foreground.value = activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+    }
+    private var pendingLocationPermission: ((Boolean) -> Unit)? = null
+    private val locationPermissionLauncher = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+        pendingLocationPermission?.invoke(it)
+        pendingLocationPermission = null
+    }
     private val lyricsRepository = LrclibLyricsRepository(activity.filesDir.toPath().resolve("lyrics-cache"))
     private val deepSeekClient = com.resonance.player.ai.DeepSeekClient()
     private val controllerFuture = MediaController.Builder(
@@ -121,6 +143,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override val incomingLanLinks: Flow<String> = LanSyncLinkBus.links
 
     init {
+        activity.lifecycle.addObserver(foregroundObserver)
         AndroidArtworkResolver.application = activity.application
         controllerFuture.addListener({
             val controller = runCatching(controllerFuture::get).getOrNull() ?: return@addListener
@@ -234,9 +257,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val raw = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
             .getString("app.themeMode", null)
         when (raw) {
+            "Dark" -> com.resonance.player.model.ThemeMode.Dark
             "Light" -> com.resonance.player.model.ThemeMode.Light
             "System" -> com.resonance.player.model.ThemeMode.System
-            else -> com.resonance.player.model.ThemeMode.Dark
+            else -> com.resonance.player.model.ThemeMode.Light
         }
     }
 
@@ -246,6 +270,95 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .putString("app.themeMode", mode.name)
             .commit()
         Unit
+    }
+
+    override fun currentTimeMillis(): Long = System.currentTimeMillis()
+    private val appearancePreferences get() = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+    override suspend fun loadAppearance(): AppearancePreferences = withContext(Dispatchers.IO) {
+        AppearanceStorage.preferences(appearancePreferences.getString("app.appearance", null))
+    }
+    override suspend fun saveAppearance(preferences: AppearancePreferences): Unit = withContext(Dispatchers.IO) {
+        appearancePreferences.edit().putString("app.appearance", AppearanceStorage.encode(preferences)).commit()
+        Unit
+    }
+    override suspend fun loadWeatherSnapshot(): WeatherSnapshot? = withContext(Dispatchers.IO) {
+        AppearanceStorage.snapshot(appearancePreferences.getString("app.weather", null))
+    }
+    override suspend fun saveWeatherSnapshot(snapshot: WeatherSnapshot): Unit = withContext(Dispatchers.IO) {
+        appearancePreferences.edit().putString("app.weather", AppearanceStorage.encode(snapshot)).commit()
+        Unit
+    }
+    override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
+    override suspend fun fetchWeather(location: WeatherLocation, previous: WeatherPalette) = WeatherClient.current(location, previous)
+
+    override suspend fun weatherLocation(requestPermission: Boolean): WeatherLocation? = withContext(Dispatchers.Main.immediate) {
+        if (!foreground.value) return@withContext null
+        val permission = Manifest.permission.ACCESS_COARSE_LOCATION
+        if (ActivityCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
+            if (!requestPermission) return@withContext null
+            val granted = suspendCancellableCoroutine<Boolean> { continuation ->
+                pendingLocationPermission = { if (continuation.isActive) continuation.resume(it) }
+                continuation.invokeOnCancellation { pendingLocationPermission = null }
+                locationPermissionLauncher.launch(permission)
+            }
+            if (!granted || !foreground.value) return@withContext null
+        }
+        val manager = activity.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+        try {
+            val providers = manager.getProviders(true).filter { it != android.location.LocationManager.PASSIVE_PROVIDER }
+            val last = providers.mapNotNull { manager.getLastKnownLocation(it) }
+                .filter { System.currentTimeMillis() - it.time in 0..1_800_000 }
+                .maxByOrNull { it.time }
+            val location = last ?: kotlinx.coroutines.withTimeoutOrNull(8_000) {
+                val provider = providers.firstOrNull { it == android.location.LocationManager.NETWORK_PROVIDER }
+                    ?: providers.firstOrNull() ?: return@withTimeoutOrNull null
+                suspendCancellableCoroutine<android.location.Location?> { continuation ->
+                    val listener = object : android.location.LocationListener {
+                        override fun onLocationChanged(location: android.location.Location) {
+                            manager.removeUpdates(this)
+                            if (continuation.isActive) continuation.resume(location)
+                        }
+                        override fun onProviderEnabled(provider: String) {}
+                        override fun onProviderDisabled(provider: String) {}
+                        @Deprecated("Legacy Android callback")
+                        override fun onStatusChanged(provider: String?, status: Int, extras: android.os.Bundle?) {}
+                    }
+                    continuation.invokeOnCancellation { manager.removeUpdates(listener) }
+                    manager.requestSingleUpdate(provider, listener, android.os.Looper.getMainLooper())
+                }
+            }
+            location?.let { WeatherLocation(it.latitude, it.longitude, "当前位置") }?.takeIf { it.valid }
+        } catch (_: SecurityException) { null }
+    }
+
+    override suspend fun chooseLyricsFolder(): String? = withContext(Dispatchers.Main.immediate) {
+        pickMusicTree()?.toString()
+    }
+
+    private suspend fun resolveLyricsFolder(): String? = withContext(Dispatchers.IO) {
+        val folder = loadCustomLyricsFolder() ?: return@withContext null
+        if (!folder.startsWith("content://")) return@withContext folder
+        val tree = DocumentFile.fromTreeUri(activity, Uri.parse(folder)) ?: return@withContext null
+        val cache = activity.filesDir.resolve("selected-lyrics/${folder.hashCode()}").apply { mkdirs() }
+        var count = 0
+        fun copyLyrics(directory: DocumentFile, depth: Int) {
+            if (depth > 2 || count >= 1000) return
+            directory.listFiles().forEach { document ->
+                if (count >= 1000) return@forEach
+                if (document.isDirectory) copyLyrics(document, depth + 1)
+                else {
+                    val name = document.name.orEmpty().substringAfterLast('/').substringAfterLast('\\')
+                    if ((name.endsWith(".lrc", true) || name.endsWith(".krc", true)) && document.length() <= 2_000_000) {
+                        count++
+                        activity.contentResolver.openInputStream(document.uri)?.use { input ->
+                            cache.resolve(name).outputStream().use { output -> input.copyTo(output) }
+                        }
+                    }
+                }
+            }
+        }
+        copyLyrics(tree, 0)
+        cache.absolutePath
     }
 
 
@@ -312,7 +425,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         lyricsRepository.fetch(
             track = track,
             forceRefresh = forceRefresh,
-            customLyricsFolder = loadCustomLyricsFolder(),
+            customLyricsFolder = resolveLyricsFolder(),
             aiFallback = { reqTrack ->
                 val config = loadDeepSeekConfig()
                 if (config.isConfigured && config.enabled) {
@@ -569,7 +682,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         onProgress: (com.resonance.player.model.BatchEnrichProgress) -> Unit,
     ): com.resonance.player.model.BatchEnrichReport = withContext(Dispatchers.IO) {
         val config = loadDeepSeekConfig()
-        val customFolder = loadCustomLyricsFolder()
+        val customFolder = resolveLyricsFolder()
         val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress)
         if (report.updatedTracks.isNotEmpty()) {
             updateTracks(report.updatedTracks)
@@ -745,6 +858,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun close() {
+        activity.lifecycle.removeObserver(foregroundObserver)
+        pendingLocationPermission?.invoke(false)
+        pendingLocationPermission = null
         pendingDocumentResult?.invoke(null)
         pendingDocumentResult = null
         pendingTreeResult?.invoke(null)

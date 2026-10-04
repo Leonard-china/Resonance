@@ -38,8 +38,42 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
+import com.resonance.player.model.*
+import com.resonance.player.weather.AppearanceStorage
+import com.resonance.player.weather.WeatherClient
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class DesktopPlatformServices : PlatformServices {
+    override val foreground = MutableStateFlow(true)
+    override val systemReduceMotion: Boolean get() = java.awt.Toolkit.getDefaultToolkit()
+        .getDesktopProperty("win.clientAreaAnimation") == false
+    override fun currentTimeMillis(): Long = System.currentTimeMillis()
+    override suspend fun loadAppearance() = withContext(Dispatchers.IO) {
+        AppearanceStorage.preferences(library.readUiValue("app.appearance"))
+    }
+    override suspend fun saveAppearance(preferences: AppearancePreferences) = withContext(Dispatchers.IO) {
+        library.writeUiValue("app.appearance", AppearanceStorage.encode(preferences))
+    }
+    override suspend fun loadWeatherSnapshot() = withContext(Dispatchers.IO) {
+        AppearanceStorage.snapshot(library.readUiValue("app.weather"))
+    }
+    override suspend fun saveWeatherSnapshot(snapshot: WeatherSnapshot) = withContext(Dispatchers.IO) {
+        library.writeUiValue("app.weather", AppearanceStorage.encode(snapshot))
+    }
+    override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
+    override suspend fun fetchWeather(location: WeatherLocation, previous: WeatherPalette) = WeatherClient.current(location, previous)
+    override suspend fun weatherLocation(requestPermission: Boolean): WeatherLocation? = WindowsWeatherLocation.current()
+    override suspend fun chooseLyricsFolder(): String? = withContext(Dispatchers.IO) {
+        var selected: String? = null
+        SwingUtilities.invokeAndWait {
+            val chooser = JFileChooser().apply {
+                dialogTitle = "选择本地歌词目录"
+                fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+            }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) selected = chooser.selectedFile.absolutePath
+        }
+        selected
+    }
     private val library = DesktopLibraryStore()
     private val lyricsRepository = LrclibLyricsRepository(library.lyricsCacheDirectory)
     private val deepSeekClient = DeepSeekClient()
@@ -503,13 +537,25 @@ internal class DesktopMusicScanner(
 }
 
 internal class DesktopLibraryStore {
-    private val appDirectory: Path = Path.of(
-        System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"),
-        "Resonance",
-    )
+    private val appDirectory: Path = System.getenv("RESONANCE_DATA")?.takeIf(String::isNotBlank)?.let(Path::of)
+        ?: Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "Resonance")
     private val libraryFile = appDirectory.resolve("library.properties")
     private val playlistFile = appDirectory.resolve("playlists.properties")
     private val uiStateFile = appDirectory.resolve("ui-state.properties")
+    @Synchronized
+    fun readUiValue(key: String): String? {
+        if (!Files.isRegularFile(uiStateFile)) return null
+        return Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }.getProperty(key)
+    }
+    @Synchronized
+    fun writeUiValue(key: String, value: String) {
+        Files.createDirectories(appDirectory)
+        val properties = Properties().apply {
+            if (Files.isRegularFile(uiStateFile)) Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load)
+        }
+        properties.setProperty(key, value)
+        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
+    }
     val artworkDirectory: Path = appDirectory.resolve("artwork")
     val lyricsCacheDirectory: Path = appDirectory.resolve("lyrics-cache")
     val managedMusicDirectory: Path = preferredManagedMusicDirectory()
@@ -670,6 +716,7 @@ internal class DesktopLibraryStore {
         writePropertiesAtomically(playlistFile, properties, "Resonance playlists")
     }
 
+    @Synchronized
     fun loadLastSelectedPlaylistId(): String? {
         if (!Files.isRegularFile(uiStateFile)) return null
         val properties = Properties()
@@ -677,6 +724,7 @@ internal class DesktopLibraryStore {
         return properties.getProperty("library.selectedPlaylistId")?.takeIf(String::isNotBlank)
     }
 
+    @Synchronized
     fun saveLastSelectedPlaylistId(playlistId: String?) {
         Files.createDirectories(appDirectory)
         val properties = if (Files.isRegularFile(uiStateFile)) {
@@ -692,17 +740,20 @@ internal class DesktopLibraryStore {
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
 
+    @Synchronized
     fun loadThemeMode(): com.resonance.player.model.ThemeMode {
-        if (!Files.isRegularFile(uiStateFile)) return com.resonance.player.model.ThemeMode.Dark
+        if (!Files.isRegularFile(uiStateFile)) return com.resonance.player.model.ThemeMode.Light
         val properties = Properties()
         Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
         return when (properties.getProperty("app.themeMode")) {
+            "Dark" -> com.resonance.player.model.ThemeMode.Dark
             "Light" -> com.resonance.player.model.ThemeMode.Light
             "System" -> com.resonance.player.model.ThemeMode.System
-            else -> com.resonance.player.model.ThemeMode.Dark
+            else -> com.resonance.player.model.ThemeMode.Light
         }
     }
 
+    @Synchronized
     fun saveThemeMode(mode: com.resonance.player.model.ThemeMode) {
         Files.createDirectories(appDirectory)
         val properties = if (Files.isRegularFile(uiStateFile)) {
@@ -714,6 +765,7 @@ internal class DesktopLibraryStore {
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
 
+    @Synchronized
     fun loadDeepSeekConfig(): DeepSeekConfig {
         if (!Files.isRegularFile(uiStateFile)) return DeepSeekConfig()
         val properties = Properties()
@@ -726,6 +778,7 @@ internal class DesktopLibraryStore {
         )
     }
 
+    @Synchronized
     fun saveDeepSeekConfig(config: DeepSeekConfig) {
         Files.createDirectories(appDirectory)
         val properties = if (Files.isRegularFile(uiStateFile)) {
@@ -740,6 +793,7 @@ internal class DesktopLibraryStore {
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
 
+    @Synchronized
     fun loadCustomLyricsFolder(): String? {
         if (!Files.isRegularFile(uiStateFile)) return null
         val properties = Properties()
@@ -747,6 +801,7 @@ internal class DesktopLibraryStore {
         return properties.getProperty("lyrics.customFolder")?.takeIf(String::isNotBlank)
     }
 
+    @Synchronized
     fun saveCustomLyricsFolder(folder: String?) {
         Files.createDirectories(appDirectory)
         val properties = if (Files.isRegularFile(uiStateFile)) {

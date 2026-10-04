@@ -98,8 +98,7 @@ if (-not $env:RESONANCE_FFMPEG -and (Test-Path -LiteralPath "D:\Software\Github\
     $env:RESONANCE_FFMPEG = "D:\Software\Github\FlyMouseFormat\release\exe\FlyingMouse Format\resources\ffmpeg\ffmpeg.exe"
 }
 
-$installedGradle = "D:\Software\DevelopmentTools\Gradle\gradle-8.10.2\bin\gradle.bat"
-$gradle = if (Test-Path -LiteralPath $installedGradle) { $installedGradle } else { Join-Path $projectRoot "gradlew.bat" }
+$gradle = Join-Path $projectRoot "gradlew.bat"
 
 if (-not (Test-Path -LiteralPath $gradle)) {
     throw "Gradle not found."

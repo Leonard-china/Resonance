@@ -60,7 +60,7 @@ fun RenamePlaylistDialog(
         Column(Modifier.padding(22.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("重命名歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+                    Text("重命名歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
                     Spacer(Modifier.height(2.dp))
                     Text("歌曲不会受到影响", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
                 }
@@ -77,11 +77,11 @@ fun RenamePlaylistDialog(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ResonanceColors.Coral,
+                    focusedBorderColor = ResonanceColors.Primary,
                     unfocusedBorderColor = ResonanceColors.Divider,
                     focusedContainerColor = ResonanceColors.Canvas,
                     unfocusedContainerColor = ResonanceColors.Canvas,
-                    cursorColor = ResonanceColors.Coral,
+                    cursorColor = ResonanceColors.Primary,
                 ),
             )
             Spacer(Modifier.height(20.dp))
@@ -93,8 +93,8 @@ fun RenamePlaylistDialog(
                     enabled = name.isNotBlank(),
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Coral,
-                        contentColor = Color.White,
+                        containerColor = ResonanceColors.Primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                     modifier = Modifier.resonancePressable(saveInteraction),
                     interactionSource = saveInteraction,
@@ -113,7 +113,7 @@ fun DeletePlaylistDialog(
     val deleteInteraction = remember { MutableInteractionSource() }
     DialogScrim(onDismiss = onDismiss) {
         Column(Modifier.padding(22.dp)) {
-            Text("删除「$playlistName」？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+            Text("删除「$playlistName」？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
             Spacer(Modifier.height(6.dp))
             Text("只会删除歌单，不会删除本地音乐文件。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
             Spacer(Modifier.height(22.dp))
@@ -124,8 +124,8 @@ fun DeletePlaylistDialog(
                     onClick = onConfirm,
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Coral,
-                        contentColor = Color.White,
+                        containerColor = ResonanceColors.Primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                     modifier = Modifier.resonancePressable(deleteInteraction),
                     interactionSource = deleteInteraction,
@@ -144,7 +144,7 @@ fun DeleteTrackDialog(
     val deleteInteraction = remember { MutableInteractionSource() }
     DialogScrim(onDismiss = onDismiss) {
         Column(Modifier.padding(22.dp)) {
-            Text("删除本地音频文件？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+            Text("删除本地音频文件？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
             Spacer(Modifier.height(6.dp))
             Text("「${track.title}」的音频文件将直接从手机/本地设备存储中永久删除，并从音乐库和全部歌单中移除。此操作不可撤销。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
             Spacer(Modifier.height(22.dp))
@@ -155,8 +155,8 @@ fun DeleteTrackDialog(
                     onClick = onConfirm,
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Coral,
-                        contentColor = Color.White,
+                        containerColor = ResonanceColors.Primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                     modifier = Modifier.resonancePressable(deleteInteraction),
                     interactionSource = deleteInteraction,
@@ -175,7 +175,7 @@ fun BatchDeleteTracksDialog(
     val deleteInteraction = remember { MutableInteractionSource() }
     DialogScrim(onDismiss = onDismiss) {
         Column(Modifier.padding(22.dp)) {
-            Text("批量删除 $count 首歌曲？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+            Text("批量删除 $count 首歌曲？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
             Spacer(Modifier.height(6.dp))
             Text("选中的 $count 首歌曲的本地音频文件将直接从存储中永久删除，并从音乐库和全部歌单中移除。此操作不可撤销。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
             Spacer(Modifier.height(22.dp))
@@ -186,8 +186,8 @@ fun BatchDeleteTracksDialog(
                     onClick = onConfirm,
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Coral,
-                        contentColor = Color.White,
+                        containerColor = ResonanceColors.Primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                     modifier = Modifier.resonancePressable(deleteInteraction),
                     interactionSource = deleteInteraction,
@@ -209,7 +209,7 @@ fun BatchAddToPlaylistDialog(
         Column(Modifier.padding(22.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("添加到歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.Ivory)
+                    Text("添加到歌单", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
                     Spacer(Modifier.height(2.dp))
                     Text("将选中的 $trackCount 首歌曲加入歌单", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
                 }
@@ -238,10 +238,10 @@ fun BatchAddToPlaylistDialog(
                                 .padding(horizontal = 8.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, tint = ResonanceColors.Coral, modifier = Modifier.size(18.dp))
+                            Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(10.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(playlist.name, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Ivory)
+                                Text(playlist.name, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.TextPrimary)
                                 Text("${playlist.tracks.size} 首歌曲", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
                             }
                         }
