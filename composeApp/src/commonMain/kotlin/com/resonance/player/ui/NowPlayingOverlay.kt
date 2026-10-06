@@ -112,8 +112,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.border
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.LocalReducedMotion
@@ -126,6 +126,8 @@ import dev.chrisbanes.haze.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import com.resonance.player.design.ResonanceShapes
 import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
@@ -138,7 +140,6 @@ import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Track
 import com.resonance.player.model.durationTextToSeconds
 import com.resonance.player.platform.ResonanceBackHandler
-import com.resonance.player.platform.ResonanceDialogSystemBars
 
 private enum class PlayerPane(val label: String, val icon: ImageVector) {
     Cover("封面", Icons.Default.Album),
@@ -170,6 +171,7 @@ internal fun NowPlayingOverlay(
     onRefreshLyrics: () -> Unit,
     onRequestAiLyrics: () -> Unit = onRefreshLyrics,
     onDeleteLocalTrack: ((Track) -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val track = playerState.currentTrack ?: return
     var paneName by rememberSaveable { mutableStateOf(PlayerPane.Cover.name) }
@@ -177,14 +179,16 @@ internal fun NowPlayingOverlay(
 
     ResonanceBackHandler(enabled = true, onBack = onDismiss)
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+    Surface(
+        modifier = modifier.fillMaxSize().clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = {},
+        ),
+        color = ResonanceColors.Canvas,
     ) {
-        ResonanceDialogSystemBars(ResonanceColors.isDark)
-        Surface(modifier = Modifier.fillMaxSize(), color = ResonanceColors.Canvas) {
-            val glassState = rememberHazeState()
-            CompositionLocalProvider(LocalGlassState provides glassState) {
+        val glassState = rememberHazeState()
+        CompositionLocalProvider(LocalGlassState provides glassState) {
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 val wide = maxWidth >= 720.dp || maxWidth > maxHeight * 1.35f
                 val short = maxHeight < 560.dp
@@ -215,7 +219,7 @@ internal fun NowPlayingOverlay(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
                             ) {
-                                ArtworkPane(track, playerState.isPlaying, Modifier.weight(1f))
+                                ArtworkPane(track, playerState.isPlaying, Modifier.weight(1f), onDismiss = onDismiss)
                             }
                             Column(Modifier.weight(1.05f).fillMaxHeight()
                                 .then(if (short) Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
@@ -243,6 +247,7 @@ internal fun NowPlayingOverlay(
                                     onAdjustOffset = onAdjustLyricsOffset,
                                     onEmbedLyrics = onEmbedLyrics,
                                     showArtwork = false,
+                                    onDismiss = onDismiss,
                                     modifier = if (short) Modifier.height(shortPaneHeight) else Modifier.weight(1f),
                                 )
                                 if (!short) {
@@ -268,6 +273,7 @@ internal fun NowPlayingOverlay(
                             onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
                             onAdjustOffset = onAdjustLyricsOffset,
                             onEmbedLyrics = onEmbedLyrics,
+                            onDismiss = onDismiss,
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.height(8.dp))
@@ -285,7 +291,6 @@ internal fun NowPlayingOverlay(
             }
         }
     }
-}
 }
 
 /** 封面种子色衍生的流动极光光晕背景（Now Playing 沉浸专属）。 */
@@ -312,12 +317,47 @@ private fun NowPlayingTopBar(
     floatingLyricsEnabled: Boolean = false,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
-        AccessibleIconButton("关闭正在播放", onClick = onDismiss) {
-            Icon(Icons.Default.KeyboardArrowDown, "关闭正在播放", tint = ResonanceColors.TextPrimary)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                var dragDistY = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { dragDistY = 0f },
+                    onDragEnd = {
+                        if (dragDistY > 50f) onDismiss()
+                        dragDistY = 0f
+                    },
+                    onDragCancel = { dragDistY = 0f },
+                    onVerticalDrag = { _, dragAmount ->
+                        dragDistY += dragAmount
+                        if (dragDistY > 100f) {
+                            onDismiss()
+                        }
+                    }
+                )
+            }
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp, bottom = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(4.dp)
+                    .clip(CircleShape)
+                    .background(ResonanceColors.GlassBorder.copy(alpha = 0.6f))
+            )
         }
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("正在播放", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            AccessibleIconButton("关闭正在播放", onClick = onDismiss) {
+                Icon(Icons.Default.KeyboardArrowDown, "关闭正在播放", tint = ResonanceColors.TextPrimary)
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("正在播放", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
             Text(track.album.ifBlank { "本地曲目" }, style = MaterialTheme.typography.bodySmall,
                 color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -342,6 +382,7 @@ private fun NowPlayingTopBar(
             }
         }
     }
+}
 }
 
 /** 底部磨砂浮动胶囊页签切换（封面 / 歌词 / 队列）。 */
@@ -428,6 +469,7 @@ private fun PaneContent(
     onOpenFullLyrics: () -> Unit,
     onAdjustOffset: ((Long) -> Unit)? = null,
     onEmbedLyrics: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
 ) {
@@ -457,7 +499,7 @@ private fun PaneContent(
                     verticalArrangement = if (showArtwork) Arrangement.SpaceBetween else Arrangement.Center,
                 ) {
                     if (showArtwork) {
-                        ArtworkPane(track, playerState.isPlaying, Modifier.weight(1f))
+                        ArtworkPane(track, playerState.isPlaying, Modifier.weight(1f), onDismiss = onDismiss)
                         Spacer(Modifier.height(8.dp))
                     }
                     HeroSyncedLyricsPreview(
@@ -626,14 +668,42 @@ private fun HeroSyncedLyricsPreview(
 }
 
 @Composable
-private fun ArtworkPane(track: Track, playing: Boolean, modifier: Modifier = Modifier) {
+private fun ArtworkPane(
+    track: Track,
+    playing: Boolean,
+    modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null,
+) {
     val scale by animateFloatAsState(
         targetValue = if (LocalReducedMotion.current || playing) 1f else 0.98f,
         animationSpec = resonanceSpring(),
         label = "heroArtworkScale",
     )
 
-    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(
+        modifier = modifier.then(
+            if (onDismiss != null) {
+                Modifier.pointerInput(Unit) {
+                    var dragY = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { dragY = 0f },
+                        onDragEnd = {
+                            if (dragY > 60f) onDismiss()
+                            dragY = 0f
+                        },
+                        onDragCancel = { dragY = 0f },
+                        onVerticalDrag = { _, dragAmount ->
+                            dragY += dragAmount
+                            if (dragY > 120f) {
+                                onDismiss()
+                            }
+                        }
+                    )
+                }
+            } else Modifier
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
         val artworkSize = minOf(maxWidth - 24.dp, maxHeight - 16.dp, 360.dp).coerceAtLeast(0.dp)
         Box(
             modifier = Modifier

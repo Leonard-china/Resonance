@@ -1,6 +1,7 @@
 package com.resonance.player.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.RepeatMode as AnimationRepeatMode
@@ -12,6 +13,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import com.resonance.player.design.ResonanceMotionTokens
 import androidx.compose.foundation.Canvas
@@ -118,6 +121,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -391,34 +395,65 @@ fun LibraryShell(
             }
         }
 
-        if (showNowPlaying && playerState.currentTrack != null) {
-            NowPlayingOverlay(
-                playerState = playerState,
-                queue = playbackQueue,
-                lyricsState = lyricsState,
-                onDismiss = { showNowPlaying = false },
-                onTogglePlay = onTogglePlay,
-                onPrevious = onPrevious,
-                onNext = onNext,
-                onToggleShuffle = onToggleShuffle,
-                onCycleRepeat = onCycleRepeat,
-                onSeek = onSeek,
-                onVolumeChange = onVolumeChange,
-                onSpeedChange = onSpeedChange,
-                onOpenSleepTimer = onOpenSleepTimer,
-                onAdjustLyricsOffset = onAdjustLyricsOffset,
-                onEmbedLyrics = { onEmbedLyrics(playerState.currentTrack) },
-                onToggleFloatingLyrics = onToggleFloatingLyrics,
-                floatingLyricsEnabled = floatingLyricsEnabled,
-                onTrackSelected = { track -> onTrackSelected(track, playbackQueue) },
-                onToggleFavorite = onToggleFavorite,
-                onRefreshLyrics = onRefreshLyrics,
-                onRequestAiLyrics = onRequestAiLyrics,
-                onDeleteLocalTrack = { track ->
-                    showNowPlaying = false
-                    onDeleteLocalTrack(track)
-                },
-            )
+        var activeOverlayTrack by remember { mutableStateOf(playerState.currentTrack) }
+        LaunchedEffect(playerState.currentTrack) {
+            if (playerState.currentTrack != null) {
+                activeOverlayTrack = playerState.currentTrack
+            }
+        }
+        val currentTrackForOverlay = playerState.currentTrack ?: activeOverlayTrack
+        val isNowPlayingVisible = showNowPlaying && currentTrackForOverlay != null
+        val reducedMotion = LocalReducedMotion.current
+
+        AnimatedVisibility(
+            visible = isNowPlayingVisible,
+            enter = if (reducedMotion) {
+                fadeIn(ResonanceMotionTokens.PageFadeInSpec)
+            } else {
+                slideInVertically(
+                    animationSpec = ResonanceMotionTokens.DetailSlideSpec,
+                    initialOffsetY = { fullHeight -> fullHeight },
+                ) + fadeIn(ResonanceMotionTokens.PageFadeInSpec)
+            },
+            exit = if (reducedMotion) {
+                fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
+            } else {
+                slideOutVertically(
+                    animationSpec = ResonanceMotionTokens.DetailSlideSpec,
+                    targetOffsetY = { fullHeight -> fullHeight },
+                ) + fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
+            },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            if (currentTrackForOverlay != null) {
+                NowPlayingOverlay(
+                    playerState = if (playerState.currentTrack != null) playerState else playerState.copy(currentTrack = currentTrackForOverlay),
+                    queue = playbackQueue,
+                    lyricsState = lyricsState,
+                    onDismiss = { showNowPlaying = false },
+                    onTogglePlay = onTogglePlay,
+                    onPrevious = onPrevious,
+                    onNext = onNext,
+                    onToggleShuffle = onToggleShuffle,
+                    onCycleRepeat = onCycleRepeat,
+                    onSeek = onSeek,
+                    onVolumeChange = onVolumeChange,
+                    onSpeedChange = onSpeedChange,
+                    onOpenSleepTimer = onOpenSleepTimer,
+                    onAdjustLyricsOffset = onAdjustLyricsOffset,
+                    onEmbedLyrics = { onEmbedLyrics(playerState.currentTrack ?: currentTrackForOverlay) },
+                    onToggleFloatingLyrics = onToggleFloatingLyrics,
+                    floatingLyricsEnabled = floatingLyricsEnabled,
+                    onTrackSelected = { track -> onTrackSelected(track, playbackQueue) },
+                    onToggleFavorite = onToggleFavorite,
+                    onRefreshLyrics = onRefreshLyrics,
+                    onRequestAiLyrics = onRequestAiLyrics,
+                    onDeleteLocalTrack = { track ->
+                        showNowPlaying = false
+                        onDeleteLocalTrack(track)
+                    },
+                )
+            }
         }
 
         trackPendingEdit?.let { track ->
