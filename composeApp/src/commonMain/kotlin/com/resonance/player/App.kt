@@ -150,9 +150,13 @@ fun App(services: PlatformServices) {
         } else {
             importedTracks
         }
-        val playbackQueue = (importedTracks + playlists.flatMap(Playlist::tracks))
+        val fullLibraryQueue = (importedTracks + playlists.flatMap(Playlist::tracks))
             .filter { it.sourceUri != null }
             .distinctBy(Track::id)
+        var customQueue by remember { mutableStateOf<List<Track>?>(null) }
+        val playbackQueue = remember(customQueue, fullLibraryQueue) {
+            resolvePlaybackQueue(customQueue, fullLibraryQueue)
+        }
 
         fun persistPlaylists(updated: List<Playlist>) {
             playlists = updated
@@ -165,6 +169,7 @@ fun App(services: PlatformServices) {
                 list.map { if (it.id == track.id) it.copy(isFavorite = next) else it }
             importedTracks = mark(importedTracks)
             persistPlaylists(playlists.map { playlist -> playlist.copy(tracks = mark(playlist.tracks)) })
+            customQueue = customQueue?.let(::mark)
             player.currentTrack?.takeIf { it.id == track.id }?.let {
                 player = player.copy(currentTrack = it.copy(isFavorite = next))
             }
@@ -176,13 +181,20 @@ fun App(services: PlatformServices) {
             is LyricsFetchResult.Unavailable -> LyricsUiState.Unavailable(result.message, result.retryable)
         }
 
-        fun startTrack(track: Track) {
+        fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) {
             if (track.sourceUri == null) {
                 importMessage = "本机尚未找到「${track.title}」的音频文件；扫描音乐后会自动匹配。"
                 return
             }
-            services.play(track, playbackQueue, player.shuffleEnabled, player.repeatMode)
-            player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
+            val targetQueue = when {
+                newQueue != null -> newQueue.filter { it.sourceUri != null }.takeIf { it.isNotEmpty() }
+                customQueue?.any { it.id == track.id } == true -> customQueue
+                else -> null
+            }
+            customQueue = targetQueue
+            val effectiveQueue = targetQueue ?: fullLibraryQueue
+            services.play(track, effectiveQueue, shuffle, player.repeatMode)
+            player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, shuffleEnabled = shuffle)
         }
 
         fun startShufflePlayback(tracks: List<Track>) {
@@ -194,15 +206,14 @@ fun App(services: PlatformServices) {
                 services.setPlaybackMode(nextShuffle, player.repeatMode)
                 scope.launch { services.savePlaybackMode(nextShuffle, player.repeatMode) }
             }
-            services.play(pick, playbackQueue, nextShuffle, player.repeatMode)
-            player = player.copy(currentTrack = pick, isPlaying = true, progress = 0f, shuffleEnabled = nextShuffle)
+            startTrack(pick, playable, shuffle = nextShuffle)
         }
 
         fun moveInQueue(direction: Int, automatic: Boolean = false) {
             if (playbackQueue.isEmpty()) return
             val current = player.currentTrack ?: playbackQueue.firstOrNull() ?: return
             if (automatic && player.repeatMode == RepeatMode.One) {
-                startTrack(current)
+                startTrack(current, playbackQueue)
                 return
             }
 
@@ -220,7 +231,7 @@ fun App(services: PlatformServices) {
                 val nextIndex = (currentIndex + direction).mod(playbackQueue.size)
                 playbackQueue[nextIndex]
             }
-            startTrack(target)
+            startTrack(target, playbackQueue)
         }
 
         LaunchedEffect(services, playbackQueue, player.currentTrack, player.repeatMode, player.shuffleEnabled) {
@@ -308,8 +319,8 @@ fun App(services: PlatformServices) {
                             services.setPlaying(nextPlaying)
                             player = player.copy(isPlaying = nextPlaying)
                         },
-                        onTrackSelected = { track ->
-                            startTrack(track)
+                        onTrackSelected = { track, queue ->
+                            startTrack(track, queue)
                         },
                         onToggleShufflePlay = ::startShufflePlayback,
                         selectedPlaylistId = selectedPlaylistId,
@@ -332,6 +343,9 @@ fun App(services: PlatformServices) {
                                 }
                             }
                             persistPlaylists(updated)
+                            if (!include) {
+                                customQueue = customQueue?.filterNot { it.id == track.id }
+                            }
                         },
                         onRenamePlaylist = { playlistId, name ->
                             val cleanedName = name.trim().take(60)
@@ -424,6 +438,7 @@ fun App(services: PlatformServices) {
                         onExitPreview = {
                             services.setPlaying(false)
                             previewMode = false
+                            customQueue = null
                             player = PlayerState(shuffleEnabled = player.shuffleEnabled, repeatMode = player.repeatMode)
                         },
                         previewMode = previewMode,
@@ -458,6 +473,7 @@ fun App(services: PlatformServices) {
                                         services.setPlaying(false)
                                         player = PlayerState(shuffleEnabled = player.shuffleEnabled, repeatMode = player.repeatMode)
                                     }
+                                    customQueue = customQueue?.filterNot { t -> candidateTracks.any { it.id == t.id } }
                                     val report = services.batchDeleteTracks(candidateTracks)
                                     importMessage = report.message
                                     if (report.success) {
@@ -598,6 +614,7 @@ fun App(services: PlatformServices) {
                                         services.setPlaying(false)
                                         player = PlayerState(shuffleEnabled = player.shuffleEnabled, repeatMode = player.repeatMode)
                                     }
+                                    customQueue = customQueue?.filterNot { it.id == track.id }
                                     val report = services.deleteLocalTrack(track)
                                     importMessage = report.message
                                     if (report.success) {
@@ -661,6 +678,11 @@ fun App(services: PlatformServices) {
         }
     }
 }
+
+internal fun resolvePlaybackQueue(
+    customQueue: List<Track>?,
+    fullLibraryQueue: List<Track>,
+): List<Track> = customQueue?.filter { it.sourceUri != null }?.takeIf { it.isNotEmpty() } ?: fullLibraryQueue
 
 internal fun resolveSelectedPlaylistId(requestedId: String?, playlists: List<Playlist>): String? =
     playlists.firstOrNull { it.id == requestedId }?.id ?: playlists.firstOrNull()?.id

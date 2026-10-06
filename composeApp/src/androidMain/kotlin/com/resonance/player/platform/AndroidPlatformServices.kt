@@ -69,7 +69,7 @@ import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
     override val foreground = MutableStateFlow(false)
-    override val systemReduceMotion: Boolean get() = !android.animation.ValueAnimator.areAnimatorsEnabled()
+    override val systemReduceMotion: Boolean get() = false
     override fun updateSystemBars(isDark: Boolean) {
         androidx.core.view.WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
             isAppearanceLightStatusBars = !isDark

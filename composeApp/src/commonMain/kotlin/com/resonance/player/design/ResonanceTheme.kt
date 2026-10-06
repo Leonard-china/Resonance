@@ -124,31 +124,43 @@ fun motionDuration(duration: Int): Int = if (LocalReducedMotion.current) 0 else 
 
 /**
  * 界面切换规范动效：
- * 采用原生物理质感（critically damped spring / fluid cubic-bezier），
- * 杜绝僵硬突兀的瞬时跳变，赋予画面连贯的空间位置感。
+ * 采用原生顶级工业质感（fluid cubic-bezier / smooth deceleration），
+ * 杜绝僵硬突兀的瞬时跳变，赋予画面丝滑连贯的空间位置感。
  */
 object ResonanceMotionTokens {
-    // 页面横向滑动的弹簧规范：阻尼比 1.0f 确保无余震回弹，stiffness 420f 提供极佳的响应速度与如丝顺滑
+    // 页面横向滑动的流畅规范：320ms fluid cubic-bezier (0.2, 0.0, 0.0, 1.0)，丝滑优美，位移明确连贯
+    val PageSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
+        durationMillis = 320,
+        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+    )
+
+    // 层级钻取（Push-Pop）的规范：340ms 柔和减速曲线
+    val DetailSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
+        durationMillis = 340,
+        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+    )
+
+    // 页面横向滑动的弹簧规范：阻尼比 1.0f 确保无余震回弹，stiffness 300f 提供极佳的响应速度与如丝顺滑
     val PageSlideSpring: FiniteAnimationSpec<IntOffset> = spring(
-        stiffness = 420f,
+        stiffness = 300f,
         dampingRatio = 1.0f,
     )
 
-    // 层级钻取（Push-Pop）的弹簧规范：略微柔和（380f）
+    // 层级钻取（Push-Pop）的弹簧规范：略微柔和（260f）
     val DetailSlideSpring: FiniteAnimationSpec<IntOffset> = spring(
-        stiffness = 380f,
+        stiffness = 260f,
         dampingRatio = 1.0f,
     )
 
-    // 伴随滑动的柔和渐变：配合 CubicBezier(0.23, 1, 0.32, 1) 平滑消隐与浮现
+    // 伴随滑动的柔和渐变：避免画面过早消隐，确保滑动态势自然可见
     val PageFadeInSpec: FiniteAnimationSpec<Float> = tween(
         durationMillis = 280,
-        easing = CubicBezierEasing(0.23f, 1.0f, 0.32f, 1.0f),
+        easing = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f),
     )
 
     val PageFadeOutSpec: FiniteAnimationSpec<Float> = tween(
         durationMillis = 220,
-        easing = CubicBezierEasing(0.23f, 1.0f, 0.32f, 1.0f),
+        easing = CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f),
     )
 }
 

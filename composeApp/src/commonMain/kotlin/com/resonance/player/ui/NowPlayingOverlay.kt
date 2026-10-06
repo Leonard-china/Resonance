@@ -441,9 +441,9 @@ private fun PaneContent(
                 fadeIn(ResonanceMotionTokens.PageFadeInSpec) togetherWith fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
             } else {
                 val dir = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.3f * dir).toInt() } +
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.3f * dir).toInt() } +
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
                     fadeOut(ResonanceMotionTokens.PageFadeOutSpec))
             }
         },

@@ -217,7 +217,7 @@ fun LibraryShell(
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
     onSeek: (Float) -> Unit,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit = { _, _ -> },
     onToggleShufflePlay: ((List<Track>) -> Unit)? = null,
     selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
@@ -410,7 +410,7 @@ fun LibraryShell(
                 onEmbedLyrics = { onEmbedLyrics(playerState.currentTrack) },
                 onToggleFloatingLyrics = onToggleFloatingLyrics,
                 floatingLyricsEnabled = floatingLyricsEnabled,
-                onTrackSelected = onTrackSelected,
+                onTrackSelected = { track -> onTrackSelected(track, playbackQueue) },
                 onToggleFavorite = onToggleFavorite,
                 onRefreshLyrics = onRefreshLyrics,
                 onRequestAiLyrics = onRequestAiLyrics,
@@ -713,7 +713,7 @@ private fun DestinationContent(
     playlists: List<Playlist>,
     libraryTracks: List<Track>,
     playerState: PlayerState,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit,
     onToggleShuffle: () -> Unit = {},
     onToggleShufflePlay: ((List<Track>) -> Unit)? = null,
     selectedPlaylistId: String?,
@@ -756,32 +756,32 @@ private fun DestinationContent(
                 (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                     (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState == LibraryDestination.Profile && targetState in profileSubPages) {
-                // 进入工具二级页面：从右侧推入
-                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                // 进入工具二级页面：从右侧满屏推入，主页面向左视差退场
+                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
                     fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState in profileSubPages && targetState == LibraryDestination.Profile) {
-                // 返回工具主页面：向右滑出
-                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                // 返回工具主页面：主页面从左侧视差归位，二级页面向右满屏滑出
+                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
                     fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState in profileSubPages && targetState in profileSubPages) {
-                // 工具二级页面之间切换
+                // 工具二级页面之间切换：满屏丝滑平移
                 val dir = if (subPageIndexOf(targetState) >= subPageIndexOf(initialState)) 1 else -1
-                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f * dir).toInt() } +
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f * dir).toInt() } +
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
                     fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else {
-                // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）
+                // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）：满屏丝滑平移
                 val fromTab = mainTabIndexOf(initialState)
                 val toTab = mainTabIndexOf(targetState)
                 val dir = if (toTab >= fromTab) 1 else -1
-                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f * dir).toInt() } +
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f * dir).toInt() } +
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
                     fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             }
         },
@@ -995,7 +995,7 @@ private fun LibraryScreen(
     playlists: List<Playlist>,
     libraryTracks: List<Track>,
     playerState: PlayerState,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit,
     onToggleShuffle: () -> Unit = {},
     onToggleShufflePlay: ((List<Track>) -> Unit)? = null,
     selectedPlaylistId: String?,
@@ -1197,21 +1197,21 @@ private fun LibraryScreen(
                         (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                 } else if (targetState != null && initialState == null) {
                     // 进入详情（歌单 / 专辑 / 艺术家 / 收藏）：从右侧满屏推入，列表视差滑出
-                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
                         fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
                         fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                 } else if (targetState == null && initialState != null) {
                     // 从详情返回列表：列表视差滑入，详情向右滑出
-                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
                         fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
                         fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                 } else {
-                    // 详情之间相互切换
-                    (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f).toInt() } +
+                    // 详情之间相互切换：满屏丝滑平移
+                    (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it } +
                         fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f).toInt() } +
+                    (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it } +
                         fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                 }
             },
@@ -1241,7 +1241,7 @@ private fun LibraryScreen(
                             if (!playerState.shuffleEnabled) {
                                 onToggleShuffle()
                             }
-                            onTrackSelected(pick)
+                            onTrackSelected(pick, playable)
                         }
                     },
                     onRenamePlaylist = if (currentDetailPlaylist != null && !previewMode) { { showRenameDialog = true } } else null,
@@ -1274,9 +1274,9 @@ private fun LibraryScreen(
                                     (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                             } else {
                                 val dir = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f * dir).toInt() } +
+                                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f * dir).toInt() } +
+                                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
                                     fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                             }
                         },
@@ -1445,7 +1445,7 @@ private fun TrackListTab(
     tracks: List<Track>,
     favoriteCount: Int,
     playerState: PlayerState,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit,
     onOpenFavorites: () -> Unit,
     userPlaylists: List<Playlist>,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
@@ -1493,7 +1493,7 @@ private fun TrackListTab(
                 track = track,
                 selected = playerState.currentTrack?.id == track.id,
                 isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
-                onClick = { onTrackSelected(track) },
+                onClick = { onTrackSelected(track, tracks) },
                 userPlaylists = userPlaylists,
                 onPlaylistMembershipChange = onPlaylistMembershipChange,
                 onDeleteLocalTrack = onDeleteLocalTrack,
@@ -1625,7 +1625,7 @@ private fun LibraryDetailView(
     favoriteTracks: List<Track>,
     playerState: PlayerState,
     onBack: () -> Unit,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit,
     userPlaylists: List<Playlist>,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
     onDeleteLocalTrack: (Track) -> Unit,
@@ -1727,7 +1727,7 @@ private fun LibraryDetailView(
                 Spacer(Modifier.height(16.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
-                        onClick = { playable.firstOrNull()?.let(onTrackSelected) },
+                        onClick = { playable.firstOrNull()?.let { onTrackSelected(it, playable) } },
                         enabled = playable.isNotEmpty(),
                         shape = ResonanceShapes.Button,
                         colors = ButtonDefaults.buttonColors(
@@ -1741,7 +1741,7 @@ private fun LibraryDetailView(
                         Text("播放全部", style = MaterialTheme.typography.labelLarge)
                     }
                     Button(
-                        onClick = { onToggleShufflePlay(tracks) },
+                        onClick = { onToggleShufflePlay(playable) },
                         enabled = playable.isNotEmpty(),
                         shape = ResonanceShapes.Button,
                         colors = ButtonDefaults.buttonColors(
@@ -1774,7 +1774,7 @@ private fun LibraryDetailView(
                 track = track,
                 selected = playerState.currentTrack?.id == track.id,
                 isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
-                onClick = { onTrackSelected(track) },
+                onClick = { onTrackSelected(track, playable) },
                 userPlaylists = userPlaylists,
                 onPlaylistMembershipChange = onPlaylistMembershipChange,
                 onDeleteLocalTrack = onDeleteLocalTrack,
@@ -1794,7 +1794,7 @@ private fun SearchResultList(
     query: String,
     tracks: List<Track>,
     playerState: PlayerState,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit,
     userPlaylists: List<Playlist>,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
     onDeleteLocalTrack: (Track) -> Unit,
@@ -1825,7 +1825,7 @@ private fun SearchResultList(
                 track = track,
                 selected = playerState.currentTrack?.id == track.id,
                 isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
-                onClick = { onTrackSelected(track) },
+                onClick = { onTrackSelected(track, results) },
                 userPlaylists = userPlaylists,
                 onPlaylistMembershipChange = onPlaylistMembershipChange,
                 onDeleteLocalTrack = onDeleteLocalTrack,
@@ -1924,7 +1924,7 @@ private fun DiscoverScreen(
     libraryTracks: List<Track>,
     playlists: List<Playlist>,
     playerState: PlayerState,
-    onTrackSelected: (Track) -> Unit,
+    onTrackSelected: (Track, List<Track>?) -> Unit,
     userPlaylists: List<Playlist>,
     onPlaylistMembershipChange: (Track, String, Boolean) -> Unit,
     onDeleteLocalTrack: (Track) -> Unit,
