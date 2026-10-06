@@ -84,6 +84,16 @@ class DesktopPlatformServices : PlatformServices {
     override suspend fun saveGlobalVolume(volume: Float): Unit = withContext(Dispatchers.IO) {
         library.writeUiValue("vol.global", volume.coerceIn(0f, 1f).toString())
     }
+
+    override suspend fun loadTrackGain(trackId: String): Float? = withContext(Dispatchers.IO) {
+        library.readUiValue("gain.track.$trackId")?.toFloatOrNull()
+    }
+
+    override suspend fun saveTrackGain(trackId: String, gainDb: Float): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("gain.track.$trackId", gainDb.coerceIn(-12f, 12f).toString())
+    }
+
+    override fun setTrackGain(gainDb: Float) = player.setTrackGain(gainDb)
     override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
     override suspend fun fetchWeather(location: WeatherLocation, previous: WeatherPalette) = WeatherClient.current(location, previous)
     override suspend fun weatherLocation(requestPermission: Boolean): WeatherLocation? = WindowsWeatherLocation.current()
@@ -964,9 +974,22 @@ private class DesktopAudioPlayer(
         Platform.runLater { mediaPlayer?.let { if (isPlaying) it.play() else it.pause() } }
     }
 
+    private var baseVolume: Double = 1.0
+    private var gainFactor: Double = 1.0
+
     fun setVolume(volume: Float) {
-        currentVolume = volume.toDouble().coerceIn(0.0, 1.0)
-        Platform.runLater { mediaPlayer?.volume = currentVolume }
+        baseVolume = volume.toDouble().coerceIn(0.0, 1.0)
+        applyOutputVolume()
+    }
+
+    fun setTrackGain(gainDb: Float) {
+        gainFactor = Math.pow(10.0, (gainDb / 20.0).toDouble()).coerceIn(0.1, 2.5)
+        applyOutputVolume()
+    }
+
+    private fun applyOutputVolume() {
+        val finalVolume = (baseVolume * gainFactor).coerceIn(0.0, 1.0)
+        Platform.runLater { mediaPlayer?.volume = finalVolume }
     }
 
     fun setPlaybackSpeed(speed: Float) {

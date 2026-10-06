@@ -1,6 +1,7 @@
 package com.resonance.player.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -51,6 +52,13 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -165,6 +173,7 @@ internal fun NowPlayingOverlay(
     onSeek: (Float) -> Unit,
     onVolumeChange: (Float) -> Unit = {},
     onSpeedChange: (Float) -> Unit = {},
+    onTrackGainChange: (Float) -> Unit = {},
     onOpenSleepTimer: (() -> Unit)? = null,
     onAdjustLyricsOffset: ((Long) -> Unit)? = null,
     onEmbedLyrics: (() -> Unit)? = null,
@@ -232,7 +241,7 @@ internal fun NowPlayingOverlay(
                                 if (short) {
                                     PlaybackProgress(track, playerState.progress, onSeek)
                                     PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
-                                    VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange)
+                                    VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange, playerState.trackGainDb, onTrackGainChange)
                                     Spacer(Modifier.height(8.dp))
                                 }
                                 PaneSwitcher(pane, onSelect = { paneName = it.name })
@@ -259,7 +268,7 @@ internal fun NowPlayingOverlay(
                                     PlaybackProgress(track, playerState.progress, onSeek)
                                     PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
                                     Spacer(Modifier.height(2.dp))
-                                    VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange)
+                                    VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange, playerState.trackGainDb, onTrackGainChange)
                                 }
                             }
                         }
@@ -286,7 +295,7 @@ internal fun NowPlayingOverlay(
                         PlaybackProgress(track, playerState.progress, onSeek)
                         PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
                         Spacer(Modifier.height(2.dp))
-                        VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange)
+                        VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange, playerState.trackGainDb, onTrackGainChange)
                         Spacer(Modifier.height(4.dp))
                         PaneSwitcher(pane, onSelect = { paneName = it.name })
                         Spacer(Modifier.height(4.dp))
@@ -917,11 +926,15 @@ private fun VolumeAndSpeedRow(
     speed: Float,
     onVolumeChange: (Float) -> Unit,
     onSpeedChange: (Float) -> Unit,
+    trackGainDb: Float = 0f,
+    onTrackGainChange: (Float) -> Unit = {},
 ) {
     var showSpeedMenu by remember { mutableStateOf(false) }
     var previousVolume by remember { mutableStateOf(1f) }
+    var showCalibration by remember { mutableStateOf(false) }
 
-    Row(
+    Column(Modifier.fillMaxWidth()) {
+        Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1004,6 +1017,132 @@ private fun VolumeAndSpeedRow(
                 }
             }
         }
+
+        Spacer(Modifier.width(4.dp))
+
+        IconButton(
+            onClick = { showCalibration = !showCalibration },
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                Icons.Default.Tune,
+                contentDescription = "响度增益调节模式",
+                tint = if (showCalibration || trackGainDb != 0f) ResonanceColors.Primary else ResonanceColors.Dim,
+                modifier = Modifier.size(19.dp),
+            )
+        }
+    }
+
+    AnimatedVisibility(
+        visible = showCalibration,
+        enter = fadeIn(tween(220)) + expandVertically(),
+        exit = fadeOut(tween(180)) + shrinkVertically(),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 6.dp, bottom = 4.dp, start = 4.dp, end = 4.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(ResonanceColors.PrimarySoft.copy(alpha = 0.35f))
+                .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = null,
+                        tint = ResonanceColors.Primary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "音频前级增益 (响度校准模式)",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = ResonanceColors.TextPrimary,
+                    )
+                }
+                Text(
+                    text = if (trackGainDb > 0f) "+%.1f dB".format(trackGainDb)
+                           else if (trackGainDb < 0f) "%.1f dB".format(trackGainDb)
+                           else "0.0 dB (标准)",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (trackGainDb != 0f) ResonanceColors.Primary else ResonanceColors.Dim,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "直接微调本曲内部解码前级响度，不修改手机系统音量，退出应用后手机音量保持原样。",
+                style = MaterialTheme.typography.bodySmall,
+                color = ResonanceColors.Dim,
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("-12dB", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
+                Slider(
+                    value = trackGainDb.coerceIn(-12f, 12f),
+                    onValueChange = onTrackGainChange,
+                    valueRange = -12f..12f,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = ResonanceColors.Primary,
+                        activeTrackColor = ResonanceColors.Primary,
+                        inactiveTrackColor = ResonanceColors.DividerStrong,
+                    ),
+                )
+                Text("+12dB", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                listOf(
+                    "标准 (0dB)" to 0f,
+                    "钢琴/弱音 (+6dB)" to 6f,
+                    "强劲 (+10dB)" to 10f,
+                    "降躁 (-3dB)" to -3f,
+                ).forEach { (label, presetGain) ->
+                    val isSelected = kotlin.math.abs(trackGainDb - presetGain) < 0.1f
+                    SuggestionChip(
+                        onClick = { onTrackGainChange(presetGain) },
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) },
+                        colors = SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = if (isSelected) ResonanceColors.Primary.copy(alpha = 0.2f) else ResonanceColors.Soft,
+                            labelColor = if (isSelected) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+                        ),
+                        border = if (isSelected) BorderStroke(1.dp, ResonanceColors.Primary) else null,
+                        modifier = Modifier.height(28.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Security,
+                    contentDescription = null,
+                    tint = ResonanceColors.Positive,
+                    modifier = Modifier.size(13.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "软限幅防削波保护已激活 · Hi-Fi 无损保真无杂音",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ResonanceColors.Positive,
+                )
+            }
+        }
+    }
     }
 }
 

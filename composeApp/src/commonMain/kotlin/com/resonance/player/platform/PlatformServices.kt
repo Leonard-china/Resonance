@@ -82,5 +82,8 @@ interface PlatformServices {
     suspend fun savePlaylistVolume(playlistId: String, volume: Float) {}
     suspend fun loadGlobalVolume(): Float = 1.0f
     suspend fun saveGlobalVolume(volume: Float) {}
+    suspend fun loadTrackGain(trackId: String): Float? = null
+    suspend fun saveTrackGain(trackId: String, gainDb: Float) {}
+    fun setTrackGain(gainDb: Float) {}
     fun close()
 }

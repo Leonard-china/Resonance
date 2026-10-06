@@ -1,6 +1,6 @@
 package com.resonance.player.model
 
-const val APP_VERSION = "0.3.0"
+const val APP_VERSION = "0.3.1"
 
 data class Track(
     val id: String,
@@ -132,6 +132,7 @@ data class PlayerState(
     val playbackSpeed: Float = 1.0f,
     val sleepTimerOption: SleepTimerOption = SleepTimerOption.Off,
     val sleepTimerRemainingSeconds: Int? = null,
+    val trackGainDb: Float = 0.0f,
 )
 
 data class LyricLine(

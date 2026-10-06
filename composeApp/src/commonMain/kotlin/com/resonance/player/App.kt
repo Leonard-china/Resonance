@@ -200,11 +200,13 @@ fun App(services: PlatformServices) {
             player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, shuffleEnabled = shuffle)
             scope.launch {
                 try {
+                    val trackGain = services.loadTrackGain(track.id) ?: 0.0f
+                    services.setTrackGain(trackGain)
                     val trackVol = services.loadTrackVolume(track.id)
                     val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
                     val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
                     services.setVolume(targetVol)
-                    player = player.copy(volume = targetVol)
+                    player = player.copy(volume = targetVol, trackGainDb = trackGain)
                 } catch (_: Throwable) {}
             }
         }
@@ -284,11 +286,13 @@ fun App(services: PlatformServices) {
             services.activeTrackChanges.collect { trackId ->
                 playbackQueue.firstOrNull { it.id == trackId }?.let { track ->
                     try {
+                        val trackGain = services.loadTrackGain(track.id) ?: 0.0f
+                        services.setTrackGain(trackGain)
                         val trackVol = services.loadTrackVolume(track.id)
                         val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
                         val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
                         services.setVolume(targetVol)
-                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, volume = targetVol)
+                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, volume = targetVol, trackGainDb = trackGain)
                     } catch (_: Throwable) {
                         player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
                     }
@@ -436,6 +440,17 @@ fun App(services: PlatformServices) {
                         onSpeedChange = { speed ->
                             services.setPlaybackSpeed(speed)
                             player = player.copy(playbackSpeed = speed)
+                        },
+                        onTrackGainChange = { gain ->
+                            services.setTrackGain(gain)
+                            player = player.copy(trackGainDb = gain)
+                            scope.launch {
+                                try {
+                                    player.currentTrack?.let { curr ->
+                                        services.saveTrackGain(curr.id, gain)
+                                    }
+                                } catch (_: Throwable) {}
+                            }
                         },
                         onCreatePlaylist = { showCreateDialog = true },
                         onImport = { convertToMp3 ->

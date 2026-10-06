@@ -340,6 +340,29 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .apply()
     }
 
+    override suspend fun loadTrackGain(trackId: String): Float? = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+        val key = "gain.track.$trackId"
+        if (prefs.contains(key)) prefs.getFloat(key, 0.0f) else null
+    }
+
+    override suspend fun saveTrackGain(trackId: String, gainDb: Float): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putFloat("gain.track.$trackId", gainDb.coerceIn(-12f, 12f))
+            .apply()
+    }
+
+    override fun setTrackGain(gainDb: Float) {
+        withPlayer { controller ->
+            val args = android.os.Bundle().apply { putFloat("gainDb", gainDb.coerceIn(-12f, 12f)) }
+            controller.sendCustomCommand(
+                androidx.media3.session.SessionCommand("SET_AUDIO_GAIN", android.os.Bundle()),
+                args,
+            )
+        }
+    }
+
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
     private val appearancePreferences get() = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
     override suspend fun loadAppearance(): AppearancePreferences = withContext(Dispatchers.IO) {
