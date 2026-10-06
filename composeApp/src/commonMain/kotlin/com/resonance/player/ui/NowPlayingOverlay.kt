@@ -13,6 +13,10 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.gestures.animateScrollBy
 import com.resonance.player.design.ResonanceMotionTokens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -719,47 +723,72 @@ private fun ArtworkPane(
                     spotColor = ResonanceColors.Shadow.copy(alpha = 0.10f),
                 ),
         ) {
-            AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 24.dp, track.artworkPath)
+            AnimatedContent(
+                targetState = track.id,
+                transitionSpec = {
+                    (fadeIn(tween(300)) + scaleIn(initialScale = 0.94f, animationSpec = tween(300)))
+                        .togetherWith(fadeOut(tween(220)) + scaleOut(targetScale = 1.04f, animationSpec = tween(220)))
+                },
+                label = "heroArtworkTransition",
+            ) { _ ->
+                AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 24.dp, track.artworkPath)
+            }
         }
     }
 }
 
 @Composable
 private fun TrackIdentity(track: Track) {
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            track.title,
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = ResonanceColors.TextPrimary,
-            fontWeight = FontWeight.Bold,
-        )
-        Spacer(Modifier.height(4.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    AnimatedContent(
+        targetState = track,
+        transitionSpec = {
+            (slideInHorizontally(
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
+            ) { width -> (width * 0.35f).toInt() } + fadeIn(tween(260)))
+                .togetherWith(
+                    slideOutHorizontally(
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                    ) { width -> -(width * 0.35f).toInt() } + fadeOut(tween(200))
+                )
+        },
+        label = "trackIdentitySlide",
+        modifier = Modifier.fillMaxWidth(),
+    ) { currentTrack ->
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Text(
-                track.artist.ifBlank { "未知艺术家" },
-                style = MaterialTheme.typography.bodyMedium,
-                color = ResonanceColors.Muted,
+                currentTrack.title,
+                style = MaterialTheme.typography.headlineMedium,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                color = ResonanceColors.TextPrimary,
+                fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = if (track.mimeType.contains("flac", ignoreCase = true)) "FLAC" else "320K",
-                style = MaterialTheme.typography.labelSmall,
-                color = ResonanceColors.Dim,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(ResonanceColors.Soft)
-                    .padding(horizontal = 5.dp, vertical = 1.dp),
-            )
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    currentTrack.artist.ifBlank { "未知艺术家" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ResonanceColors.Muted,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (currentTrack.mimeType.contains("flac", ignoreCase = true)) "FLAC" else "320K",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ResonanceColors.Dim,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(ResonanceColors.Soft)
+                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                )
+            }
         }
     }
 }
@@ -930,7 +959,17 @@ private fun VolumeAndSpeedRow(
             ),
         )
 
-        Spacer(Modifier.width(10.dp))
+        Spacer(Modifier.width(6.dp))
+
+        Text(
+            text = "${(volume.coerceIn(0f, 1f) * 100).toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            color = ResonanceColors.Dim,
+            modifier = Modifier.width(36.dp),
+            textAlign = TextAlign.End,
+        )
+
+        Spacer(Modifier.width(8.dp))
 
         Box {
             TextButton(
@@ -1093,7 +1132,22 @@ private fun LyricsContent(
             val mark = lastUserDragMark
             val allowAutoScroll = !isDragged && (mark == null || mark.elapsedNow().inWholeMilliseconds >= 3000L)
             if (allowAutoScroll) {
-                if (reducedMotion) listState.scrollToItem(activeIndex) else listState.animateScrollToItem(activeIndex)
+                if (reducedMotion) {
+                    listState.scrollToItem(activeIndex)
+                } else {
+                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == activeIndex }
+                    if (itemInfo != null) {
+                        val viewportHeight = listState.layoutInfo.viewportSize.height
+                        val targetOffset = (viewportHeight - itemInfo.size) / 2
+                        val diff = itemInfo.offset - targetOffset
+                        listState.animateScrollBy(
+                            diff.toFloat(),
+                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                        )
+                    } else {
+                        listState.animateScrollToItem(activeIndex)
+                    }
+                }
             }
         }
     }
@@ -1171,24 +1225,14 @@ private fun LyricsContent(
 private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
     val interactionSource = remember { MutableInteractionSource() }
     val color by animateColorAsState(
-        targetValue = if (active) ResonanceColors.TextPrimary else ResonanceColors.Dim,
-        animationSpec = tween(motionDuration(180)),
+        targetValue = if (active) ResonanceColors.Primary else ResonanceColors.Dim.copy(alpha = 0.55f),
+        animationSpec = tween(motionDuration(300)),
         label = "lyricColor",
     )
     val activeScale by animateFloatAsState(
-        targetValue = if (active) 1.04f else 0.98f,
+        targetValue = if (active) 1.05f else 0.98f,
         animationSpec = resonanceSpring(),
         label = "lyricScale",
-    )
-    val backgroundColor by animateColorAsState(
-        targetValue = if (active) ResonanceColors.PrimarySoft else Color.Transparent,
-        animationSpec = tween(motionDuration(180)),
-        label = "lyricBgColor",
-    )
-    val borderColor by animateColorAsState(
-        targetValue = if (active) ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f) else Color.Transparent,
-        animationSpec = tween(motionDuration(180)),
-        label = "lyricBorderColor",
     )
 
     val interaction = if (onClick != null) {
@@ -1203,16 +1247,13 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 48.dp)
+            .heightIn(min = 44.dp)
             .graphicsLayer {
                 scaleX = activeScale
                 scaleY = activeScale
             }
-            .clip(RoundedCornerShape(12.dp))
             .then(interaction)
-            .background(backgroundColor)
-            .border(1.dp, borderColor, RoundedCornerShape(12.dp))
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -1246,24 +1287,40 @@ private fun QueuePane(queue: List<Track>, currentTrackId: String, onTrackSelecte
             }
             return@Box
         }
+        val queueListState = rememberLazyListState()
+        LaunchedEffect(currentTrackId) {
+            val idx = queue.indexOfFirst { it.id == currentTrackId }
+            if (idx >= 0) {
+                val isVisible = queueListState.layoutInfo.visibleItemsInfo.any { it.index == idx }
+                if (!isVisible) {
+                    queueListState.animateScrollToItem(idx)
+                }
+            }
+        }
         LazyColumn(
+            state = queueListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(vertical = 4.dp),
         ) {
             itemsIndexed(queue, key = { index, item -> "queue-${item.id}-$index" }) { _, item ->
                 val current = item.id == currentTrackId
                 val interactionSource = remember { MutableInteractionSource() }
+                val itemBg by animateColorAsState(
+                    targetValue = if (current) ResonanceColors.PrimarySoft else Color.Transparent,
+                    animationSpec = tween(280),
+                    label = "queueItemBg",
+                )
+                val itemBorder by animateColorAsState(
+                    targetValue = if (current) ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f) else Color.Transparent,
+                    animationSpec = tween(280),
+                    label = "queueItemBorder",
+                )
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .then(
-                            if (current) {
-                                Modifier
-                                    .background(ResonanceColors.PrimarySoft)
-                                    .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                            } else Modifier
-                        )
+                        .background(itemBg)
+                        .border(1.dp, itemBorder, RoundedCornerShape(12.dp))
                         .resonancePressable(interactionSource, pressedScale = 0.98f)
                         .clickable(interactionSource = interactionSource, indication = null) { onTrackSelected(item) }
                         .padding(horizontal = 10.dp, vertical = 8.dp),

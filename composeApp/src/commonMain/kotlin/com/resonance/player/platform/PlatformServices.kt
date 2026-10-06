@@ -76,5 +76,11 @@ interface PlatformServices {
     suspend fun saveLyricsOffset(track: Track, offsetMs: Long): com.resonance.player.model.Lyrics?
     suspend fun embedLyricsToAudioFile(track: Track, lyrics: com.resonance.player.model.Lyrics): Boolean
     suspend fun editTrackMetadata(track: Track, newTitle: String, newArtist: String, newAlbum: String): Track
+    suspend fun loadTrackVolume(trackId: String): Float? = null
+    suspend fun saveTrackVolume(trackId: String, volume: Float) {}
+    suspend fun loadPlaylistVolume(playlistId: String): Float? = null
+    suspend fun savePlaylistVolume(playlistId: String, volume: Float) {}
+    suspend fun loadGlobalVolume(): Float = 1.0f
+    suspend fun saveGlobalVolume(volume: Float) {}
     fun close()
 }

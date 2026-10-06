@@ -302,6 +302,44 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         Unit
     }
 
+    override suspend fun loadTrackVolume(trackId: String): Float? = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+        val key = "vol.track.$trackId"
+        if (prefs.contains(key)) prefs.getFloat(key, 1.0f) else null
+    }
+
+    override suspend fun saveTrackVolume(trackId: String, volume: Float): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putFloat("vol.track.$trackId", volume.coerceIn(0f, 1f))
+            .apply()
+    }
+
+    override suspend fun loadPlaylistVolume(playlistId: String): Float? = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+        val key = "vol.playlist.$playlistId"
+        if (prefs.contains(key)) prefs.getFloat(key, 1.0f) else null
+    }
+
+    override suspend fun savePlaylistVolume(playlistId: String, volume: Float): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putFloat("vol.playlist.$playlistId", volume.coerceIn(0f, 1f))
+            .apply()
+    }
+
+    override suspend fun loadGlobalVolume(): Float = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .getFloat("vol.global", 1.0f)
+    }
+
+    override suspend fun saveGlobalVolume(volume: Float): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putFloat("vol.global", volume.coerceIn(0f, 1f))
+            .apply()
+    }
+
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
     private val appearancePreferences get() = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
     override suspend fun loadAppearance(): AppearancePreferences = withContext(Dispatchers.IO) {

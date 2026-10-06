@@ -60,6 +60,30 @@ class DesktopPlatformServices : PlatformServices {
     override suspend fun saveWeatherSnapshot(snapshot: WeatherSnapshot) = withContext(Dispatchers.IO) {
         library.writeUiValue("app.weather", AppearanceStorage.encode(snapshot))
     }
+
+    override suspend fun loadTrackVolume(trackId: String): Float? = withContext(Dispatchers.IO) {
+        library.readUiValue("vol.track.$trackId")?.toFloatOrNull()
+    }
+
+    override suspend fun saveTrackVolume(trackId: String, volume: Float): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("vol.track.$trackId", volume.coerceIn(0f, 1f).toString())
+    }
+
+    override suspend fun loadPlaylistVolume(playlistId: String): Float? = withContext(Dispatchers.IO) {
+        library.readUiValue("vol.playlist.$playlistId")?.toFloatOrNull()
+    }
+
+    override suspend fun savePlaylistVolume(playlistId: String, volume: Float): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("vol.playlist.$playlistId", volume.coerceIn(0f, 1f).toString())
+    }
+
+    override suspend fun loadGlobalVolume(): Float = withContext(Dispatchers.IO) {
+        library.readUiValue("vol.global")?.toFloatOrNull() ?: 1.0f
+    }
+
+    override suspend fun saveGlobalVolume(volume: Float): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("vol.global", volume.coerceIn(0f, 1f).toString())
+    }
     override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
     override suspend fun fetchWeather(location: WeatherLocation, previous: WeatherPalette) = WeatherClient.current(location, previous)
     override suspend fun weatherLocation(requestPermission: Boolean): WeatherLocation? = WindowsWeatherLocation.current()

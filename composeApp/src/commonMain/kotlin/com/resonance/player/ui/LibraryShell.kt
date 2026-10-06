@@ -8,7 +8,12 @@ import androidx.compose.animation.core.RepeatMode as AnimationRepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -162,9 +167,7 @@ import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
 import com.resonance.player.ui.common.FluidAmbientCanvas
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1491,7 +1494,21 @@ private fun TrackListTab(
     onToggleTrackSelect: (String) -> Unit = {},
     contentPadding: PaddingValues,
 ) {
-    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+    val trackListState = rememberLazyListState()
+    val currentTrackId = playerState.currentTrack?.id
+    LaunchedEffect(currentTrackId) {
+        if (currentTrackId != null) {
+            val idx = tracks.indexOfFirst { it.id == currentTrackId }
+            if (idx >= 0) {
+                val targetIndex = idx + 1
+                val isVisible = trackListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
+                if (!isVisible) {
+                    trackListState.animateScrollToItem(targetIndex)
+                }
+            }
+        }
+    }
+    LazyColumn(state = trackListState, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         item {
             Row(
                 modifier = Modifier
@@ -1716,8 +1733,23 @@ private fun LibraryDetailView(
         }
     }
     val playable = tracks.filter { it.sourceUri != null }
+    val playlistListState = rememberLazyListState()
+    val currentTrackId = playerState.currentTrack?.id
+    LaunchedEffect(currentTrackId) {
+        if (currentTrackId != null) {
+            val idx = tracks.indexOfFirst { it.id == currentTrackId }
+            if (idx >= 0) {
+                val targetIndex = idx + 2
+                val isVisible = playlistListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
+                if (!isVisible) {
+                    playlistListState.animateScrollToItem(targetIndex)
+                }
+            }
+        }
+    }
 
     LazyColumn(
+        state = playlistListState,
         contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -2123,6 +2155,21 @@ private fun TrackRow(
         selected -> ResonanceColors.PrimarySoft.copy(alpha = 0.18f)
         else -> Color.Transparent
     }
+    val animatedBg by animateColorAsState(
+        targetValue = rowHighlight,
+        animationSpec = tween(motionDuration(280)),
+        label = "trackRowBg",
+    )
+    val animatedBorder by animateColorAsState(
+        targetValue = if (selected) ResonanceColors.GlassBorderGlow.copy(alpha = 0.35f) else Color.Transparent,
+        animationSpec = tween(motionDuration(280)),
+        label = "trackRowBorder",
+    )
+    val animatedTitleColor by animateColorAsState(
+        targetValue = if (isMultiSelected || selected) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+        animationSpec = tween(motionDuration(260)),
+        label = "trackRowTitleColor",
+    )
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
@@ -2130,12 +2177,8 @@ private fun TrackRow(
                 .fillMaxWidth()
                 .resonancePressable(rowInteraction, pressedScale = 0.98f)
                 .clip(RoundedCornerShape(12.dp))
-                .background(rowHighlight)
-                .then(
-                    if (selected) {
-                        Modifier.border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    } else Modifier
-                )
+                .background(animatedBg)
+                .border(1.dp, animatedBorder, RoundedCornerShape(12.dp))
                 .clickable(
                     interactionSource = rowInteraction,
                     indication = null,
@@ -2153,6 +2196,20 @@ private fun TrackRow(
                 .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            AnimatedVisibility(
+                visible = selected && !isMultiSelectMode,
+                enter = slideInHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it } + fadeIn(tween(220)),
+                exit = slideOutHorizontally(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) { -it } + fadeOut(tween(180)),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 4.dp)
+                        .width(3.5.dp)
+                        .height(26.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(ResonanceColors.Primary)
+                )
+            }
             if (isMultiSelectMode) {
                 Checkbox(
                     checked = isMultiSelected,
@@ -2184,14 +2241,20 @@ private fun TrackRow(
             }
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (selected && !isMultiSelectMode) {
-                        NowPlayingIndicator(isPlaying = isPlaying)
-                        Spacer(Modifier.width(7.dp))
+                    AnimatedVisibility(
+                        visible = selected && !isMultiSelectMode,
+                        enter = fadeIn(tween(220)) + expandHorizontally(),
+                        exit = fadeOut(tween(180)) + shrinkHorizontally(),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            NowPlayingIndicator(isPlaying = isPlaying)
+                            Spacer(Modifier.width(7.dp))
+                        }
                     }
                     Text(
                         track.title,
                         style = MaterialTheme.typography.titleSmall,
-                        color = if (isMultiSelected || selected) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+                        color = animatedTitleColor,
                         fontWeight = if (isMultiSelected || selected) FontWeight.SemiBold else FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -2437,45 +2500,65 @@ private fun MiniPlayer(
                     .padding(start = 12.dp, end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 封面带柔光微投影
-                Box(
-                    modifier = Modifier.shadow(
-                        elevation = 6.dp,
-                        shape = RoundedCornerShape(10.dp),
-                        spotColor = ResonanceColors.Primary.copy(alpha = 0.35f),
-                    ),
-                ) {
-                    AlbumArtwork(
-                        track.artworkSeed,
-                        Modifier.size(42.dp),
-                        10.dp,
-                        track.artworkPath,
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (isPlaying) {
-                            NowPlayingIndicator(isPlaying = true)
-                            Spacer(Modifier.width(6.dp))
+                AnimatedContent(
+                    targetState = track,
+                    transitionSpec = {
+                        (slideInHorizontally(
+                            animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioLowBouncy)
+                        ) { width -> (width * 0.4f).toInt() } + fadeIn(tween(260)))
+                            .togetherWith(
+                                slideOutHorizontally(
+                                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow, dampingRatio = Spring.DampingRatioNoBouncy)
+                                ) { width -> -(width * 0.4f).toInt() } + fadeOut(tween(200))
+                            )
+                    },
+                    label = "miniPlayerTrackSlide",
+                    modifier = Modifier.weight(1f),
+                ) { currentTrack ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier.shadow(
+                                elevation = 6.dp,
+                                shape = RoundedCornerShape(10.dp),
+                                spotColor = ResonanceColors.Primary.copy(alpha = 0.35f),
+                            ),
+                        ) {
+                            AlbumArtwork(
+                                currentTrack.artworkSeed,
+                                Modifier.size(42.dp),
+                                10.dp,
+                                currentTrack.artworkPath,
+                            )
                         }
-                        Text(
-                            track.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = ResonanceColors.TextPrimary,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isPlaying) {
+                                    NowPlayingIndicator(isPlaying = true)
+                                    Spacer(Modifier.width(6.dp))
+                                }
+                                Text(
+                                    currentTrack.title,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    color = ResonanceColors.TextPrimary,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
+                            Spacer(Modifier.height(1.dp))
+                            Text(
+                                currentTrack.artist.ifBlank { "未知艺术家" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ResonanceColors.Dim,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(1.dp))
-                    Text(
-                        track.artist.ifBlank { "未知艺术家" },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = ResonanceColors.Dim,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
 
                 if (!compact) {

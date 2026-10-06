@@ -114,11 +114,14 @@ fun App(services: PlatformServices) {
         LaunchedEffect(services) {
             try {
                 val playbackMode = services.loadPlaybackMode()
+                val globalVol = services.loadGlobalVolume()
                 player = player.copy(
                     shuffleEnabled = playbackMode.shuffleEnabled,
                     repeatMode = playbackMode.repeatMode,
+                    volume = globalVol,
                 )
                 services.setPlaybackMode(playbackMode.shuffleEnabled, playbackMode.repeatMode)
+                services.setVolume(globalVol)
             } catch (_: Throwable) {}
             try {
                 val loadedTracks = services.loadLibrary()
@@ -195,6 +198,15 @@ fun App(services: PlatformServices) {
             val effectiveQueue = targetQueue ?: fullLibraryQueue
             services.play(track, effectiveQueue, shuffle, player.repeatMode)
             player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, shuffleEnabled = shuffle)
+            scope.launch {
+                try {
+                    val trackVol = services.loadTrackVolume(track.id)
+                    val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
+                    val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
+                    services.setVolume(targetVol)
+                    player = player.copy(volume = targetVol)
+                } catch (_: Throwable) {}
+            }
         }
 
         fun startShufflePlayback(tracks: List<Track>) {
@@ -268,10 +280,18 @@ fun App(services: PlatformServices) {
                 }
             }
         }
-        LaunchedEffect(services, playbackQueue) {
+        LaunchedEffect(services, playbackQueue, selectedPlaylistId) {
             services.activeTrackChanges.collect { trackId ->
                 playbackQueue.firstOrNull { it.id == trackId }?.let { track ->
-                    player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
+                    try {
+                        val trackVol = services.loadTrackVolume(track.id)
+                        val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
+                        val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
+                        services.setVolume(targetVol)
+                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, volume = targetVol)
+                    } catch (_: Throwable) {
+                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
+                    }
                 }
             }
         }
@@ -397,6 +417,25 @@ fun App(services: PlatformServices) {
                         onSeek = { progress ->
                             services.seekTo(progress)
                             player = player.copy(progress = progress)
+                        },
+                        onVolumeChange = { vol ->
+                            services.setVolume(vol)
+                            player = player.copy(volume = vol)
+                            scope.launch {
+                                try {
+                                    services.saveGlobalVolume(vol)
+                                    player.currentTrack?.let { curr ->
+                                        services.saveTrackVolume(curr.id, vol)
+                                    }
+                                    selectedPlaylistId?.let { plId ->
+                                        services.savePlaylistVolume(plId, vol)
+                                    }
+                                } catch (_: Throwable) {}
+                            }
+                        },
+                        onSpeedChange = { speed ->
+                            services.setPlaybackSpeed(speed)
+                            player = player.copy(playbackSpeed = speed)
                         },
                         onCreatePlaylist = { showCreateDialog = true },
                         onImport = { convertToMp3 ->
