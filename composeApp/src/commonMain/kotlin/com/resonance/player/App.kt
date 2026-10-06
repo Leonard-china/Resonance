@@ -113,6 +113,14 @@ fun App(services: PlatformServices) {
 
         LaunchedEffect(services) {
             try {
+                val playbackMode = services.loadPlaybackMode()
+                player = player.copy(
+                    shuffleEnabled = playbackMode.shuffleEnabled,
+                    repeatMode = playbackMode.repeatMode,
+                )
+                services.setPlaybackMode(playbackMode.shuffleEnabled, playbackMode.repeatMode)
+            } catch (_: Throwable) {}
+            try {
                 val loadedTracks = services.loadLibrary()
                 val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
                 val restoredPlaylistId = resolveSelectedPlaylistId(
@@ -175,6 +183,19 @@ fun App(services: PlatformServices) {
             }
             services.play(track, playbackQueue, player.shuffleEnabled, player.repeatMode)
             player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
+        }
+
+        fun startShufflePlayback(tracks: List<Track>) {
+            val playable = tracks.filter { it.sourceUri != null }
+            val pick = playable.takeIf { it.isNotEmpty() }?.random() ?: return
+            val nextShuffle = true
+            if (!player.shuffleEnabled) {
+                player = player.copy(shuffleEnabled = nextShuffle)
+                services.setPlaybackMode(nextShuffle, player.repeatMode)
+                scope.launch { services.savePlaybackMode(nextShuffle, player.repeatMode) }
+            }
+            services.play(pick, playbackQueue, nextShuffle, player.repeatMode)
+            player = player.copy(currentTrack = pick, isPlaying = true, progress = 0f, shuffleEnabled = nextShuffle)
         }
 
         fun moveInQueue(direction: Int, automatic: Boolean = false) {
@@ -290,6 +311,7 @@ fun App(services: PlatformServices) {
                         onTrackSelected = { track ->
                             startTrack(track)
                         },
+                        onToggleShufflePlay = ::startShufflePlayback,
                         selectedPlaylistId = selectedPlaylistId,
                         userPlaylists = playlists,
                         onPlaylistSelected = { playlistId -> selectPlaylist(playlistId) },
@@ -346,6 +368,7 @@ fun App(services: PlatformServices) {
                             val next = !player.shuffleEnabled
                             services.setPlaybackMode(next, player.repeatMode)
                             player = player.copy(shuffleEnabled = next)
+                            scope.launch { services.savePlaybackMode(next, player.repeatMode) }
                         },
                         onCycleRepeat = {
                             val nextRepeat = when (player.repeatMode) {
@@ -355,6 +378,7 @@ fun App(services: PlatformServices) {
                             }
                             services.setPlaybackMode(player.shuffleEnabled, nextRepeat)
                             player = player.copy(repeatMode = nextRepeat)
+                            scope.launch { services.savePlaybackMode(player.shuffleEnabled, nextRepeat) }
                         },
                         onSeek = { progress ->
                             services.seekTo(progress)
@@ -400,7 +424,7 @@ fun App(services: PlatformServices) {
                         onExitPreview = {
                             services.setPlaying(false)
                             previewMode = false
-                            player = PlayerState()
+                            player = PlayerState(shuffleEnabled = player.shuffleEnabled, repeatMode = player.repeatMode)
                         },
                         previewMode = previewMode,
                         themeMode = themeMode,
@@ -432,7 +456,7 @@ fun App(services: PlatformServices) {
                                 try {
                                     if (player.currentTrack?.let { curr -> candidateTracks.any { it.id == curr.id } } == true) {
                                         services.setPlaying(false)
-                                        player = PlayerState()
+                                        player = PlayerState(shuffleEnabled = player.shuffleEnabled, repeatMode = player.repeatMode)
                                     }
                                     val report = services.batchDeleteTracks(candidateTracks)
                                     importMessage = report.message
@@ -572,7 +596,7 @@ fun App(services: PlatformServices) {
                                 try {
                                     if (player.currentTrack?.id == track.id) {
                                         services.setPlaying(false)
-                                        player = PlayerState()
+                                        player = PlayerState(shuffleEnabled = player.shuffleEnabled, repeatMode = player.repeatMode)
                                     }
                                     val report = services.deleteLocalTrack(track)
                                     importMessage = report.message

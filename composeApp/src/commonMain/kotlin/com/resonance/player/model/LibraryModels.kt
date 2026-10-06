@@ -1,6 +1,6 @@
 package com.resonance.player.model
 
-const val APP_VERSION = "0.2.4"
+const val APP_VERSION = "0.2.5"
 
 data class Track(
     val id: String,
@@ -83,6 +83,11 @@ enum class RepeatMode {
     All,
     One,
 }
+
+data class PlaybackModePreference(
+    val shuffleEnabled: Boolean = false,
+    val repeatMode: RepeatMode = RepeatMode.Off,
+)
 
 enum class ThemeMode {
     Dark,

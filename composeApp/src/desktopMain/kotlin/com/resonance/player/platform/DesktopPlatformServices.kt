@@ -119,6 +119,12 @@ class DesktopPlatformServices : PlatformServices {
     override suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode): Unit = withContext(Dispatchers.IO) {
         library.saveThemeMode(mode)
     }
+    override suspend fun loadPlaybackMode(): PlaybackModePreference = withContext(Dispatchers.IO) {
+        library.loadPlaybackMode()
+    }
+    override suspend fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode): Unit = withContext(Dispatchers.IO) {
+        library.savePlaybackMode(shuffle, repeatMode)
+    }
 
     override val libraryLocation: String
         get() = library.managedMusicDirectory.toString()
@@ -316,7 +322,9 @@ class DesktopPlatformServices : PlatformServices {
         player.setPlaying(isPlaying)
     }
 
-    override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) = Unit
+    override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
+        library.savePlaybackMode(shuffle, repeatMode)
+    }
 
     override fun setVolume(volume: Float) = player.setVolume(volume)
 
@@ -762,6 +770,33 @@ internal class DesktopLibraryStore {
             Properties()
         }
         properties.setProperty("app.themeMode", mode.name)
+        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
+    }
+
+    @Synchronized
+    fun loadPlaybackMode(): PlaybackModePreference {
+        if (!Files.isRegularFile(uiStateFile)) return PlaybackModePreference()
+        val properties = Properties()
+        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
+        val shuffle = properties.getProperty("playback.shuffleEnabled")?.toBooleanStrictOrNull() ?: false
+        val repeatMode = when (properties.getProperty("playback.repeatMode")) {
+            "All" -> RepeatMode.All
+            "One" -> RepeatMode.One
+            else -> RepeatMode.Off
+        }
+        return PlaybackModePreference(shuffleEnabled = shuffle, repeatMode = repeatMode)
+    }
+
+    @Synchronized
+    fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
+        Files.createDirectories(appDirectory)
+        val properties = if (Files.isRegularFile(uiStateFile)) {
+            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
+        } else {
+            Properties()
+        }
+        properties.setProperty("playback.shuffleEnabled", shuffle.toString())
+        properties.setProperty("playback.repeatMode", repeatMode.name)
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
 

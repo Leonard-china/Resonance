@@ -164,6 +164,15 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                     mediaItem?.mediaId?.takeIf(String::isNotBlank)?.let(trackEvents::tryEmit)
                 }
             })
+            val prefs = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            val shuffle = prefs.getBoolean("playback.shuffleEnabled", false)
+            val repeatRaw = prefs.getString("playback.repeatMode", null)
+            val repeatMode = when (repeatRaw) {
+                "All" -> RepeatMode.All
+                "One" -> RepeatMode.One
+                else -> RepeatMode.Off
+            }
+            applyPlaybackMode(controller, shuffle, repeatMode)
             synchronized(pendingPlayerActions) {
                 pendingPlayerActions.forEach { it(controller) }
                 pendingPlayerActions.clear()
@@ -268,6 +277,27 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
             .edit()
             .putString("app.themeMode", mode.name)
+            .commit()
+        Unit
+    }
+
+    override suspend fun loadPlaybackMode(): com.resonance.player.model.PlaybackModePreference = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+        val shuffle = prefs.getBoolean("playback.shuffleEnabled", false)
+        val repeatRaw = prefs.getString("playback.repeatMode", null)
+        val repeatMode = when (repeatRaw) {
+            "All" -> RepeatMode.All
+            "One" -> RepeatMode.One
+            else -> RepeatMode.Off
+        }
+        com.resonance.player.model.PlaybackModePreference(shuffleEnabled = shuffle, repeatMode = repeatMode)
+    }
+
+    override suspend fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("playback.shuffleEnabled", shuffle)
+            .putString("playback.repeatMode", repeatMode.name)
             .commit()
         Unit
     }
@@ -814,6 +844,15 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
     override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
         withPlayer { applyPlaybackMode(it, shuffle, repeatMode) }
+        uiScope.launch(Dispatchers.IO) {
+            try {
+                activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+                    .edit()
+                    .putBoolean("playback.shuffleEnabled", shuffle)
+                    .putString("playback.repeatMode", repeatMode.name)
+                    .apply()
+            } catch (_: Throwable) {}
+        }
     }
 
     override fun setVolume(volume: Float) {

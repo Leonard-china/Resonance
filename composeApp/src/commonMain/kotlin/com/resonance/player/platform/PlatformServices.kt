@@ -27,6 +27,8 @@ interface PlatformServices {
     suspend fun saveLastSelectedPlaylistId(playlistId: String?)
     suspend fun loadThemeMode(): com.resonance.player.model.ThemeMode
     suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode)
+    suspend fun loadPlaybackMode(): com.resonance.player.model.PlaybackModePreference = com.resonance.player.model.PlaybackModePreference()
+    suspend fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {}
     val foreground: kotlinx.coroutines.flow.StateFlow<Boolean>
     val systemReduceMotion: Boolean get() = false
     fun updateSystemBars(isDark: Boolean) {}

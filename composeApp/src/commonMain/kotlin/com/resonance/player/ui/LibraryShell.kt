@@ -215,6 +215,7 @@ fun LibraryShell(
     onCycleRepeat: () -> Unit,
     onSeek: (Float) -> Unit,
     onTrackSelected: (Track) -> Unit,
+    onToggleShufflePlay: ((List<Track>) -> Unit)? = null,
     selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
@@ -297,6 +298,8 @@ fun LibraryShell(
                 libraryTracks = libraryTracks,
                 playerState = playerState,
                 onTrackSelected = onTrackSelected,
+                onToggleShuffle = onToggleShuffle,
+                onToggleShufflePlay = onToggleShufflePlay,
                 selectedPlaylistId = selectedPlaylistId,
                 userPlaylists = userPlaylists,
                 onPlaylistSelected = onPlaylistSelected,
@@ -688,6 +691,8 @@ private fun DestinationContent(
     libraryTracks: List<Track>,
     playerState: PlayerState,
     onTrackSelected: (Track) -> Unit,
+    onToggleShuffle: () -> Unit = {},
+    onToggleShufflePlay: ((List<Track>) -> Unit)? = null,
     selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
@@ -736,6 +741,8 @@ private fun DestinationContent(
                 libraryTracks = libraryTracks,
                 playerState = playerState,
                 onTrackSelected = onTrackSelected,
+                onToggleShuffle = onToggleShuffle,
+                onToggleShufflePlay = onToggleShufflePlay,
                 selectedPlaylistId = selectedPlaylistId,
                 userPlaylists = userPlaylists,
                 onPlaylistSelected = onPlaylistSelected,
@@ -937,6 +944,8 @@ private fun LibraryScreen(
     libraryTracks: List<Track>,
     playerState: PlayerState,
     onTrackSelected: (Track) -> Unit,
+    onToggleShuffle: () -> Unit = {},
+    onToggleShufflePlay: ((List<Track>) -> Unit)? = null,
     selectedPlaylistId: String?,
     userPlaylists: List<Playlist>,
     onPlaylistSelected: (String) -> Unit,
@@ -1141,8 +1150,15 @@ private fun LibraryScreen(
                 onPlaylistMembershipChange = onPlaylistMembershipChange,
                 onDeleteLocalTrack = onDeleteLocalTrack,
                 onToggleFavorite = onToggleFavorite,
-                onToggleShufflePlay = { tracks ->
-                    tracks.filter { it.sourceUri != null }.takeIf { it.isNotEmpty() }?.random()?.let(onTrackSelected)
+                onToggleShufflePlay = onToggleShufflePlay ?: { tracks ->
+                    val playable = tracks.filter { it.sourceUri != null }
+                    val pick = playable.takeIf { it.isNotEmpty() }?.random()
+                    if (pick != null) {
+                        if (!playerState.shuffleEnabled) {
+                            onToggleShuffle()
+                        }
+                        onTrackSelected(pick)
+                    }
                 },
                 onRenamePlaylist = if (detailPlaylist != null && !previewMode) { { showRenameDialog = true } } else null,
                 onDeletePlaylist = if (detailPlaylist != null && !previewMode) { { showDeleteDialog = true } } else null,
