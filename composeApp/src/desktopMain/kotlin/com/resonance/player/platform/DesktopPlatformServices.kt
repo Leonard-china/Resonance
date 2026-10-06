@@ -545,7 +545,7 @@ internal class DesktopMusicScanner(
 }
 
 internal class DesktopLibraryStore {
-    private val appDirectory: Path = System.getenv("RESONANCE_DATA")?.takeIf(String::isNotBlank)?.let(Path::of)
+    private val appDirectory: Path = (System.getProperty("RESONANCE_DATA") ?: System.getenv("RESONANCE_DATA"))?.takeIf(String::isNotBlank)?.let(Path::of)
         ?: Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "Resonance")
     private val libraryFile = appDirectory.resolve("library.properties")
     private val playlistFile = appDirectory.resolve("playlists.properties")

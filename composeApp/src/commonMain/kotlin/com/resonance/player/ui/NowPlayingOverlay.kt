@@ -10,7 +10,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import com.resonance.player.design.ResonanceMotionTokens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -428,13 +431,21 @@ private fun PaneContent(
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
 ) {
-    val enterDuration = motionDuration(200)
-    val exitDuration = motionDuration(140)
+    val reducedMotion = LocalReducedMotion.current
+
     AnimatedContent(
         targetState = pane,
         modifier = modifier.fillMaxWidth(),
         transitionSpec = {
-            fadeIn(tween(enterDuration)) togetherWith fadeOut(tween(exitDuration))
+            if (reducedMotion) {
+                fadeIn(ResonanceMotionTokens.PageFadeInSpec) togetherWith fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
+            } else {
+                val dir = if (targetState.ordinal >= initialState.ordinal) 1 else -1
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.3f * dir).toInt() } +
+                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.3f * dir).toInt() } +
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec))
+            }
         },
         label = "playerPaneContent",
     ) { active ->

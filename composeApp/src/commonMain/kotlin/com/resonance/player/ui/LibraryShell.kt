@@ -10,7 +10,10 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import com.resonance.player.design.ResonanceMotionTokens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -439,6 +442,26 @@ private fun tabDestinationOf(destination: LibraryDestination): LibraryDestinatio
     else -> destination
 }
 
+private val profileSubPages = setOf(
+    LibraryDestination.Import,
+    LibraryDestination.Sync,
+    LibraryDestination.Settings,
+)
+
+private fun mainTabIndexOf(destination: LibraryDestination): Int = when (tabDestinationOf(destination)) {
+    LibraryDestination.Library -> 0
+    LibraryDestination.Discover -> 1
+    LibraryDestination.Profile -> 2
+    else -> 0
+}
+
+private fun subPageIndexOf(destination: LibraryDestination): Int = when (destination) {
+    LibraryDestination.Import -> 0
+    LibraryDestination.Sync -> 1
+    LibraryDestination.Settings -> 2
+    else -> 0
+}
+
 @Composable
 private fun BottomNavigationBar(
     destination: LibraryDestination,
@@ -725,13 +748,42 @@ private fun DestinationContent(
     message: String?,
     operationInProgress: Boolean,
 ) {
-    val standardDuration = motionDuration(MotionStandard)
-    val quickDuration = motionDuration(MotionQuick)
+    val reducedMotion = LocalReducedMotion.current
     AnimatedContent(
         targetState = destination,
         transitionSpec = {
-            (fadeIn(tween(standardDuration))) togetherWith (fadeOut(tween(quickDuration))) using
-                SizeTransform(clip = false)
+            if (reducedMotion) {
+                (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+            } else if (initialState == LibraryDestination.Profile && targetState in profileSubPages) {
+                // 进入工具二级页面：从右侧推入
+                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+            } else if (initialState in profileSubPages && targetState == LibraryDestination.Profile) {
+                // 返回工具主页面：向右滑出
+                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+            } else if (initialState in profileSubPages && targetState in profileSubPages) {
+                // 工具二级页面之间切换
+                val dir = if (subPageIndexOf(targetState) >= subPageIndexOf(initialState)) 1 else -1
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f * dir).toInt() } +
+                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f * dir).toInt() } +
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+            } else {
+                // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）
+                val fromTab = mainTabIndexOf(initialState)
+                val toTab = mainTabIndexOf(targetState)
+                val dir = if (toTab >= fromTab) 1 else -1
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f * dir).toInt() } +
+                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f * dir).toInt() } +
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+            }
         },
         label = "destinationContent",
     ) { activeDestination ->
@@ -1135,87 +1187,139 @@ private fun LibraryScreen(
             }
         }
 
-        val currentDetail = detail
-        if (currentDetail != null) {
-            // 详情视图（歌单 / 专辑 / 艺术家 / 收藏）
-            LibraryDetailView(
-                detail = currentDetail,
-                playlists = playlists,
-                libraryTracks = libraryTracks,
-                favoriteTracks = favoriteTracks,
-                playerState = playerState,
-                onBack = { detail = null },
-                onTrackSelected = onTrackSelected,
-                userPlaylists = userPlaylists,
-                onPlaylistMembershipChange = onPlaylistMembershipChange,
-                onDeleteLocalTrack = onDeleteLocalTrack,
-                onToggleFavorite = onToggleFavorite,
-                onToggleShufflePlay = onToggleShufflePlay ?: { tracks ->
-                    val playable = tracks.filter { it.sourceUri != null }
-                    val pick = playable.takeIf { it.isNotEmpty() }?.random()
-                    if (pick != null) {
-                        if (!playerState.shuffleEnabled) {
-                            onToggleShuffle()
-                        }
-                        onTrackSelected(pick)
-                    }
-                },
-                onRenamePlaylist = if (detailPlaylist != null && !previewMode) { { showRenameDialog = true } } else null,
-                onDeletePlaylist = if (detailPlaylist != null && !previewMode) { { showDeleteDialog = true } } else null,
-                isMultiSelectMode = isMultiSelectMode,
-                selectedTrackIds = selectedTrackIds,
-                onToggleTrackSelect = ::toggleTrackSelect,
-                pagePadding = pagePadding,
-            )
-        } else {
-            // 标签页
-            LibraryTabRow(
-                activeTab = activeTab,
-                onSelect = { tab = it.name },
-                modifier = Modifier.padding(horizontal = pagePadding),
-            )
-            if (activeTab == LibraryTab.Tracks && allLibraryMissingTracks.isNotEmpty()) {
-                TextButton(onClick = { onOpenBatchEnrich(allLibraryMissingTracks) }, modifier = Modifier.padding(horizontal = pagePadding)) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("补全缺失信息 · ${allLibraryMissingTracks.size} 首")
+        val reducedMotion = LocalReducedMotion.current
+        AnimatedContent(
+            targetState = detail,
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            transitionSpec = {
+                if (reducedMotion) {
+                    (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                        (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                } else if (targetState != null && initialState == null) {
+                    // 进入详情（歌单 / 专辑 / 艺术家 / 收藏）：从右侧满屏推入，列表视差滑出
+                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                        fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                        fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                } else if (targetState == null && initialState != null) {
+                    // 从详情返回列表：列表视差滑入，详情向右滑出
+                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpring) { (-it * 0.25f).toInt() } +
+                        fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpring) { it } +
+                        fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                } else {
+                    // 详情之间相互切换
+                    (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f).toInt() } +
+                        fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                    (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f).toInt() } +
+                        fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                 }
-            }
-            when (activeTab) {
-                LibraryTab.Tracks -> TrackListTab(
-                    tracks = libraryTracks,
-                    favoriteCount = favoriteTracks.size,
+            },
+            label = "libraryDetailTransition",
+        ) { activeDetail ->
+            if (activeDetail != null) {
+                // 详情视图（歌单 / 专辑 / 艺术家 / 收藏）
+                val currentDetailPlaylist = (activeDetail as? LibraryDetail.PlaylistDetail)?.let { d ->
+                    playlists.firstOrNull { it.id == d.playlistId }
+                }
+                LibraryDetailView(
+                    detail = activeDetail,
+                    playlists = playlists,
+                    libraryTracks = libraryTracks,
+                    favoriteTracks = favoriteTracks,
                     playerState = playerState,
+                    onBack = { detail = null },
                     onTrackSelected = onTrackSelected,
-                    onOpenFavorites = { detail = LibraryDetail.Favorites },
                     userPlaylists = userPlaylists,
                     onPlaylistMembershipChange = onPlaylistMembershipChange,
                     onDeleteLocalTrack = onDeleteLocalTrack,
                     onToggleFavorite = onToggleFavorite,
+                    onToggleShufflePlay = onToggleShufflePlay ?: { tracks ->
+                        val playable = tracks.filter { it.sourceUri != null }
+                        val pick = playable.takeIf { it.isNotEmpty() }?.random()
+                        if (pick != null) {
+                            if (!playerState.shuffleEnabled) {
+                                onToggleShuffle()
+                            }
+                            onTrackSelected(pick)
+                        }
+                    },
+                    onRenamePlaylist = if (currentDetailPlaylist != null && !previewMode) { { showRenameDialog = true } } else null,
+                    onDeletePlaylist = if (currentDetailPlaylist != null && !previewMode) { { showDeleteDialog = true } } else null,
                     isMultiSelectMode = isMultiSelectMode,
                     selectedTrackIds = selectedTrackIds,
                     onToggleTrackSelect = ::toggleTrackSelect,
-                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                    pagePadding = pagePadding,
                 )
-                LibraryTab.Playlists -> PlaylistListTab(
-                    playlists = playlists,
-                    onOpenPlaylist = { playlist ->
-                        onPlaylistSelected(playlist.id)
-                        detail = LibraryDetail.PlaylistDetail(playlist.id)
-                    },
-                    onCreatePlaylist = onCreatePlaylist,
-                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
-                )
-                LibraryTab.Albums -> AlbumListTab(
-                    tracks = allKnownTracks,
-                    onOpenAlbum = { detail = LibraryDetail.AlbumDetail(it) },
-                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
-                )
-                LibraryTab.Artists -> ArtistListTab(
-                    tracks = allKnownTracks,
-                    onOpenArtist = { detail = LibraryDetail.ArtistDetail(it) },
-                    contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
-                )
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    LibraryTabRow(
+                        activeTab = activeTab,
+                        onSelect = { tab = it.name },
+                        modifier = Modifier.padding(horizontal = pagePadding),
+                    )
+                    if (activeTab == LibraryTab.Tracks && allLibraryMissingTracks.isNotEmpty()) {
+                        TextButton(onClick = { onOpenBatchEnrich(allLibraryMissingTracks) }, modifier = Modifier.padding(horizontal = pagePadding)) {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("补全缺失信息 · ${allLibraryMissingTracks.size} 首")
+                        }
+                    }
+                    AnimatedContent(
+                        targetState = activeTab,
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                        transitionSpec = {
+                            if (reducedMotion) {
+                                (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                            } else {
+                                val dir = if (targetState.ordinal >= initialState.ordinal) 1 else -1
+                                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpring) { (it * 0.35f * dir).toInt() } +
+                                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpring) { (-it * 0.35f * dir).toInt() } +
+                                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                            }
+                        },
+                        label = "libraryTabTransition",
+                    ) { currentTab ->
+                        when (currentTab) {
+                            LibraryTab.Tracks -> TrackListTab(
+                                tracks = libraryTracks,
+                                favoriteCount = favoriteTracks.size,
+                                playerState = playerState,
+                                onTrackSelected = onTrackSelected,
+                                onOpenFavorites = { detail = LibraryDetail.Favorites },
+                                userPlaylists = userPlaylists,
+                                onPlaylistMembershipChange = onPlaylistMembershipChange,
+                                onDeleteLocalTrack = onDeleteLocalTrack,
+                                onToggleFavorite = onToggleFavorite,
+                                isMultiSelectMode = isMultiSelectMode,
+                                selectedTrackIds = selectedTrackIds,
+                                onToggleTrackSelect = ::toggleTrackSelect,
+                                contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                            )
+                            LibraryTab.Playlists -> PlaylistListTab(
+                                playlists = playlists,
+                                onOpenPlaylist = { playlist ->
+                                    onPlaylistSelected(playlist.id)
+                                    detail = LibraryDetail.PlaylistDetail(playlist.id)
+                                },
+                                onCreatePlaylist = onCreatePlaylist,
+                                contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                            )
+                            LibraryTab.Albums -> AlbumListTab(
+                                tracks = allKnownTracks,
+                                onOpenAlbum = { detail = LibraryDetail.AlbumDetail(it) },
+                                contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                            )
+                            LibraryTab.Artists -> ArtistListTab(
+                                tracks = allKnownTracks,
+                                onOpenArtist = { detail = LibraryDetail.ArtistDetail(it) },
+                                contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                            )
+                        }
+                    }
+                }
             }
         }
     }
