@@ -22,6 +22,9 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import com.resonance.player.design.ResonanceMotionTokens
+import com.resonance.player.ui.common.SoftMiniPlayButton
+import com.resonance.player.ui.common.SoftMiniSkipButton
+import com.resonance.player.ui.common.SoftNeumorphicTokens
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -365,8 +368,8 @@ fun LibraryShell(
         val overlayProgress by animateFloatAsState(
             targetValue = if (isNowPlayingVisible) 1f else 0f,
             animationSpec = if (reducedMotion) tween(0) else spring(
-                stiffness = 360f,
-                dampingRatio = 0.94f,
+                stiffness = 320f,
+                dampingRatio = 1.0f,
             ),
             label = "overlayProgress",
         )
@@ -375,10 +378,10 @@ fun LibraryShell(
             .fillMaxSize()
             .graphicsLayer {
                 if (!reducedMotion && overlayProgress > 0.001f) {
-                    scaleX = 1f - 0.045f * overlayProgress
-                    scaleY = 1f - 0.045f * overlayProgress
-                    translationY = -12.dp.toPx() * overlayProgress
-                    shape = RoundedCornerShape((20 * overlayProgress).dp)
+                    scaleX = 1f - 0.035f * overlayProgress
+                    scaleY = 1f - 0.035f * overlayProgress
+                    translationY = -8.dp.toPx() * overlayProgress
+                    shape = RoundedCornerShape((18 * overlayProgress).dp)
                     clip = true
                 }
             }
@@ -443,7 +446,7 @@ fun LibraryShell(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.52f * overlayProgress))
+                    .background(Color.Black.copy(alpha = 0.45f * overlayProgress))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -455,20 +458,20 @@ fun LibraryShell(
         AnimatedVisibility(
             visible = isNowPlayingVisible,
             enter = if (reducedMotion) {
-                fadeIn(ResonanceMotionTokens.PageFadeInSpec)
+                fadeIn(tween(0))
             } else {
                 slideInVertically(
-                    animationSpec = spring(stiffness = 360f, dampingRatio = 0.94f),
+                    animationSpec = spring(stiffness = 320f, dampingRatio = 1.0f),
                     initialOffsetY = { fullHeight -> fullHeight },
-                ) + fadeIn(tween(220))
+                )
             },
             exit = if (reducedMotion) {
-                fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
+                fadeOut(tween(0))
             } else {
                 slideOutVertically(
-                    animationSpec = spring(stiffness = 400f, dampingRatio = 1.0f),
+                    animationSpec = spring(stiffness = 340f, dampingRatio = 1.0f),
                     targetOffsetY = { fullHeight -> fullHeight },
-                ) + fadeOut(tween(180))
+                )
             },
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -1284,17 +1287,13 @@ private fun LibraryScreen(
                     (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                         (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
                 } else if (targetState != null && initialState == null) {
-                    // 进入详情（歌单 / 专辑 / 艺术家 / 收藏）：从右侧满屏推入，列表视差滑出
-                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
-                        fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
-                        fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    // 进入详情（歌单 / 专辑 / 艺术家 / 收藏）：从右侧满屏推入，列表视差滑出（不早退消隐，杜绝虚空割裂）
+                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it }) togetherWith
+                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 }) using SizeTransform(clip = false)
                 } else if (targetState == null && initialState != null) {
-                    // 从详情返回列表：列表视差滑入，详情向右滑出
-                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
-                        fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
-                        fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    // 从详情返回列表：列表从左侧视差归位，详情向右滑出
+                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 }) togetherWith
+                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it }) using SizeTransform(clip = false)
                 } else {
                     // 详情之间相互切换：满屏丝滑平移
                     (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it } +
@@ -2642,59 +2641,10 @@ private fun TactileMiniPlayButton(
     isPlaying: Boolean,
     onClick: () -> Unit,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val isPressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.88f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "miniPlayScale",
+    SoftMiniPlayButton(
+        isPlaying = isPlaying,
+        onClick = onClick,
     )
-
-    Box(
-        modifier = Modifier
-            .size(46.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(
-                elevation = 8.dp,
-                shape = CircleShape,
-                spotColor = ResonanceColors.Primary.copy(alpha = 0.50f),
-            )
-            .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        ResonanceColors.PrimaryGlow,
-                        ResonanceColors.Primary,
-                        ResonanceColors.Positive,
-                    )
-                )
-            )
-            .border(
-                width = 1.5.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.60f),
-                        Color.White.copy(alpha = 0.15f),
-                        Color.Transparent,
-                    )
-                ),
-                shape = CircleShape,
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = Color.White.copy(alpha = 0.3f), bounded = true),
-                onClick = onClick,
-                role = Role.Button,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-            contentDescription = if (isPlaying) "暂停" else "播放",
-            tint = Color.White,
-            modifier = Modifier.size(23.dp),
-        )
-    }
 }
 
 @Composable
@@ -2703,43 +2653,10 @@ private fun TactileMiniSkipButton(
     contentDescription: String,
     onClick: () -> Unit,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val isPressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.89f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "miniSkipScale",
+    SoftMiniSkipButton(
+        isNext = icon == Icons.Default.SkipNext,
+        onClick = onClick,
     )
-
-    Box(
-        modifier = Modifier
-            .size(36.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(2.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.25f))
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.08f))
-            .border(
-                1.dp,
-                Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.06f))
-                ),
-                CircleShape
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
-                onClick = onClick,
-                role = Role.Button,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = ResonanceColors.TextPrimary,
-            modifier = Modifier.size(19.dp),
-        )
-    }
 }
 
 internal fun formatPlaybackPosition(durationText: String, progress: Float): String {

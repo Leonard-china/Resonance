@@ -29,6 +29,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceMotionTokens
+import com.resonance.player.ui.common.SoftHeroPlayButton
+import com.resonance.player.ui.common.SoftSkipButton
+import com.resonance.player.ui.common.SoftUtilityButton
+import com.resonance.player.ui.common.SoftRefinedPlaybackScrubber
+import com.resonance.player.ui.common.SoftRefinedVolumeSlider
+import com.resonance.player.ui.common.SoftNeumorphicTokens
+import com.resonance.player.ui.common.softConvexDisc
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -214,22 +221,11 @@ internal fun NowPlayingOverlay(
         modifier = modifier
             .fillMaxSize()
             .shadow(
-                elevation = 28.dp,
+                elevation = 24.dp,
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                spotColor = Color.Black.copy(alpha = 0.50f),
+                spotColor = Color.Black.copy(alpha = 0.40f),
             )
             .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.22f),
-                        Color.White.copy(alpha = 0.05f),
-                        Color.Transparent,
-                    )
-                ),
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -406,65 +402,20 @@ private fun TactileTopBarButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = ResonanceColors.TextPrimary,
+    tint: Color? = null,
     glowColor: Color? = null,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val isPressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.89f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "topBtnScale",
+    SoftUtilityButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        size = 40.dp,
+        isActive = glowColor != null,
+        activeColor = tint ?: SoftNeumorphicTokens.ActiveEmerald,
+        activeGlowColor = glowColor ?: SoftNeumorphicTokens.ActiveEmeraldGlow,
+        customTint = tint,
     )
-
-    Box(
-        modifier = modifier
-            .size(40.dp)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .then(
-                if (glowColor != null) {
-                    Modifier.shadow(elevation = 6.dp, shape = CircleShape, spotColor = glowColor)
-                } else {
-                    Modifier.shadow(elevation = 3.dp, shape = CircleShape, spotColor = Color.Black.copy(alpha = 0.22f))
-                }
-            )
-            .clip(CircleShape)
-            .background(
-                if (glowColor != null) {
-                    glowColor.copy(alpha = 0.16f)
-                } else {
-                    Color.White.copy(alpha = 0.08f)
-                }
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    if (glowColor != null) {
-                        listOf(glowColor.copy(alpha = 0.70f), glowColor.copy(alpha = 0.25f))
-                    } else {
-                        listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.06f))
-                    }
-                ),
-                shape = CircleShape,
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
-                onClick = onClick,
-                role = Role.Button,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = tint,
-            modifier = Modifier.size(20.dp),
-        )
-    }
 }
 
 @Composable
@@ -508,11 +459,10 @@ private fun NowPlayingTopBar(
         ) {
             Box(
                 modifier = Modifier
-                    .width(42.dp)
-                    .height(4.5.dp)
+                    .width(40.dp)
+                    .height(4.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.40f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.60f), CircleShape)
+                    .background(Color.White.copy(alpha = 0.35f))
             )
         }
         Row(
@@ -549,8 +499,8 @@ private fun NowPlayingTopBar(
                 icon = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (track.isFavorite) "取消收藏" else "收藏",
                 onClick = { onToggleFavorite(track) },
-                tint = if (track.isFavorite) Color(0xFFFF4766) else ResonanceColors.Muted,
-                glowColor = if (track.isFavorite) Color(0xFFFF4766).copy(alpha = 0.45f) else null,
+                tint = if (track.isFavorite) SoftNeumorphicTokens.ActiveHeart else null,
+                glowColor = if (track.isFavorite) SoftNeumorphicTokens.ActiveHeart.copy(alpha = 0.45f) else null,
             )
             Spacer(Modifier.width(8.dp))
             Box {
@@ -987,168 +937,14 @@ private fun TrackIdentity(track: Track) {
 }
 
 @Composable
-private fun ExquisitePlaybackScrubber(
-    track: Track,
-    progress: Float,
-    onSeek: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var isDragging by remember { mutableStateOf(false) }
-    var dragFraction by remember { mutableFloatStateOf(0f) }
-    val currentProgress = if (isDragging) dragFraction else progress.coerceIn(0f, 1f)
-
-    val trackHeight by animateDpAsState(
-        targetValue = if (isDragging) 5.dp else 3.5.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "scrubTrackH",
-    )
-    val knobSize by animateDpAsState(
-        targetValue = if (isDragging) 14.dp else 8.dp,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "scrubKnobSize",
-    )
-    val glowAlpha by animateFloatAsState(
-        targetValue = if (isDragging) 0.50f else 0f,
-        animationSpec = tween(180),
-        label = "scrubGlowAlpha",
-    )
-
-    Column(modifier = modifier.fillMaxWidth()) {
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(34.dp)
-                .pointerInput(Unit) {
-                    detectTapGestures { offset ->
-                        val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                        onSeek(fraction)
-                    }
-                }
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { offset ->
-                            isDragging = true
-                            val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                            dragFraction = fraction
-                            onSeek(fraction)
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            onSeek(dragFraction)
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                        },
-                        onHorizontalDrag = { change, _ ->
-                            change.consume()
-                            val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                            dragFraction = fraction
-                            onSeek(fraction)
-                        }
-                    )
-                },
-            contentAlignment = Alignment.CenterStart,
-        ) {
-            val activeWidth = maxWidth * currentProgress
-
-            // 1. Inactive Track Rail
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(trackHeight)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.14f))
-            )
-
-            // 2. Active Progress Track with luminous gradient
-            Box(
-                modifier = Modifier
-                    .width(activeWidth)
-                    .height(trackHeight)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.horizontalGradient(
-                            listOf(
-                                ResonanceColors.Primary.copy(alpha = 0.85f),
-                                ResonanceColors.PrimaryGlow,
-                                ResonanceColors.PositiveGlow,
-                            )
-                        )
-                    )
-            )
-
-            // 3. Exquisite Jewel Knob
-            val knobOffset = (maxWidth - knobSize) * currentProgress
-            Box(
-                modifier = Modifier
-                    .offset(x = knobOffset)
-                    .size(knobSize),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (glowAlpha > 0.01f) {
-                    Box(
-                        modifier = Modifier
-                            .size(knobSize + 8.dp)
-                            .clip(CircleShape)
-                            .background(ResonanceColors.Primary.copy(alpha = glowAlpha))
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .size(knobSize)
-                        .shadow(
-                            elevation = if (isDragging) 6.dp else 2.5.dp,
-                            shape = CircleShape,
-                            spotColor = ResonanceColors.Primary.copy(alpha = 0.45f),
-                        )
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .border(
-                            width = if (isDragging) 2.dp else 1.5.dp,
-                            color = ResonanceColors.Primary,
-                            shape = CircleShape,
-                        )
-                )
-            }
-        }
-
-        // Timestamps below
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = formatPlaybackPosition(track.durationText, currentProgress),
-                style = TextStyle(
-                    fontFamily = FontFamily.SansSerif,
-                    fontWeight = if (isDragging) FontWeight.Bold else FontWeight.Medium,
-                    fontSize = 11.5.sp,
-                    letterSpacing = 0.3.sp,
-                    fontFeatureSettings = "tnum",
-                ),
-                color = if (isDragging) ResonanceColors.Primary else ResonanceColors.TextPrimary.copy(alpha = 0.72f),
-            )
-            Text(
-                text = track.durationText,
-                style = TextStyle(
-                    fontFamily = FontFamily.SansSerif,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.5.sp,
-                    letterSpacing = 0.3.sp,
-                    fontFeatureSettings = "tnum",
-                ),
-                color = ResonanceColors.Dimmer,
-            )
-        }
-    }
-}
-
-@Composable
 private fun PlaybackProgress(track: Track, progress: Float, onSeek: (Float) -> Unit) {
-    ExquisitePlaybackScrubber(track, progress, onSeek)
+    SoftRefinedPlaybackScrubber(
+        progress = progress,
+        durationText = track.durationText,
+        onSeek = onSeek,
+        formatPosition = ::formatPlaybackPosition,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
 }
 
 @Composable
@@ -1157,78 +953,12 @@ private fun TactilePlayPauseButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val isPressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.88f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "playPressScale",
+    SoftHeroPlayButton(
+        isPlaying = isPlaying,
+        onClick = onClick,
+        modifier = modifier,
+        size = 70.dp,
     )
-
-    Box(
-        modifier = modifier
-            .size(68.dp)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .shadow(
-                elevation = 12.dp,
-                shape = CircleShape,
-                spotColor = ResonanceColors.Primary.copy(alpha = 0.50f),
-                ambientColor = ResonanceColors.Shadow.copy(alpha = 0.35f),
-            )
-            .clip(CircleShape)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        ResonanceColors.PrimaryGlow,
-                        ResonanceColors.Primary,
-                        ResonanceColors.Positive,
-                    )
-                )
-            )
-            .border(
-                width = 1.5.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.65f),
-                        Color.White.copy(alpha = 0.18f),
-                        Color.Transparent,
-                    )
-                ),
-                shape = CircleShape,
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = Color.White.copy(alpha = 0.3f), bounded = true),
-                onClick = onClick,
-                role = Role.Button,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth(0.65f)
-                .height(18.dp)
-                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.28f),
-                            Color.Transparent,
-                        )
-                    )
-                )
-        )
-        Icon(
-            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-            contentDescription = if (isPlaying) "暂停" else "播放",
-            tint = Color.White,
-            modifier = Modifier.size(34.dp),
-        )
-    }
 }
 
 @Composable
@@ -1238,60 +968,13 @@ private fun TactileSkipButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val isPressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.89f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "skipPressScale",
+    SoftSkipButton(
+        isNext = icon == Icons.Default.SkipNext,
+        onClick = onClick,
+        modifier = modifier,
+        size = 54.dp,
+        contentDescription = contentDescription,
     )
-
-    Box(
-        modifier = modifier
-            .size(52.dp)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .shadow(
-                elevation = 6.dp,
-                shape = CircleShape,
-                spotColor = Color.Black.copy(alpha = 0.30f),
-            )
-            .clip(CircleShape)
-            .background(
-                Brush.radialGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.15f),
-                        Color.White.copy(alpha = 0.05f),
-                    )
-                )
-            )
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.38f),
-                        Color.White.copy(alpha = 0.08f),
-                    )
-                ),
-                shape = CircleShape,
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
-                onClick = onClick,
-                role = Role.Button,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = contentDescription,
-            tint = if (isPressed) ResonanceColors.Primary else ResonanceColors.TextPrimary,
-            modifier = Modifier.size(28.dp),
-        )
-    }
 }
 
 @Composable
@@ -1302,96 +985,14 @@ private fun TactileSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val isPressed by interaction.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.90f else 1f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
-        label = "secondaryPressScale",
+    SoftUtilityButton(
+        icon = icon,
+        contentDescription = contentDescription,
+        onClick = onClick,
+        modifier = modifier,
+        size = 44.dp,
+        isActive = isActive,
     )
-
-    Box(
-        modifier = modifier
-            .size(44.dp)
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
-            .then(
-                if (isActive) {
-                    Modifier.shadow(
-                        elevation = 6.dp,
-                        shape = CircleShape,
-                        spotColor = ResonanceColors.Primary.copy(alpha = 0.40f),
-                    )
-                } else Modifier
-            )
-            .clip(CircleShape)
-            .background(
-                if (isActive) {
-                    Brush.linearGradient(
-                        listOf(
-                            ResonanceColors.PrimarySoft,
-                            ResonanceColors.PrimarySoft.copy(alpha = 0.35f),
-                        )
-                    )
-                } else {
-                    Brush.radialGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.07f),
-                            Color.White.copy(alpha = 0.02f),
-                        )
-                    )
-                }
-            )
-            .border(
-                width = 1.dp,
-                brush = if (isActive) {
-                    Brush.verticalGradient(
-                        listOf(
-                            ResonanceColors.Primary.copy(alpha = 0.70f),
-                            ResonanceColors.Primary.copy(alpha = 0.30f),
-                        )
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.18f),
-                            Color.White.copy(alpha = 0.05f),
-                        )
-                    )
-                },
-                shape = CircleShape,
-            )
-            .clickable(
-                interactionSource = interaction,
-                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
-                onClick = onClick,
-                role = Role.Button,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = if (isActive) ResonanceColors.Primary else ResonanceColors.Dim,
-                modifier = Modifier.size(20.dp),
-            )
-            if (isActive) {
-                Spacer(Modifier.height(2.dp))
-                Box(
-                    modifier = Modifier
-                        .size(3.5.dp)
-                        .clip(CircleShape)
-                        .background(ResonanceColors.Primary)
-                )
-            }
-        }
-    }
 }
 
 @Composable
@@ -1445,95 +1046,6 @@ private fun PlaybackControls(
 }
 
 @Composable
-private fun ExquisiteVolumeSlider(
-    volume: Float,
-    onVolumeChange: (Float) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var isDragging by remember { mutableStateOf(false) }
-    var dragVolume by remember { mutableFloatStateOf(volume) }
-    val displayedVolume = if (isDragging) dragVolume else volume.coerceIn(0f, 1f)
-
-    val trackHeight by animateDpAsState(if (isDragging) 4.5.dp else 3.dp, label = "volTrackH")
-    val knobSize by animateDpAsState(if (isDragging) 12.dp else 7.dp, label = "volKnobSize")
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(28.dp)
-            .pointerInput(Unit) {
-                detectTapGestures { offset ->
-                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                    onVolumeChange(fraction)
-                }
-            }
-            .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        val fraction = (offset.x / size.width).coerceIn(0f, 1f)
-                        dragVolume = fraction
-                        onVolumeChange(fraction)
-                    },
-                    onDragEnd = {
-                        isDragging = false
-                        onVolumeChange(dragVolume)
-                    },
-                    onDragCancel = {
-                        isDragging = false
-                    },
-                    onHorizontalDrag = { change, _ ->
-                        change.consume()
-                        val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
-                        dragVolume = fraction
-                        onVolumeChange(fraction)
-                    }
-                )
-            },
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        val filledWidth = maxWidth * displayedVolume
-
-        // Track background
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(trackHeight)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f))
-        )
-
-        // Active Track
-        Box(
-            modifier = Modifier
-                .width(filledWidth)
-                .height(trackHeight)
-                .clip(CircleShape)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            ResonanceColors.TextPrimary.copy(alpha = 0.85f),
-                            ResonanceColors.TextPrimary,
-                        )
-                    )
-                )
-        )
-
-        // Knob
-        val knobOffset = (maxWidth - knobSize) * displayedVolume
-        Box(
-            modifier = Modifier
-                .offset(x = knobOffset)
-                .size(knobSize)
-                .shadow(2.dp, CircleShape)
-                .clip(CircleShape)
-                .background(Color.White)
-                .border(1.dp, ResonanceColors.CanvasElevated, CircleShape)
-        )
-    }
-}
-
-@Composable
 private fun VolumeAndSpeedRow(
     volume: Float,
     speed: Float,
@@ -1564,7 +1076,7 @@ private fun VolumeAndSpeedRow(
 
     Column(Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TactileTopBarButton(
@@ -1582,13 +1094,12 @@ private fun VolumeAndSpeedRow(
                         onVolumeChange(if (previousVolume > 0.05f) previousVolume else 1f)
                     }
                 },
-                tint = if (volume <= 0.01f) ResonanceColors.Dim else ResonanceColors.TextPrimary,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(36.dp),
             )
 
             Spacer(Modifier.width(8.dp))
 
-            ExquisiteVolumeSlider(
+            SoftRefinedVolumeSlider(
                 volume = volume,
                 onVolumeChange = onVolumeChange,
                 modifier = Modifier.weight(1f),
@@ -1613,25 +1124,29 @@ private fun VolumeAndSpeedRow(
 
             Box {
                 val speedInteraction = remember { MutableInteractionSource() }
+                val speedPressed by speedInteraction.collectIsPressedAsState()
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .height(30.dp)
-                        .clip(CircleShape)
-                        .background(if (speed != 1.0f) ResonanceColors.PrimarySoft else Color.White.copy(alpha = 0.07f))
-                        .border(
-                            1.dp,
-                            if (speed != 1.0f) ResonanceColors.Primary.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
-                            CircleShape
+                        .graphicsLayer {
+                            val s = if (speedPressed) 0.92f else 1f
+                            scaleX = s
+                            scaleY = s
+                        }
+                        .softConvexDisc(
+                            isPressed = speedPressed,
+                            elevationResting = if (speed != 1.0f) 5.dp else 3.dp,
+                            elevationPressed = 1.dp,
+                            glowColor = if (speed != 1.0f) SoftNeumorphicTokens.ActiveEmeraldGlow else null,
                         )
-                        .resonancePressable(speedInteraction, pressedScale = 0.92f)
                         .clickable(interactionSource = speedInteraction, indication = null) { showSpeedMenu = true }
                         .padding(horizontal = 9.dp),
                 ) {
                     Icon(
                         Icons.Default.Speed,
                         contentDescription = null,
-                        tint = if (speed != 1.0f) ResonanceColors.Primary else ResonanceColors.Dim,
+                        tint = if (speed != 1.0f) SoftNeumorphicTokens.ActiveEmerald else (if (ResonanceColors.isDark) Color(0xFFA5BDB6) else SoftNeumorphicTokens.IconPetroleumTeal.copy(alpha = 0.76f)),
                         modifier = Modifier.size(13.dp),
                     )
                     Spacer(Modifier.width(3.dp))
@@ -1639,7 +1154,7 @@ private fun VolumeAndSpeedRow(
                         text = "${if (speed == 1.0f) "1.0" else speed}x",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = if (speed != 1.0f) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+                        color = if (speed != 1.0f) SoftNeumorphicTokens.ActiveEmerald else (if (ResonanceColors.isDark) Color(0xFFDCEDE7) else SoftNeumorphicTokens.IconPetroleumTeal),
                     )
                 }
                 DropdownMenu(
@@ -1648,13 +1163,13 @@ private fun VolumeAndSpeedRow(
                 ) {
                     listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { s ->
                         DropdownMenuItem(
-                            text = { Text("${s}x 倍速", color = if (s == speed) ResonanceColors.Primary else ResonanceColors.TextPrimary) },
+                            text = { Text("${s}x 倍速", color = if (s == speed) SoftNeumorphicTokens.ActiveEmerald else ResonanceColors.TextPrimary) },
                             onClick = {
                                 onSpeedChange(s)
                                 showSpeedMenu = false
                             },
                             trailingIcon = if (s == speed) {
-                                { Icon(Icons.Default.Check, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(16.dp)) }
+                                { Icon(Icons.Default.Check, contentDescription = null, tint = SoftNeumorphicTokens.ActiveEmerald, modifier = Modifier.size(16.dp)) }
                             } else null,
                         )
                     }
@@ -1667,9 +1182,9 @@ private fun VolumeAndSpeedRow(
                 icon = Icons.Default.Tune,
                 contentDescription = "响度增益与专属校准模式",
                 onClick = { showCalibration = !showCalibration },
-                tint = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) ResonanceColors.Primary else ResonanceColors.Dim,
-                glowColor = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) ResonanceColors.Primary.copy(alpha = 0.45f) else null,
-                modifier = Modifier.size(34.dp),
+                tint = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) SoftNeumorphicTokens.ActiveEmerald else null,
+                glowColor = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) SoftNeumorphicTokens.ActiveEmeraldGlow else null,
+                modifier = Modifier.size(36.dp),
             )
         }
 

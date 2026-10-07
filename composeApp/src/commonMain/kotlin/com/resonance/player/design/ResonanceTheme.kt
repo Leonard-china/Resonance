@@ -152,15 +152,15 @@ object ResonanceMotionTokens {
         dampingRatio = 1.0f,
     )
 
-    // 伴随滑动的柔和渐变：避免画面过早消隐，确保滑动态势自然可见
+    // 伴随滑动的柔和渐变：与位移动效严格同步（340ms），杜绝提前消隐导致的黑色虚空割裂
     val PageFadeInSpec: FiniteAnimationSpec<Float> = tween(
-        durationMillis = 280,
-        easing = CubicBezierEasing(0.0f, 0.0f, 0.2f, 1.0f),
+        durationMillis = 340,
+        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
     )
 
     val PageFadeOutSpec: FiniteAnimationSpec<Float> = tween(
-        durationMillis = 220,
-        easing = CubicBezierEasing(0.4f, 0.0f, 1.0f, 1.0f),
+        durationMillis = 340,
+        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
     )
 }
 
