@@ -27,6 +27,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -350,60 +352,6 @@ fun LibraryShell(
             )
         }
 
-        when (windowClass) {
-            WindowClass.Compact -> Column(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) { sharedContent(true) }
-                if (playerState.currentTrack != null) {
-                    MiniPlayer(
-                        playerState = playerState,
-                        onTogglePlay = onTogglePlay,
-                        onPrevious = onPrevious,
-                        onNext = onNext,
-                        onOpenNowPlaying = { showNowPlaying = true },
-                        compact = true,
-                    )
-                }
-                BottomNavigationBar(destination, handleDestination)
-            }
-            WindowClass.Medium -> Row(Modifier.fillMaxSize()) {
-                SideNavigationRail(destination, handleDestination)
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                    Box(Modifier.weight(1f)) { sharedContent(false) }
-                    if (playerState.currentTrack != null) {
-                        MiniPlayer(
-                            playerState = playerState,
-                            onTogglePlay = onTogglePlay,
-                            onPrevious = onPrevious,
-                            onNext = onNext,
-                            onOpenNowPlaying = { showNowPlaying = true },
-                            compact = false,
-                        )
-                    }
-                }
-            }
-            WindowClass.Expanded -> Row(Modifier.fillMaxSize()) {
-                DesktopSidebar(
-                    destination = destination,
-                    onDestinationChange = handleDestination,
-                    themeMode = themeMode,
-                    onThemeModeChange = onThemeModeChange,
-                )
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                    Box(Modifier.weight(1f)) { sharedContent(false) }
-                    if (playerState.currentTrack != null) {
-                        MiniPlayer(
-                            playerState = playerState,
-                            onTogglePlay = onTogglePlay,
-                            onPrevious = onPrevious,
-                            onNext = onNext,
-                            onOpenNowPlaying = { showNowPlaying = true },
-                            compact = false,
-                        )
-                    }
-                }
-            }
-        }
-
         var activeOverlayTrack by remember { mutableStateOf(playerState.currentTrack) }
         LaunchedEffect(playerState.currentTrack) {
             if (playerState.currentTrack != null) {
@@ -414,23 +362,113 @@ fun LibraryShell(
         val isNowPlayingVisible = showNowPlaying && currentTrackForOverlay != null
         val reducedMotion = LocalReducedMotion.current
 
+        val overlayProgress by animateFloatAsState(
+            targetValue = if (isNowPlayingVisible) 1f else 0f,
+            animationSpec = if (reducedMotion) tween(0) else spring(
+                stiffness = 360f,
+                dampingRatio = 0.94f,
+            ),
+            label = "overlayProgress",
+        )
+
+        val backgroundModifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                if (!reducedMotion && overlayProgress > 0.001f) {
+                    scaleX = 1f - 0.045f * overlayProgress
+                    scaleY = 1f - 0.045f * overlayProgress
+                    translationY = -12.dp.toPx() * overlayProgress
+                    shape = RoundedCornerShape((20 * overlayProgress).dp)
+                    clip = true
+                }
+            }
+
+        Box(modifier = backgroundModifier) {
+            when (windowClass) {
+                WindowClass.Compact -> Column(Modifier.fillMaxSize()) {
+                    Box(Modifier.weight(1f)) { sharedContent(true) }
+                    if (playerState.currentTrack != null) {
+                        MiniPlayer(
+                            playerState = playerState,
+                            onTogglePlay = onTogglePlay,
+                            onPrevious = onPrevious,
+                            onNext = onNext,
+                            onOpenNowPlaying = { showNowPlaying = true },
+                            compact = true,
+                        )
+                    }
+                    BottomNavigationBar(destination, handleDestination)
+                }
+                WindowClass.Medium -> Row(Modifier.fillMaxSize()) {
+                    SideNavigationRail(destination, handleDestination)
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
+                        Box(Modifier.weight(1f)) { sharedContent(false) }
+                        if (playerState.currentTrack != null) {
+                            MiniPlayer(
+                                playerState = playerState,
+                                onTogglePlay = onTogglePlay,
+                                onPrevious = onPrevious,
+                                onNext = onNext,
+                                onOpenNowPlaying = { showNowPlaying = true },
+                                compact = false,
+                            )
+                        }
+                    }
+                }
+                WindowClass.Expanded -> Row(Modifier.fillMaxSize()) {
+                    DesktopSidebar(
+                        destination = destination,
+                        onDestinationChange = handleDestination,
+                        themeMode = themeMode,
+                        onThemeModeChange = onThemeModeChange,
+                    )
+                    Column(Modifier.weight(1f).fillMaxHeight()) {
+                        Box(Modifier.weight(1f)) { sharedContent(false) }
+                        if (playerState.currentTrack != null) {
+                            MiniPlayer(
+                                playerState = playerState,
+                                onTogglePlay = onTogglePlay,
+                                onPrevious = onPrevious,
+                                onNext = onNext,
+                                onOpenNowPlaying = { showNowPlaying = true },
+                                compact = false,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (overlayProgress > 0.001f) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.52f * overlayProgress))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { showNowPlaying = false },
+                    )
+            )
+        }
+
         AnimatedVisibility(
             visible = isNowPlayingVisible,
             enter = if (reducedMotion) {
                 fadeIn(ResonanceMotionTokens.PageFadeInSpec)
             } else {
                 slideInVertically(
-                    animationSpec = ResonanceMotionTokens.DetailSlideSpec,
+                    animationSpec = spring(stiffness = 360f, dampingRatio = 0.94f),
                     initialOffsetY = { fullHeight -> fullHeight },
-                ) + fadeIn(ResonanceMotionTokens.PageFadeInSpec)
+                ) + fadeIn(tween(220))
             },
             exit = if (reducedMotion) {
                 fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
             } else {
                 slideOutVertically(
-                    animationSpec = ResonanceMotionTokens.DetailSlideSpec,
+                    animationSpec = spring(stiffness = 400f, dampingRatio = 1.0f),
                     targetOffsetY = { fullHeight -> fullHeight },
-                ) + fadeOut(ResonanceMotionTokens.PageFadeOutSpec)
+                ) + fadeOut(tween(180))
             },
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -2574,44 +2612,133 @@ private fun MiniPlayer(
                 }
 
                 if (!compact) {
-                    IconButton(onClick = onPrevious) {
-                        Icon(Icons.Default.SkipPrevious, contentDescription = "上一首", tint = ResonanceColors.Muted)
-                    }
-                }
-
-                // 水灵灵的弹性大播放键
-                FilledIconButton(
-                    onClick = onTogglePlay,
-                    interactionSource = playInteraction,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .graphicsLayer {
-                            scaleX = playButtonScale
-                            scaleY = playButtonScale
-                        }
-                        .resonancePressable(playInteraction, pressedScale = 0.88f)
-                        .shadow(
-                            elevation = 4.dp,
-                            shape = CircleShape,
-                            spotColor = ResonanceColors.Primary.copy(alpha = 0.5f),
-                        ),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = ResonanceColors.Primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                    ),
-                ) {
-                    Icon(
-                        if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "暂停" else "播放",
-                        modifier = Modifier.size(22.dp),
+                    TactileMiniSkipButton(
+                        icon = Icons.Default.SkipPrevious,
+                        contentDescription = "上一首",
+                        onClick = onPrevious,
                     )
+                    Spacer(Modifier.width(6.dp))
                 }
 
-                IconButton(onClick = onNext) {
-                    Icon(Icons.Default.SkipNext, contentDescription = "下一首", tint = ResonanceColors.Muted)
-                }
+                TactileMiniPlayButton(
+                    isPlaying = isPlaying,
+                    onClick = onTogglePlay,
+                )
+
+                Spacer(Modifier.width(6.dp))
+
+                TactileMiniSkipButton(
+                    icon = Icons.Default.SkipNext,
+                    contentDescription = "下一首",
+                    onClick = onNext,
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun TactileMiniPlayButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "miniPlayScale",
+    )
+
+    Box(
+        modifier = Modifier
+            .size(46.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(
+                elevation = 8.dp,
+                shape = CircleShape,
+                spotColor = ResonanceColors.Primary.copy(alpha = 0.50f),
+            )
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        ResonanceColors.PrimaryGlow,
+                        ResonanceColors.Primary,
+                        ResonanceColors.Positive,
+                    )
+                )
+            )
+            .border(
+                width = 1.5.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.60f),
+                        Color.White.copy(alpha = 0.15f),
+                        Color.Transparent,
+                    )
+                ),
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = Color.White.copy(alpha = 0.3f), bounded = true),
+                onClick = onClick,
+                role = Role.Button,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+            contentDescription = if (isPlaying) "暂停" else "播放",
+            tint = Color.White,
+            modifier = Modifier.size(23.dp),
+        )
+    }
+}
+
+@Composable
+private fun TactileMiniSkipButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.89f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "miniSkipScale",
+    )
+
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(2.dp, CircleShape, spotColor = Color.Black.copy(alpha = 0.25f))
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(
+                1.dp,
+                Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.28f), Color.White.copy(alpha = 0.06f))
+                ),
+                CircleShape
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
+                onClick = onClick,
+                role = Role.Button,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = ResonanceColors.TextPrimary,
+            modifier = Modifier.size(19.dp),
+        )
     }
 }
 

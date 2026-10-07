@@ -17,7 +17,17 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.ripple
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceMotionTokens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -201,11 +211,30 @@ internal fun NowPlayingOverlay(
     ResonanceBackHandler(enabled = true, onBack = onDismiss)
 
     Surface(
-        modifier = modifier.fillMaxSize().clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null,
-            onClick = {},
-        ),
+        modifier = modifier
+            .fillMaxSize()
+            .shadow(
+                elevation = 28.dp,
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                spotColor = Color.Black.copy(alpha = 0.50f),
+            )
+            .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.22f),
+                        Color.White.copy(alpha = 0.05f),
+                        Color.Transparent,
+                    )
+                ),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {},
+            ),
         color = ResonanceColors.Canvas,
     ) {
         val glassState = rememberHazeState()
@@ -372,6 +401,73 @@ private fun NowPlayingBackdrop(seed: Int, isPlaying: Boolean, modifier: Modifier
 }
 
 @Composable
+private fun TactileTopBarButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = ResonanceColors.TextPrimary,
+    glowColor: Color? = null,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.89f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "topBtnScale",
+    )
+
+    Box(
+        modifier = modifier
+            .size(40.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .then(
+                if (glowColor != null) {
+                    Modifier.shadow(elevation = 6.dp, shape = CircleShape, spotColor = glowColor)
+                } else {
+                    Modifier.shadow(elevation = 3.dp, shape = CircleShape, spotColor = Color.Black.copy(alpha = 0.22f))
+                }
+            )
+            .clip(CircleShape)
+            .background(
+                if (glowColor != null) {
+                    glowColor.copy(alpha = 0.16f)
+                } else {
+                    Color.White.copy(alpha = 0.08f)
+                }
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    if (glowColor != null) {
+                        listOf(glowColor.copy(alpha = 0.70f), glowColor.copy(alpha = 0.25f))
+                    } else {
+                        listOf(Color.White.copy(alpha = 0.26f), Color.White.copy(alpha = 0.06f))
+                    }
+                ),
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
+                onClick = onClick,
+                role = Role.Button,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = tint,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
 private fun NowPlayingTopBar(
     track: Track,
     playerState: PlayerState,
@@ -407,48 +503,83 @@ private fun NowPlayingTopBar(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 2.dp, bottom = 4.dp),
+                .padding(top = 4.dp, bottom = 6.dp),
             contentAlignment = Alignment.Center,
         ) {
             Box(
                 modifier = Modifier
-                    .width(36.dp)
-                    .height(4.dp)
+                    .width(42.dp)
+                    .height(4.5.dp)
                     .clip(CircleShape)
-                    .background(ResonanceColors.GlassBorder.copy(alpha = 0.6f))
+                    .background(Color.White.copy(alpha = 0.40f))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.60f), CircleShape)
             )
         }
-        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-            AccessibleIconButton("关闭正在播放", onClick = onDismiss) {
-                Icon(Icons.Default.KeyboardArrowDown, "关闭正在播放", tint = ResonanceColors.TextPrimary)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TactileTopBarButton(
+                icon = Icons.Default.KeyboardArrowDown,
+                contentDescription = "关闭正在播放",
+                onClick = onDismiss,
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = "正在播放",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = ResonanceColors.Muted,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    text = track.album.ifBlank { "本地曲目" },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = ResonanceColors.Dim,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("正在播放", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
-            Text(track.album.ifBlank { "本地曲目" }, style = MaterialTheme.typography.bodySmall,
-                color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        AccessibleIconButton(if (track.isFavorite) "取消收藏" else "收藏", onClick = { onToggleFavorite(track) }) {
-            Icon(if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                if (track.isFavorite) "取消收藏" else "收藏", tint = if (track.isFavorite) ResonanceColors.Primary else ResonanceColors.Muted)
-        }
-        Box {
-            AccessibleIconButton("播放选项", onClick = { menuExpanded = true }) { Icon(Icons.Default.MoreVert, "播放选项", tint = ResonanceColors.Muted) }
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                if (onOpenSleepTimer != null) DropdownMenuItem(text = { Text("睡眠定时器") },
-                    onClick = { menuExpanded = false; onOpenSleepTimer() })
-                if (onToggleFloatingLyrics != null) DropdownMenuItem(
-                    text = { Text(if (floatingLyricsEnabled) "关闭桌面歌词" else "开启桌面歌词") },
-                    onClick = { menuExpanded = false; onToggleFloatingLyrics() })
-                if (!track.sourceUri.isNullOrBlank() && onDeleteLocalTrack != null) DropdownMenuItem(
-                    text = { Text("删除本地音频", color = MaterialTheme.colorScheme.error) },
-                    onClick = { menuExpanded = false; onDeleteLocalTrack(track) })
-                if (onOpenSleepTimer == null && onToggleFloatingLyrics == null && onDeleteLocalTrack == null) {
-                    DropdownMenuItem(text = { Text("本地音乐播放") }, onClick = { menuExpanded = false }, enabled = false)
+            TactileTopBarButton(
+                icon = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                contentDescription = if (track.isFavorite) "取消收藏" else "收藏",
+                onClick = { onToggleFavorite(track) },
+                tint = if (track.isFavorite) Color(0xFFFF4766) else ResonanceColors.Muted,
+                glowColor = if (track.isFavorite) Color(0xFFFF4766).copy(alpha = 0.45f) else null,
+            )
+            Spacer(Modifier.width(8.dp))
+            Box {
+                TactileTopBarButton(
+                    icon = Icons.Default.MoreVert,
+                    contentDescription = "播放选项",
+                    onClick = { menuExpanded = true },
+                    tint = ResonanceColors.Muted,
+                )
+                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    if (onOpenSleepTimer != null) DropdownMenuItem(
+                        text = { Text("睡眠定时器") },
+                        onClick = { menuExpanded = false; onOpenSleepTimer() },
+                    )
+                    if (onToggleFloatingLyrics != null) DropdownMenuItem(
+                        text = { Text(if (floatingLyricsEnabled) "关闭桌面歌词" else "开启桌面歌词") },
+                        onClick = { menuExpanded = false; onToggleFloatingLyrics() },
+                    )
+                    if (!track.sourceUri.isNullOrBlank() && onDeleteLocalTrack != null) DropdownMenuItem(
+                        text = { Text("删除本地音频", color = MaterialTheme.colorScheme.error) },
+                        onClick = { menuExpanded = false; onDeleteLocalTrack(track) },
+                    )
+                    if (onOpenSleepTimer == null && onToggleFloatingLyrics == null && onDeleteLocalTrack == null) {
+                        DropdownMenuItem(text = { Text("本地音乐播放") }, onClick = { menuExpanded = false }, enabled = false)
+                    }
                 }
             }
         }
     }
-}
 }
 
 /** 底部磨砂浮动胶囊页签切换（封面 / 歌词 / 队列）。 */
@@ -856,32 +987,409 @@ private fun TrackIdentity(track: Track) {
 }
 
 @Composable
-private fun PlaybackProgress(track: Track, progress: Float, onSeek: (Float) -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
-        Slider(
-            value = progress.coerceIn(0f, 1f),
-            onValueChange = onSeek,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { contentDescription = "播放进度" },
-            colors = SliderDefaults.colors(
-                thumbColor = ResonanceColors.Primary,
-                activeTrackColor = ResonanceColors.Primary,
-                inactiveTrackColor = ResonanceColors.DividerStrong,
-            ),
-        )
+private fun ExquisitePlaybackScrubber(
+    track: Track,
+    progress: Float,
+    onSeek: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragFraction by remember { mutableFloatStateOf(0f) }
+    val currentProgress = if (isDragging) dragFraction else progress.coerceIn(0f, 1f)
+
+    val trackHeight by animateDpAsState(
+        targetValue = if (isDragging) 5.dp else 3.5.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "scrubTrackH",
+    )
+    val knobSize by animateDpAsState(
+        targetValue = if (isDragging) 14.dp else 8.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "scrubKnobSize",
+    )
+    val glowAlpha by animateFloatAsState(
+        targetValue = if (isDragging) 0.50f else 0f,
+        animationSpec = tween(180),
+        label = "scrubGlowAlpha",
+    )
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(34.dp)
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                        onSeek(fraction)
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragStart = { offset ->
+                            isDragging = true
+                            val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                            dragFraction = fraction
+                            onSeek(fraction)
+                        },
+                        onDragEnd = {
+                            isDragging = false
+                            onSeek(dragFraction)
+                        },
+                        onDragCancel = {
+                            isDragging = false
+                        },
+                        onHorizontalDrag = { change, _ ->
+                            change.consume()
+                            val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                            dragFraction = fraction
+                            onSeek(fraction)
+                        }
+                    )
+                },
+            contentAlignment = Alignment.CenterStart,
+        ) {
+            val activeWidth = maxWidth * currentProgress
+
+            // 1. Inactive Track Rail
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(trackHeight)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.14f))
+            )
+
+            // 2. Active Progress Track with luminous gradient
+            Box(
+                modifier = Modifier
+                    .width(activeWidth)
+                    .height(trackHeight)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                ResonanceColors.Primary.copy(alpha = 0.85f),
+                                ResonanceColors.PrimaryGlow,
+                                ResonanceColors.PositiveGlow,
+                            )
+                        )
+                    )
+            )
+
+            // 3. Exquisite Jewel Knob
+            val knobOffset = (maxWidth - knobSize) * currentProgress
+            Box(
+                modifier = Modifier
+                    .offset(x = knobOffset)
+                    .size(knobSize),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (glowAlpha > 0.01f) {
+                    Box(
+                        modifier = Modifier
+                            .size(knobSize + 8.dp)
+                            .clip(CircleShape)
+                            .background(ResonanceColors.Primary.copy(alpha = glowAlpha))
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .size(knobSize)
+                        .shadow(
+                            elevation = if (isDragging) 6.dp else 2.5.dp,
+                            shape = CircleShape,
+                            spotColor = ResonanceColors.Primary.copy(alpha = 0.45f),
+                        )
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .border(
+                            width = if (isDragging) 2.dp else 1.5.dp,
+                            color = ResonanceColors.Primary,
+                            shape = CircleShape,
+                        )
+                )
+            }
+        }
+
+        // Timestamps below
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 6.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                formatPlaybackPosition(track.durationText, progress),
-                style = MaterialTheme.typography.labelMedium,
-                color = ResonanceColors.Muted,
+                text = formatPlaybackPosition(track.durationText, currentProgress),
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = if (isDragging) FontWeight.Bold else FontWeight.Medium,
+                    fontSize = 11.5.sp,
+                    letterSpacing = 0.3.sp,
+                    fontFeatureSettings = "tnum",
+                ),
+                color = if (isDragging) ResonanceColors.Primary else ResonanceColors.TextPrimary.copy(alpha = 0.72f),
             )
             Text(
-                track.durationText,
-                style = MaterialTheme.typography.labelMedium,
-                color = ResonanceColors.Dim,
+                text = track.durationText,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.5.sp,
+                    letterSpacing = 0.3.sp,
+                    fontFeatureSettings = "tnum",
+                ),
+                color = ResonanceColors.Dimmer,
             )
+        }
+    }
+}
+
+@Composable
+private fun PlaybackProgress(track: Track, progress: Float, onSeek: (Float) -> Unit) {
+    ExquisitePlaybackScrubber(track, progress, onSeek)
+}
+
+@Composable
+private fun TactilePlayPauseButton(
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.88f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "playPressScale",
+    )
+
+    Box(
+        modifier = modifier
+            .size(68.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .shadow(
+                elevation = 12.dp,
+                shape = CircleShape,
+                spotColor = ResonanceColors.Primary.copy(alpha = 0.50f),
+                ambientColor = ResonanceColors.Shadow.copy(alpha = 0.35f),
+            )
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        ResonanceColors.PrimaryGlow,
+                        ResonanceColors.Primary,
+                        ResonanceColors.Positive,
+                    )
+                )
+            )
+            .border(
+                width = 1.5.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.65f),
+                        Color.White.copy(alpha = 0.18f),
+                        Color.Transparent,
+                    )
+                ),
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = Color.White.copy(alpha = 0.3f), bounded = true),
+                onClick = onClick,
+                role = Role.Button,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth(0.65f)
+                .height(18.dp)
+                .clip(RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp))
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.28f),
+                            Color.Transparent,
+                        )
+                    )
+                )
+        )
+        Icon(
+            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+            contentDescription = if (isPlaying) "暂停" else "播放",
+            tint = Color.White,
+            modifier = Modifier.size(34.dp),
+        )
+    }
+}
+
+@Composable
+private fun TactileSkipButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.89f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "skipPressScale",
+    )
+
+    Box(
+        modifier = modifier
+            .size(52.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .shadow(
+                elevation = 6.dp,
+                shape = CircleShape,
+                spotColor = Color.Black.copy(alpha = 0.30f),
+            )
+            .clip(CircleShape)
+            .background(
+                Brush.radialGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.15f),
+                        Color.White.copy(alpha = 0.05f),
+                    )
+                )
+            )
+            .border(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.38f),
+                        Color.White.copy(alpha = 0.08f),
+                    )
+                ),
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
+                onClick = onClick,
+                role = Role.Button,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (isPressed) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+            modifier = Modifier.size(28.dp),
+        )
+    }
+}
+
+@Composable
+private fun TactileSecondaryButton(
+    icon: ImageVector,
+    contentDescription: String,
+    isActive: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val isPressed by interaction.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.90f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow),
+        label = "secondaryPressScale",
+    )
+
+    Box(
+        modifier = modifier
+            .size(44.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
+            .then(
+                if (isActive) {
+                    Modifier.shadow(
+                        elevation = 6.dp,
+                        shape = CircleShape,
+                        spotColor = ResonanceColors.Primary.copy(alpha = 0.40f),
+                    )
+                } else Modifier
+            )
+            .clip(CircleShape)
+            .background(
+                if (isActive) {
+                    Brush.linearGradient(
+                        listOf(
+                            ResonanceColors.PrimarySoft,
+                            ResonanceColors.PrimarySoft.copy(alpha = 0.35f),
+                        )
+                    )
+                } else {
+                    Brush.radialGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.07f),
+                            Color.White.copy(alpha = 0.02f),
+                        )
+                    )
+                }
+            )
+            .border(
+                width = 1.dp,
+                brush = if (isActive) {
+                    Brush.verticalGradient(
+                        listOf(
+                            ResonanceColors.Primary.copy(alpha = 0.70f),
+                            ResonanceColors.Primary.copy(alpha = 0.30f),
+                        )
+                    )
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.18f),
+                            Color.White.copy(alpha = 0.05f),
+                        )
+                    )
+                },
+                shape = CircleShape,
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = Color.White.copy(alpha = 0.2f), bounded = true),
+                onClick = onClick,
+                role = Role.Button,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (isActive) ResonanceColors.Primary else ResonanceColors.Dim,
+                modifier = Modifier.size(20.dp),
+            )
+            if (isActive) {
+                Spacer(Modifier.height(2.dp))
+                Box(
+                    modifier = Modifier
+                        .size(3.5.dp)
+                        .clip(CircleShape)
+                        .background(ResonanceColors.Primary)
+                )
+            }
         }
     }
 }
@@ -895,81 +1403,133 @@ private fun PlaybackControls(
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
 ) {
-    val playInteraction = remember { MutableInteractionSource() }
-    val isPlaying = playerState.isPlaying
-    val playPopScale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = resonanceSpring(),
-        label = "playPopScale",
-    )
-
     Row(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 76.dp)
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onToggleShuffle, modifier = Modifier.size(48.dp)) {
-            Icon(
-                Icons.Default.Shuffle,
-                contentDescription = if (playerState.shuffleEnabled) "关闭随机播放" else "开启随机播放",
-                tint = if (playerState.shuffleEnabled) ResonanceColors.Primary else ResonanceColors.Dim,
-                modifier = Modifier.size(21.dp),
-            )
-        }
-        IconButton(onClick = onPrevious, modifier = Modifier.size(52.dp)) {
-            Icon(
-                Icons.Default.SkipPrevious,
-                contentDescription = "上一首",
-                tint = ResonanceColors.TextPrimary,
-                modifier = Modifier.size(32.dp),
-            )
-        }
-        FilledIconButton(
+        TactileSecondaryButton(
+            icon = Icons.Default.Shuffle,
+            contentDescription = if (playerState.shuffleEnabled) "关闭随机播放" else "开启随机播放",
+            isActive = playerState.shuffleEnabled,
+            onClick = onToggleShuffle,
+        )
+        TactileSkipButton(
+            icon = Icons.Default.SkipPrevious,
+            contentDescription = "上一首",
+            onClick = onPrevious,
+        )
+        TactilePlayPauseButton(
+            isPlaying = playerState.isPlaying,
             onClick = onTogglePlay,
-            modifier = Modifier
-                .size(66.dp)
-                .graphicsLayer {
-                    scaleX = playPopScale
-                    scaleY = playPopScale
+        )
+        TactileSkipButton(
+            icon = Icons.Default.SkipNext,
+            contentDescription = "下一首",
+            onClick = onNext,
+        )
+        TactileSecondaryButton(
+            icon = if (playerState.repeatMode == RepeatMode.One) Icons.Default.RepeatOne else Icons.Default.Repeat,
+            contentDescription = when (playerState.repeatMode) {
+                RepeatMode.Off -> "开启列表循环"
+                RepeatMode.All -> "开启单曲循环"
+                RepeatMode.One -> "关闭循环"
+            },
+            isActive = playerState.repeatMode != RepeatMode.Off,
+            onClick = onCycleRepeat,
+        )
+    }
+}
+
+@Composable
+private fun ExquisiteVolumeSlider(
+    volume: Float,
+    onVolumeChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var isDragging by remember { mutableStateOf(false) }
+    var dragVolume by remember { mutableFloatStateOf(volume) }
+    val displayedVolume = if (isDragging) dragVolume else volume.coerceIn(0f, 1f)
+
+    val trackHeight by animateDpAsState(if (isDragging) 4.5.dp else 3.dp, label = "volTrackH")
+    val knobSize by animateDpAsState(if (isDragging) 12.dp else 7.dp, label = "volKnobSize")
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(28.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                    onVolumeChange(fraction)
                 }
-                .resonancePressable(playInteraction, pressedScale = 0.88f)
-                .shadow(
-                    elevation = 5.dp,
-                    shape = CircleShape,
-                    spotColor = ResonanceColors.Shadow.copy(alpha = 0.12f),
-                ),
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = ResonanceColors.Primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ),
-            interactionSource = playInteraction,
-        ) {
-            Icon(
-                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "暂停" else "播放",
-                modifier = Modifier.size(34.dp),
-            )
-        }
-        IconButton(onClick = onNext, modifier = Modifier.size(52.dp)) {
-            Icon(
-                Icons.Default.SkipNext,
-                contentDescription = "下一首",
-                tint = ResonanceColors.TextPrimary,
-                modifier = Modifier.size(32.dp),
-            )
-        }
-        IconButton(onClick = onCycleRepeat, modifier = Modifier.size(48.dp)) {
-            Icon(
-                if (playerState.repeatMode == RepeatMode.One) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                contentDescription = when (playerState.repeatMode) {
-                    RepeatMode.Off -> "开启列表循环"
-                    RepeatMode.All -> "开启单曲循环"
-                    RepeatMode.One -> "关闭循环"
-                },
-                tint = if (playerState.repeatMode == RepeatMode.Off) ResonanceColors.Dim else ResonanceColors.Primary,
-                modifier = Modifier.size(21.dp),
-            )
-        }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        isDragging = true
+                        val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                        dragVolume = fraction
+                        onVolumeChange(fraction)
+                    },
+                    onDragEnd = {
+                        isDragging = false
+                        onVolumeChange(dragVolume)
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                    },
+                    onHorizontalDrag = { change, _ ->
+                        change.consume()
+                        val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                        dragVolume = fraction
+                        onVolumeChange(fraction)
+                    }
+                )
+            },
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val filledWidth = maxWidth * displayedVolume
+
+        // Track background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(trackHeight)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.12f))
+        )
+
+        // Active Track
+        Box(
+            modifier = Modifier
+                .width(filledWidth)
+                .height(trackHeight)
+                .clip(CircleShape)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            ResonanceColors.TextPrimary.copy(alpha = 0.85f),
+                            ResonanceColors.TextPrimary,
+                        )
+                    )
+                )
+        )
+
+        // Knob
+        val knobOffset = (maxWidth - knobSize) * displayedVolume
+        Box(
+            modifier = Modifier
+                .offset(x = knobOffset)
+                .size(knobSize)
+                .shadow(2.dp, CircleShape)
+                .clip(CircleShape)
+                .background(Color.White)
+                .border(1.dp, ResonanceColors.CanvasElevated, CircleShape)
+        )
     }
 }
 
@@ -1007,7 +1567,13 @@ private fun VolumeAndSpeedRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
+            TactileTopBarButton(
+                icon = when {
+                    volume <= 0.01f -> Icons.AutoMirrored.Filled.VolumeOff
+                    volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
+                    else -> Icons.AutoMirrored.Filled.VolumeUp
+                },
+                contentDescription = "音量调节与静音",
                 onClick = {
                     if (volume > 0.01f) {
                         previousVolume = volume
@@ -1016,54 +1582,62 @@ private fun VolumeAndSpeedRow(
                         onVolumeChange(if (previousVolume > 0.05f) previousVolume else 1f)
                     }
                 },
-                modifier = Modifier.size(32.dp),
-            ) {
-                Icon(
-                    when {
-                        volume <= 0.01f -> Icons.AutoMirrored.Filled.VolumeOff
-                        volume < 0.5f -> Icons.AutoMirrored.Filled.VolumeDown
-                        else -> Icons.AutoMirrored.Filled.VolumeUp
-                    },
-                    contentDescription = "音量调节与静音",
-                    tint = if (volume <= 0.01f) ResonanceColors.Dim else ResonanceColors.TextPrimary,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-
-            Slider(
-                value = volume.coerceIn(0f, 1f),
-                onValueChange = onVolumeChange,
-                modifier = Modifier.weight(1f).heightIn(min = 48.dp).semantics { contentDescription = "音量" },
-                colors = SliderDefaults.colors(
-                    thumbColor = ResonanceColors.TextPrimary,
-                    activeTrackColor = ResonanceColors.TextPrimary,
-                    inactiveTrackColor = ResonanceColors.DividerStrong,
-                ),
+                tint = if (volume <= 0.01f) ResonanceColors.Dim else ResonanceColors.TextPrimary,
+                modifier = Modifier.size(34.dp),
             )
 
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(8.dp))
+
+            ExquisiteVolumeSlider(
+                volume = volume,
+                onVolumeChange = onVolumeChange,
+                modifier = Modifier.weight(1f),
+            )
+
+            Spacer(Modifier.width(8.dp))
 
             Text(
                 text = "${(volume.coerceIn(0f, 1f) * 100).toInt()}%",
-                style = MaterialTheme.typography.labelSmall,
+                style = TextStyle(
+                    fontFamily = FontFamily.SansSerif,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.sp,
+                    fontFeatureSettings = "tnum",
+                ),
                 color = ResonanceColors.Dim,
-                modifier = Modifier.width(36.dp),
+                modifier = Modifier.width(34.dp),
                 textAlign = TextAlign.End,
             )
 
             Spacer(Modifier.width(8.dp))
 
             Box {
-                TextButton(
-                    onClick = { showSpeedMenu = true },
-                    modifier = Modifier.heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                val speedInteraction = remember { MutableInteractionSource() }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .height(30.dp)
+                        .clip(CircleShape)
+                        .background(if (speed != 1.0f) ResonanceColors.PrimarySoft else Color.White.copy(alpha = 0.07f))
+                        .border(
+                            1.dp,
+                            if (speed != 1.0f) ResonanceColors.Primary.copy(alpha = 0.5f) else Color.White.copy(alpha = 0.15f),
+                            CircleShape
+                        )
+                        .resonancePressable(speedInteraction, pressedScale = 0.92f)
+                        .clickable(interactionSource = speedInteraction, indication = null) { showSpeedMenu = true }
+                        .padding(horizontal = 9.dp),
                 ) {
-                    Icon(Icons.Default.Speed, contentDescription = null, tint = if (speed != 1.0f) ResonanceColors.Primary else ResonanceColors.Dim, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.Speed,
+                        contentDescription = null,
+                        tint = if (speed != 1.0f) ResonanceColors.Primary else ResonanceColors.Dim,
+                        modifier = Modifier.size(13.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
                     Text(
                         text = "${if (speed == 1.0f) "1.0" else speed}x",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = if (speed != 1.0f) ResonanceColors.Primary else ResonanceColors.TextPrimary,
                     )
@@ -1087,19 +1661,16 @@ private fun VolumeAndSpeedRow(
                 }
             }
 
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(6.dp))
 
-            IconButton(
+            TactileTopBarButton(
+                icon = Icons.Default.Tune,
+                contentDescription = "响度增益与专属校准模式",
                 onClick = { showCalibration = !showCalibration },
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    Icons.Default.Tune,
-                    contentDescription = "响度增益与专属校准模式",
-                    tint = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) ResonanceColors.Primary else ResonanceColors.Dim,
-                    modifier = Modifier.size(19.dp),
-                )
-            }
+                tint = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) ResonanceColors.Primary else ResonanceColors.Dim,
+                glowColor = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) ResonanceColors.Primary.copy(alpha = 0.45f) else null,
+                modifier = Modifier.size(34.dp),
+            )
         }
 
         AnimatedVisibility(

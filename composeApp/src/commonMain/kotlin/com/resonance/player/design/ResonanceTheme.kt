@@ -229,7 +229,7 @@ fun Modifier.resonancePressable(
 ): Modifier = composed {
     val pressed by interactionSource.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (LocalReducedMotion.current) 1f else if (pressed) pressedScale.coerceAtLeast(0.96f) else restingScale,
+        targetValue = if (LocalReducedMotion.current) 1f else if (pressed) pressedScale.coerceIn(0.80f, 1f) else restingScale,
         animationSpec = resonanceSpring(),
         label = "resonancePressScale",
     )
