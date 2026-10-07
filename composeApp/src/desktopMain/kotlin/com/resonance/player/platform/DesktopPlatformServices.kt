@@ -22,8 +22,11 @@ import javafx.application.Platform
 import javafx.scene.media.Media
 import javafx.scene.media.MediaPlayer
 import kotlinx.coroutines.Dispatchers
+import com.resonance.player.model.CalibrationStatus
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.withContext
 import org.jaudiotagger.audio.AudioFileIO
@@ -41,7 +44,6 @@ import javax.swing.SwingUtilities
 import com.resonance.player.model.*
 import com.resonance.player.weather.AppearanceStorage
 import com.resonance.player.weather.WeatherClient
-import kotlinx.coroutines.flow.MutableStateFlow
 
 class DesktopPlatformServices : PlatformServices {
     override val foreground = MutableStateFlow(true)
@@ -94,6 +96,59 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun setTrackGain(gainDb: Float) = player.setTrackGain(gainDb)
+
+    private val _desktopCalibrationStatus = MutableStateFlow(CalibrationStatus())
+    override val calibrationStatus: StateFlow<CalibrationStatus> = _desktopCalibrationStatus
+
+    override fun startVolumeCalibration(trackId: String): Boolean {
+        _desktopCalibrationStatus.value = CalibrationStatus(
+            isActive = true,
+            trackId = trackId,
+            baseVolume = 10,
+            currentVolume = 10,
+            maxVolume = 15,
+            deltaDb = 0f,
+        )
+        return true
+    }
+
+    override fun finishVolumeCalibration(trackId: String): Float? {
+        val cur = _desktopCalibrationStatus.value
+        _desktopCalibrationStatus.value = CalibrationStatus(isActive = false)
+        return cur.deltaDb
+    }
+
+    override fun cancelVolumeCalibration() {
+        _desktopCalibrationStatus.value = CalibrationStatus(isActive = false)
+    }
+
+    override suspend fun loadTrackCalibratedGain(trackId: String): Float? = withContext(Dispatchers.IO) {
+        library.readUiValue("gain.calibrated.$trackId")?.toFloatOrNull()
+    }
+
+    override suspend fun saveTrackCalibratedGain(trackId: String, gainDb: Float): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("gain.calibrated.$trackId", gainDb.coerceIn(-18f, 18f).toString())
+    }
+
+    override suspend fun clearTrackCalibratedGain(trackId: String): Unit = withContext(Dispatchers.IO) {
+        library.removeUiValue("gain.calibrated.$trackId")
+    }
+
+    override suspend fun isAutoLoudnessEnabled(): Boolean = withContext(Dispatchers.IO) {
+        library.readUiValue("gain.auto_enabled")?.toBooleanStrictOrNull() ?: true
+    }
+
+    override suspend fun setAutoLoudnessEnabled(enabled: Boolean): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("gain.auto_enabled", enabled.toString())
+    }
+
+    override suspend fun loadAutoLoudnessGain(track: Track): Float? = withContext(Dispatchers.IO) {
+        library.readUiValue("gain.auto.${track.id}")?.toFloatOrNull()
+    }
+
+    override suspend fun analyzeAndCacheLoudnessGain(track: Track): Float = withContext(Dispatchers.IO) {
+        0.0f
+    }
     override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
     override suspend fun fetchWeather(location: WeatherLocation, previous: WeatherPalette) = WeatherClient.current(location, previous)
     override suspend fun weatherLocation(requestPermission: Boolean): WeatherLocation? = WindowsWeatherLocation.current()
@@ -596,6 +651,15 @@ internal class DesktopLibraryStore {
             if (Files.isRegularFile(uiStateFile)) Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load)
         }
         properties.setProperty(key, value)
+        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
+    }
+    @Synchronized
+    fun removeUiValue(key: String) {
+        Files.createDirectories(appDirectory)
+        val properties = Properties().apply {
+            if (Files.isRegularFile(uiStateFile)) Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load)
+        }
+        properties.remove(key)
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
     val artworkDirectory: Path = appDirectory.resolve("artwork")

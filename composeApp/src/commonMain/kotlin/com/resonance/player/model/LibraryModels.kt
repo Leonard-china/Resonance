@@ -1,6 +1,6 @@
 package com.resonance.player.model
 
-const val APP_VERSION = "0.3.1"
+const val APP_VERSION = "0.3.2"
 
 data class Track(
     val id: String,
@@ -122,6 +122,15 @@ enum class SleepTimerOption(val label: String, val minutes: Int?) {
     EndOfTrack("播完当前歌曲停止", null),
 }
 
+data class CalibrationStatus(
+    val isActive: Boolean = false,
+    val trackId: String? = null,
+    val baseVolume: Int = 0,
+    val currentVolume: Int = 0,
+    val maxVolume: Int = 15,
+    val deltaDb: Float = 0.0f,
+)
+
 data class PlayerState(
     val currentTrack: Track? = null,
     val isPlaying: Boolean = false,
@@ -133,6 +142,9 @@ data class PlayerState(
     val sleepTimerOption: SleepTimerOption = SleepTimerOption.Off,
     val sleepTimerRemainingSeconds: Int? = null,
     val trackGainDb: Float = 0.0f,
+    val autoLoudnessEnabled: Boolean = true,
+    val calibrationStatus: CalibrationStatus = CalibrationStatus(),
+    val isCurrentTrackCalibrated: Boolean = false,
 )
 
 data class LyricLine(

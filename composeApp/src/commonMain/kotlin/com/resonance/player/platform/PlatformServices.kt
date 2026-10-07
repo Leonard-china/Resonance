@@ -11,7 +11,10 @@ import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.Track
+import com.resonance.player.model.CalibrationStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 interface PlatformServices {
     val playbackEnded: Flow<Unit>
@@ -85,5 +88,16 @@ interface PlatformServices {
     suspend fun loadTrackGain(trackId: String): Float? = null
     suspend fun saveTrackGain(trackId: String, gainDb: Float) {}
     fun setTrackGain(gainDb: Float) {}
+    val calibrationStatus: StateFlow<CalibrationStatus> get() = MutableStateFlow(CalibrationStatus())
+    fun startVolumeCalibration(trackId: String): Boolean = false
+    fun finishVolumeCalibration(trackId: String): Float? = null
+    fun cancelVolumeCalibration() {}
+    suspend fun loadTrackCalibratedGain(trackId: String): Float? = null
+    suspend fun saveTrackCalibratedGain(trackId: String, gainDb: Float) {}
+    suspend fun clearTrackCalibratedGain(trackId: String) {}
+    suspend fun loadAutoLoudnessGain(track: Track): Float? = null
+    suspend fun analyzeAndCacheLoudnessGain(track: Track): Float = 0.0f
+    suspend fun isAutoLoudnessEnabled(): Boolean = true
+    suspend fun setAutoLoudnessEnabled(enabled: Boolean) {}
     fun close()
 }

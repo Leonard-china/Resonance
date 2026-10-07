@@ -115,14 +115,23 @@ fun App(services: PlatformServices) {
             try {
                 val playbackMode = services.loadPlaybackMode()
                 val globalVol = services.loadGlobalVolume()
+                val autoEnabled = services.isAutoLoudnessEnabled()
                 player = player.copy(
                     shuffleEnabled = playbackMode.shuffleEnabled,
                     repeatMode = playbackMode.repeatMode,
                     volume = globalVol,
+                    autoLoudnessEnabled = autoEnabled,
                 )
                 services.setPlaybackMode(playbackMode.shuffleEnabled, playbackMode.repeatMode)
                 services.setVolume(globalVol)
             } catch (_: Throwable) {}
+            launch {
+                try {
+                    services.calibrationStatus.collect { status ->
+                        player = player.copy(calibrationStatus = status)
+                    }
+                } catch (_: Throwable) {}
+            }
             try {
                 val loadedTracks = services.loadLibrary()
                 val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
@@ -184,6 +193,37 @@ fun App(services: PlatformServices) {
             is LyricsFetchResult.Unavailable -> LyricsUiState.Unavailable(result.message, result.retryable)
         }
 
+        suspend fun applyTrackGainFor(track: Track) {
+            try {
+                val calibrated = services.loadTrackCalibratedGain(track.id)
+                if (calibrated != null) {
+                    services.setTrackGain(calibrated)
+                    player = player.copy(trackGainDb = calibrated, isCurrentTrackCalibrated = true)
+                    return
+                }
+                val autoEnabled = services.isAutoLoudnessEnabled()
+                if (autoEnabled) {
+                    val cachedAuto = services.loadAutoLoudnessGain(track)
+                    if (cachedAuto != null) {
+                        services.setTrackGain(cachedAuto)
+                        player = player.copy(trackGainDb = cachedAuto, isCurrentTrackCalibrated = false)
+                    } else {
+                        services.setTrackGain(0.0f)
+                        player = player.copy(trackGainDb = 0.0f, isCurrentTrackCalibrated = false)
+                        val calculated = services.analyzeAndCacheLoudnessGain(track)
+                        if (player.currentTrack?.id == track.id) {
+                            services.setTrackGain(calculated)
+                            player = player.copy(trackGainDb = calculated, isCurrentTrackCalibrated = false)
+                        }
+                    }
+                } else {
+                    val manual = services.loadTrackGain(track.id) ?: 0.0f
+                    services.setTrackGain(manual)
+                    player = player.copy(trackGainDb = manual, isCurrentTrackCalibrated = false)
+                }
+            } catch (_: Throwable) {}
+        }
+
         fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) {
             if (track.sourceUri == null) {
                 importMessage = "本机尚未找到「${track.title}」的音频文件；扫描音乐后会自动匹配。"
@@ -200,13 +240,12 @@ fun App(services: PlatformServices) {
             player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, shuffleEnabled = shuffle)
             scope.launch {
                 try {
-                    val trackGain = services.loadTrackGain(track.id) ?: 0.0f
-                    services.setTrackGain(trackGain)
                     val trackVol = services.loadTrackVolume(track.id)
                     val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
                     val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
                     services.setVolume(targetVol)
-                    player = player.copy(volume = targetVol, trackGainDb = trackGain)
+                    player = player.copy(volume = targetVol)
+                    applyTrackGainFor(track)
                 } catch (_: Throwable) {}
             }
         }
@@ -286,13 +325,12 @@ fun App(services: PlatformServices) {
             services.activeTrackChanges.collect { trackId ->
                 playbackQueue.firstOrNull { it.id == trackId }?.let { track ->
                     try {
-                        val trackGain = services.loadTrackGain(track.id) ?: 0.0f
-                        services.setTrackGain(trackGain)
                         val trackVol = services.loadTrackVolume(track.id)
                         val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
                         val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
                         services.setVolume(targetVol)
-                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, volume = targetVol, trackGainDb = trackGain)
+                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, volume = targetVol)
+                        applyTrackGainFor(track)
                     } catch (_: Throwable) {
                         player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
                     }
@@ -450,6 +488,38 @@ fun App(services: PlatformServices) {
                                         services.saveTrackGain(curr.id, gain)
                                     }
                                 } catch (_: Throwable) {}
+                            }
+                        },
+                        onToggleAutoLoudness = {
+                            val next = !player.autoLoudnessEnabled
+                            player = player.copy(autoLoudnessEnabled = next)
+                            scope.launch {
+                                services.setAutoLoudnessEnabled(next)
+                                player.currentTrack?.let { applyTrackGainFor(it) }
+                            }
+                        },
+                        onStartCalibration = {
+                            player.currentTrack?.let { track ->
+                                services.startVolumeCalibration(track.id)
+                            }
+                        },
+                        onFinishCalibration = {
+                            player.currentTrack?.let { track ->
+                                val gain = services.finishVolumeCalibration(track.id)
+                                if (gain != null) {
+                                    player = player.copy(trackGainDb = gain, isCurrentTrackCalibrated = true)
+                                }
+                            }
+                        },
+                        onCancelCalibration = {
+                            services.cancelVolumeCalibration()
+                        },
+                        onResetCalibration = {
+                            player.currentTrack?.let { track ->
+                                scope.launch {
+                                    services.clearTrackCalibratedGain(track.id)
+                                    applyTrackGainFor(track)
+                                }
                             }
                         },
                         onCreatePlaylist = { showCreateDialog = true },

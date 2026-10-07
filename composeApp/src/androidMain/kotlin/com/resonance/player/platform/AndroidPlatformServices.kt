@@ -13,6 +13,10 @@ import android.provider.MediaStore
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.IntentSenderRequest
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.media.AudioManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.documentfile.provider.DocumentFile
@@ -32,6 +36,8 @@ import com.resonance.player.model.Playlist
 import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.Track
+import com.resonance.player.model.CalibrationStatus
+import com.resonance.player.model.durationTextToSeconds
 import com.resonance.player.lyrics.LrclibLyricsRepository
 import com.resonance.player.sync.EncryptedSyncPackage
 import com.resonance.player.sync.PlainSyncPackage
@@ -44,6 +50,8 @@ import com.arthenica.ffmpegkit.ReturnCode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
@@ -63,7 +71,6 @@ import kotlinx.coroutines.launch
 import com.resonance.player.model.*
 import com.resonance.player.weather.AppearanceStorage
 import com.resonance.player.weather.WeatherClient
-import kotlinx.coroutines.flow.MutableStateFlow
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
@@ -76,8 +83,11 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             isAppearanceLightNavigationBars = !isDark
         }
     }
-    private val foregroundObserver = LifecycleEventObserver { _, _ ->
+    private val foregroundObserver = LifecycleEventObserver { _, event ->
         foreground.value = activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+            cancelVolumeCalibration()
+        }
     }
     private var pendingLocationPermission: ((Boolean) -> Unit)? = null
     private val locationPermissionLauncher = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) {
@@ -355,12 +365,174 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
     override fun setTrackGain(gainDb: Float) {
         withPlayer { controller ->
-            val args = android.os.Bundle().apply { putFloat("gainDb", gainDb.coerceIn(-12f, 12f)) }
+            val args = android.os.Bundle().apply { putFloat("gainDb", gainDb.coerceIn(-18f, 18f)) }
             controller.sendCustomCommand(
                 androidx.media3.session.SessionCommand("SET_AUDIO_GAIN", android.os.Bundle()),
                 args,
             )
         }
+    }
+
+    private val _calibrationStatus = MutableStateFlow(CalibrationStatus())
+    override val calibrationStatus: StateFlow<CalibrationStatus> = _calibrationStatus
+    private var volumeReceiver: BroadcastReceiver? = null
+    private var calibrationBaseVol: Int = 0
+
+    override fun startVolumeCalibration(trackId: String): Boolean {
+        try {
+            val audioManager = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val baseVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+            val maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+            calibrationBaseVol = baseVol
+            _calibrationStatus.value = CalibrationStatus(
+                isActive = true,
+                trackId = trackId,
+                baseVolume = baseVol,
+                currentVolume = baseVol,
+                maxVolume = maxVol,
+                deltaDb = 0.0f,
+            )
+            runCatching {
+                volumeReceiver?.let { activity.unregisterReceiver(it) }
+            }
+            val receiver = object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    val curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+                    val ratio = curVol.toFloat() / calibrationBaseVol.toFloat()
+                    val deltaDb = if (ratio > 0f) (20.0 * Math.log10(ratio.toDouble())).toFloat().coerceIn(-18f, 18f) else -18f
+                    _calibrationStatus.value = CalibrationStatus(
+                        isActive = true,
+                        trackId = trackId,
+                        baseVolume = calibrationBaseVol,
+                        currentVolume = curVol,
+                        maxVolume = maxVol,
+                        deltaDb = deltaDb,
+                    )
+                }
+            }
+            val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+            if (Build.VERSION.SDK_INT >= 33) {
+                activity.registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED)
+            } else {
+                activity.registerReceiver(receiver, filter)
+            }
+            volumeReceiver = receiver
+            return true
+        } catch (_: Throwable) {
+            return false
+        }
+    }
+
+    override fun finishVolumeCalibration(trackId: String): Float? {
+        val cur = _calibrationStatus.value
+        if (!cur.isActive) return null
+        try {
+            runCatching { volumeReceiver?.let { activity.unregisterReceiver(it) } }
+            volumeReceiver = null
+            val audioManager = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val curVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val ratio = curVol.toFloat() / calibrationBaseVol.toFloat()
+            val deltaDb = if (ratio > 0f) (20.0 * Math.log10(ratio.toDouble())).toFloat().coerceIn(-18f, 18f) else 0f
+            runCatching {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, calibrationBaseVol, 0)
+            }
+            activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+                .edit()
+                .putFloat("gain.calibrated.$trackId", deltaDb)
+                .apply()
+            setTrackGain(deltaDb)
+            _calibrationStatus.value = CalibrationStatus(isActive = false)
+            return deltaDb
+        } catch (_: Throwable) {
+            _calibrationStatus.value = CalibrationStatus(isActive = false)
+            return null
+        }
+    }
+
+    override fun cancelVolumeCalibration() {
+        if (!_calibrationStatus.value.isActive) return
+        try {
+            runCatching { volumeReceiver?.let { activity.unregisterReceiver(it) } }
+            volumeReceiver = null
+            val audioManager = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            runCatching {
+                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, calibrationBaseVol, 0)
+            }
+        } catch (_: Throwable) {}
+        _calibrationStatus.value = CalibrationStatus(isActive = false)
+    }
+
+    override suspend fun loadTrackCalibratedGain(trackId: String): Float? = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+        val key = "gain.calibrated.$trackId"
+        if (prefs.contains(key)) prefs.getFloat(key, 0.0f) else null
+    }
+
+    override suspend fun saveTrackCalibratedGain(trackId: String, gainDb: Float): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+            .edit()
+            .putFloat("gain.calibrated.$trackId", gainDb.coerceIn(-18f, 18f))
+            .apply()
+    }
+
+    override suspend fun clearTrackCalibratedGain(trackId: String): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+            .edit()
+            .remove("gain.calibrated.$trackId")
+            .apply()
+    }
+
+    override suspend fun isAutoLoudnessEnabled(): Boolean = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+            .getBoolean("gain.auto_enabled", true)
+    }
+
+    override suspend fun setAutoLoudnessEnabled(enabled: Boolean): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean("gain.auto_enabled", enabled)
+            .apply()
+    }
+
+    override suspend fun loadAutoLoudnessGain(track: Track): Float? = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+        val key = "gain.auto.${track.id}"
+        if (prefs.contains(key)) prefs.getFloat(key, 0.0f) else null
+    }
+
+    override suspend fun analyzeAndCacheLoudnessGain(track: Track): Float = withContext(Dispatchers.IO) {
+        val prefs = activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
+        val key = "gain.auto.${track.id}"
+        if (prefs.contains(key)) return@withContext prefs.getFloat(key, 0.0f)
+
+        val uriString = track.sourceUri ?: return@withContext 0.0f
+        try {
+            val inputArg = if (uriString.startsWith("content://")) {
+                com.arthenica.ffmpegkit.FFmpegKitConfig.getSafParameterForRead(activity, Uri.parse(uriString))
+            } else {
+                Uri.parse(uriString).path ?: uriString
+            }
+            if (inputArg.isNullOrBlank()) return@withContext 0.0f
+
+            val durationSec = durationTextToSeconds(track.durationText)
+            val args = if (durationSec > 35) {
+                arrayOf("-hide_banner", "-nostdin", "-ss", "15", "-t", "20", "-i", inputArg, "-filter:a", "volumedetect", "-f", "null", "-")
+            } else {
+                arrayOf("-hide_banner", "-nostdin", "-t", "20", "-i", inputArg, "-filter:a", "volumedetect", "-f", "null", "-")
+            }
+
+            val session = FFmpegKit.executeWithArguments(args)
+            val logs = session.allLogsAsString.orEmpty().ifBlank { session.output.orEmpty() }
+            val meanMatch = Regex("""mean_volume:\s*(-?\d+(\.\d+)?)\s*dB""").find(logs)
+            val meanVol = meanMatch?.groupValues?.get(1)?.toFloatOrNull()
+            if (meanVol != null) {
+                val targetLoudness = -14.0f
+                val gain = (targetLoudness - meanVol).coerceIn(-12.0f, 14.0f)
+                prefs.edit().putFloat(key, gain).apply()
+                return@withContext gain
+            }
+        } catch (_: Throwable) {}
+        return@withContext 0.0f
     }
 
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
@@ -917,7 +1089,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun setVolume(volume: Float) {
-        withPlayer { it.volume = volume.coerceIn(0f, 1f) }
+        withPlayer { controller ->
+            controller.volume = volume.coerceIn(0f, 1f)
+            val args = android.os.Bundle().apply { putFloat("volume", volume.coerceIn(0f, 1f)) }
+            controller.sendCustomCommand(
+                androidx.media3.session.SessionCommand("SET_MASTER_VOLUME", android.os.Bundle()),
+                args,
+            )
+        }
     }
 
     override fun setPlaybackSpeed(speed: Float) {
@@ -958,6 +1137,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun close() {
+        cancelVolumeCalibration()
         activity.lifecycle.removeObserver(foregroundObserver)
         pendingLocationPermission?.invoke(false)
         pendingLocationPermission = null

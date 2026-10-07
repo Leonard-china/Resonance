@@ -19,6 +19,7 @@ class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var loudnessEnhancer: LoudnessEnhancer? = null
     private var currentGainDb: Float = 0f
+    private var baseMasterVolume: Float = 1.0f
 
     override fun onCreate() {
         super.onCreate()
@@ -63,6 +64,12 @@ class PlaybackService : MediaSessionService() {
                         applyAudioGain(player, gainDb)
                         return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                     }
+                    if (customCommand.customAction == "SET_MASTER_VOLUME") {
+                        val vol = args.getFloat("volume", 1.0f)
+                        baseMasterVolume = vol.coerceIn(0f, 1f)
+                        applyAudioGain(player, currentGainDb)
+                        return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                    }
                     return super.onCustomCommand(session, controller, customCommand, args)
                 }
             })
@@ -89,14 +96,14 @@ class PlaybackService : MediaSessionService() {
                 }
             }
             if (gainDb >= 0f) {
-                player.volume = 1.0f
+                player.volume = baseMasterVolume
                 val gainMb = (gainDb * 100).toInt().coerceIn(0, 2000)
                 loudnessEnhancer?.setTargetGain(gainMb)
                 loudnessEnhancer?.enabled = (gainMb > 0)
             } else {
                 loudnessEnhancer?.enabled = false
-                val factor = Math.pow(10.0, (gainDb / 20.0).toDouble()).toFloat().coerceIn(0.05f, 1.0f)
-                player.volume = factor
+                val factor = Math.pow(10.0, (gainDb / 20.0).toDouble()).toFloat().coerceIn(0.01f, 1.0f)
+                player.volume = (baseMasterVolume * factor).coerceIn(0f, 1f)
             }
         } catch (_: Throwable) {}
     }
