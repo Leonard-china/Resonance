@@ -24,6 +24,6 @@
 <!-- GENERATED-CHECKSUMS -->
 | 文件 | 大小 | SHA-256 |
 | --- | --- | --- |
-| `Resonance-0.3.5-release.apk` | 59.95 MiB | `64c9acf8de9f07f8d06dfb2b912ddfd500aad5fa51823650ace4bfea98f8142e` |
+| `Resonance-0.3.5-release.apk` | 59.97 MiB | `a2e6608b63acc552c762be528c2e1afdc4f62f73151af5f0eea542e6ee5b537a` |
 | `Resonance-0.3.5.exe` | 191.43 MiB | `fd45cb80b1750b5f678414ed8b9a7b831819a1ba475e9894a74fbcc829bfc74d` |
 <!-- END-GENERATED-CHECKSUMS -->

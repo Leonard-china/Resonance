@@ -124,6 +124,8 @@ android {
                 storePassword = releaseKeystoreProperties.getProperty("storePassword")
                 keyAlias = releaseKeystoreProperties.getProperty("keyAlias")
                 keyPassword = releaseKeystoreProperties.getProperty("keyPassword")
+                enableV1Signing = true
+                enableV2Signing = true
             }
         }
     }
