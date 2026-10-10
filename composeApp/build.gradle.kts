@@ -21,12 +21,27 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+val generatedVersionDirectory = layout.buildDirectory.dir("generated/version/commonMain")
+val generateAppVersion by tasks.registering {
+    inputs.file(rootProject.file("version.properties"))
+    outputs.dir(generatedVersionDirectory)
+    doLast {
+        val target = generatedVersionDirectory.get().file("com/resonance/player/model/BuildVersion.kt").asFile
+        target.parentFile.mkdirs()
+        target.writeText("package com.resonance.player.model\n\nconst val APP_VERSION = \"$appVersionName\"\n")
+    }
+}
+tasks.matching { it.name.startsWith("compile") && it.name.contains("Kotlin") }.configureEach {
+    dependsOn(generateAppVersion)
+}
+
 kotlin {
     androidTarget()
     jvm("desktop")
 
     sourceSets {
         val commonMain by getting {
+            kotlin.srcDir(generatedVersionDirectory)
             dependencies {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
@@ -43,6 +58,14 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
+            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+        }
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation("androidx.test:runner:1.6.2")
+                implementation("androidx.test.ext:junit:1.2.1")
+                implementation("androidx.compose.ui:ui-test-junit4:1.11.1")
+            }
         }
         val jvmMain by creating {
             dependsOn(commonMain)
@@ -57,9 +80,6 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.jaudiotagger)
                 implementation("com.google.zxing:javase:3.5.4")
-                implementation("org.openjfx:javafx-base:21.0.8:win")
-                implementation("org.openjfx:javafx-graphics:21.0.8:win")
-                implementation("org.openjfx:javafx-media:21.0.8:win")
                 implementation("org.xerial:sqlite-jdbc:3.47.1.0")
             }
         }
@@ -79,6 +99,10 @@ kotlin {
     }
 }
 
+dependencies {
+    add("debugImplementation", "androidx.compose.ui:ui-test-manifest:1.11.1")
+}
+
 android {
     namespace = "com.resonance.player"
     compileSdk = 36
@@ -90,6 +114,7 @@ android {
         targetSdk = 36
         versionCode = appVersionCode
         versionName = appVersionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -131,8 +156,7 @@ compose.desktop {
     application {
         mainClass = "com.resonance.player.MainKt"
         buildTypes.release.proguard {
-            // The JavaFX toolkit and media backends are discovered reflectively.
-            // Shrinking them makes the packaged launcher fail before the UI opens.
+            // Preserve dependencies used through reflection by desktop integrations.
             configurationFiles.from(project.file("compose-desktop.pro"))
         }
         nativeDistributions {
@@ -189,7 +213,7 @@ tasks.register<JavaExec>("lanShareProbe") {
 
 tasks.register("bumpVersion") {
     group = "versioning"
-    description = "Automatically bumps the patch version and versionCode in version.properties and LibraryModels.kt"
+    description = "Explicitly bumps version.properties for a release; normal builds keep the same version"
     doLast {
         val file = rootProject.file("version.properties")
         val props = Properties().apply { if (file.isFile) file.inputStream().use(::load) }
@@ -208,12 +232,6 @@ tasks.register("bumpVersion") {
         props.setProperty("versionCode", nextCode.toString())
         file.outputStream().use { props.store(it, "Resonance build version") }
 
-        val modelFile = project.file("src/commonMain/kotlin/com/resonance/player/model/LibraryModels.kt")
-        if (modelFile.isFile) {
-            val content = modelFile.readText()
-            val updated = content.replace(Regex("""const val APP_VERSION = "[^"]*""""), """const val APP_VERSION = "$nextName"""")
-            modelFile.writeText(updated)
-        }
         println("Resonance version bumped: $currentName ($currentCode) -> $nextName ($nextCode)")
     }
 }

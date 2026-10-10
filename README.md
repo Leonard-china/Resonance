@@ -6,7 +6,7 @@
 
 一个面向 Android 与 Windows 的本地音乐库：扫描和整理本机音频、转换受支持的 KGMA 文件、读取歌曲元数据与专辑封面、像常规音乐应用一样播放，并在不部署服务器的情况下同步两台设备。
 
-当前版本：`v0.2.0`
+当前版本：`v0.3.5`
 
 > Resonance 坚持本地优先：不要求注册账号，不上传音乐库，也不依赖常驻云服务。酷狗歌单链接仅用于读取公开曲目目录并匹配本机已有歌曲；应用不会下载会员/受保护音频，也不会绕过账号、DRM 或版权限制。
 
@@ -34,8 +34,8 @@
 
 | 文件 | 用途 | SHA-256 |
 | --- | --- | --- |
-| `Resonance-0.2.0-release.apk` | Android 8.0（API 26）及以上 | `B3B7CBBAE97AAC2B4EDA94873E5EF8636844F1DB3FD4FBDAB86C90FBDD685AF6` |
-| `Resonance-0.2.0.exe` | Windows 10/11 x64 安装器 | `EEAA564930093D21C162F8848B0E1E12890258538AE08AAE824BA8894F9090EA` |
+| `Resonance-0.3.5-release.apk` | Android 8.0（API 26）及以上 | 见 [本版产物与校验值](docs/RELEASE_NOTES-0.3.5.md#构建产物) |
+| `Resonance-0.3.5.exe` | Windows 10/11 x64 安装器 | 见 [本版产物与校验值](docs/RELEASE_NOTES-0.3.5.md#构建产物) |
 
 > Windows 版请完整保留安装目录；单独复制 `Resonance.exe` 无法启动其 JVM 运行时。
 
@@ -47,14 +47,14 @@
 
 ### Windows
 
-- 推荐普通用户运行 `Resonance-0.2.0.exe` 安装器；需要批量部署时也可单独构建 MSI。
+- 推荐普通用户运行 `Resonance-0.3.5.exe` 安装器；需要批量部署时也可单独构建 MSI。
 - 便携版必须完整解压 `Portable.zip`，确保 `Resonance.exe`、`app` 与 `runtime` 保持在同一目录结构中。
 - 若 Windows SmartScreen 提示未知发布者，请先核对上方 SHA-256，再选择是否运行。本项目当前没有商业代码签名证书。
 
 在 PowerShell 中校验下载文件：
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Resonance-0.2.0-release.apk
+Get-FileHash -Algorithm SHA256 .\Resonance-0.3.5-release.apk
 ```
 
 ## 快速开始
@@ -110,6 +110,12 @@ Get-FileHash -Algorithm SHA256 .\Resonance-0.2.0-release.apk
 
 自动歌词使用 [LRCLIB](https://lrclib.net/docs) 的公开只读 API。只有当前播放曲目的歌名、歌手、专辑和时长会用于匹配，不会上传音频文件、封面、歌单或本地路径。
 
+### 响度与播放恢复
+
+Android 和 Windows 在本机分析完整音轨的响度，自动增益按真实峰值余量限制，并缓存结果。首次分析完成时会平滑更新增益；静音或分析失败不会写入成功缓存。手动音量、逐曲校准优先于对应的自动设置，原始音频文件不会被改写。
+
+应用保存当前歌曲、队列、进度和歌单，冷启动时恢复为暂停状态。Android 后台服务仍在播放时，重新打开应用会连接现有会话。
+
 ## 无服务器同步
 
 ### 局域网二维码同步
@@ -137,14 +143,14 @@ Get-FileHash -Algorithm SHA256 .\Resonance-0.2.0-release.apk
 项目基于 Kotlin Multiplatform 与 Compose Multiplatform，共享界面、状态与领域逻辑，同时保留平台原生文件访问和播放能力。
 
 ```text
-Mp3/
+Resonance/
 ├─ composeApp/
 │  ├─ src/commonMain/     # 共享 UI、状态、模型、转换基础逻辑
 │  ├─ src/commonTest/     # 共享单元测试
 │  ├─ src/jvmMain/        # Android/Windows 共用的 JVM 实现
 │  │                       # 自动歌词仓库、LRC 解析、歌单与同步包
 │  ├─ src/androidMain/    # Android MediaStore、Media3、SAF、前台播放服务
-│  ├─ src/desktopMain/    # Windows 文件系统、JavaFX Media、局域网发送端
+│  ├─ src/desktopMain/    # Windows 文件系统、FFmpeg/Java Sound 播放、局域网发送端
 │  └─ src/desktopTest/    # 转换、歌单导入、同步及安全边界测试
 ├─ docs/                  # 设计、第三方依赖与发布说明
 ├─ scripts/               # 本机构建脚本（默认把缓存与工具放在 D:）
@@ -156,9 +162,9 @@ Mp3/
 
 - Kotlin `2.3.20`
 - Compose Multiplatform `1.11.0`
-- Android Gradle Plugin `8.8.2`
+- Android Gradle Plugin `8.9.2` / Android Lint `9.4.1`
 - Android Media3 `1.10.1`
-- JavaFX Media `21.0.8`
+- Windows 音频输出：FFmpeg PCM 解码 + Java Sound 数字增益与软限幅
 - FFmpegKit Maintained / FFmpeg（音频转码）
 - jaudiotagger `3.0.1`（音频标签与封面）
 - LRCLIB API（自动匹配普通/逐行歌词，无需 API Key）
@@ -169,7 +175,7 @@ Mp3/
 
 - JDK 17–21（构建脚本会拒绝当前不兼容的 JDK 25）
 - Android SDK 36 / Build Tools 36.0.0
-- Gradle Wrapper，或项目现有的 Gradle 8.10.2
+- Gradle Wrapper（Gradle `8.11.1`）
 - Windows 10/11 x64（构建 EXE/MSI）
 - 一份可用的 `ffmpeg.exe`，通过 `RESONANCE_FFMPEG` 指定
 
@@ -181,10 +187,10 @@ $env:ANDROID_HOME = 'D:\Development\AndroidSdk'
 $env:RESONANCE_FFMPEG = 'D:\Tools\ffmpeg\bin\ffmpeg.exe'
 ```
 
-运行全部 JVM 测试并构建 Android Release APK：
+运行全部测试、Release Lint 并构建 Android Release APK：
 
 ```powershell
-.\gradlew.bat :composeApp:allTests :composeApp:assembleRelease --no-configuration-cache
+.\gradlew.bat :composeApp:allTests :composeApp:lintRelease :composeApp:assembleRelease --no-configuration-cache
 ```
 
 构建 Windows Release 便携目录、EXE 和 MSI：
@@ -197,6 +203,10 @@ $env:RESONANCE_FFMPEG = 'D:\Tools\ffmpeg\bin\ffmpeg.exe'
 ```
 
 开发机也可以直接运行 `scripts\build.cmd`。该脚本使用项目作者当前的 D 盘工具路径；在其他机器上请先修改脚本或设置相应环境变量。
+
+普通构建保持版本不变。版本唯一来源为 `version.properties`，界面版本常量由 Gradle 生成。发布时显式运行 `scripts/build.ps1 -BumpVersion` 或 `-SetVersion 0.3.6`，并准备对应版本说明。构建后运行 `scripts/release-manifest.ps1`，生成发布目录、`SHA256SUMS.txt` 并更新版本说明中的产物表。
+
+GitHub Actions 自动执行两端测试、Release Lint 和 Android Debug 构建。Android 设备回归使用 `:composeApp:connectedDebugAndroidTest`，需要已启动的测试设备或模拟器；签名库始终保留在本地。
 
 ### Android Release 签名
 
@@ -219,7 +229,7 @@ keyPassword=change-me
 
 ## 测试与发布质量门槛
 
-`v0.2.0` 发布前质量门槛：
+发布前质量门槛：
 
 - Gradle `allTests` 完整通过，0 失败；
 - Android `lintRelease` 完整通过，0 错误；
@@ -227,11 +237,11 @@ keyPassword=change-me
 - 酷狗公开歌单解析、分页、主机限制和本地匹配；
 - 加密同步包的口令、完整性、大小限制与路径安全；
 - Windows 局域网一次性分享端点与跨设备同步夹具；
-- MuMu 模拟器完成手机竖屏、横屏、完整播放页、歌词状态、队列与旋转状态保持的视觉/交互检查；
-- Windows 完成当前 Release 代码启动、宽屏响应式布局、导入、同步与设置页的视觉检查；
+- MuMu 模拟器通过后台音频会话及歌单转场中途画面测试；
+- Windows 当前 Release 启动检查通过；
 - APK v2 签名校验通过，APK 与 EXE 的 SHA-256 已写入下载表。
 
-完整版本说明见 [`docs/RELEASE_NOTES-0.2.0.md`](docs/RELEASE_NOTES-0.2.0.md)。
+本版结果见 [验证报告](docs/VERIFICATION-0.3.5.md)，版本说明见 [v0.3.5](docs/RELEASE_NOTES-0.3.5.md)。
 
 ## 数据、安全与限制
 

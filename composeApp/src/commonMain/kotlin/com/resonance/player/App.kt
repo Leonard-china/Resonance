@@ -36,6 +36,10 @@ import com.resonance.player.platform.PlatformServices
 import com.resonance.player.platform.tracksWithPlaylistArtwork
 import com.resonance.player.ui.LibraryShell
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.resonance.player.playback.PlaybackStateStore
+import com.resonance.player.playback.PlaybackSnapshot
+import com.resonance.player.data.PersistenceQueue
 import kotlin.random.Random
 
 private enum class SyncAction { Export, Import }
@@ -55,7 +59,6 @@ fun App(services: PlatformServices) {
         var destination by remember { mutableStateOf(LibraryDestination.Library) }
         var playlists by remember { mutableStateOf(emptyList<Playlist>()) }
         var importedTracks by remember { mutableStateOf(emptyList<com.resonance.player.model.Track>()) }
-        var player by remember { mutableStateOf(PlayerState()) }
         var showCreateDialog by remember { mutableStateOf(false) }
         var showPlaylistLinkDialog by remember { mutableStateOf(false) }
         var trackPendingDeletion by remember { mutableStateOf<Track?>(null) }
@@ -64,6 +67,15 @@ fun App(services: PlatformServices) {
         var previewMode by remember { mutableStateOf(false) }
         var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
         var importMessage by remember { mutableStateOf<String?>(null) }
+        val playback = remember(services) { PlaybackStateStore(services, scope) {
+            importMessage = "音频设置未能完成：${it.message.orEmpty()}"
+        } }
+        var player by playback.state
+        var customQueue by remember { mutableStateOf<List<Track>?>(null) }
+        var activePlaylistId by remember { mutableStateOf<String?>(null) }
+        val persistence = remember(services) { PersistenceQueue(scope) {
+            importMessage = "保存失败：${it.message.orEmpty()}"
+        } }
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
         var lanQrPath by remember { mutableStateOf<String?>(null) }
         var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
@@ -123,7 +135,6 @@ fun App(services: PlatformServices) {
                     autoLoudnessEnabled = autoEnabled,
                 )
                 services.setPlaybackMode(playbackMode.shuffleEnabled, playbackMode.repeatMode)
-                services.setVolume(globalVol)
             } catch (_: Throwable) {}
             launch {
                 try {
@@ -144,8 +155,25 @@ fun App(services: PlatformServices) {
                 selectedPlaylistId = restoredPlaylistId
                 deepSeekConfig = services.loadDeepSeekConfig()
                 customLyricsFolder = services.loadCustomLyricsFolder()
-                services.savePlaylists(loadedPlaylists)
-                services.saveLastSelectedPlaylistId(restoredPlaylistId)
+                val known = (importedTracks + loadedPlaylists.flatMap(Playlist::tracks)).distinctBy(Track::id)
+                services.resumePlayback(known)?.let { resume ->
+                    val snapshot = resume.snapshot
+                    val byId = known.associateBy(Track::id)
+                    val queue = snapshot.queueIds.mapNotNull(byId::get).filter { it.sourceUri != null }
+                    byId[snapshot.trackId]?.takeIf { it.sourceUri != null }?.let { track ->
+                        val restoredQueue = (queue + track).distinctBy(Track::id)
+                        customQueue = restoredQueue
+                        selectedPlaylistId = resolveSelectedPlaylistId(snapshot.playlistId, loadedPlaylists)
+                        activePlaylistId = snapshot.playlistId
+                        playback.activate(track, selectedPlaylistId, resetGain = !resume.attached) {
+                            if (!resume.attached) services.restorePausedPlayback(track, restoredQueue,
+                                snapshot.progress, player.shuffleEnabled, player.repeatMode)
+                            player = player.copy(progress = snapshot.progress, isPlaying = resume.isPlaying)
+                        }
+                    }
+                }
+                persistence.submit { services.savePlaylists(loadedPlaylists) }
+                services.saveLastSelectedPlaylistId(selectedPlaylistId)
             } catch (error: Throwable) {
                 importMessage = "音乐库加载失败：${error.message ?: error::class.simpleName.orEmpty()}"
             } finally {
@@ -153,7 +181,7 @@ fun App(services: PlatformServices) {
             }
         }
         DisposableEffect(services) {
-            onDispose { services.close() }
+            onDispose { playback.close(); persistence.close(); services.close() }
         }
 
         val visiblePlaylists = if (previewMode) PreviewLibrary.playlists else playlists
@@ -162,17 +190,16 @@ fun App(services: PlatformServices) {
         } else {
             importedTracks
         }
-        val fullLibraryQueue = (importedTracks + playlists.flatMap(Playlist::tracks))
-            .filter { it.sourceUri != null }
-            .distinctBy(Track::id)
-        var customQueue by remember { mutableStateOf<List<Track>?>(null) }
+        val fullLibraryQueue = remember(importedTracks, playlists) {
+            (importedTracks + playlists.flatMap(Playlist::tracks)).filter { it.sourceUri != null }.distinctBy(Track::id)
+        }
         val playbackQueue = remember(customQueue, fullLibraryQueue) {
             resolvePlaybackQueue(customQueue, fullLibraryQueue)
         }
 
         fun persistPlaylists(updated: List<Playlist>) {
             playlists = updated
-            scope.launch { services.savePlaylists(updated) }
+            persistence.submit { services.savePlaylists(updated) }
         }
 
         fun toggleFavorite(track: Track) {
@@ -185,43 +212,12 @@ fun App(services: PlatformServices) {
             player.currentTrack?.takeIf { it.id == track.id }?.let {
                 player = player.copy(currentTrack = it.copy(isFavorite = next))
             }
-            scope.launch { services.setTrackFavorite(track.id, next) }
+            persistence.submit { services.setTrackFavorite(track.id, next) }
         }
 
         fun lyricsUiState(result: LyricsFetchResult): LyricsUiState = when (result) {
             is LyricsFetchResult.Found -> LyricsUiState.Ready(result.lyrics)
             is LyricsFetchResult.Unavailable -> LyricsUiState.Unavailable(result.message, result.retryable)
-        }
-
-        suspend fun applyTrackGainFor(track: Track) {
-            try {
-                val calibrated = services.loadTrackCalibratedGain(track.id)
-                if (calibrated != null) {
-                    services.setTrackGain(calibrated)
-                    player = player.copy(trackGainDb = calibrated, isCurrentTrackCalibrated = true)
-                    return
-                }
-                val autoEnabled = services.isAutoLoudnessEnabled()
-                if (autoEnabled) {
-                    val cachedAuto = services.loadAutoLoudnessGain(track)
-                    if (cachedAuto != null) {
-                        services.setTrackGain(cachedAuto)
-                        player = player.copy(trackGainDb = cachedAuto, isCurrentTrackCalibrated = false)
-                    } else {
-                        services.setTrackGain(0.0f)
-                        player = player.copy(trackGainDb = 0.0f, isCurrentTrackCalibrated = false)
-                        val calculated = services.analyzeAndCacheLoudnessGain(track)
-                        if (player.currentTrack?.id == track.id) {
-                            services.setTrackGain(calculated)
-                            player = player.copy(trackGainDb = calculated, isCurrentTrackCalibrated = false)
-                        }
-                    }
-                } else {
-                    val manual = services.loadTrackGain(track.id) ?: 0.0f
-                    services.setTrackGain(manual)
-                    player = player.copy(trackGainDb = manual, isCurrentTrackCalibrated = false)
-                }
-            } catch (_: Throwable) {}
         }
 
         fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) {
@@ -236,17 +232,14 @@ fun App(services: PlatformServices) {
             }
             customQueue = targetQueue
             val effectiveQueue = targetQueue ?: fullLibraryQueue
-            services.play(track, effectiveQueue, shuffle, player.repeatMode)
-            player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, shuffleEnabled = shuffle)
-            scope.launch {
-                try {
-                    val trackVol = services.loadTrackVolume(track.id)
-                    val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
-                    val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
-                    services.setVolume(targetVol)
-                    player = player.copy(volume = targetVol)
-                    applyTrackGainFor(track)
-                } catch (_: Throwable) {}
+            val playlistId = selectedPlaylistId
+            activePlaylistId = playlistId
+            services.setPlaying(false)
+            player = player.copy(isPlaying = false, shuffleEnabled = shuffle)
+            playback.activate(track, playlistId, expectNativeTrack = true, prepare = {
+                persistence.run { services.savePlaybackSnapshot(PlaybackSnapshot(track.id, effectiveQueue.map(Track::id), playlistId = playlistId)) }
+            }) {
+                services.play(track, effectiveQueue, shuffle, player.repeatMode)
             }
         }
 
@@ -296,6 +289,18 @@ fun App(services: PlatformServices) {
         LaunchedEffect(services) {
             services.isPlayingChanges.collect { isPlaying -> player = player.copy(isPlaying = isPlaying) }
         }
+        LaunchedEffect(services) {
+            services.playbackErrors.collect { importMessage = "播放失败：$it"; playback.playbackFailed() }
+        }
+        LaunchedEffect(services, playbackQueue, player.currentTrack?.id) {
+            while (true) {
+                delay(2_000)
+                player.currentTrack?.let { track ->
+                    val snapshot = PlaybackSnapshot(track.id, playbackQueue.map(Track::id), player.progress, activePlaylistId)
+                    persistence.submitLatest("playback.snapshot") { services.savePlaybackSnapshot(snapshot) }
+                }
+            }
+        }
         LaunchedEffect(services, player.currentTrack?.id) {
             val track = player.currentTrack
             if (track == null || track.sourceUri == null) {
@@ -323,17 +328,9 @@ fun App(services: PlatformServices) {
         }
         LaunchedEffect(services, playbackQueue, selectedPlaylistId) {
             services.activeTrackChanges.collect { trackId ->
+                if (!playback.acceptNativeTrack(trackId)) return@collect
                 playbackQueue.firstOrNull { it.id == trackId }?.let { track ->
-                    try {
-                        val trackVol = services.loadTrackVolume(track.id)
-                        val playlistVol = selectedPlaylistId?.let { services.loadPlaylistVolume(it) }
-                        val targetVol = trackVol ?: playlistVol ?: services.loadGlobalVolume()
-                        services.setVolume(targetVol)
-                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f, volume = targetVol)
-                        applyTrackGainFor(track)
-                    } catch (_: Throwable) {
-                        player = player.copy(currentTrack = track, isPlaying = true, progress = 0f)
-                    }
+                    playback.activate(track, activePlaylistId, resetGain = false)
                 }
             }
         }
@@ -461,41 +458,28 @@ fun App(services: PlatformServices) {
                             player = player.copy(progress = progress)
                         },
                         onVolumeChange = { vol ->
-                            services.setVolume(vol)
-                            player = player.copy(volume = vol)
-                            scope.launch {
-                                try {
-                                    services.saveGlobalVolume(vol)
-                                    player.currentTrack?.let { curr ->
-                                        services.saveTrackVolume(curr.id, vol)
-                                    }
-                                    selectedPlaylistId?.let { plId ->
-                                        services.savePlaylistVolume(plId, vol)
-                                    }
-                                } catch (_: Throwable) {}
-                            }
+                            playback.setVolume(vol)
+                            val trackId = player.currentTrack?.id
+                            val playlistId = activePlaylistId
+                            persistence.submitLatest("volume.global") { services.saveGlobalVolume(vol) }
+                            trackId?.let { id -> persistence.submitLatest("volume.track.$id") { services.saveTrackVolume(id, vol) } }
+                            playlistId?.let { id -> persistence.submitLatest("volume.playlist.$id") { services.savePlaylistVolume(id, vol) } }
                         },
                         onSpeedChange = { speed ->
                             services.setPlaybackSpeed(speed)
                             player = player.copy(playbackSpeed = speed)
                         },
                         onTrackGainChange = { gain ->
-                            services.setTrackGain(gain)
-                            player = player.copy(trackGainDb = gain)
-                            scope.launch {
-                                try {
-                                    player.currentTrack?.let { curr ->
-                                        services.saveTrackGain(curr.id, gain)
-                                    }
-                                } catch (_: Throwable) {}
-                            }
+                            playback.setGain(gain)
+                            val trackId = player.currentTrack?.id
+                            persistence.submit { trackId?.let { services.saveTrackGain(it, gain) } }
                         },
                         onToggleAutoLoudness = {
                             val next = !player.autoLoudnessEnabled
                             player = player.copy(autoLoudnessEnabled = next)
-                            scope.launch {
+                            persistence.submit {
                                 services.setAutoLoudnessEnabled(next)
-                                player.currentTrack?.let { applyTrackGainFor(it) }
+                                playback.refreshAudio(activePlaylistId)
                             }
                         },
                         onStartCalibration = {
@@ -507,7 +491,7 @@ fun App(services: PlatformServices) {
                             player.currentTrack?.let { track ->
                                 val gain = services.finishVolumeCalibration(track.id)
                                 if (gain != null) {
-                                    player = player.copy(trackGainDb = gain, isCurrentTrackCalibrated = true)
+                                    playback.setGain(gain, calibrated = true)
                                 }
                             }
                         },
@@ -516,9 +500,9 @@ fun App(services: PlatformServices) {
                         },
                         onResetCalibration = {
                             player.currentTrack?.let { track ->
-                                scope.launch {
+                                persistence.submit {
                                     services.clearTrackCalibratedGain(track.id)
-                                    applyTrackGainFor(track)
+                                    if (player.currentTrack?.id == track.id) playback.refreshAudio(activePlaylistId)
                                 }
                             }
                         },

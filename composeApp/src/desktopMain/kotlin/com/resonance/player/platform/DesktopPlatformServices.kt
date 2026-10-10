@@ -18,9 +18,6 @@ import com.resonance.player.playlist.KugouPlaylistImporter
 import com.resonance.player.sync.EncryptedSyncPackage
 import com.resonance.player.sync.PlainSyncPackage
 import com.resonance.player.sync.DesktopLanShare
-import javafx.application.Platform
-import javafx.scene.media.Media
-import javafx.scene.media.MediaPlayer
 import kotlinx.coroutines.Dispatchers
 import com.resonance.player.model.CalibrationStatus
 import kotlinx.coroutines.flow.Flow
@@ -37,7 +34,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.Properties
-import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
@@ -46,6 +42,16 @@ import com.resonance.player.weather.AppearanceStorage
 import com.resonance.player.weather.WeatherClient
 
 class DesktopPlatformServices : PlatformServices {
+    private val loudnessAnalyzer = com.resonance.player.audio.DesktopLoudnessAnalyzer()
+    override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
+        com.resonance.player.playback.PlaybackSnapshotCodec.decode(library.readUiValue("playback.snapshot"))
+    }
+    override suspend fun savePlaybackSnapshot(snapshot: com.resonance.player.playback.PlaybackSnapshot) = withContext(Dispatchers.IO) {
+        library.writeUiValue("playback.snapshot", com.resonance.player.playback.PlaybackSnapshotCodec.encode(snapshot))
+    }
+    override fun restorePausedPlayback(track: Track, queue: List<Track>, progress: Float, shuffle: Boolean, repeatMode: RepeatMode) {
+        player.play(track, autoPlay = false, initialProgress = progress)
+    }
     override val foreground = MutableStateFlow(true)
     override val systemReduceMotion: Boolean get() = java.awt.Toolkit.getDefaultToolkit()
         .getDesktopProperty("win.clientAreaAnimation") == false
@@ -95,7 +101,7 @@ class DesktopPlatformServices : PlatformServices {
         library.writeUiValue("gain.track.$trackId", gainDb.coerceIn(-12f, 12f).toString())
     }
 
-    override fun setTrackGain(gainDb: Float) = player.setTrackGain(gainDb)
+    override fun setTrackGain(gainDb: Float, userInitiated: Boolean) = player.setTrackGain(gainDb)
 
     private val _desktopCalibrationStatus = MutableStateFlow(CalibrationStatus())
     override val calibrationStatus: StateFlow<CalibrationStatus> = _desktopCalibrationStatus
@@ -143,11 +149,15 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override suspend fun loadAutoLoudnessGain(track: Track): Float? = withContext(Dispatchers.IO) {
-        library.readUiValue("gain.auto.${track.id}")?.toFloatOrNull()
+        library.readUiValue("gain.auto.${com.resonance.player.audio.LoudnessAnalysis.CACHE_VERSION}.${track.id}")?.toFloatOrNull()
     }
 
     override suspend fun analyzeAndCacheLoudnessGain(track: Track): Float = withContext(Dispatchers.IO) {
-        0.0f
+        loadAutoLoudnessGain(track)?.let { return@withContext it }
+        val source = track.sourceUri ?: return@withContext 0f
+        val measured = loudnessAnalyzer.analyze(source) ?: return@withContext 0f
+        library.writeUiValue("gain.auto.${com.resonance.player.audio.LoudnessAnalysis.CACHE_VERSION}.${track.id}", measured.toString())
+        measured
     }
     override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
     override suspend fun fetchWeather(location: WeatherLocation, previous: WeatherPalette) = WeatherClient.current(location, previous)
@@ -169,6 +179,8 @@ class DesktopPlatformServices : PlatformServices {
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    private val errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    override val playbackErrors: Flow<String> = errorEvents
     private val player = DesktopAudioPlayer(
         onEnded = {
             isPlayingEvents.tryEmit(false)
@@ -176,6 +188,7 @@ class DesktopPlatformServices : PlatformServices {
         },
         onProgress = { progressEvents.tryEmit(it) },
         onPlayingChanged = { isPlayingEvents.tryEmit(it) },
+        onError = { errorEvents.tryEmit(it) },
     )
     private var lanShare: DesktopLanShare? = null
 
@@ -633,32 +646,28 @@ internal class DesktopMusicScanner(
     }
 }
 
-internal class DesktopLibraryStore {
+internal class DesktopLibraryStore(
     private val appDirectory: Path = (System.getProperty("RESONANCE_DATA") ?: System.getenv("RESONANCE_DATA"))?.takeIf(String::isNotBlank)?.let(Path::of)
-        ?: Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "Resonance")
+        ?: Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "Resonance"),
+) {
     private val libraryFile = appDirectory.resolve("library.properties")
     private val playlistFile = appDirectory.resolve("playlists.properties")
     private val uiStateFile = appDirectory.resolve("ui-state.properties")
     @Synchronized
     fun readUiValue(key: String): String? {
-        if (!Files.isRegularFile(uiStateFile)) return null
-        return Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }.getProperty(key)
+        return com.resonance.player.io.AtomicPropertiesFile.read(uiStateFile).getProperty(key)
     }
     @Synchronized
     fun writeUiValue(key: String, value: String) {
         Files.createDirectories(appDirectory)
-        val properties = Properties().apply {
-            if (Files.isRegularFile(uiStateFile)) Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load)
-        }
+        val properties = com.resonance.player.io.AtomicPropertiesFile.read(uiStateFile)
         properties.setProperty(key, value)
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
     @Synchronized
     fun removeUiValue(key: String) {
         Files.createDirectories(appDirectory)
-        val properties = Properties().apply {
-            if (Files.isRegularFile(uiStateFile)) Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load)
-        }
+        val properties = com.resonance.player.io.AtomicPropertiesFile.read(uiStateFile)
         properties.remove(key)
         writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
     }
@@ -666,6 +675,7 @@ internal class DesktopLibraryStore {
     val lyricsCacheDirectory: Path = appDirectory.resolve("lyrics-cache")
     val managedMusicDirectory: Path = preferredManagedMusicDirectory()
 
+    @Synchronized
     fun installationId(): String {
         Files.createDirectories(appDirectory)
         val target = appDirectory.resolve("installation.id")
@@ -677,10 +687,11 @@ internal class DesktopLibraryStore {
         return created
     }
 
+    @Synchronized
     fun load(): List<Track> {
-        if (!Files.isRegularFile(libraryFile)) return emptyList()
-        val properties = Properties()
-        Files.newBufferedReader(libraryFile, StandardCharsets.UTF_8).use(properties::load)
+        val properties = com.resonance.player.io.AtomicPropertiesFile.read(libraryFile) {
+            com.resonance.player.io.AtomicPropertiesFile.validIndexed(it, "track", "source")
+        }
         val count = properties.getProperty("count")?.toIntOrNull() ?: return emptyList()
         val usesContentIds = properties.getProperty("id.format") == "sha256-audio-v1"
         return (0 until count).mapNotNull { index ->
@@ -706,6 +717,7 @@ internal class DesktopLibraryStore {
         }.associateBy(Track::id).values.toList()
     }
 
+    @Synchronized
     fun save(tracks: List<Track>) {
         Files.createDirectories(appDirectory)
         val properties = Properties().apply {
@@ -725,20 +737,16 @@ internal class DesktopLibraryStore {
             properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
             properties.setProperty(prefix + "mime", track.mimeType)
         }
-        val temporary = libraryFile.resolveSibling("${libraryFile.fileName}.tmp")
-        Files.newBufferedWriter(temporary, StandardCharsets.UTF_8).use { properties.store(it, "Resonance music library") }
-        runCatching {
-            Files.move(temporary, libraryFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
-        }.getOrElse {
-            Files.move(temporary, libraryFile, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        }
+        writePropertiesAtomically(libraryFile, properties, "Resonance music library")
     }
 
+    @Synchronized
     fun merge(imported: List<Track>) {
         val merged = (load() + imported).associateBy(Track::id).values.toList()
         save(merged)
     }
 
+    @Synchronized
     fun updateTracks(updated: List<Track>) {
         val updatedById = updated.associateBy(Track::id)
         val currentLibrary = load().map { current -> updatedById[current.id] ?: current }
@@ -761,15 +769,18 @@ internal class DesktopLibraryStore {
         savePlaylists(currentPlaylists)
     }
 
+    @Synchronized
     fun removeMultiple(trackIds: Set<String>) {
         save(load().filterNot { it.id in trackIds })
         savePlaylists(loadPlaylists().map { playlist -> playlist.copy(tracks = playlist.tracks.filterNot { it.id in trackIds }) })
     }
 
+    @Synchronized
     fun remove(trackId: String) {
         removeMultiple(setOf(trackId))
     }
 
+    @Synchronized
     fun setFavorite(trackId: String, favorite: Boolean) {
         save(load().map { track -> if (track.id == trackId) track.copy(isFavorite = favorite) else track })
         savePlaylists(loadPlaylists().map { playlist ->
@@ -779,10 +790,11 @@ internal class DesktopLibraryStore {
         })
     }
 
+    @Synchronized
     fun loadPlaylists(): List<Playlist> {
-        if (!Files.isRegularFile(playlistFile)) return emptyList()
-        val properties = Properties()
-        Files.newBufferedReader(playlistFile, StandardCharsets.UTF_8).use(properties::load)
+        val properties = com.resonance.player.io.AtomicPropertiesFile.read(playlistFile) {
+            com.resonance.player.io.AtomicPropertiesFile.validIndexed(it, "playlist", "id")
+        }
         val tracksById = load().associateBy(Track::id)
         val count = properties.getProperty("count")?.toIntOrNull() ?: return emptyList()
         return (0 until count).mapNotNull { index ->
@@ -807,6 +819,7 @@ internal class DesktopLibraryStore {
         }
     }
 
+    @Synchronized
     fun savePlaylists(playlists: List<Playlist>) {
         Files.createDirectories(appDirectory)
         val properties = Properties().apply { setProperty("count", playlists.size.toString()) }
@@ -979,13 +992,7 @@ internal class DesktopLibraryStore {
     }
 
     private fun writePropertiesAtomically(target: Path, properties: Properties, comment: String) {
-        val temporary = target.resolveSibling("${target.fileName}.tmp")
-        Files.newBufferedWriter(temporary, StandardCharsets.UTF_8).use { properties.store(it, comment) }
-        runCatching {
-            Files.move(temporary, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE)
-        }.getOrElse {
-            Files.move(temporary, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        }
+        com.resonance.player.io.AtomicPropertiesFile.write(target, properties, comment)
     }
 
     private fun preferredManagedMusicDirectory(): Path {
@@ -997,91 +1004,19 @@ internal class DesktopLibraryStore {
 }
 
 private class DesktopAudioPlayer(
-    private val onEnded: () -> Unit,
-    private val onProgress: (Float) -> Unit,
-    private val onPlayingChanged: (Boolean) -> Unit,
+    onEnded: () -> Unit,
+    onProgress: (Float) -> Unit,
+    onPlayingChanged: (Boolean) -> Unit,
+    onError: (String) -> Unit,
 ) {
-    private var mediaPlayer: MediaPlayer? = null
-    private var currentVolume: Double = 1.0
-    private var currentRate: Double = 1.0
-
-    init { ensureJavaFx() }
-
-    fun play(track: Track) {
-        val source = track.sourceUri ?: return
-        Platform.runLater {
-            mediaPlayer?.dispose()
-            val uriString = runCatching {
-                if (source.startsWith("file:/")) java.net.URI(source).toString()
-                else if (source.startsWith("http://") || source.startsWith("https://")) source
-                else Path.of(source).toUri().toString()
-            }.getOrElse { Path.of(source).toUri().toString() }
-            mediaPlayer = MediaPlayer(Media(uriString)).also { activePlayer ->
-                activePlayer.volume = currentVolume
-                activePlayer.rate = currentRate
-                activePlayer.setOnEndOfMedia(onEnded)
-                activePlayer.currentTimeProperty().addListener { _, _, current ->
-                    val duration = activePlayer.totalDuration.toMillis()
-                    if (duration.isFinite() && duration > 0) {
-                        onProgress((current.toMillis() / duration).toFloat().coerceIn(0f, 1f))
-                    }
-                }
-                activePlayer.statusProperty().addListener { _, _, newStatus ->
-                    onPlayingChanged(newStatus == MediaPlayer.Status.PLAYING)
-                }
-                activePlayer.play()
-            }
-        }
-    }
-
-    fun setPlaying(isPlaying: Boolean) {
-        Platform.runLater { mediaPlayer?.let { if (isPlaying) it.play() else it.pause() } }
-    }
-
-    private var baseVolume: Double = 1.0
-    private var gainFactor: Double = 1.0
-
-    fun setVolume(volume: Float) {
-        baseVolume = volume.toDouble().coerceIn(0.0, 1.0)
-        applyOutputVolume()
-    }
-
-    fun setTrackGain(gainDb: Float) {
-        gainFactor = Math.pow(10.0, (gainDb / 20.0).toDouble()).coerceIn(0.1, 2.5)
-        applyOutputVolume()
-    }
-
-    private fun applyOutputVolume() {
-        val finalVolume = (baseVolume * gainFactor).coerceIn(0.0, 1.0)
-        Platform.runLater { mediaPlayer?.volume = finalVolume }
-    }
-
-    fun setPlaybackSpeed(speed: Float) {
-        currentRate = speed.toDouble().coerceIn(0.25, 3.0)
-        Platform.runLater { mediaPlayer?.rate = currentRate }
-    }
-
-    fun seekTo(fraction: Float) {
-        Platform.runLater {
-            mediaPlayer?.let { activePlayer ->
-                val duration = activePlayer.totalDuration.toMillis()
-                if (duration.isFinite() && duration > 0) {
-                    activePlayer.seek(javafx.util.Duration.millis(duration * fraction.coerceIn(0f, 1f)))
-                }
-            }
-        }
-    }
-
-    fun close() {
-        Platform.runLater { mediaPlayer?.dispose(); mediaPlayer = null }
-    }
-
-    companion object {
-        private val started = AtomicBoolean(false)
-        private fun ensureJavaFx() {
-            if (started.compareAndSet(false, true)) Platform.startup {}
-        }
-    }
+    private val backend = com.resonance.player.audio.DesktopPcmPlayer(onEnded, onProgress, onPlayingChanged, onError)
+    fun play(track: Track, autoPlay: Boolean = true, initialProgress: Float = 0f) = backend.play(track, autoPlay, initialProgress)
+    fun setPlaying(isPlaying: Boolean) = backend.setPlaying(isPlaying)
+    fun setVolume(volume: Float) = backend.setVolume(volume)
+    fun setTrackGain(gainDb: Float) = backend.setTrackGain(gainDb)
+    fun setPlaybackSpeed(speed: Float) = backend.setPlaybackSpeed(speed)
+    fun seekTo(fraction: Float) = backend.seekTo(fraction)
+    fun close() = backend.close()
 }
 
 private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")

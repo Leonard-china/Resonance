@@ -1,0 +1,39 @@
+name: Verify Android and desktop
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install SDK
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Install FFmpeg for audio integration tests
+        shell: pwsh
+        run: |
+          choco install ffmpeg --no-progress --yes
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg installation failed' }
+          $ffmpeg = Join-Path $env:ChocolateyInstall 'bin/ffmpeg.exe'
+          if (-not (Test-Path -LiteralPath $ffmpeg)) { throw 'FFmpeg executable missing' }
+          "RESONANCE_FFMPEG=$ffmpeg" >> $env:GITHUB_ENV
+      - name: Verify shared behavior and both platforms
+        run: ./gradlew.bat :composeApp:allTests :composeApp:lintRelease :composeApp:assembleDebug --no-configuration-cache --console=plain
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verification-reports
+          path: |
+            composeApp/build/reports/tests
+            composeApp/build/reports/lint-results-release.*
+          retention-days: 14

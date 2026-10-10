@@ -17,6 +17,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface PlatformServices {
+    val playbackErrors: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
+    suspend fun loadPlaybackSnapshot(): com.resonance.player.playback.PlaybackSnapshot? = null
+    suspend fun savePlaybackSnapshot(snapshot: com.resonance.player.playback.PlaybackSnapshot) {}
+    suspend fun resumePlayback(queue: List<Track>): com.resonance.player.playback.PlaybackResume? =
+        loadPlaybackSnapshot()?.let { com.resonance.player.playback.PlaybackResume(it) }
+    fun restorePausedPlayback(track: Track, queue: List<Track>, progress: Float, shuffle: Boolean, repeatMode: RepeatMode) {
+        play(track, queue, shuffle, repeatMode)
+        setPlaying(false)
+        seekTo(progress)
+    }
     val playbackEnded: Flow<Unit>
     val playbackProgress: Flow<Float>
     val isPlayingChanges: Flow<Boolean>
@@ -87,7 +97,7 @@ interface PlatformServices {
     suspend fun saveGlobalVolume(volume: Float) {}
     suspend fun loadTrackGain(trackId: String): Float? = null
     suspend fun saveTrackGain(trackId: String, gainDb: Float) {}
-    fun setTrackGain(gainDb: Float) {}
+    fun setTrackGain(gainDb: Float, userInitiated: Boolean = false) {}
     val calibrationStatus: StateFlow<CalibrationStatus> get() = MutableStateFlow(CalibrationStatus())
     fun startVolumeCalibration(trackId: String): Boolean = false
     fun finishVolumeCalibration(trackId: String): Float? = null

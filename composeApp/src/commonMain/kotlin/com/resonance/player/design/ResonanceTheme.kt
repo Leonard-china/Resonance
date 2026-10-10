@@ -134,10 +134,10 @@ object ResonanceMotionTokens {
         easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
     )
 
-    // 层级钻取（Push-Pop）的规范：340ms 柔和减速曲线
+    // Push/pop stays responsive and settles without overshoot.
     val DetailSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
-        durationMillis = 340,
-        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+        durationMillis = 280,
+        easing = CubicBezierEasing(0.23f, 1.0f, 0.32f, 1.0f),
     )
 
     // 页面横向滑动的弹簧规范：阻尼比 1.0f 确保无余震回弹，stiffness 300f 提供极佳的响应速度与如丝顺滑

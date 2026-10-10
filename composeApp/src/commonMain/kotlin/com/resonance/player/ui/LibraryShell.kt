@@ -188,6 +188,8 @@ import com.resonance.player.model.Track
 import com.resonance.player.platform.decodeArtwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import com.resonance.player.util.LibrarySearchIndex
 
 private enum class WindowClass { Compact, Medium, Expanded }
 private enum class LibraryTab(val label: String) { Tracks("歌曲"), Playlists("歌单"), Albums("专辑"), Artists("歌手") }
@@ -1125,8 +1127,10 @@ private fun LibraryScreen(
     var showBatchDeleteDialog by remember { mutableStateOf(false) }
     var showBatchAddToPlaylistDialog by remember { mutableStateOf(false) }
 
-    val allKnownTracks = (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
-    val favoriteTracks = allKnownTracks.filter(Track::isFavorite)
+    val allKnownTracks = remember(libraryTracks, playlists) {
+        (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
+    }
+    val favoriteTracks = remember(allKnownTracks) { allKnownTracks.filter(Track::isFavorite) }
     val allLibraryMissingTracks = remember(allKnownTracks) { allKnownTracks.filter { it.isMissingAnyMetadata } }
     val pagePadding = if (compact) 16.dp else 32.dp
 
@@ -1279,30 +1283,9 @@ private fun LibraryScreen(
         }
 
         val reducedMotion = LocalReducedMotion.current
-        AnimatedContent(
-            targetState = detail,
+        LibraryDetailTransition(
+            detail = detail,
             modifier = Modifier.fillMaxWidth().weight(1f),
-            transitionSpec = {
-                if (reducedMotion) {
-                    (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                        (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
-                } else if (targetState != null && initialState == null) {
-                    // 进入详情（歌单 / 专辑 / 艺术家 / 收藏）：从右侧满屏推入，列表视差滑出（不早退消隐，杜绝虚空割裂）
-                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it }) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 }) using SizeTransform(clip = false)
-                } else if (targetState == null && initialState != null) {
-                    // 从详情返回列表：列表从左侧视差归位，详情向右滑出
-                    (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 }) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it }) using SizeTransform(clip = false)
-                } else {
-                    // 详情之间相互切换：满屏丝滑平移
-                    (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it } +
-                        fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it } +
-                        fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
-                }
-            },
-            label = "libraryDetailTransition",
         ) { activeDetail ->
             if (activeDetail != null) {
                 // 详情视图（歌单 / 专辑 / 艺术家 / 收藏）
@@ -1614,10 +1597,10 @@ private fun AlbumListTab(
     onOpenAlbum: (String) -> Unit,
     contentPadding: PaddingValues,
 ) {
-    val albums = tracks
+    val albums = remember(tracks) { tracks
         .groupBy { it.album.ifBlank { "未知专辑" } }
         .toList()
-        .sortedBy { (name, _) -> name }
+        .sortedBy { (name, _) -> name } }
     LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         itemsIndexed(albums, key = { index, album -> "album-${album.first}-$index" }) { _, (album, albumTracks) ->
             val first = albumTracks.first()
@@ -1669,10 +1652,10 @@ private fun ArtistListTab(
     onOpenArtist: (String) -> Unit,
     contentPadding: PaddingValues,
 ) {
-    val artists = tracks
+    val artists = remember(tracks) { tracks
         .groupBy { it.artist.ifBlank { "未知艺术家" } }
         .toList()
-        .sortedBy { (name, _) -> name }
+        .sortedBy { (name, _) -> name } }
     LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         itemsIndexed(artists, key = { index, artist -> "artist-${artist.first}-$index" }) { _, (artist, artistTracks) ->
             Row(
@@ -2057,10 +2040,12 @@ private fun DiscoverScreen(
     var showDelete by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
     val pagePadding = if (compact) 16.dp else 32.dp
-    val allKnownTracks = (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
+    val allKnownTracks = remember(libraryTracks, playlists) {
+        (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
+    }
 
     val results = localSearchResults(query, allKnownTracks)
-    val selectedTracks = allKnownTracks.filter { it.id in selectedIds }
+    val selectedTracks = remember(allKnownTracks, selectedIds) { allKnownTracks.filter { it.id in selectedIds } }
     fun toggle(id: String) { selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id }
     ResonanceBackHandler(enabled = selecting) { selecting = false; selectedIds = emptySet() }
     Column(Modifier.fillMaxSize()) {
@@ -2733,12 +2718,19 @@ fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 12
     }
 }
 
+@Composable
 private fun localSearchResults(query: String, tracks: List<Track>): List<Track> {
-    val trimmed = query.trim()
-    if (trimmed.isEmpty()) return emptyList()
-    return tracks.filter { track ->
-        com.resonance.player.util.PinyinUtils.matches(track.title, trimmed) ||
-            com.resonance.player.util.PinyinUtils.matches(track.artist, trimmed) ||
-            com.resonance.player.util.PinyinUtils.matches(track.album, trimmed)
+    val indexed by produceState<Pair<List<Track>, LibrarySearchIndex>?>(null, tracks) {
+        value = tracks to withContext(Dispatchers.Default) { LibrarySearchIndex.build(tracks) }
     }
+    val trimmed = query.trim()
+    val result by produceState<Pair<String, List<Track>>>("" to emptyList(), trimmed, indexed) {
+        value = trimmed to emptyList()
+        val current = indexed
+        if (trimmed.isNotEmpty() && current != null && current.first == tracks) {
+            delay(120)
+            value = trimmed to withContext(Dispatchers.Default) { current.second.search(trimmed) }
+        }
+    }
+    return if (result.first == trimmed && indexed?.first == tracks) result.second else emptyList()
 }

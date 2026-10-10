@@ -75,6 +75,43 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
+    private val loudnessAnalyzer = com.resonance.player.audio.AndroidLoudnessAnalyzer(activity)
+    override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
+        com.resonance.player.playback.PlaybackSnapshotCodec.decode(
+            activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE).getString("playback.snapshot", null))
+    }
+    override suspend fun savePlaybackSnapshot(snapshot: com.resonance.player.playback.PlaybackSnapshot): Unit = withContext(Dispatchers.IO) {
+        check(activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE).edit()
+            .putString("playback.snapshot", com.resonance.player.playback.PlaybackSnapshotCodec.encode(snapshot)).commit())
+    }
+    override suspend fun resumePlayback(queue: List<Track>): com.resonance.player.playback.PlaybackResume? = withContext(Dispatchers.Main.immediate) {
+        val controller = suspendCancellableCoroutine<MediaController> { continuation ->
+            controllerFuture.addListener({
+                if (continuation.isActive) {
+                    try { continuation.resume(controllerFuture.get()) }
+                    catch (error: Exception) { continuation.resumeWith(Result.failure(error)) }
+                }
+            }, ContextCompat.getMainExecutor(activity))
+        }
+        val saved = loadPlaybackSnapshot()
+        val id = controller.currentMediaItem?.mediaId
+        if (id != null && queue.any { it.id == id }) {
+            val progress = if (controller.duration > 0) (controller.currentPosition.toFloat() / controller.duration).coerceIn(0f, 1f) else 0f
+            com.resonance.player.playback.PlaybackResume(com.resonance.player.playback.PlaybackSnapshot(id,
+                (0 until controller.mediaItemCount).map { controller.getMediaItemAt(it).mediaId }, progress, saved?.playlistId),
+                controller.isPlaying, attached = true)
+        } else saved?.let { com.resonance.player.playback.PlaybackResume(it) }
+    }
+    override fun restorePausedPlayback(track: Track, queue: List<Track>, progress: Float, shuffle: Boolean, repeatMode: RepeatMode) {
+        withPlayer { controller ->
+            val playable = queue.filter { it.sourceUri != null }
+            controller.setMediaItems(playable.map(::mediaItemFor), playable.indexOfFirst { it.id == track.id }.coerceAtLeast(0),
+                (durationTextToSeconds(track.durationText) * 1000L * progress).toLong())
+            applyPlaybackMode(controller, shuffle, repeatMode)
+            controller.prepare()
+            controller.pause()
+        }
+    }
     override val foreground = MutableStateFlow(false)
     override val systemReduceMotion: Boolean get() = false
     override fun updateSystemBars(isDark: Boolean) {
@@ -143,6 +180,8 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    private val errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    override val playbackErrors: Flow<String> = errorEvents
     private val trackEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -159,6 +198,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             val controller = runCatching(controllerFuture::get).getOrNull() ?: return@addListener
             player = controller
             controller.addListener(object : Player.Listener {
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    errorEvents.tryEmit(error.message ?: "音频解码失败")
+                }
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_ENDED) {
                         isPlayingEvents.tryEmit(false)
@@ -213,11 +255,15 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun loadPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
-        val preferences = activity.getSharedPreferences("resonance_playlists", android.content.Context.MODE_PRIVATE)
+        synchronized(this@AndroidPlatformServices) { loadPlaylistsNow() }
+    }
+
+    private fun loadPlaylistsNow(): List<Playlist> {
+        val preferences = recoverPlaylistPreferences()
         val favorites = favoriteIds()
         val tracksById = cachedTracks.associateBy(Track::id)
         val count = preferences.getInt("count", 0)
-        (0 until count).mapNotNull { index ->
+        return (0 until count).mapNotNull { index ->
             val prefix = "playlist.$index."
             val id = preferences.getString(prefix + "id", null) ?: return@mapNotNull null
             val trackIds = preferences.getString(prefix + "tracks", "").orEmpty().split(',').filter(String::isNotBlank)
@@ -243,7 +289,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun savePlaylists(playlists: List<Playlist>): Unit = withContext(Dispatchers.IO) {
-        val editor = activity.getSharedPreferences("resonance_playlists", android.content.Context.MODE_PRIVATE).edit().clear()
+        synchronized(this@AndroidPlatformServices) { savePlaylistsNow(playlists) }
+    }
+
+    private fun savePlaylistsNow(playlists: List<Playlist>) {
+        val current = recoverPlaylistPreferences()
+        if (current.contains("count")) copyPlaylistPreferences(current,
+            activity.getSharedPreferences("resonance_playlists_backup", Context.MODE_PRIVATE))
+        val editor = current.edit().clear()
         editor.putInt("count", playlists.size)
         playlists.forEachIndexed { index, playlist ->
             val prefix = "playlist.$index."
@@ -254,8 +307,33 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             editor.putString(prefix + "tracks", playlist.tracks.joinToString(",", transform = Track::id))
             playlist.tracks.forEachIndexed { trackIndex, track -> writeCatalogTrack(editor, prefix, trackIndex, track) }
         }
-        editor.commit()
-        Unit
+        check(editor.commit()) { "歌单保存失败" }
+    }
+
+    private fun recoverPlaylistPreferences(): android.content.SharedPreferences {
+        val current = activity.getSharedPreferences("resonance_playlists", Context.MODE_PRIVATE)
+        val backup = activity.getSharedPreferences("resonance_playlists_backup", Context.MODE_PRIVATE)
+        fun valid(prefs: android.content.SharedPreferences): Boolean = try {
+            val count = prefs.getInt("count", -1)
+            count in 0..100_000 && (0 until count).all { prefs.contains("playlist.$it.id") }
+        } catch (_: Exception) { false }
+        if (!valid(current) && valid(backup)) copyPlaylistPreferences(backup, current)
+        else if (current.contains("count") && !valid(current)) error("歌单数据损坏且没有可恢复备份")
+        return current
+    }
+
+    private fun copyPlaylistPreferences(source: android.content.SharedPreferences, target: android.content.SharedPreferences) {
+        val editor = target.edit().clear()
+        source.all.forEach { (key, value) ->
+            when (value) {
+                is String -> editor.putString(key, value)
+                is Int -> editor.putInt(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+            }
+        }
+        check(editor.commit()) { "歌单备份/恢复失败" }
     }
 
     override suspend fun loadLastSelectedPlaylistId(): String? = withContext(Dispatchers.IO) {
@@ -363,13 +441,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .apply()
     }
 
-    override fun setTrackGain(gainDb: Float) {
+    override fun setTrackGain(gainDb: Float, userInitiated: Boolean) {
         withPlayer { controller ->
-            val args = android.os.Bundle().apply { putFloat("gainDb", gainDb.coerceIn(-18f, 18f)) }
-            controller.sendCustomCommand(
-                androidx.media3.session.SessionCommand("SET_AUDIO_GAIN", android.os.Bundle()),
-                args,
-            )
+            val args = android.os.Bundle().apply {
+                putFloat("gainDb", gainDb.coerceIn(-60f, 18f)); putBoolean("userInitiated", userInitiated)
+            }
+            sendAudioCommand(controller, com.resonance.player.AudioSessionCommands.GAIN, args)
         }
     }
 
@@ -495,44 +572,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun loadAutoLoudnessGain(track: Track): Float? = withContext(Dispatchers.IO) {
-        val prefs = activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
-        val key = "gain.auto.${track.id}"
-        if (prefs.contains(key)) prefs.getFloat(key, 0.0f) else null
+        loudnessAnalyzer.cached(track.id)
     }
 
     override suspend fun analyzeAndCacheLoudnessGain(track: Track): Float = withContext(Dispatchers.IO) {
-        val prefs = activity.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
-        val key = "gain.auto.${track.id}"
-        if (prefs.contains(key)) return@withContext prefs.getFloat(key, 0.0f)
-
-        val uriString = track.sourceUri ?: return@withContext 0.0f
-        try {
-            val inputArg = if (uriString.startsWith("content://")) {
-                com.arthenica.ffmpegkit.FFmpegKitConfig.getSafParameterForRead(activity, Uri.parse(uriString))
-            } else {
-                Uri.parse(uriString).path ?: uriString
-            }
-            if (inputArg.isNullOrBlank()) return@withContext 0.0f
-
-            val durationSec = durationTextToSeconds(track.durationText)
-            val args = if (durationSec > 35) {
-                arrayOf("-hide_banner", "-nostdin", "-ss", "15", "-t", "20", "-i", inputArg, "-filter:a", "volumedetect", "-f", "null", "-")
-            } else {
-                arrayOf("-hide_banner", "-nostdin", "-t", "20", "-i", inputArg, "-filter:a", "volumedetect", "-f", "null", "-")
-            }
-
-            val session = FFmpegKit.executeWithArguments(args)
-            val logs = session.allLogsAsString.orEmpty().ifBlank { session.output.orEmpty() }
-            val meanMatch = Regex("""mean_volume:\s*(-?\d+(\.\d+)?)\s*dB""").find(logs)
-            val meanVol = meanMatch?.groupValues?.get(1)?.toFloatOrNull()
-            if (meanVol != null) {
-                val targetLoudness = -14.0f
-                val gain = (targetLoudness - meanVol).coerceIn(-12.0f, 14.0f)
-                prefs.edit().putFloat(key, gain).apply()
-                return@withContext gain
-            }
-        } catch (_: Throwable) {}
-        return@withContext 0.0f
+        val source = track.sourceUri ?: return@withContext 0f
+        loudnessAnalyzer.analyze(track.id, source)
     }
 
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
@@ -630,10 +675,11 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .resolve("Resonance").absolutePath
 
     override suspend fun setTrackFavorite(trackId: String, favorite: Boolean): Unit = withContext(Dispatchers.IO) {
+        synchronized(this@AndroidPlatformServices) {
         val preferences = activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
         val ids = preferences.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
         if (favorite) ids += trackId else ids -= trackId
-        preferences.edit().putStringSet("ids", ids).commit()
+        check(preferences.edit().putStringSet("ids", ids).commit()) { "收藏保存失败" }
         val synced = loadSyncedTracks()
         if (synced.any { it.id == trackId }) {
             saveSyncedTracks(synced.map { track ->
@@ -644,6 +690,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             if (track.id == trackId) track.copy(isFavorite = favorite) else track
         }
         Unit
+        }
     }
 
     override suspend fun loadDeepSeekConfig(): com.resonance.player.model.DeepSeekConfig = withContext(Dispatchers.IO) {
@@ -755,14 +802,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
                 .toPath().resolve("Resonance")
             val imported = PlainSyncPackage().import(temporary, managed)
-            val existingPlaylists = loadPlaylists()
             val androidTracks = imported.tracks.map { track ->
                 track.copy(sourceUri = Paths.get(track.sourceUri!!).toUri().toString())
             }
-            val syncedTracks = (loadSyncedTracks() + androidTracks).associateBy(Track::id).values.toList()
-            saveSyncedTracks(syncedTracks)
-            cachedTracks = (cachedTracks + syncedTracks).associateBy(Track::id).values.toList()
-            savePlaylists((existingPlaylists + imported.playlists).associateBy(Playlist::id).values.toList())
+            synchronized(this@AndroidPlatformServices) {
+                mergeSyncedTracks(androidTracks)
+                mergeSyncedPlaylists(imported.playlists)
+            }
             SyncReport(true, "已导入 $sourceName", androidTracks.size, imported.playlists.size)
         } finally {
             Files.deleteIfExists(temporary)
@@ -817,11 +863,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 .toPath().resolve("Resonance")
             val imported = EncryptedSyncPackage().import(temporary, passphrase, managed)
             val androidTracks = imported.tracks.map { track -> track.copy(sourceUri = Paths.get(track.sourceUri!!).toUri().toString()) }
-            val syncedTracks = (loadSyncedTracks() + androidTracks).associateBy(Track::id).values.toList()
-            saveSyncedTracks(syncedTracks)
-            cachedTracks = (cachedTracks + syncedTracks).associateBy(Track::id).values.toList()
-            val mergedPlaylists = (loadPlaylists() + imported.playlists).associateBy(Playlist::id).values.toList()
-            savePlaylists(mergedPlaylists)
+            synchronized(this@AndroidPlatformServices) {
+                mergeSyncedTracks(androidTracks)
+                mergeSyncedPlaylists(imported.playlists)
+            }
             SyncReport(true, "局域网同步完成", androidTracks.size, imported.playlists.size)
         } finally {
             Files.deleteIfExists(temporary)
@@ -834,9 +879,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         if (convertToMp3) {
             val treeUri = pickMusicTree() ?: return ImportReport(emptyList())
             val report = withContext(Dispatchers.IO) { scanDocumentTree(treeUri) }
-            val merged = (loadSyncedTracks() + report.tracks).associateBy(Track::id).values.toList()
-            saveSyncedTracks(merged)
-            cachedTracks = (cachedTracks + merged).associateBy(Track::id).values.toList()
+            withContext(Dispatchers.IO) { mergeSyncedTracks(report.tracks) }
             return report
         }
         val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
@@ -899,9 +942,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             }
             else -> error("不支持删除该存储位置")
         }
-        val remainingSynced = loadSyncedTracks().filterNot { it.id == track.id }
-        saveSyncedTracks(remainingSynced)
-        cachedTracks = cachedTracks.filterNot { it.id == track.id }
+        synchronized(this@AndroidPlatformServices) {
+            saveSyncedTracks(loadSyncedTracks().filterNot { it.id == track.id })
+            cachedTracks = cachedTracks.filterNot { it.id == track.id }
+        }
         track.artworkPath?.takeIf { !it.startsWith("content://") && !it.startsWith("http") }?.let { artwork ->
             runCatching { Files.deleteIfExists(Paths.get(artwork)) }
         }
@@ -917,11 +961,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun updateTracks(tracks: List<Track>): Unit = withContext(Dispatchers.IO) {
+        synchronized(this@AndroidPlatformServices) {
         val updatedById = tracks.associateBy(Track::id)
         val synced = loadSyncedTracks().map { current -> updatedById[current.id] ?: current }
         saveSyncedTracks(synced)
         cachedTracks = cachedTracks.map { current -> updatedById[current.id] ?: current }
-        val playlists = loadPlaylists().map { playlist ->
+        val playlists = loadPlaylistsNow().map { playlist ->
             playlist.copy(
                 tracks = playlist.tracks.map { track ->
                     updatedById[track.id]?.let { u ->
@@ -936,7 +981,8 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 }
             )
         }
-        savePlaylists(playlists)
+        savePlaylistsNow(playlists)
+        }
     }
 
     override suspend fun batchEnrichTracks(
@@ -1090,13 +1136,21 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
     override fun setVolume(volume: Float) {
         withPlayer { controller ->
-            controller.volume = volume.coerceIn(0f, 1f)
             val args = android.os.Bundle().apply { putFloat("volume", volume.coerceIn(0f, 1f)) }
-            controller.sendCustomCommand(
-                androidx.media3.session.SessionCommand("SET_MASTER_VOLUME", android.os.Bundle()),
-                args,
-            )
+            sendAudioCommand(controller, com.resonance.player.AudioSessionCommands.VOLUME, args)
         }
+    }
+
+    private fun sendAudioCommand(controller: MediaController, action: String, args: android.os.Bundle) {
+        val command = com.resonance.player.AudioSessionCommands.command(action)
+        check(controller.isSessionCommandAvailable(command)) { "音频命令未注册：$action" }
+        val result = controller.sendCustomCommand(command, args)
+        result.addListener({
+            try {
+                if (result.get().resultCode != androidx.media3.session.SessionResult.RESULT_SUCCESS)
+                    android.util.Log.e("ResonanceAudio", "Audio command failed: $action")
+            } catch (error: Exception) { android.util.Log.e("ResonanceAudio", "Audio command failed: $action", error) }
+        }, ContextCompat.getMainExecutor(activity))
     }
 
     override fun setPlaybackSpeed(speed: Float) {
@@ -1514,11 +1568,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         return openTrackSource(value)
     }
 
+    @Synchronized
     private fun loadSyncedTracks(): List<Track> {
         val index = activity.filesDir.toPath().resolve("synced-library.properties")
-        if (!Files.isRegularFile(index)) return emptyList()
-        val properties = Properties()
-        Files.newBufferedReader(index, StandardCharsets.UTF_8).use(properties::load)
+        val properties = com.resonance.player.io.AtomicPropertiesFile.read(index) {
+            com.resonance.player.io.AtomicPropertiesFile.validIndexed(it, "track", "source")
+        }
         val count = properties.getProperty("count")?.toIntOrNull() ?: return emptyList()
         return (0 until count).mapNotNull { indexValue ->
             val prefix = "track.$indexValue."
@@ -1546,6 +1601,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         activity.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
     }.getOrDefault(false)
 
+    @Synchronized
     private fun saveSyncedTracks(tracks: List<Track>) {
         val index = activity.filesDir.toPath().resolve("synced-library.properties")
         val properties = Properties().apply { setProperty("count", tracks.size.toString()) }
@@ -1562,9 +1618,20 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
             properties.setProperty(prefix + "mime", track.mimeType)
         }
-        val temporary = index.resolveSibling("${index.fileName}.tmp")
-        Files.newBufferedWriter(temporary, StandardCharsets.UTF_8).use { properties.store(it, "Resonance synced library") }
-        Files.move(temporary, index, StandardCopyOption.REPLACE_EXISTING)
+        com.resonance.player.io.AtomicPropertiesFile.write(index, properties, "Resonance synced library")
+    }
+
+    @Synchronized
+    private fun mergeSyncedTracks(tracks: List<Track>): List<Track> {
+        val merged = (loadSyncedTracks() + tracks).associateBy(Track::id).values.toList()
+        saveSyncedTracks(merged)
+        cachedTracks = (cachedTracks + merged).associateBy(Track::id).values.toList()
+        return merged
+    }
+
+    @Synchronized
+    private fun mergeSyncedPlaylists(playlists: List<Playlist>) {
+        savePlaylistsNow((loadPlaylistsNow() + playlists).associateBy(Playlist::id).values.toList())
     }
 
     private fun scanMediaStore(): List<Track> {

@@ -15,7 +15,6 @@ compose-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", vers
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
 jaudiotagger = { module = "net.jthink:jaudiotagger", version = "3.0.1" }
-javafx-media = { module = "org.openjfx:javafx-media", version = "21.0.8" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

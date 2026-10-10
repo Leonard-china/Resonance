@@ -1,5 +1,6 @@
-param(
+﻿param(
     [switch]$NoBump,
+    [switch]$BumpVersion,
     [string]$SetVersion
 )
 
@@ -8,7 +9,8 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $projectRoot
 
-# ---- 1. 版本号自增逻辑（每次构建均自动变更版本号）----
+# 版本只在显式发布时变更；普通构建保持版本稳定。
+if ($NoBump -and $BumpVersion) { throw "NoBump 和 BumpVersion 不能同时使用" }
 $versionFile = Join-Path $projectRoot "version.properties"
 $currentVersion = "0.2.0"
 $currentCode = 8
@@ -25,9 +27,10 @@ $newVersion = $currentVersion
 $newCode = $currentCode
 
 if ($SetVersion) {
+    if ($SetVersion -notmatch '^\d+\.\d+\.\d+$') { throw "版本号必须使用 major.minor.patch 格式" }
     $newVersion = $SetVersion.Trim()
-    $newCode = $currentCode + 1
-} elseif (-not $NoBump) {
+    if ($newVersion -ne $currentVersion) { $newCode = $currentCode + 1 }
+} elseif ($BumpVersion) {
     $parts = $currentVersion.Split('.')
     if ($parts.Length -ge 3 -and [int]::TryParse($parts[2], [ref]$null)) {
         $patch = [int]$parts[2] + 1
@@ -41,14 +44,8 @@ if ($SetVersion) {
 if ($newVersion -ne $currentVersion -or $newCode -ne $currentCode) {
     Write-Host ">>> 自动递增版本: v$currentVersion (code $currentCode) -> v$newVersion (code $newCode)" -ForegroundColor Cyan
     $versionContent = "versionName=$newVersion`nversionCode=$newCode`n"
-    Set-Content -LiteralPath $versionFile -Value $versionContent -Encoding UTF8
+    [System.IO.File]::WriteAllText($versionFile, $versionContent, [System.Text.UTF8Encoding]::new($false))
 
-    $modelFile = Join-Path $projectRoot "composeApp\src\commonMain\kotlin\com\resonance\player\model\LibraryModels.kt"
-    if (Test-Path -LiteralPath $modelFile) {
-        $content = Get-Content -LiteralPath $modelFile -Raw -Encoding UTF8
-        $updated = $content -replace 'const val APP_VERSION = "[^"]*"', "const val APP_VERSION = `"$newVersion`""
-        Set-Content -LiteralPath $modelFile -Value $updated -Encoding UTF8 -NoNewline
-    }
 } else {
     Write-Host ">>> 当前构建版本: v$currentVersion (code $currentCode)" -ForegroundColor Cyan
 }
@@ -104,7 +101,7 @@ if (-not (Test-Path -LiteralPath $gradle)) {
     throw "Gradle not found."
 }
 
-& $gradle :composeApp:allTests :composeApp:assembleRelease :composeApp:packageReleaseExe --no-configuration-cache
+& $gradle :composeApp:allTests :composeApp:lintRelease :composeApp:assembleRelease :composeApp:packageReleaseExe --no-configuration-cache
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host "`n================ 构建产物汇总 (v$newVersion) ================" -ForegroundColor Green
@@ -127,5 +124,6 @@ if (Test-Path -LiteralPath $exePath) {
     Write-Host "SHA256       : $exeHash"
 }
 Write-Host "========================================================`n" -ForegroundColor Green
+& (Join-Path $PSScriptRoot 'release-manifest.ps1') -Version $newVersion
 
 
