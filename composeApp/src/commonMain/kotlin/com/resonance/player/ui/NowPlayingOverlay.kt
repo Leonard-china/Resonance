@@ -1178,271 +1178,11 @@ private fun VolumeAndSpeedRow(
 
             Spacer(Modifier.width(6.dp))
 
-            TactileTopBarButton(
-                icon = Icons.Default.Tune,
-                contentDescription = "响度增益与专属校准模式",
-                onClick = { showCalibration = !showCalibration },
-                tint = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) SoftNeumorphicTokens.ActiveEmerald else null,
-                glowColor = if (isPanelVisible || isCurrentTrackCalibrated || trackGainDb != 0f) SoftNeumorphicTokens.ActiveEmeraldGlow else null,
-                modifier = Modifier.size(36.dp),
+            androidx.compose.material3.FilterChip(
+                selected = autoLoudnessEnabled,
+                onClick = onToggleAutoLoudness,
+                label = { Text("音量平衡") },
             )
-        }
-
-        AnimatedVisibility(
-            visible = isPanelVisible,
-            enter = fadeIn(tween(220)) + expandVertically(),
-            exit = fadeOut(tween(180)) + shrinkVertically(),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp, bottom = 4.dp, start = 4.dp, end = 4.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(ResonanceColors.PrimarySoft.copy(alpha = 0.35f))
-                    .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                    .padding(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Tune,
-                            contentDescription = null,
-                            tint = ResonanceColors.Primary,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "音频前级响度均衡 & 专属校准",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = ResonanceColors.TextPrimary,
-                        )
-                    }
-                    Text(
-                        text = when {
-                            isCalibrationActive -> "🔴 校准中"
-                            isCurrentTrackCalibrated -> "🎯 已专属记忆 (${formatGain(trackGainDb)})"
-                            autoLoudnessEnabled && trackGainDb != 0f -> "⚡ 自动均衡 (${formatGain(trackGainDb)})"
-                            trackGainDb != 0f -> formatGain(trackGainDb)
-                            else -> "0.0 dB (标准)"
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isCalibrationActive || isCurrentTrackCalibrated || trackGainDb != 0f) ResonanceColors.Primary else ResonanceColors.Dim,
-                    )
-                }
-
-                Spacer(Modifier.height(6.dp))
-
-                if (isCalibrationActive) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(ResonanceColors.Primary.copy(alpha = 0.15f))
-                            .border(1.dp, ResonanceColors.Primary.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            "🔴 正在进行物理音量校准模式",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = ResonanceColors.Primary,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            "请直接使用手机侧边的【物理音量按键】调节到当前曲目最舒适的音量。",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ResonanceColors.TextPrimary,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                "基准音量: ${calibrationStatus.baseVolume} → 当前: ${calibrationStatus.currentVolume} / ${calibrationStatus.maxVolume}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = ResonanceColors.Dim
-                            )
-                            Text(
-                                "相对增益: ${formatGain(calibrationStatus.deltaDb)}",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = ResonanceColors.Primary
-                            )
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            TextButton(onClick = onCancelCalibration) {
-                                Text("取消", color = ResonanceColors.Dim)
-                            }
-                            Spacer(Modifier.width(8.dp))
-                            Button(
-                                onClick = onFinishCalibration,
-                                colors = ButtonDefaults.buttonColors(containerColor = ResonanceColors.Primary)
-                            ) {
-                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("保存并还原手机音量", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                } else {
-                    if (isCurrentTrackCalibrated) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(ResonanceColors.Soft)
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    "🎯 本曲已记忆专属振幅 (${formatGain(trackGainDb)})",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = ResonanceColors.Primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    "播放时已自动应用专属振幅，不影响手机系统音量",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = ResonanceColors.Dim
-                                )
-                            }
-                            Row {
-                                TextButton(onClick = onStartCalibration) {
-                                    Text("重新校准", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Primary)
-                                }
-                                TextButton(onClick = onResetCalibration) {
-                                    Text("清除", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
-                                }
-                            }
-                        }
-                    } else {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        Icons.Default.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = if (autoLoudnessEnabled) ResonanceColors.Primary else ResonanceColors.Dim,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        "全自动动态响度均衡",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = ResonanceColors.TextPrimary
-                                    )
-                                }
-                                Text(
-                                    if (autoLoudnessEnabled) "EBU R128 标准，平拉钢琴/弱录音与流行乐" else "已关闭自动均衡，使用标准默认输出",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = ResonanceColors.Dim
-                                )
-                            }
-                            SuggestionChip(
-                                onClick = onToggleAutoLoudness,
-                                label = { Text(if (autoLoudnessEnabled) "已开启" else "已关闭", style = MaterialTheme.typography.labelSmall) },
-                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                    containerColor = if (autoLoudnessEnabled) ResonanceColors.Primary.copy(alpha = 0.2f) else ResonanceColors.Soft,
-                                    labelColor = if (autoLoudnessEnabled) ResonanceColors.Primary else ResonanceColors.Dim
-                                ),
-                                border = if (autoLoudnessEnabled) BorderStroke(1.dp, ResonanceColors.Primary) else null,
-                                modifier = Modifier.height(28.dp)
-                            )
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        OutlinedButton(
-                            onClick = onStartCalibration,
-                            modifier = Modifier.fillMaxWidth().height(36.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-                            border = BorderStroke(1.dp, ResonanceColors.GlassBorderGlow)
-                        ) {
-                            Icon(Icons.Default.Tune, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("开启物理音量校准模式 (按手机侧键记忆)", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.TextPrimary)
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("-12dB", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
-                    Slider(
-                        value = trackGainDb.coerceIn(-12f, 12f),
-                        onValueChange = onTrackGainChange,
-                        valueRange = -12f..12f,
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                        colors = SliderDefaults.colors(
-                            thumbColor = ResonanceColors.Primary,
-                            activeTrackColor = ResonanceColors.Primary,
-                            inactiveTrackColor = ResonanceColors.DividerStrong,
-                        ),
-                    )
-                    Text("+12dB", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
-                }
-                Spacer(Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    listOf(
-                        "标准 (0dB)" to 0f,
-                        "钢琴/弱音 (+6dB)" to 6f,
-                        "强劲 (+10dB)" to 10f,
-                        "降躁 (-3dB)" to -3f,
-                    ).forEach { (label, presetGain) ->
-                        val isSelected = kotlin.math.abs(trackGainDb - presetGain) < 0.1f
-                        SuggestionChip(
-                            onClick = { onTrackGainChange(presetGain) },
-                            label = { Text(label, style = MaterialTheme.typography.labelSmall) },
-                            colors = SuggestionChipDefaults.suggestionChipColors(
-                                containerColor = if (isSelected) ResonanceColors.Primary.copy(alpha = 0.2f) else ResonanceColors.Soft,
-                                labelColor = if (isSelected) ResonanceColors.Primary else ResonanceColors.TextPrimary,
-                            ),
-                            border = if (isSelected) BorderStroke(1.dp, ResonanceColors.Primary) else null,
-                            modifier = Modifier.height(28.dp),
-                        )
-                    }
-                }
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Security,
-                        contentDescription = null,
-                        tint = ResonanceColors.Positive,
-                        modifier = Modifier.size(13.dp),
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        "软限幅防削波保护已激活 · Hi-Fi 无损保真无杂音",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ResonanceColors.Positive,
-                    )
-                }
-            }
         }
     }
 }
@@ -1520,7 +1260,7 @@ private fun LyricsUnavailable(message: String, onRefresh: () -> Unit, onRequestA
             OutlinedButton(onClick = onRequestAi) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Primary)
                 Spacer(Modifier.width(6.dp))
-                Text("DeepSeek AI 检索", color = ResonanceColors.Primary)
+                Text("AI 查找歌词", color = ResonanceColors.Primary)
             }
         }
     }
@@ -1593,6 +1333,7 @@ private fun LyricsContent(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        TranslationControls()
         if (lyrics.synchronized && onAdjustOffset != null) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
@@ -1696,12 +1437,18 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
+        Column {
         Text(
-            line.text,
+            if (display == com.resonance.player.model.LyricDisplay.Translation) line.translation ?: line.text else line.text,
             style = if (active) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodyLarge,
             fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
             color = color,
         )
+        if (display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank()) {
+            Text(line.translation, style = MaterialTheme.typography.bodyMedium, color = color.copy(alpha = 0.8f), modifier = Modifier.padding(top = 4.dp))
+        }
+        }
     }
 }
 

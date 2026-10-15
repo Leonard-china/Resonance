@@ -12,6 +12,17 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class MetadataEnricherTest {
+    @Test fun publicCatalogMatchingRejectsWrongSongsAndAllowsUnknownArtist() {
+        val root = Files.createTempDirectory("catalog-matching-")
+        try {
+            val enricher = MetadataEnricher(root.resolve("art"), LrclibLyricsRepository(root.resolve("lyrics")))
+            assertTrue(enricher.candidateMatches("晴天", "未知歌手", "晴天", "周杰伦"))
+            assertTrue(enricher.candidateMatches("周杰伦 - 晴天.mp3", "周杰伦", "晴天", "周杰伦"))
+            assertFalse(enricher.candidateMatches("晴天", "周杰伦", "夜曲", "周杰伦"))
+            assertFalse(enricher.candidateMatches("晴天", "周杰伦", "晴天", "其他歌手"))
+            assertFalse(enricher.candidateMatches("晴天", "周杰伦", "晴天", ""))
+        } finally { Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
 
     @Test
     fun cleansTrackTitleProperly() {

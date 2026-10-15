@@ -13,6 +13,7 @@ import com.resonance.player.model.LyricLine
 import com.resonance.player.model.Lyrics
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.Track
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -83,11 +84,11 @@ class MetadataEnricher(
             var updatedAlbum = currentTrack.album
 
             if (needArtistOrAlbum) {
-                if (!onlineResult.artist.isNullOrBlank() && currentTrack.isMissingArtist) {
+                if (!onlineResult.artist.isNullOrBlank() && (options.forceRefresh || currentTrack.isMissingArtist)) {
                     updatedArtist = onlineResult.artist
                     modified = true
                 }
-                if (!onlineResult.album.isNullOrBlank() && currentTrack.isMissingAlbum) {
+                if (!onlineResult.album.isNullOrBlank() && (options.forceRefresh || currentTrack.isMissingAlbum)) {
                     updatedAlbum = onlineResult.album
                     modified = true
                 }
@@ -137,13 +138,14 @@ class MetadataEnricher(
             }
         }
 
-        // 4. DeepSeek AI 兜底（仅在用户开启且有未解决项时调用，节省 Token！）
+        // 4. AI 兜底（仅在用户开启且有未解决项时调用，节省 Token！）
         val stillNeedsCover = needCover && currentTrack.isMissingCover
         val stillNeedsArtist = needArtistOrAlbum && currentTrack.isMissingArtist
+        val stillNeedsAlbum = needArtistOrAlbum && currentTrack.isMissingAlbum
         val stillNeedsLyrics = needLyrics && !lyricsFound
 
-        if (options.useAiFallback && config.isConfigured && config.enabled && (stillNeedsCover || stillNeedsArtist || stillNeedsLyrics)) {
-            onStatus("免费源未命中，正在调用 DeepSeek AI 智能推断…")
+        if (options.useAiFallback && config.isConfigured && config.enabled && (stillNeedsCover || stillNeedsArtist || stillNeedsAlbum || stillNeedsLyrics)) {
+            onStatus("免费源未命中，正在调用 AI 智能推断…")
             val aiResult = deepSeekClient.enrichMetadata(config, currentTrack, needLyrics = stillNeedsLyrics)
             aiCalled = true
 
@@ -152,8 +154,8 @@ class MetadataEnricher(
                 var updatedArtist = currentTrack.artist
                 var updatedAlbum = currentTrack.album
 
-                if (stillNeedsArtist) {
-                    aiResult.artist?.takeIf(String::isNotBlank)?.let {
+                if (stillNeedsArtist || stillNeedsAlbum) {
+                    aiResult.artist?.takeIf { it.isNotBlank() && stillNeedsArtist }?.let {
                         updatedArtist = it
                         modified = true
                     }
@@ -161,7 +163,7 @@ class MetadataEnricher(
                         updatedAlbum = it
                         modified = true
                     }
-                    aiResult.title?.takeIf(String::isNotBlank)?.let {
+                    aiResult.title?.takeIf { it.isNotBlank() && stillNeedsArtist }?.let {
                         updatedTitle = it
                         modified = true
                     }
@@ -196,7 +198,7 @@ class MetadataEnricher(
                             lines = lines,
                             synchronized = true,
                             instrumental = aiResult.isInstrumental,
-                            source = "DeepSeek AI",
+                            source = "AI",
                             fromCache = false,
                         )
                     } else {
@@ -206,7 +208,7 @@ class MetadataEnricher(
                             lines = plainLines,
                             synchronized = false,
                             instrumental = aiResult.isInstrumental,
-                            source = "DeepSeek AI",
+                            source = "AI",
                             fromCache = false,
                         )
                     }
@@ -226,6 +228,7 @@ class MetadataEnricher(
         config: DeepSeekConfig,
         customLyricsFolder: String? = null,
         onProgress: (BatchEnrichProgress) -> Unit = {},
+        onTrackProcessed: suspend (Track) -> Unit = {},
     ): BatchEnrichReport = withContext(Dispatchers.IO) {
         var coversEnriched = 0
         var lyricsEnriched = 0
@@ -234,6 +237,7 @@ class MetadataEnricher(
         val updatedList = mutableListOf<Track>()
 
         tracks.forEachIndexed { index, track ->
+            kotlinx.coroutines.currentCoroutineContext().ensureActive()
             val hadCover = !track.isMissingCover
             val hadArtist = !track.isMissingArtist
             val hadAlbum = !track.isMissingAlbum
@@ -270,6 +274,7 @@ class MetadataEnricher(
             if (!hadArtist && !enrichedTrack.isMissingArtist || (!hadAlbum && !enrichedTrack.isMissingAlbum)) metadataEnriched++
             if (options.enrichLyrics && lyricsRepository.readCache(enrichedTrack) is LyricsFetchResult.Found) lyricsEnriched++
 
+            if (enrichedTrack != track) onTrackProcessed(enrichedTrack)
             updatedList.add(enrichedTrack)
         }
 
@@ -278,7 +283,7 @@ class MetadataEnricher(
             if (coversEnriched > 0) append("补全 $coversEnriched 个封面，")
             if (lyricsEnriched > 0) append("获取 $lyricsEnriched 份歌词，")
             if (metadataEnriched > 0) append("修正 $metadataEnriched 条歌手/专辑，")
-            append("节省 Token 模式：优先使用免费官方源。")
+            append("优先使用公共来源，AI 调用 $aiCallsCount 次。")
         }
 
         BatchEnrichReport(
@@ -305,13 +310,11 @@ class MetadataEnricher(
         val results = root.optJSONArray("results") ?: return@runCatching null
         if (results.length() == 0) return@runCatching null
 
-        val normTitle = normalize(title)
         val best = (0 until results.length())
             .mapNotNull(results::optJSONObject)
             .firstOrNull { item ->
-                val trackName = normalize(item.optString("trackName"))
-                trackName.contains(normTitle) || normTitle.contains(trackName)
-            } ?: results.optJSONObject(0) ?: return@runCatching null
+                candidateMatches(title, artist, item.optString("trackName"), item.optString("artistName"))
+            } ?: return@runCatching null
 
         val rawArtwork = best.optString("artworkUrl100").takeIf(String::isNotBlank)
         val hdArtwork = rawArtwork?.replace("/100x100bb.jpg", "/600x600bb.jpg")
@@ -339,7 +342,9 @@ class MetadataEnricher(
         val root = JSONObject(body)
         val data = root.optJSONObject("data") ?: return@runCatching null
         val lists = data.optJSONArray("lists") ?: return@runCatching null
-        val item = lists.optJSONObject(0) ?: return@runCatching null
+        val item = (0 until lists.length()).mapNotNull(lists::optJSONObject).firstOrNull {
+            candidateMatches(title, artist, it.optString("SongName").replace(Regex("<[^>]*>"), ""), it.optString("SingerName").replace(Regex("<[^>]*>"), ""))
+        } ?: return@runCatching null
         val songName = item.optString("SongName").takeIf(String::isNotBlank)
             ?.replace(Regex("<em>|</em>"), "")
         val singerName = item.optString("SingerName").takeIf(String::isNotBlank)
@@ -371,14 +376,27 @@ class MetadataEnricher(
         connection.connectTimeout = 8_000
         connection.readTimeout = 15_000
         connection.setRequestProperty("User-Agent", USER_AGENT)
-        connection.inputStream.use { input ->
-            Files.newOutputStream(temporary).use { output ->
-                input.copyTo(output)
-            }
+        try {
+            val bytes = connection.inputStream.use { it.readUpTo(10_000_001) }
+            require(bytes.size <= 10_000_000) { "封面超过 10 MB" }
+            require(bytes.size >= 12 && (((bytes[0].toInt() and 0xff) == 0xff && (bytes[1].toInt() and 0xff) == 0xd8) ||
+                bytes.copyOfRange(1, 4).decodeToString() == "PNG" || bytes.copyOfRange(0, 4).decodeToString() == "GIF8" ||
+                bytes.copyOfRange(0, 4).decodeToString() == "RIFF" && bytes.copyOfRange(8, 12).decodeToString() == "WEBP")) { "返回内容不是有效封面" }
+            Files.write(temporary, bytes)
+            Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING)
+        } finally {
+            connection.disconnect(); Files.deleteIfExists(temporary)
         }
-        Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING)
         target.toAbsolutePath().normalize().toString()
     }.getOrNull()
+
+    internal fun candidateMatches(title: String, artist: String, foundTitle: String, foundArtist: String): Boolean {
+        val wanted = normalize(cleanTrackTitle(title)); val found = normalize(foundTitle)
+        if (wanted.isBlank() || found.isBlank() || !(wanted.contains(found) || found.contains(wanted))) return false
+        val expectedArtist = artist.trim().takeUnless { it.isBlank() || it.lowercase() in setOf("未知歌手", "未知艺术家", "未知", "unknown", "unknown artist") } ?: return true
+        val expected = normalize(expectedArtist); val actual = normalize(foundArtist)
+        return actual.isNotBlank() && (actual.contains(expected) || expected.contains(actual))
+    }
 
     internal fun cleanTrackTitle(title: String): String {
         var text = title.replace(Regex("""(?i)\.(mp3|flac|m4a|wav|ape|kgma|kgg|ogg)$"""), "").trim()

@@ -29,13 +29,7 @@ data class ImportReport(
     val tracks: List<Track>,
     val skippedCount: Int = 0,
     val warnings: List<String> = emptyList(),
-)
-
-data class PlaylistImportReport(
-    val playlist: Playlist,
-    val catalogTrackCount: Int,
-    val matchedTrackCount: Int,
-    val message: String,
+    val cancelled: Boolean = false,
 )
 
 data class DeleteTrackReport(
@@ -49,13 +43,6 @@ data class SyncReport(
     val message: String,
     val trackCount: Int = 0,
     val playlistCount: Int = 0,
-)
-
-data class LanShareInfo(
-    val active: Boolean,
-    val message: String,
-    val qrPath: String? = null,
-    val expiresText: String? = null,
 )
 
 data class Playlist(
@@ -72,7 +59,9 @@ enum class LibraryDestination {
     Playing,
     Profile,
     Import,
-    Sync,
+    PlaylistArchive,
+    Assistant,
+    AudioHelp,
     Settings,
 }
 
@@ -148,6 +137,7 @@ data class PlayerState(
 data class LyricLine(
     val timestampMs: Long?,
     val text: String,
+    val translation: String? = null,
 )
 
 data class Lyrics(
@@ -158,6 +148,7 @@ data class Lyrics(
     val source: String,
     val fromCache: Boolean = false,
     val offsetMs: Long = 0L,
+    val translationLanguage: String? = null,
 )
 
 sealed interface LyricsFetchResult {

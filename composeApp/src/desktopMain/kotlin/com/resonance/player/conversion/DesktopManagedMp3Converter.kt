@@ -11,7 +11,8 @@ class DesktopManagedMp3Converter(
     private val managedDirectory: Path,
     private val ffmpegOverride: Path? = null,
 ) {
-    fun importAsMp3(source: Path): Path {
+    fun importAsMp3(source: Path, control: com.resonance.player.io.ImportControl = com.resonance.player.io.ImportControl(), onProgress: (Long, Long) -> Unit = { _, _ -> }): Path {
+        control.check()
         require(Files.isRegularFile(source)) { "源音频不存在" }
         Files.createDirectories(managedDirectory)
         val target = targetFor(source)
@@ -25,9 +26,9 @@ class DesktopManagedMp3Converter(
         var decodedSource: Path? = null
         try {
             val input = when (extension) {
-                "kgma", "kgm" -> DesktopKgmaConverter().decrypt(source, stagingDirectory)
+                "kgma", "kgm" -> DesktopKgmaConverter().decrypt(source, stagingDirectory) { done, total -> control.check(); onProgress(done, total) }
                     .also { decodedSource = it.path }
-                "kgg" -> decryptKgg(source, stagingDirectory)
+                "kgg" -> decryptKgg(source, stagingDirectory, control, onProgress)
                     .also { decodedSource = it.path }
                 else -> null
             }
@@ -36,7 +37,8 @@ class DesktopManagedMp3Converter(
                 return copyAtomically(input.path, target)
             }
 
-            transcodeWithFfmpeg(input?.path ?: source, target)
+            control.check()
+            transcodeWithFfmpeg(input?.path ?: source, target, control)
             return target
         } finally {
             decodedSource?.let(Files::deleteIfExists)
@@ -50,7 +52,7 @@ class DesktopManagedMp3Converter(
      * Reads the audio hash from the file header, looks up the ekey in the KuGou local database,
      * then stream-decrypts the audio payload to a temporary file.
      */
-    private fun decryptKgg(source: Path, stagingDirectory: Path): DesktopKgmaConverter.DecryptedAudio {
+    private fun decryptKgg(source: Path, stagingDirectory: Path, control: com.resonance.player.io.ImportControl, progress: (Long, Long) -> Unit): DesktopKgmaConverter.DecryptedAudio {
         val minHeader = ByteArray(72)
         val audioHash: String
         val audioOffset: Long
@@ -109,7 +111,12 @@ class DesktopManagedMp3Converter(
         val output = stagingDirectory.resolve("$base.${prefixDecoded.extension}")
 
         Files.newOutputStream(temporary).buffered().use { out ->
-            KggCipher.decryptStream(source, audioOffset, cipher, out)
+            val guarded = object : java.io.FilterOutputStream(out) {
+                var position = 0L
+                override fun write(bytes: ByteArray, offset: Int, length: Int) { control.check(); out.write(bytes, offset, length); position += length; progress(position, Files.size(source) - audioOffset) }
+                override fun write(value: Int) { control.check(); out.write(value); position++; if (position % 262144 == 0L) progress(position, Files.size(source) - audioOffset) }
+            }
+            KggCipher.decryptStream(source, audioOffset, cipher, guarded)
         }
         Files.move(temporary, output, StandardCopyOption.REPLACE_EXISTING)
         return DesktopKgmaConverter.DecryptedAudio(output, prefixDecoded)
@@ -122,7 +129,7 @@ class DesktopManagedMp3Converter(
         return target
     }
 
-    private fun transcodeWithFfmpeg(source: Path, target: Path) {
+    private fun transcodeWithFfmpeg(source: Path, target: Path, control: com.resonance.player.io.ImportControl) {
         val ffmpeg = locateFfmpeg()
         val temporary = target.resolveSibling(".${target.fileName}.part")
         val process = ProcessBuilder(
@@ -135,11 +142,23 @@ class DesktopManagedMp3Converter(
             "-c:v", "copy", "-id3v2_version", "3", "-write_id3v1", "1",
             "-f", "mp3", temporary.toString(),
         ).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().use { it.readText() }
-        val exitCode = process.waitFor()
-        if (exitCode != 0 || !Files.isRegularFile(temporary)) {
+        val log = StringBuilder()
+        val reader = Thread({ process.inputStream.bufferedReader().useLines { lines -> lines.forEach { line -> synchronized(log) { log.appendLine(line); if (log.length > 8000) log.delete(0, log.length - 4000) } } } }, "resonance-convert-log").apply { isDaemon = true; start() }
+        try {
+            val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MINUTES.toNanos(10)
+            while (!process.waitFor(200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                control.check()
+                check(System.nanoTime() < deadline) { "单曲转换超时（10 分钟），可重试或检查文件" }
+            }
+            control.check()
+            reader.join(1000)
+            check(process.exitValue() == 0 && Files.isRegularFile(temporary) && Files.size(temporary) > 0) {
+                "FFmpeg 转换失败：${synchronized(log) { log.takeLast(500).toString() }}"
+            }
+        } catch (error: Throwable) {
+            process.destroyForcibly()
             Files.deleteIfExists(temporary)
-            error("FFmpeg 转换失败（$exitCode）：${output.takeLast(500).trim()}")
+            throw error
         }
         moveIntoPlace(temporary, target)
     }

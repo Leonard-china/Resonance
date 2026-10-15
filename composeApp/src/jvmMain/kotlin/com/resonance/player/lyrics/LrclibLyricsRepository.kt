@@ -279,7 +279,7 @@ class LrclibLyricsRepository(
             lines = lines,
             synchronized = synchronizedLines.isNotEmpty(),
             instrumental = instrumental,
-            source = "LRCLIB",
+            source = record.optString("source", "LRCLIB"),
             fromCache = fromCache,
             offsetMs = offsetMs,
         )
@@ -345,6 +345,7 @@ class LrclibLyricsRepository(
                     val record = JSONObject()
                         .put("instrumental", result.lyrics.instrumental)
                         .put("offsetMs", result.lyrics.offsetMs)
+                        .put("source", result.lyrics.source)
                         .put(
                             "syncedLyrics",
                             if (result.lyrics.synchronized) result.lyrics.lines.joinToString("\n") { line ->

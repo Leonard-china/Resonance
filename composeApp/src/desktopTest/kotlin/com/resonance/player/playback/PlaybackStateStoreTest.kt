@@ -46,12 +46,13 @@ class PlaybackStateStoreTest {
         } as PlatformServices
     }
 
-    @Test fun rapidSwitchNeverAppliesOldTrackVolumeOrCalibration() = runTest {
+    @Test fun rapidSwitchIgnoresLegacyCalibrationAndAppliesOnlyLatestBalancedGain() = runTest {
         val backend = Backend(this)
         backend.values["loadTrackVolume:a"] = 0.9f
         backend.values["loadTrackCalibratedGain:a"] = 12f
-        backend.delays["loadTrackVolume:a"] = 1000
-        backend.values["loadTrackVolume:b"] = 0.3f
+        backend.delays["loadGlobalVolume:"] = 1000
+        backend.values["loadGlobalVolume:"] = 0.3f
+        backend.values["loadAutoLoudnessGain:b"] = -4f
         backend.values["loadTrackCalibratedGain:b"] = -4f
         val store = PlaybackStateStore(backend.services, this)
         val started = mutableListOf<String>()
@@ -84,7 +85,7 @@ class PlaybackStateStoreTest {
     @Test fun manualVolumeAndGainWinOverPendingReadsAndAnalysis() = runTest {
         val backend = Backend(this)
         backend.values["loadTrackVolume:a"] = 0.9f
-        backend.delays["loadTrackVolume:a"] = 500
+        backend.delays["loadGlobalVolume:"] = 500
         backend.values["analyzeAndCacheLoudnessGain:a"] = 14f
         val store = PlaybackStateStore(backend.services, this)
         var started = false
@@ -100,7 +101,7 @@ class PlaybackStateStoreTest {
 
     @Test fun volumeAndCachedGainAreAppliedBeforePlaybackStarts() = runTest {
         val backend = Backend(this)
-        backend.values["loadTrackVolume:a"] = 0.25f
+        backend.values["loadGlobalVolume:"] = 0.25f
         backend.values["loadAutoLoudnessGain:a"] = 3f
         val store = PlaybackStateStore(backend.services, this)
         store.activate(track("a"), null) {
@@ -112,7 +113,7 @@ class PlaybackStateStoreTest {
 
     @Test fun disposedStateRejectsLateAudioResults() = runTest {
         val backend = Backend(this)
-        backend.delays["loadTrackVolume:a"] = 500
+        backend.delays["loadGlobalVolume:"] = 500
         val store = PlaybackStateStore(backend.services, this)
         store.activate(track("a"), null)
         runCurrent()
@@ -134,7 +135,7 @@ class PlaybackStateStoreTest {
 
     @Test fun refreshingAudioWhileLoadingKeepsThePendingPlaybackRequest() = runTest {
         val backend = Backend(this)
-        backend.delays["loadTrackVolume:a"] = 500
+        backend.delays["loadGlobalVolume:"] = 500
         val store = PlaybackStateStore(backend.services, this)
         var prepared = false
         var starts = 0

@@ -4,10 +4,8 @@ import com.resonance.player.model.DeepSeekConfig
 import com.resonance.player.model.DeepSeekTestResult
 import com.resonance.player.model.DeleteTrackReport
 import com.resonance.player.model.ImportReport
-import com.resonance.player.model.LanShareInfo
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.Playlist
-import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.Track
@@ -17,6 +15,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface PlatformServices {
+    val supportsKgg: Boolean get() = false
+    val musicAssistant: MusicAssistantServices? get() = null
+    val importProgress: StateFlow<com.resonance.player.model.ImportProgress?> get() = MutableStateFlow(null)
+    fun cancelImport() {}
+    suspend fun chooseAssistantImages(): List<com.resonance.player.model.AiImage> = emptyList()
+    suspend fun chooseCoverImage(): String? = null
+    suspend fun configureBackgroundRecommendations(settings: com.resonance.player.model.MusicFeatureSettings) {}
+    fun updateFloatingLyrics(player: com.resonance.player.model.PlayerState, lyrics: com.resonance.player.model.LyricsUiState, settings: com.resonance.player.model.MusicFeatureSettings) {}
     val playbackErrors: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
     suspend fun loadPlaybackSnapshot(): com.resonance.player.playback.PlaybackSnapshot? = null
     suspend fun savePlaybackSnapshot(snapshot: com.resonance.player.playback.PlaybackSnapshot) {}
@@ -31,7 +37,6 @@ interface PlatformServices {
     val playbackProgress: Flow<Float>
     val isPlayingChanges: Flow<Boolean>
     val activeTrackChanges: Flow<String>
-    val incomingLanLinks: Flow<String>
 
     suspend fun loadLibrary(): List<Track>
     suspend fun loadPlaylists(): List<Playlist>
@@ -67,11 +72,7 @@ interface PlatformServices {
     suspend fun requestAiLyrics(track: Track): LyricsFetchResult
     suspend fun exportSyncPackage(playlistId: String?): SyncReport
     suspend fun importSyncPackage(): SyncReport
-    suspend fun startLanShare(): LanShareInfo
-    suspend fun importLanShare(link: String): SyncReport
-    fun stopLanShare()
     suspend fun importMusic(convertToMp3: Boolean = false): ImportReport
-    suspend fun importPlaylistLink(link: String): PlaylistImportReport
     suspend fun deleteLocalTrack(track: Track): DeleteTrackReport
     suspend fun batchDeleteTracks(tracks: List<Track>): DeleteTrackReport
     suspend fun updateTracks(tracks: List<Track>)

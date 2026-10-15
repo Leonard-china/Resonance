@@ -1,14 +1,55 @@
-# Third-party runtime notice
+# 2026-10-15 — 第三方组件、模型服务、B 站和本地凭据
 
-The Windows development package currently includes an FFmpeg 8.1.1 full build from gyan.dev. That binary reports GPLv3 configuration and includes libmp3lame. Before distributing Resonance outside local development, ship the corresponding FFmpeg license and complete corresponding source information alongside the binary, or replace it with a deliberately selected compliant build.
+精确依赖见 [Gradle](../composeApp/build.gradle.kts) 与 [版本目录](../gradle/libs.versions.toml)；本文说明实际调用和发送内容，不代表所有外部服务已在线验通。
 
-Resonance invokes FFmpeg as a separate process for audio conversion; source audio is never overwritten or deleted.
+## 组件
 
-# LRCLIB
+| 组件 | 用途 |
+| --- | --- |
+| Kotlin / Compose / Material / Coroutines | 两端共享 UI/状态/任务 |
+| Haze / haze-blur | 原生界面材质 |
+| AndroidX Activity / DocumentFile / Media3 | 权限/文件选择/音频与媒体会话 |
+| WorkManager 2.10.1 | Android 后台推荐及 dataSync 下载通知 |
+| FFmpegKit audio 8.1.7 / Smart Exception 0.2.1 | Android 音频转换/整曲响度；显式补齐 Java facade 依赖 |
+| 外部 ffmpeg.exe | Windows 播放解码/转换/响度 |
+| jaudiotagger 3.0.1 | Windows 标签/封面/歌词读写 |
+| JNA platform 5.17.0 | Windows DPAPI 与歌词窗口点击穿透 |
+| sqlite-jdbc 3.47.1.0 | 本机酷狗数据库密钥，不是曲库数据库 |
+| org.json 20250517 | 两端 JSON 编解码 |
 
-Resonance uses the public read-only [LRCLIB API](https://lrclib.net/docs) to automatically match plain and synchronized lyrics. Requests identify the client as required by LRCLIB and include only track title, artist, album, and duration. Audio files, artwork, playlists, and local paths are not uploaded. Results are cached locally to reduce repeated requests and service load.
+ZXing 和 jdk.httpserver 随 LAN/二维码功能删除。KGG 实现注释记录 FlyMouseFormat 移植来源，发布应核对上游声明/许可；仓库无项目级 LICENSE。Windows FFmpeg 非固定 Gradle 二进制，需对实际 ffmpeg -version/-buildconf、许可证与对应源码分发条件核验；本文不声称已完成新 Release 许可证审计。Android 依赖为 audio 包，发布仍按实际内容核验。
 
-The LRCLIB server implementation is available under the MIT license. Lyrics content can remain subject to its respective copyright holders and service policies; Resonance does not publish or edit lyrics through the API.
-# FFmpegKit Maintained / FFmpeg
+## 外部请求
 
-The Android application uses the LGPL `ffmpeg-kit-audio` package to transcode locally decrypted FLAC/Ogg audio to 320 kbps MP3. FFmpegKit and FFmpeg retain their respective upstream licenses; the GPL package variants are not used.
+| 服务 | 地址/调用 | 发送或接收 |
+| --- | --- | --- |
+| LRCLIB | https://lrclib.net/docs | 歌名/歌手/专辑/时长，返回歌词 |
+| iTunes Search | https://itunes.apple.com/search | 搜索词、曲目信息/封面 |
+| 酷狗元数据 | complexsearch.kugou.com | 曲目搜索/封面；不是歌单分享链接导入 |
+| B 站 | api.bilibili.com、b23.tv、bilibili.com、允许的媒体 CDN | 视频ID/搜索/WBI，可选自有 Cookie；公开可访问音轨/封面 |
+| 通义千问 | dashscope.aliyuncs.com/compatible-mode/v1 | 文本、工具、选中的截图和歌词，Bearer Key |
+| DeepSeek | api.deepseek.com/v1 | 文本/工具/歌词，Bearer Key；图片使用另选的视觉提供商 |
+| 豆包/火山方舟 | ark.cn-beijing.volces.com/api/v3 | 用户实际模型/接入点支持的文本、工具、图片 |
+| 自定义兼容接口 | 用户指定 HTTPS /chat/completions | 由用户选择服务，需支持相关工具/视觉消息 |
+| 天气/定位 | Open-Meteo 等现有 WeatherClient/平台定位来源 | 城市、粗坐标/IP 信息 |
+
+AI 请求发稳定曲库摘要、歌单、部分元数据/消息/拒绝原因，不上传整库音频；OCR 发送所选截图分片，翻译发送歌词。OCR/译文本地缓存；服务商前缀缓存有其有效期，不保证跨日命中。Token 预算是本地预估与计数，不是人民币账单限额。
+
+## 凭据和权限
+
+新连接 Key/B站 Cookie 在 Windows 用用户 DPAPI、Android 用 AndroidKeyStore AES-GCM 加密；JSON 原子文件有上一版备份。旧 DeepSeek 配置兼容保留，可能仍有历史明文；不得宣称迁入新设置就清除了旧文件。不要把用户配置、音频、Cookie、Key 或签名文件提交仓库。
+
+HTTPS 模型请求禁止重定向携带 Key，错误回显隐藏实际 Key。B 站 Cookie 只发给其页面/API 主机，媒体下载限制允许的 CDN；认证/验证/HTTP412 直接提示，不绕过访问限制。用户手选本地封面允许读取；AI 封面参数只允许公开 HTTPS B 站图片。
+
+Android 悬浮权限 SYSTEM_ALERT_WINDOW 由系统设置授予；后台推荐使用 WorkManager/网络/存储约束及 dataSync 前台服务，不申请管理所有文件权限。备份关闭。Windows 关闭主窗进入托盘，主动退出停止后台任务。
+
+## 实现参考
+
+- [千问视觉](https://help.aliyun.com/zh/model-studio/vision-model/)、[工具调用](https://help.aliyun.com/zh/model-studio/qwen-function-calling)、[上下文缓存](https://help.aliyun.com/zh/model-studio/context-cache)
+- [DeepSeek API](https://api-docs.deepseek.com/zh-cn/)、[缓存机制](https://api-docs.deepseek.com/zh-cn/guides/kv_cache/)
+- [火山方舟文档](https://docs.volcengine.com/docs/ark?lang=zh)
+- [WorkManager 2.10.1](https://developer.android.com/jetpack/androidx/releases/work#2.10.1)
+- [JNA Crypt32Util 源码](https://github.com/java-native-access/jna/blob/master/contrib/platform/src/com/sun/jna/platform/win32/Crypt32Util.java)
+- [yt-dlp Bilibili extractor](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/bilibili.py)：正常 WBI/音轨请求的实现参考；项目没有引入 yt-dlp 运行依赖。
+
+来源仅供实现/后续排查，不构成外部接口长期可用承诺。本轮真实服务验证限制见 [验证记录](changes/2026-10-15-12-verification-and-handoff.md)。

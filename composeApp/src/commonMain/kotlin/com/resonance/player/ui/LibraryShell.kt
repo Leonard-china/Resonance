@@ -1,4 +1,5 @@
 package com.resonance.player.ui
+import androidx.compose.ui.draw.clipToBounds
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -135,6 +136,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -246,11 +248,8 @@ fun LibraryShell(
     libraryLocation: String,
     onCreatePlaylist: () -> Unit,
     onImport: (Boolean) -> Unit,
-    onImportPlaylist: () -> Unit,
     onExportSync: () -> Unit,
     onImportSync: () -> Unit,
-    onStartLanSync: () -> Unit,
-    lanQrPath: String?,
     onExitPreview: () -> Unit,
     previewMode: Boolean,
     themeMode: ThemeMode = ThemeMode.Dark,
@@ -271,7 +270,7 @@ fun LibraryShell(
     onFinishCalibration: () -> Unit = {},
     onCancelCalibration: () -> Unit = {},
     onResetCalibration: () -> Unit = {},
-    onOpenSleepTimer: () -> Unit = {},
+    onOpenSleepTimer: (() -> Unit)? = null,
     onAdjustLyricsOffset: (Long) -> Unit = {},
     onEmbedLyrics: (Track) -> Unit = {},
     onToggleFloatingLyrics: (() -> Unit)? = null,
@@ -291,7 +290,9 @@ fun LibraryShell(
         }
     }
 
-    if (destination in listOf(LibraryDestination.Import, LibraryDestination.Sync, LibraryDestination.Settings)) {
+    if (destination == LibraryDestination.AudioHelp) {
+        ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Settings) }
+    } else if (destination in listOf(LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Assistant)) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Profile) }
     } else if (destination != LibraryDestination.Library) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Library) }
@@ -334,11 +335,8 @@ fun LibraryShell(
                 libraryLocation = libraryLocation,
                 onCreatePlaylist = onCreatePlaylist,
                 onImport = onImport,
-                onImportPlaylist = onImportPlaylist,
                 onExportSync = onExportSync,
                 onImportSync = onImportSync,
-                onStartLanSync = onStartLanSync,
-                lanQrPath = lanQrPath,
                 onExitPreview = onExitPreview,
                 previewMode = previewMode,
                 compact = compact,
@@ -530,15 +528,17 @@ fun LibraryShell(
 }
 
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
-    LibraryDestination.Import, LibraryDestination.Sync, LibraryDestination.Settings -> LibraryDestination.Profile
+    LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Assistant, LibraryDestination.AudioHelp -> LibraryDestination.Profile
     LibraryDestination.Playing -> LibraryDestination.Library
     else -> destination
 }
 
 private val profileSubPages = setOf(
     LibraryDestination.Import,
-    LibraryDestination.Sync,
+    LibraryDestination.PlaylistArchive,
     LibraryDestination.Settings,
+    LibraryDestination.Assistant,
+    LibraryDestination.AudioHelp,
 )
 
 private fun mainTabIndexOf(destination: LibraryDestination): Int = when (tabDestinationOf(destination)) {
@@ -550,7 +550,7 @@ private fun mainTabIndexOf(destination: LibraryDestination): Int = when (tabDest
 
 private fun subPageIndexOf(destination: LibraryDestination): Int = when (destination) {
     LibraryDestination.Import -> 0
-    LibraryDestination.Sync -> 1
+    LibraryDestination.PlaylistArchive -> 1
     LibraryDestination.Settings -> 2
     else -> 0
 }
@@ -820,11 +820,8 @@ private fun DestinationContent(
     libraryLocation: String,
     onCreatePlaylist: () -> Unit,
     onImport: (Boolean) -> Unit,
-    onImportPlaylist: () -> Unit,
     onExportSync: () -> Unit,
     onImportSync: () -> Unit,
-    onStartLanSync: () -> Unit,
-    lanQrPath: String?,
     onExitPreview: () -> Unit,
     previewMode: Boolean,
     compact: Boolean,
@@ -881,6 +878,9 @@ private fun DestinationContent(
         label = "destinationContent",
     ) { activeDestination ->
         when (activeDestination) {
+            LibraryDestination.Assistant -> AssistantScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
+            LibraryDestination.AudioHelp -> AudioBalanceHelpScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
+
             LibraryDestination.Library -> LibraryScreen(
                 playlists = playlists,
                 libraryTracks = libraryTracks,
@@ -929,7 +929,7 @@ private fun DestinationContent(
             LibraryDestination.Profile -> ProfileScreen(
                 compact = compact,
                 onOpenImport = { onDestinationChange(LibraryDestination.Import) },
-                onOpenSync = { onDestinationChange(LibraryDestination.Sync) },
+                onOpenSync = { onDestinationChange(LibraryDestination.PlaylistArchive) },
                 onOpenSettings = { onDestinationChange(LibraryDestination.Settings) },
             )
             LibraryDestination.Import -> ImportScreen(
@@ -937,17 +937,14 @@ private fun DestinationContent(
                 onBack = { onDestinationChange(LibraryDestination.Profile) },
                 onImport = { onImport(false) },
                 onConvert = { onImport(true) },
-                onImportPlaylist = onImportPlaylist,
                 message = message,
                 operationInProgress = operationInProgress,
             )
-            LibraryDestination.Sync -> SyncScreen(
+            LibraryDestination.PlaylistArchive -> SyncScreen(
                 compact = compact,
                 onBack = { onDestinationChange(LibraryDestination.Profile) },
                 onExportSync = onExportSync,
                 onImportSync = onImportSync,
-                onStartLanSync = onStartLanSync,
-                lanQrPath = lanQrPath,
                 message = message,
             )
             LibraryDestination.Settings -> SettingsScreen(
@@ -1131,7 +1128,7 @@ private fun LibraryScreen(
         (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
     }
     val favoriteTracks = remember(allKnownTracks) { allKnownTracks.filter(Track::isFavorite) }
-    val allLibraryMissingTracks = remember(allKnownTracks) { allKnownTracks.filter { it.isMissingAnyMetadata } }
+
     val pagePadding = if (compact) 16.dp else 32.dp
 
     val detailPlaylist = (detail as? LibraryDetail.PlaylistDetail)?.let { d ->
@@ -1328,30 +1325,8 @@ private fun LibraryScreen(
                         onSelect = { tab = it.name },
                         modifier = Modifier.padding(horizontal = pagePadding),
                     )
-                    if (activeTab == LibraryTab.Tracks && allLibraryMissingTracks.isNotEmpty()) {
-                        TextButton(onClick = { onOpenBatchEnrich(allLibraryMissingTracks) }, modifier = Modifier.padding(horizontal = pagePadding)) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("补全缺失信息 · ${allLibraryMissingTracks.size} 首")
-                        }
-                    }
-                    AnimatedContent(
-                        targetState = activeTab,
-                        modifier = Modifier.fillMaxWidth().weight(1f),
-                        transitionSpec = {
-                            if (reducedMotion) {
-                                (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
-                            } else {
-                                val dir = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
-                                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
-                            }
-                        },
-                        label = "libraryTabTransition",
-                    ) { currentTab ->
+                    Box(Modifier.fillMaxWidth().weight(1f).clipToBounds()) {
+                        val currentTab = activeTab
                         when (currentTab) {
                             LibraryTab.Tracks -> TrackListTab(
                                 tracks = libraryTracks,
@@ -2670,8 +2645,9 @@ private fun BrandMark(modifier: Modifier = Modifier) {
 
 @Composable
 fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 12.dp, artworkPath: String? = null) {
-    val decoded by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artworkPath) {
-        value = artworkPath?.let { path -> withContext(Dispatchers.Default) { decodeArtwork(path) } }
+    val artworkRevision by com.resonance.player.platform.ArtworkMemoryCache.revision.collectAsState()
+    val decoded by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artworkPath, artworkRevision) {
+        value = artworkPath?.let { path -> withContext(Dispatchers.IO) { com.resonance.player.platform.ArtworkMemoryCache.load(path) } }
     }
     val artwork = decoded
     if (artwork != null) {

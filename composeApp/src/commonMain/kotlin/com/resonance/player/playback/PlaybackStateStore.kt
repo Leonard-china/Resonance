@@ -45,14 +45,11 @@ class PlaybackStateStore(
         audioJob = scope.launch {
             var started = false
             try {
-                val volume = services.loadTrackVolume(track.id)
-                    ?: playlistId?.let { services.loadPlaylistVolume(it) }
-                    ?: services.loadGlobalVolume()
-                val calibrated = services.loadTrackCalibratedGain(track.id)
+                val volume = services.loadGlobalVolume()
+                val calibrated: Float? = null
                 val automatic = services.isAutoLoudnessEnabled()
-                val cached = if (calibrated == null && automatic) services.loadAutoLoudnessGain(track) else null
-                val initialGain = calibrated ?: cached
-                    ?: if (!automatic) services.loadTrackGain(track.id) ?: 0f else 0f
+                val cached = if (automatic) services.loadAutoLoudnessGain(track) else null
+                val initialGain = if (automatic) cached ?: 0f else 0f
                 coroutineContext.ensureActive()
                 if (request != generation) return@launch
                 if (volumeVersion == volumeRevision) {

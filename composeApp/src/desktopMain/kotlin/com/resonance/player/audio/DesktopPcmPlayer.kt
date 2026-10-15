@@ -122,7 +122,12 @@ class DesktopPcmPlayer(
         current?.let { play(it.track, !paused, progress) }
     }
     @Synchronized fun seekTo(progress: Float) { session?.let { play(it.track, !paused, progress.coerceIn(0f, 1f)) } }
-    @Synchronized fun close() { session?.close(); session = null; synchronized(pauseMonitor) { pauseMonitor.notifyAll() } }
+    @Synchronized fun close() {
+        val previous = session; session = null
+        previous?.close()
+        synchronized(pauseMonitor) { pauseMonitor.notifyAll() }
+        previous?.process?.let { runCatching { it.waitFor(3, java.util.concurrent.TimeUnit.SECONDS) } }
+    }
 
     companion object {
         fun tempoFilter(speed: Double): String {

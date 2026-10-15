@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -35,6 +38,10 @@ import com.resonance.player.model.Track
 import com.resonance.player.platform.PlatformServices
 import com.resonance.player.platform.tracksWithPlaylistArtwork
 import com.resonance.player.ui.LibraryShell
+import com.resonance.player.ui.MusicFeatureController
+import com.resonance.player.ui.LocalMusicFeatures
+import com.resonance.player.ui.MusicFeatureDialogs
+import com.resonance.player.platform.FloatingLyricsHost
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import com.resonance.player.playback.PlaybackStateStore
@@ -60,7 +67,6 @@ fun App(services: PlatformServices) {
         var playlists by remember { mutableStateOf(emptyList<Playlist>()) }
         var importedTracks by remember { mutableStateOf(emptyList<com.resonance.player.model.Track>()) }
         var showCreateDialog by remember { mutableStateOf(false) }
-        var showPlaylistLinkDialog by remember { mutableStateOf(false) }
         var trackPendingDeletion by remember { mutableStateOf<Track?>(null) }
         var operationInProgress by remember { mutableStateOf(false) }
         var initialLoadInProgress by remember { mutableStateOf(true) }
@@ -77,7 +83,6 @@ fun App(services: PlatformServices) {
             importMessage = "保存失败：${it.message.orEmpty()}"
         } }
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
-        var lanQrPath by remember { mutableStateOf<String?>(null) }
         var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
         var deepSeekConfig by remember { mutableStateOf(com.resonance.player.model.DeepSeekConfig()) }
         var customLyricsFolder by remember { mutableStateOf<String?>(null) }
@@ -86,6 +91,73 @@ fun App(services: PlatformServices) {
         var batchEnrichProgress by remember { mutableStateOf<com.resonance.player.model.BatchEnrichProgress?>(null) }
         var batchEnrichReport by remember { mutableStateOf<com.resonance.player.model.BatchEnrichReport?>(null) }
         var batchEnrichJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+        val features = remember(services) { MusicFeatureController(services, scope) }
+        features.library = importedTracks
+        features.playlists = playlists
+        features.player = player
+        features.lyrics = lyricsState
+        features.onNavigate = { destination = it }
+        features.beforeTask = { persistence.run {} }
+        features.onToggleBalance = {
+            val enabled = !player.autoLoudnessEnabled
+            player = player.copy(autoLoudnessEnabled = enabled)
+            persistence.submit { services.setAutoLoudnessEnabled(enabled); playback.refreshAudio(activePlaylistId) }
+        }
+        features.onReload = {
+            val loaded = services.loadLibrary()
+            val lists = services.loadPlaylists()
+            importedTracks = tracksWithPlaylistArtwork(loaded, lists)
+            playlists = lists
+            customQueue = customQueue?.mapNotNull { queued -> loaded.firstOrNull { it.id == queued.id } }
+            player.currentTrack?.let { current ->
+                val updated = loaded.firstOrNull { it.id == current.id }
+                player = if (updated != null) player.copy(currentTrack = updated) else { services.setPlaying(false); PlayerState(autoLoudnessEnabled = player.autoLoudnessEnabled, volume = player.volume) }
+            }
+            services.musicAssistant?.updateLibrarySnapshot(importedTracks, playlists)
+        }
+        LaunchedEffect(services) {
+            try {
+                features.load()
+                // Migrate the user's existing DeepSeek connection without changing its credentials.
+                val legacy = services.loadDeepSeekConfig()
+                if (legacy.isConfigured && features.settings.connections.none { it.configured }) {
+                    val connection = com.resonance.player.model.AiConnection(com.resonance.player.model.AiProvider.DeepSeek, legacy.baseUrl, legacy.model, legacy.apiKey, false)
+                    val next = features.settings.copy(connections = features.settings.connections.filterNot { it.provider == connection.provider } + connection, assistantProvider = connection.provider)
+                    features.settings = next; services.musicAssistant?.saveSettings(next)
+                }
+            } catch (error: Exception) { features.message = error.message.orEmpty() }
+        }
+        LaunchedEffect(importedTracks, playlists) { if (!initialLoadInProgress) services.musicAssistant?.updateLibrarySnapshot(importedTracks, playlists) }
+        val foreground by services.foreground.collectAsState()
+        LaunchedEffect(foreground, features.loaded, features.settings.recommendationsEnabled, features.settings.intervalHours, initialLoadInProgress) {
+            if (foreground && features.loaded && !initialLoadInProgress && features.settings.recommendationsEnabled) {
+                while (true) {
+                    try { persistence.run {}; services.musicAssistant?.recommend() }
+                    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (error: Exception) { features.message = error.message.orEmpty() }
+                    delay(60_000)
+                }
+            }
+        }
+        val featureTaskState = services.musicAssistant?.state?.collectAsState()?.value
+        LaunchedEffect(featureTaskState?.task?.running) {
+            if (featureTaskState?.task?.running == false && !initialLoadInProgress) {
+                try { features.onReload() }
+                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (error: Exception) { features.message = "曲库刷新失败：${error.message}" }
+            }
+        }
+        val translatedLyrics = features.translated?.takeIf { translated ->
+            val original = (lyricsState as? LyricsUiState.Ready)?.lyrics
+            translated.trackId == player.currentTrack?.id && translated.translationLanguage == features.settings.translationLanguage && original?.lines?.map { it.text } == translated.lines.map { it.text }
+        }
+        val displayLyrics = translatedLyrics?.let { LyricsUiState.Ready(it) } ?: lyricsState
+        LaunchedEffect(lyricsState, features.settings.translationLanguage) {
+            val original = (lyricsState as? LyricsUiState.Ready)?.lyrics
+            features.translated = original?.let { services.musicAssistant?.cachedTranslation(it, features.settings.translationLanguage) }
+        }
+        LaunchedEffect(player, displayLyrics, features.settings) { services.updateFloatingLyrics(player, displayLyrics, features.settings) }
 
         fun startBatchEnrich(tracks: List<Track>, options: com.resonance.player.model.BatchEnrichOptions) {
             batchEnrichRunning = true
@@ -97,6 +169,7 @@ fun App(services: PlatformServices) {
                         batchEnrichProgress = p
                     }
                     batchEnrichReport = report
+                    com.resonance.player.platform.ArtworkMemoryCache.clear()
                     val loadedTracks = services.loadLibrary()
                     val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
                     importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
@@ -212,7 +285,7 @@ fun App(services: PlatformServices) {
             player.currentTrack?.takeIf { it.id == track.id }?.let {
                 player = player.copy(currentTrack = it.copy(isFavorite = next))
             }
-            persistence.submit { services.setTrackFavorite(track.id, next) }
+            persistence.submit { services.setTrackFavorite(track.id, next); if (next) services.musicAssistant?.retain(track.id) }
         }
 
         fun lyricsUiState(result: LyricsFetchResult): LyricsUiState = when (result) {
@@ -334,27 +407,8 @@ fun App(services: PlatformServices) {
                 }
             }
         }
-        LaunchedEffect(services) {
-            services.incomingLanLinks.collect { link ->
-                try {
-                    importMessage = "正在从 Windows 接收加密音乐库…"
-                    val report = services.importLanShare(link)
-                    importMessage = report.message
-                    if (report.success) {
-                        val loadedTracks = services.loadLibrary()
-                        val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
-                        importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
-                        playlists = loadedPlaylists
-                        services.savePlaylists(loadedPlaylists)
-                        val restored = resolveSelectedPlaylistId(selectedPlaylistId, loadedPlaylists)
-                        selectPlaylist(restored)
-                    }
-                } catch (error: Throwable) {
-                    importMessage = "局域网同步失败：${error.message ?: error::class.simpleName.orEmpty()}"
-                }
-            }
-        }
-
+        features.onPlay = { track -> startTrack(track, importedTracks) }
+        CompositionLocalProvider(LocalMusicFeatures provides features) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -372,7 +426,7 @@ fun App(services: PlatformServices) {
                         libraryTracks = visibleLibraryTracks,
                         playerState = player,
                         playbackQueue = playbackQueue,
-                        lyricsState = lyricsState,
+                        lyricsState = displayLyrics,
                         onTogglePlay = {
                             val nextPlaying = !player.isPlaying
                             services.setPlaying(nextPlaying)
@@ -402,6 +456,7 @@ fun App(services: PlatformServices) {
                                 }
                             }
                             persistPlaylists(updated)
+                            if (include) scope.launch { services.musicAssistant?.retain(track.id) }
                             if (!include) {
                                 customQueue = customQueue?.filterNot { it.id == track.id }
                             }
@@ -462,8 +517,6 @@ fun App(services: PlatformServices) {
                             val trackId = player.currentTrack?.id
                             val playlistId = activePlaylistId
                             persistence.submitLatest("volume.global") { services.saveGlobalVolume(vol) }
-                            trackId?.let { id -> persistence.submitLatest("volume.track.$id") { services.saveTrackVolume(id, vol) } }
-                            playlistId?.let { id -> persistence.submitLatest("volume.playlist.$id") { services.savePlaylistVolume(id, vol) } }
                         },
                         onSpeedChange = { speed ->
                             services.setPlaybackSpeed(speed)
@@ -474,6 +527,9 @@ fun App(services: PlatformServices) {
                             val trackId = player.currentTrack?.id
                             persistence.submit { trackId?.let { services.saveTrackGain(it, gain) } }
                         },
+                        onToggleFloatingLyrics = features::toggleFloatingLyrics,
+                        floatingLyricsEnabled = features.settings.floatingLyrics,
+                        onEditTrack = { track, title, artist, album, embed -> features.launch { services.editTrackMetadata(track, title, artist, album); features.onReload() } },
                         onToggleAutoLoudness = {
                             val next = !player.autoLoudnessEnabled
                             player = player.copy(autoLoudnessEnabled = next)
@@ -528,21 +584,8 @@ fun App(services: PlatformServices) {
                                 }
                             }
                         },
-                        onImportPlaylist = { showPlaylistLinkDialog = true },
                         onExportSync = { syncAction = SyncAction.Export },
                         onImportSync = { syncAction = SyncAction.Import },
-                        onStartLanSync = {
-                            scope.launch {
-                                try {
-                                    val info = services.startLanShare()
-                                    importMessage = info.message
-                                    lanQrPath = info.qrPath
-                                } catch (error: Throwable) {
-                                    importMessage = "无法开启局域网同步：${error.message ?: error::class.simpleName.orEmpty()}"
-                                }
-                            }
-                        },
-                        lanQrPath = lanQrPath,
                         onExitPreview = {
                             services.setPlaying(false)
                             previewMode = false
@@ -683,32 +726,6 @@ fun App(services: PlatformServices) {
                     )
                 }
 
-                if (showPlaylistLinkDialog) {
-                    com.resonance.player.ui.PlaylistLinkDialog(
-                        onDismiss = { showPlaylistLinkDialog = false },
-                        onConfirm = { link ->
-                            showPlaylistLinkDialog = false
-                            operationInProgress = true
-                            importMessage = "正在读取酷狗公开歌单…"
-                            scope.launch {
-                                try {
-                                    val report = services.importPlaylistLink(link)
-                                    val updated = playlists.filterNot { it.id == report.playlist.id } + report.playlist
-                                    persistPlaylists(updated)
-                                    importedTracks = tracksWithPlaylistArtwork(importedTracks, updated)
-                                    selectPlaylist(report.playlist.id)
-                                    destination = LibraryDestination.Library
-                                    importMessage = report.message
-                                } catch (error: Throwable) {
-                                    importMessage = friendlyPlaylistError(error)
-                                } finally {
-                                    operationInProgress = false
-                                }
-                            }
-                        },
-                    )
-                }
-
                 trackPendingDeletion?.let { track ->
                     com.resonance.player.ui.DeleteTrackDialog(
                         track = track,
@@ -757,7 +774,7 @@ fun App(services: PlatformServices) {
                         isRunning = batchEnrichRunning,
                         progress = batchEnrichProgress,
                         report = batchEnrichReport,
-                        hasDeepSeekConfigured = deepSeekConfig.isConfigured,
+                        hasDeepSeekConfigured = features.settings.connections.any { it.provider == features.settings.assistantProvider && it.configured } || deepSeekConfig.isConfigured,
                         onDismiss = {
                             batchEnrichJob?.cancel()
                             batchEnrichJob = null
@@ -784,6 +801,10 @@ fun App(services: PlatformServices) {
                 }
             }
         }
+        FloatingLyricsHost(player, displayLyrics, features.settings, features::save,
+            onTogglePlay = { services.setPlaying(!player.isPlaying) }, onPrevious = { moveInQueue(-1) }, onNext = { moveInQueue(1) })
+        MusicFeatureDialogs()
+        }
     }
 }
 
@@ -796,6 +817,7 @@ internal fun resolveSelectedPlaylistId(requestedId: String?, playlists: List<Pla
     playlists.firstOrNull { it.id == requestedId }?.id ?: playlists.firstOrNull()?.id
 
 internal fun importReportMessage(report: ImportReport, conversionRequested: Boolean): String? {
+    if (report.cancelled) return "已取消；已完成 ${report.tracks.size} 首并保留，源文件未修改。"
     val completed = report.tracks.size
     val notProcessed = report.skippedCount
     val action = if (conversionRequested) "转换" else "导入"

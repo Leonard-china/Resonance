@@ -11,6 +11,22 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DesktopManagedMp3ConverterTest {
+    @Test fun cancellingDecryptionPreservesSourceAndRemovesPartialOutput() {
+        val root = Files.createTempDirectory("cancel-kgma-")
+        try {
+            val payload = root.resolve("input.mp3")
+            Files.write(payload, "ID3".toByteArray() + ByteArray(32_000))
+            val kgma = root.resolve("input.kgma"); KgmaFixtureEncoder.write(payload, kgma)
+            val before = digest(kgma)
+            val control = com.resonance.player.io.ImportControl()
+            val managed = root.resolve("managed")
+            kotlin.test.assertFailsWith<kotlinx.coroutines.CancellationException> {
+                DesktopManagedMp3Converter(managed).importAsMp3(kgma, control) { _, _ -> control.cancel() }
+            }
+            assertContentEquals(before, digest(kgma))
+            Files.list(managed).use { assertEquals(0L, it.count()) }
+        } finally { Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
     private fun ffmpegPath(): Path? = sequenceOf(
         System.getenv("RESONANCE_FFMPEG")?.let(Path::of),
         Path.of("D:\\Software\\Github\\FlyMouseFormat\\release\\exe\\FlyingMouse Format\\resources\\ffmpeg\\ffmpeg.exe"),

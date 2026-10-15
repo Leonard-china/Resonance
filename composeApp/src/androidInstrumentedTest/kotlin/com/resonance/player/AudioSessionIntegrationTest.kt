@@ -33,11 +33,11 @@ class AudioSessionIntegrationTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
 
-    @Test fun commandsAreGrantedAndBackgroundTrackChangesApplyStoredVolumes() {
+    @Test fun commandsAreGrantedAndBackgroundTrackChangesUseOnlyGlobalVolume() {
         val preferences = context.getSharedPreferences("resonance_ui_state", Context.MODE_PRIVATE)
         val original = preferences.all
         preferences.edit().putBoolean("gain.auto_enabled", false).putFloat("vol.track.test-a", 0.2f)
-            .putFloat("vol.track.test-b", 0.7f).commit()
+            .putFloat("vol.track.test-b", 0.95f).putFloat("vol.global", 0.2f).commit()
         val audio = context.cacheDir.resolve("audio-session-fixture.wav")
         audio.writeBytes(silentWave())
         var future: ListenableFuture<MediaController>? = null
@@ -72,7 +72,7 @@ class AudioSessionIntegrationTest {
                 controller.prepare()
             }
             assertTrue(ready.await(15, TimeUnit.SECONDS))
-            instrumentation.runOnMainSync { assertEquals(0.2f, controller.volume, 0.001f); controller.seekToNextMediaItem() }
+            instrumentation.runOnMainSync { assertEquals(0.2f, controller.volume, 0.001f); preferences.edit().putFloat("vol.global", 0.7f).commit(); controller.seekToNextMediaItem() }
             assertTrue(switched.await(5, TimeUnit.SECONDS))
             assertTrue("Wait for the service volume event, rather than the controller's optimistic seek event", nextVolume.await(5, TimeUnit.SECONDS))
             instrumentation.runOnMainSync { assertEquals(0.7f, controller.volume, 0.001f) }
@@ -84,7 +84,7 @@ class AudioSessionIntegrationTest {
             instrumentation.runOnMainSync { controller.clearMediaItems(); controller.release() }
             audio.delete()
             val editor = preferences.edit()
-            for (key in listOf("gain.auto_enabled", "vol.track.test-a", "vol.track.test-b", "playback.snapshot")) {
+            for (key in listOf("gain.auto_enabled", "vol.track.test-a", "vol.track.test-b", "vol.global", "playback.snapshot")) {
                 editor.remove(key)
                 when (val value = original[key]) { is Boolean -> editor.putBoolean(key, value); is Float -> editor.putFloat(key, value); is String -> editor.putString(key, value) }
             }

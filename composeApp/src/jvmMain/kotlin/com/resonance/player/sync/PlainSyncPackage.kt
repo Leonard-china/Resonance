@@ -16,7 +16,7 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 /**
- * 明文 Zip 同步包：直接把 manifest.properties、audio 目录下的 MP3、art 目录下的封面
+ * 明文 Zip 歌单文件：直接把 manifest.properties、audio 目录下的 MP3、art 目录下的封面
  * 写入标准 Zip，不做口令加密。本地 MP3 没有保密需求，省去输入密码的步骤。
  * 仍然保留 SHA-256 完整性校验与路径白名单，防止损坏或恶意压缩包。
  */
@@ -47,21 +47,21 @@ class PlainSyncPackage {
     }
 
     fun import(source: Path, managedDirectory: Path): Imported {
-        require(Files.isRegularFile(source)) { "同步包不存在" }
+        require(Files.isRegularFile(source)) { "歌单文件不存在" }
         Files.createDirectories(managedDirectory)
         val staging = Files.createTempDirectory(managedDirectory, ".sync-import-")
         try {
             Files.newInputStream(source).buffered().use { probe ->
                 require(!probe.readUpTo(ENCRYPTED_MAGIC.size).contentEquals(ENCRYPTED_MAGIC)) {
-                    "这是旧版加密同步包，请在对端设备重新导出免密码同步包后再导入"
+                    "这是旧版加密歌单文件，请在对端设备重新导出免密码歌单文件后再导入"
                 }
             }
             extractWhitelisted(source, staging)
             val manifestPath = staging.resolve(MANIFEST_ENTRY)
-            require(Files.isRegularFile(manifestPath)) { "同步包缺少清单" }
+            require(Files.isRegularFile(manifestPath)) { "歌单文件缺少清单" }
             val properties = Properties()
             Files.newBufferedReader(manifestPath, StandardCharsets.UTF_8).use(properties::load)
-            require(properties.getProperty("format") == "resonance-sync-1") { "不支持的同步包版本" }
+            require(properties.getProperty("format") == "resonance-sync-1") { "不支持的歌单文件版本" }
 
             val pendingTracks = validateTracks(properties, staging, managedDirectory)
             val tracks = commitTracks(pendingTracks)
@@ -85,7 +85,7 @@ class PlainSyncPackage {
         val artworkEntries = mutableSetOf<String>()
         tracks.distinctBy(Track::id).forEach { track ->
             val audio = openAudio(track) ?: return@forEach
-            val audioEntry = "audio/${safeId(track.id)}.mp3"
+            val audioEntry = "audio/${safeId(track.id)}.${audioExtension(track)}"
             zip.putNextEntry(ZipEntry(audioEntry))
             audio.use { audioHashes[track.id] = copyAndDigest(it, zip) }
             zip.closeEntry()
@@ -126,7 +126,8 @@ class PlainSyncPackage {
             setProperty(prefix + "duration", track.durationText)
             setProperty(prefix + "seed", track.artworkSeed.toString())
             setProperty(prefix + "favorite", track.isFavorite.toString())
-            setProperty(prefix + "audio", "audio/${safeId(track.id)}.mp3")
+            setProperty(prefix + "audio", "audio/${safeId(track.id)}.${audioExtension(track)}")
+            setProperty(prefix + "mime", track.mimeType)
             setProperty(prefix + "sha256", hashes.getValue(track.id))
             if (track.id in artworkIds) setProperty(prefix + "artwork", "art/${safeId(track.id)}.cover")
         }
@@ -154,7 +155,7 @@ class PlainSyncPackage {
 
     private fun validateTracks(properties: Properties, staging: Path, managed: Path): List<PendingTrack> {
         val count = properties.getProperty("track.count")?.toIntOrNull() ?: error("曲目清单无效")
-        require(count in 0..MAX_ITEMS) { "同步包曲目数量异常" }
+        require(count in 0..MAX_ITEMS) { "歌单文件曲目数量异常" }
         return (0 until count).map { index ->
             val prefix = "track.$index."
             val id = properties.required(prefix + "id")
@@ -162,7 +163,9 @@ class PlainSyncPackage {
             val stagedAudio = safeResolve(staging, audioEntry)
             require(Files.isRegularFile(stagedAudio)) { "曲目数据缺失：$id" }
             require(sha256(stagedAudio) == properties.required(prefix + "sha256")) { "曲目校验失败：$id" }
-            val targetAudio = managed.resolve("${safeId(id)}.mp3")
+            val extension = audioEntry.substringAfterLast('.', "").lowercase()
+            require(extension in AUDIO_EXTENSIONS) { "歌单文件包含不支持的音频类型" }
+            val targetAudio = managed.resolve("${safeId(id)}.$extension")
 
             val stagedArtwork = properties.getProperty(prefix + "artwork")?.let { entry ->
                 val staged = safeResolve(staging, entry)
@@ -180,6 +183,7 @@ class PlainSyncPackage {
                     isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
                     sourceUri = targetAudio.toString(),
                     artworkPath = targetArtwork?.toString(),
+                    mimeType = properties.getProperty(prefix + "mime") ?: "audio/mpeg",
                 ),
                 stagedAudio = stagedAudio,
                 targetAudio = targetAudio,
@@ -201,7 +205,7 @@ class PlainSyncPackage {
 
     private fun readPlaylists(properties: Properties, tracks: Map<String, Track>): List<Playlist> {
         val count = properties.getProperty("playlist.count")?.toIntOrNull() ?: 0
-        require(count in 0..MAX_ITEMS) { "同步包歌单数量异常" }
+        require(count in 0..MAX_ITEMS) { "歌单文件歌单数量异常" }
         return (0 until count).map { index ->
             val prefix = "playlist.$index."
             val id = properties.required(prefix + "id")
@@ -223,9 +227,9 @@ class PlainSyncPackage {
             while (true) {
                 val entry = zip.nextEntry ?: break
                 if (entry.isDirectory) continue
-                require(++entries <= MAX_ARCHIVE_ENTRIES) { "同步包条目数量过多" }
+                require(++entries <= MAX_ARCHIVE_ENTRIES) { "歌单文件条目数量过多" }
                 require(entry.name == MANIFEST_ENTRY || entry.name.startsWith("audio/") || entry.name.startsWith("art/")) {
-                    "同步包包含不允许的条目"
+                    "歌单文件包含不允许的条目"
                 }
                 val target = safeResolve(staging, entry.name)
                 target.parent?.let(Files::createDirectories)
@@ -237,8 +241,8 @@ class PlainSyncPackage {
                         if (read < 0) break
                         written += read
                         totalWritten += read
-                        require(written <= MAX_ENTRY_BYTES) { "同步包中的单个文件过大" }
-                        require(totalWritten <= MAX_ARCHIVE_BYTES) { "同步包解压后过大" }
+                        require(written <= MAX_ENTRY_BYTES) { "歌单文件中的单个文件过大" }
+                        require(totalWritten <= MAX_ARCHIVE_BYTES) { "歌单文件解压后过大" }
                         output.write(buffer, 0, read)
                     }
                 }
@@ -249,7 +253,7 @@ class PlainSyncPackage {
 
     private fun safeResolve(root: Path, entry: String): Path {
         val resolved = root.resolve(entry).normalize()
-        require(resolved.startsWith(root.normalize())) { "同步包路径越界" }
+        require(resolved.startsWith(root.normalize())) { "歌单文件路径越界" }
         return resolved
     }
 
@@ -279,7 +283,19 @@ class PlainSyncPackage {
     }
 
     private fun safeId(id: String): String = MessageDigest.getInstance("SHA-256")
-        .digest(id.toByteArray(StandardCharsets.UTF_8)).take(12).toByteArray().hex()
+            .digest(id.toByteArray(StandardCharsets.UTF_8)).take(12).toByteArray().hex()
+
+    private fun audioExtension(track: Track): String {
+        val extension = track.sourceUri.orEmpty().substringBefore('?').substringAfterLast('.', "").lowercase()
+        if (extension in AUDIO_EXTENSIONS) return extension
+        return when (track.mimeType) {
+            "audio/flac", "audio/x-flac" -> "flac"
+            "audio/mp4", "audio/aac" -> "m4a"
+            "audio/wav", "audio/x-wav" -> "wav"
+            "audio/ogg", "audio/opus" -> "ogg"
+            else -> "mp3"
+        }
+    }
 
     private fun ByteArray.hex() = joinToString("") { "%02x".format(it) }
     private fun Properties.required(key: String) = getProperty(key) ?: error("同步清单缺少 $key")
@@ -296,6 +312,7 @@ class PlainSyncPackage {
     }
 
     private companion object {
+        val AUDIO_EXTENSIONS = setOf("mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape")
         val ENCRYPTED_MAGIC = "RESONPKG".toByteArray(StandardCharsets.US_ASCII)
         const val MANIFEST_ENTRY = "manifest.properties"
         const val MAX_ITEMS = 100_000

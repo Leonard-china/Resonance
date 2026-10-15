@@ -79,8 +79,8 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.jaudiotagger)
-                implementation("com.google.zxing:javase:3.5.4")
                 implementation("org.xerial:sqlite-jdbc:3.47.1.0")
+                implementation("net.java.dev.jna:jna-platform:5.17.0")
             }
         }
         val androidMain by getting {
@@ -88,6 +88,7 @@ kotlin {
             dependencies {
                 implementation("androidx.activity:activity-compose:1.10.1")
                 implementation("androidx.documentfile:documentfile:1.1.0")
+                implementation("androidx.work:work-runtime-ktx:2.10.1")
                 implementation("androidx.media3:media3-exoplayer:1.10.1")
                 implementation("androidx.media3:media3-session:1.10.1")
                 implementation("dev.ffmpegkit-maintained:ffmpeg-kit-audio:8.1.7")
@@ -163,11 +164,10 @@ compose.desktop {
         }
         nativeDistributions {
             appResourcesRootDir.set(layout.buildDirectory.dir("desktopAppResources"))
-            modules("jdk.httpserver")
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Resonance"
             packageVersion = appVersionName
-            description = "Local music library, player, converter, and device sync"
+            description = "Local music library, player, converter, and playlist archives"
             vendor = "Resonance"
             windows {
                 iconFile.set(project.file("src/desktopMain/resources/resonance.ico"))
@@ -203,14 +203,6 @@ tasks.matching {
     )
 }.configureEach {
     dependsOn(prepareDesktopAppResources)
-}
-
-tasks.register<JavaExec>("lanShareProbe") {
-    group = "verification"
-    dependsOn("desktopTestClasses")
-    val testCompilation = kotlin.targets.getByName("desktop").compilations.getByName("test")
-    classpath = files(testCompilation.runtimeDependencyFiles, testCompilation.output.allOutputs)
-    mainClass.set("com.resonance.player.sync.LanShareProbe")
 }
 
 tasks.register("bumpVersion") {

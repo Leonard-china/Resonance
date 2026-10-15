@@ -1,4 +1,6 @@
 package com.resonance.player.ui
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material.icons.filled.VideoLibrary
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
@@ -181,6 +183,7 @@ internal fun ProfileScreen(
     onOpenSync: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
+    val features = LocalMusicFeatures.current
     val pagePadding = if (compact) 16.dp else 32.dp
     Column(Modifier.widthIn(max = 880.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pagePadding)) {
         Text(
@@ -192,15 +195,16 @@ internal fun ProfileScreen(
         SettingRow(
             icon = Icons.Default.LibraryMusic,
             title = "导入音乐",
-            subtitle = "扫描本机、转换 KGMA/KGG、导入歌单",
+            subtitle = if (features?.services?.supportsKgg == true) "扫描本机、转换 KGMA/KGG、B 站音频" else "扫描本机、转换 KGMA、B 站音频",
             onClick = onOpenImport,
         )
         SettingRow(
             icon = Icons.Outlined.Sync,
-            title = "设备同步",
-            subtitle = "局域网扫码同步 / 同步包导入导出",
+            title = "歌单导入与导出",
+            subtitle = "完整保存音频、封面与歌单信息",
             onClick = onOpenSync,
         )
+        SettingRow(Icons.Default.AutoAwesome, "音乐助手", "聊天管理、歌单截图和每日推荐", { features?.onNavigate?.invoke(LibraryDestination.Assistant) })
         SettingRow(
             icon = Icons.Default.Settings,
             title = "设置",
@@ -254,7 +258,6 @@ internal fun ImportScreen(
     onBack: () -> Unit,
     onImport: () -> Unit,
     onConvert: () -> Unit,
-    onImportPlaylist: () -> Unit,
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -278,6 +281,10 @@ internal fun ImportScreen(
             }
             Spacer(Modifier.height(12.dp))
         }
+        LocalMusicFeatures.current?.let { features ->
+            val progress by features.services.importProgress.collectAsState()
+            progress?.let { MusicTaskProgress(it, features.services::cancelImport) }
+        }
         SectionHeader("来源")
         SettingRow(
             icon = Icons.Default.Headphones,
@@ -287,16 +294,14 @@ internal fun ImportScreen(
         )
         SettingRow(
             icon = Icons.Default.FolderOpen,
-            title = "选择文件夹并转换 KGMA/KGG",
+            title = if (LocalMusicFeatures.current?.services?.supportsKgg == true) "选择文件夹并转换 KGMA/KGG" else "选择文件夹并转换 KGMA",
             subtitle = "递归转换为 320 kbps MP3，保留源文件",
             onClick = onConvert,
         )
-        SettingRow(
-            icon = Icons.AutoMirrored.Filled.QueueMusic,
-            title = "导入酷狗歌单链接",
-            subtitle = "读取公开歌单目录并匹配本机已有歌曲",
-            onClick = onImportPlaylist,
-        )
+
+        val features = LocalMusicFeatures.current
+        SettingRow(Icons.Default.VideoLibrary, "从 B 站视频导入音频", "自定义歌名、歌手、专辑和封面", { features?.showVideoImport = true })
+
     }
 }
 
@@ -306,11 +311,9 @@ internal fun SyncScreen(
     onBack: () -> Unit,
     onExportSync: () -> Unit,
     onImportSync: () -> Unit,
-    onStartLanSync: () -> Unit,
-    lanQrPath: String?,
     message: String?,
 ) {
-    ToolPage(title = "设备同步", onBack = onBack, compact = compact) {
+    ToolPage(title = "歌单导入与导出", onBack = onBack, compact = compact) {
         if (message != null) {
             Surface(color = ResonanceColors.PrimarySoft, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
                 Text(
@@ -322,39 +325,16 @@ internal fun SyncScreen(
             }
             Spacer(Modifier.height(12.dp))
         }
-        SectionHeader("局域网")
-        SettingRow(
-            icon = Icons.Default.Devices,
-            title = "生成配对二维码",
-            subtitle = "10 分钟内有效，另一台设备扫码即可加密同步",
-            onClick = onStartLanSync,
-        )
-        if (lanQrPath != null) {
-            Spacer(Modifier.height(16.dp))
-            AlbumArtwork(
-                seed = 0,
-                modifier = Modifier.size(220.dp).align(Alignment.CenterHorizontally),
-                cornerRadius = 12.dp,
-                artworkPath = lanQrPath,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "二维码已保存：$lanQrPath",
-                style = MaterialTheme.typography.bodySmall,
-                color = ResonanceColors.Dim,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
-            )
-        }
-        SectionHeader("同步包")
+        SectionHeader("歌单文件")
         SettingRow(
             icon = Icons.Default.FolderOpen,
-            title = "导出同步包",
-            subtitle = "打包 MP3、封面与元数据为 .resonance 文件",
+            title = "导出歌单",
+            subtitle = "将歌曲音频、封面和歌单打包为 .resonance",
             onClick = onExportSync,
         )
         SettingRow(
             icon = Icons.AutoMirrored.Filled.QueueMusic,
-            title = "导入同步包",
+            title = "导入歌单",
             subtitle = "校验完整性后合并到本机音乐库",
             onClick = onImportSync,
         )
@@ -377,12 +357,6 @@ internal fun SettingsScreen(
 ) {
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val appearance = LocalAppearance.current
-    var apiKey by remember(deepSeekConfig.apiKey) { mutableStateOf(deepSeekConfig.apiKey) }
-    var baseUrl by remember(deepSeekConfig.baseUrl) { mutableStateOf(deepSeekConfig.baseUrl) }
-    var model by remember(deepSeekConfig.model) { mutableStateOf(deepSeekConfig.model) }
-    var showApiKey by remember { mutableStateOf(false) }
-    var testInProgress by remember { mutableStateOf(false) }
-    var testResult by remember { mutableStateOf<DeepSeekTestResult?>(null) }
     var lyricsFolder by remember(customLyricsFolder) { mutableStateOf(customLyricsFolder.orEmpty()) }
     var folderSavedMessage by remember { mutableStateOf<String?>(null) }
 
@@ -399,136 +373,7 @@ internal fun SettingsScreen(
 
         AppearanceSettings()
 
-        SectionHeader("DeepSeek AI 增强")
-        Text(
-            "当本地歌词和 LRCLIB 均无结果时，自动调用 DeepSeek AI 搜索或生成精准逐行时间轴歌词与专辑视觉。",
-            style = MaterialTheme.typography.bodySmall,
-            color = ResonanceColors.Dim,
-            modifier = Modifier.padding(bottom = 8.dp),
-        )
-
-        OutlinedTextField(
-            value = apiKey,
-            onValueChange = {
-                apiKey = it.trim()
-                onSaveDeepSeekConfig(DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model))
-            },
-            label = { Text("DeepSeek API Key") },
-            placeholder = { Text("sk-...", color = ResonanceColors.Dim) },
-            singleLine = true,
-            visualTransformation = if (showApiKey) VisualTransformation.None else PasswordVisualTransformation(),
-            trailingIcon = {
-                IconButton(onClick = { showApiKey = !showApiKey }) {
-                    Icon(
-                        if (showApiKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (showApiKey) "隐藏" else "显示",
-                        tint = ResonanceColors.Dim,
-                    )
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = ResonanceColors.Primary,
-                unfocusedBorderColor = ResonanceColors.Divider,
-                focusedContainerColor = ResonanceColors.Canvas,
-                unfocusedContainerColor = ResonanceColors.Canvas,
-                cursorColor = ResonanceColors.Primary,
-            ),
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            OutlinedTextField(
-                value = model,
-                onValueChange = {
-                    model = it.trim()
-                    onSaveDeepSeekConfig(DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model))
-                },
-                label = { Text("模型") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ResonanceColors.Primary,
-                    unfocusedBorderColor = ResonanceColors.Divider,
-                    focusedContainerColor = ResonanceColors.Canvas,
-                    unfocusedContainerColor = ResonanceColors.Canvas,
-                    cursorColor = ResonanceColors.Primary,
-                ),
-            )
-            OutlinedTextField(
-                value = baseUrl,
-                onValueChange = {
-                    baseUrl = it.trim()
-                    onSaveDeepSeekConfig(DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model))
-                },
-                label = { Text("API 接口地址") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = ResonanceColors.Primary,
-                    unfocusedBorderColor = ResonanceColors.Divider,
-                    focusedContainerColor = ResonanceColors.Canvas,
-                    unfocusedContainerColor = ResonanceColors.Canvas,
-                    cursorColor = ResonanceColors.Primary,
-                ),
-            )
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            androidx.compose.material3.OutlinedButton(
-                onClick = {
-                    testInProgress = true
-                    testResult = null
-                    coroutineScope.launch {
-                        val config = DeepSeekConfig(apiKey = apiKey, baseUrl = baseUrl, model = model)
-                        onSaveDeepSeekConfig(config)
-                        testResult = onTestDeepSeek(config)
-                        testInProgress = false
-                    }
-                },
-                enabled = apiKey.isNotBlank() && !testInProgress,
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                if (testInProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = ResonanceColors.Primary, strokeWidth = 2.dp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("正在测试…")
-                } else {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Primary)
-                    Spacer(Modifier.width(6.dp))
-                    Text("测试 DeepSeek 连接", color = ResonanceColors.Primary)
-                }
-            }
-        }
-
-        testResult?.let { res ->
-            Spacer(Modifier.height(6.dp))
-            Surface(
-                color = if (res.success) ResonanceColors.Soft else ResonanceColors.PrimarySoft,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    res.message,
-                    color = if (res.success) ResonanceColors.TextPrimary else ResonanceColors.Primary,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
-        }
+        MusicFeatureSettingsSection()
 
         SectionHeader("本地歌词与酷狗下载目录")
         Text(

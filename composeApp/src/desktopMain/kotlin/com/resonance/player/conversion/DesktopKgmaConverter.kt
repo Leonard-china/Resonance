@@ -8,7 +8,7 @@ import java.security.MessageDigest
 
 /** Decrypts KGMA in fixed-size chunks so large lossless files never need to fit in memory. */
 class DesktopKgmaConverter {
-    fun decrypt(input: Path, outputDirectory: Path): DecryptedAudio {
+    fun decrypt(input: Path, outputDirectory: Path, checkpoint: (Long, Long) -> Unit = { _, _ -> }): DecryptedAudio {
         val header = ByteArray(MINIMUM_HEADER_SIZE)
         BufferedInputStream(Files.newInputStream(input)).use { source ->
             readFully(source, header)
@@ -40,6 +40,7 @@ class DesktopKgmaConverter {
                 val buffer = ByteArray(BUFFER_SIZE)
                 var position = 0L
                 while (true) {
+                    checkpoint(position, Files.size(input) - audioOffset)
                     val read = source.read(buffer)
                     if (read < 0) break
                     KgmaCipher.decryptInPlace(buffer, read, position, boxes)

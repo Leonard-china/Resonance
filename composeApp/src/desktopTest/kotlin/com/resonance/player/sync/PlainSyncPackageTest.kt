@@ -116,14 +116,7 @@ class PlainSyncPackageTest {
             Files.write(audio, "ID3-fake-audio-payload".encodeToByteArray())
             val track = Track("id", "Song", "Artist", "Album", "0:01", 1, sourceUri = audio.toString())
             val pkg = root.resolve("library.resonance")
-            EncryptedSyncPackage().export(
-                pkg,
-                "correct horse battery staple",
-                listOf(track),
-                emptyList(),
-                { Files.newInputStream(audio) },
-                { null },
-            )
+            Files.write(pkg, "RESONPKG-legacy".encodeToByteArray())
             assertFailsWith<IllegalArgumentException> {
                 PlainSyncPackage().import(pkg, root.resolve("managed-encrypted"))
             }

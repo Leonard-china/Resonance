@@ -1,6 +1,6 @@
 # Design System Master File
 
-> 已归档为旧网页参考（2026-10-04）。CSS、字体和 GSAP 规则不适用于原生 Compose，页面文件不能覆盖当前原生规范。有效规范见 `docs/DESIGN.md` 与 `docs/UI-DIRECTION-2026-10-04.md`。
+> 已归档为旧网页参考（2026-10-04；入口于 2026-10-15 更新）。CSS、字体和 GSAP 规则不适用于原生 Compose，后文的网页规则不约束当前原生界面。当前实现与 UI 约定见 [开发说明](../../docs/DEVELOPMENT.md#ui)，AI 工作规则见 [AGENTS.md](../../AGENTS.md)。
 
 > **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
 > If that file exists, its rules **override** this Master file.

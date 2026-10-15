@@ -26,23 +26,18 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.resonance.player.PlaybackService
-import com.resonance.player.LanSyncLinkBus
 import com.resonance.player.model.ImportReport
 import com.resonance.player.model.DeleteTrackReport
-import com.resonance.player.model.LanShareInfo
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Playlist
-import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.Track
 import com.resonance.player.model.CalibrationStatus
 import com.resonance.player.model.durationTextToSeconds
 import com.resonance.player.lyrics.LrclibLyricsRepository
-import com.resonance.player.sync.EncryptedSyncPackage
 import com.resonance.player.sync.PlainSyncPackage
 import com.resonance.player.conversion.KgmaCipher
-import com.resonance.player.playlist.KugouPlaylistImporter
 import com.resonance.player.conversion.NativeAudioFormat
 import com.resonance.player.io.readUpTo
 import com.arthenica.ffmpegkit.FFmpegKit
@@ -75,6 +70,59 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
+    private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
+    private var conversionSession: Long? = null
+    override val importProgress = MutableStateFlow<ImportProgress?>(null)
+    override fun cancelImport() { currentImport.get()?.cancel(); conversionSession?.let(FFmpegKit::cancel) }
+    override val musicAssistant by lazy { com.resonance.player.features.AndroidMusicAccess.runtime(activity) { track ->
+        com.resonance.player.PlaybackService.stopTrack(track.id)
+        deleteLocalTrack(track)
+    } }
+    private var assistantImageResult: ((List<Uri>) -> Unit)? = null
+    private val assistantImagePicker = activity.registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { result ->
+        assistantImageResult?.invoke(result); assistantImageResult = null
+    }
+    private var coverImageResult: ((Uri?) -> Unit)? = null
+    private val coverImagePicker = activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { result ->
+        coverImageResult?.invoke(result); coverImageResult = null
+    }
+    override suspend fun chooseAssistantImages(): List<AiImage> {
+        val uris = withContext(Dispatchers.Main.immediate) { suspendCancellableCoroutine<List<Uri>> { continuation ->
+            assistantImageResult = { if (continuation.isActive) continuation.resume(it) }
+            continuation.invokeOnCancellation { assistantImageResult = null }
+            assistantImagePicker.launch(arrayOf("image/*"))
+        } }
+        return withContext(Dispatchers.IO) { com.resonance.player.features.AndroidAssistantImages.slices(activity, uris) }
+    }
+    override suspend fun chooseCoverImage(): String? {
+        val uri = withContext(Dispatchers.Main.immediate) { suspendCancellableCoroutine<Uri?> { continuation ->
+            coverImageResult = { if (continuation.isActive) continuation.resume(it) }
+            continuation.invokeOnCancellation { coverImageResult = null }
+            coverImagePicker.launch(arrayOf("image/*"))
+        } } ?: return null
+        return withContext(Dispatchers.IO) {
+            val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readUpTo(10_000_001) } ?: error("无法读取图片")
+            require(bytes.size <= 10_000_000) { "封面超过 10 MB" }
+            val directory = activity.filesDir.toPath().resolve("artwork"); Files.createDirectories(directory)
+            directory.resolve("custom-${java.util.UUID.randomUUID()}.cover").also { Files.write(it, bytes) }.toString()
+        }
+    }
+    private var recommendationSchedule: Pair<Boolean, Int>? = null
+    override suspend fun configureBackgroundRecommendations(settings: MusicFeatureSettings) {
+        val schedule = (settings.recommendationsEnabled && settings.backgroundRecommendations) to settings.intervalHours
+        if (recommendationSchedule == schedule) return
+        recommendationSchedule = schedule
+        com.resonance.player.features.RecommendationWorker.configure(activity, settings)
+    }
+    private var requestedOverlayPermission = false
+    override fun updateFloatingLyrics(player: PlayerState, lyrics: LyricsUiState, settings: MusicFeatureSettings) {
+        com.resonance.player.features.AndroidOverlayBus.frame.value = com.resonance.player.features.OverlayFrame(player, lyrics, settings)
+        if (settings.floatingLyrics && !android.provider.Settings.canDrawOverlays(activity) && !requestedOverlayPermission) {
+            requestedOverlayPermission = true
+            activity.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${activity.packageName}")))
+        }
+        if (!settings.floatingLyrics) requestedOverlayPermission = false
+    }
     private val loudnessAnalyzer = com.resonance.player.audio.AndroidLoudnessAnalyzer(activity)
     override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
         com.resonance.player.playback.PlaybackSnapshotCodec.decode(
@@ -132,7 +180,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         pendingLocationPermission = null
     }
     private val lyricsRepository = LrclibLyricsRepository(activity.filesDir.toPath().resolve("lyrics-cache"))
-    private val deepSeekClient = com.resonance.player.ai.DeepSeekClient()
+    private val deepSeekClient = com.resonance.player.ai.DeepSeekClient { messages, tokens -> musicAssistant.completeText(messages.map { AssistantMessage(it.getValue("role"), it.getValue("content")) }, tokens) }
     private val controllerFuture = MediaController.Builder(
         activity,
         SessionToken(activity, ComponentName(activity, PlaybackService::class.java)),
@@ -189,7 +237,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     override val activeTrackChanges: Flow<String> = trackEvents
-    override val incomingLanLinks: Flow<String> = LanSyncLinkBus.links
 
     init {
         activity.lifecycle.addObserver(foregroundObserver)
@@ -255,7 +302,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun loadPlaylists(): List<Playlist> = withContext(Dispatchers.IO) {
-        synchronized(this@AndroidPlatformServices) { loadPlaylistsNow() }
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) { loadPlaylistsNow() }
     }
 
     private fun loadPlaylistsNow(): List<Playlist> {
@@ -289,7 +336,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun savePlaylists(playlists: List<Playlist>): Unit = withContext(Dispatchers.IO) {
-        synchronized(this@AndroidPlatformServices) { savePlaylistsNow(playlists) }
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) { savePlaylistsNow(playlists) }
     }
 
     private fun savePlaylistsNow(playlists: List<Playlist>) {
@@ -675,7 +722,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .resolve("Resonance").absolutePath
 
     override suspend fun setTrackFavorite(trackId: String, favorite: Boolean): Unit = withContext(Dispatchers.IO) {
-        synchronized(this@AndroidPlatformServices) {
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
         val preferences = activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
         val ids = preferences.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
         if (favorite) ids += trackId else ids -= trackId
@@ -694,6 +741,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun loadDeepSeekConfig(): com.resonance.player.model.DeepSeekConfig = withContext(Dispatchers.IO) {
+        val settings = musicAssistant.settings()
+        settings.connections.firstOrNull { it.provider == settings.assistantProvider && it.configured }?.let {
+            return@withContext DeepSeekConfig(it.apiKey, it.baseUrl, it.model, true)
+        }
         val prefs = activity.getSharedPreferences("resonance_deepseek", android.content.Context.MODE_PRIVATE)
         com.resonance.player.model.DeepSeekConfig(
             apiKey = prefs.getString("apiKey", "") ?: "",
@@ -736,12 +787,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             track = track,
             forceRefresh = forceRefresh,
             customLyricsFolder = resolveLyricsFolder(),
-            aiFallback = { reqTrack ->
-                val config = loadDeepSeekConfig()
-                if (config.isConfigured && config.enabled) {
-                    deepSeekClient.generateLyrics(config, reqTrack)
-                } else null
-            },
+            aiFallback = null,
         )
 
     override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
@@ -793,9 +839,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
         val temporary = activity.cacheDir.toPath().resolve("Resonance-Import.resonance")
         val sourceUri = pickSyncPackage() ?: return@withContext SyncReport(false, "已取消导入")
-        val sourceName = sourceUri.lastPathSegment?.substringAfterLast('/') ?: "同步包"
+        val sourceName = sourceUri.lastPathSegment?.substringAfterLast('/') ?: "歌单文件"
         activity.contentResolver.openInputStream(sourceUri).use { input ->
-            requireNotNull(input) { "无法读取所选同步包" }
+            requireNotNull(input) { "无法读取所选歌单文件" }
             Files.newOutputStream(temporary).use(input::copyTo)
         }
         try {
@@ -805,7 +851,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             val androidTracks = imported.tracks.map { track ->
                 track.copy(sourceUri = Paths.get(track.sourceUri!!).toUri().toString())
             }
-            synchronized(this@AndroidPlatformServices) {
+            synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
                 mergeSyncedTracks(androidTracks)
                 mergeSyncedPlaylists(imported.playlists)
             }
@@ -815,70 +861,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         }
     }
 
-    override suspend fun startLanShare(): LanShareInfo =
-        LanShareInfo(false, "请在 Windows 版开启局域网分享，然后用手机系统相机扫描二维码")
-
-    override suspend fun importLanShare(link: String): SyncReport = withContext(Dispatchers.IO) {
-        val deepLink = Uri.parse(link)
-        require(deepLink.scheme == "resonance" && deepLink.host == "sync") { "无效的 Resonance 同步链接" }
-        val sourceUrl = deepLink.getQueryParameter("url") ?: error("同步链接缺少下载地址")
-        val passphrase = deepLink.getQueryParameter("key") ?: error("同步链接缺少密钥")
-        val source = java.net.URI(sourceUrl)
-        require(source.scheme == "http") { "局域网同步仅允许 HTTP 临时端点" }
-        require(source.host.matches(Regex("(?:\\d{1,3}\\.){3}\\d{1,3}"))) { "同步地址必须是局域网 IPv4" }
-        val address = java.net.InetAddress.getByName(source.host)
-        require(address.isSiteLocalAddress || address.isLoopbackAddress) { "同步地址不在私有局域网" }
-
-        val temporary = activity.cacheDir.toPath().resolve("Resonance-LAN-Import.resonance")
-        try {
-            val connection = source.toURL().openConnection() as java.net.HttpURLConnection
-            connection.connectTimeout = 10_000
-            connection.readTimeout = 120_000
-            connection.instanceFollowRedirects = false
-            connection.requestMethod = "GET"
-            connection.connect()
-            require(connection.responseCode == 200) { "Windows 端已过期、已被使用或拒绝连接（${connection.responseCode}）" }
-            val usableBytes = runCatching {
-                val storage = activity.getSystemService(android.os.storage.StorageManager::class.java)
-                val storageUuid = storage.getUuidForPath(activity.cacheDir)
-                storage.getAllocatableBytes(storageUuid)
-            }.getOrElse { activity.cacheDir.usableSpace }.coerceAtLeast(0)
-            val maximumBytes = (usableBytes - 128L * 1024 * 1024).coerceAtLeast(0)
-            val declaredBytes = connection.contentLengthLong
-            require(declaredBytes < 0 || declaredBytes <= maximumBytes) { "同步包超过设备可用空间" }
-            connection.inputStream.use { input ->
-                Files.newOutputStream(temporary).use { output ->
-                    val buffer = ByteArray(256 * 1024)
-                    var total = 0L
-                    while (true) {
-                        val read = input.read(buffer)
-                        if (read < 0) break
-                        total += read
-                        require(total <= maximumBytes) { "同步包超过设备可用空间" }
-                        output.write(buffer, 0, read)
-                    }
-                }
-            }
-            val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
-                .toPath().resolve("Resonance")
-            val imported = EncryptedSyncPackage().import(temporary, passphrase, managed)
-            val androidTracks = imported.tracks.map { track -> track.copy(sourceUri = Paths.get(track.sourceUri!!).toUri().toString()) }
-            synchronized(this@AndroidPlatformServices) {
-                mergeSyncedTracks(androidTracks)
-                mergeSyncedPlaylists(imported.playlists)
-            }
-            SyncReport(true, "局域网同步完成", androidTracks.size, imported.playlists.size)
-        } finally {
-            Files.deleteIfExists(temporary)
-        }
-    }
-
-    override fun stopLanShare() = Unit
-
     override suspend fun importMusic(convertToMp3: Boolean): ImportReport {
         if (convertToMp3) {
             val treeUri = pickMusicTree() ?: return ImportReport(emptyList())
-            val report = withContext(Dispatchers.IO) { scanDocumentTree(treeUri) }
+            val control = com.resonance.player.io.ImportControl()
+            check(currentImport.compareAndSet(null, control)) { "已有导入任务正在运行" }
+            val report = try { withContext(Dispatchers.IO) { scanDocumentTree(treeUri) } }
+                finally { currentImport.set(null); importProgress.value = null }
+
             withContext(Dispatchers.IO) { mergeSyncedTracks(report.tracks) }
             return report
         }
@@ -901,14 +891,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             tracks = cachedTracks,
             warnings = warnings,
         )
-    }
-
-    override suspend fun importPlaylistLink(link: String): PlaylistImportReport = withContext(Dispatchers.IO) {
-        val preferences = activity.getSharedPreferences("resonance_installation", android.content.Context.MODE_PRIVATE)
-        val installationId = preferences.getString("id", null) ?: java.util.UUID.randomUUID().toString().also {
-            preferences.edit().putString("id", it).commit()
-        }
-        KugouPlaylistImporter().import(link, cachedTracks, installationId)
     }
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {
@@ -942,7 +924,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             }
             else -> error("不支持删除该存储位置")
         }
-        synchronized(this@AndroidPlatformServices) {
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
             saveSyncedTracks(loadSyncedTracks().filterNot { it.id == track.id })
             cachedTracks = cachedTracks.filterNot { it.id == track.id }
         }
@@ -961,7 +943,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun updateTracks(tracks: List<Track>): Unit = withContext(Dispatchers.IO) {
-        synchronized(this@AndroidPlatformServices) {
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
         val updatedById = tracks.associateBy(Track::id)
         val synced = loadSyncedTracks().map { current -> updatedById[current.id] ?: current }
         saveSyncedTracks(synced)
@@ -992,7 +974,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     ): com.resonance.player.model.BatchEnrichReport = withContext(Dispatchers.IO) {
         val config = loadDeepSeekConfig()
         val customFolder = resolveLyricsFolder()
-        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress)
+        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress) { updated -> updateTracks(listOf(updated)) }
         if (report.updatedTracks.isNotEmpty()) {
             updateTracks(report.updatedTracks)
         }
@@ -1078,7 +1060,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             artworkSeed = preferences.getInt(prefix + "seed", id.hashCode()),
             isFavorite = preferences.getBoolean(prefix + "favorite", false),
             artworkPath = preferences.getString(prefix + "artwork", null)?.takeIf(String::isNotBlank),
-            mimeType = preferences.getString(prefix + "mime", null) ?: KugouPlaylistImporter.CATALOG_MIME_TYPE,
+            mimeType = preferences.getString(prefix + "mime", null) ?: "application/vnd.resonance.catalog+audio",
         )
     }
 
@@ -1175,6 +1157,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             album = cleanAlbum,
         )
         cachedTracks = cachedTracks.map { if (it.id == track.id) updated else it }
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
+            saveSyncedTracks((loadSyncedTracks().filterNot { it.id == updated.id } + updated))
+        }
         val playlists = loadPlaylists()
         val updatedPlaylists = playlists.map { pl ->
             pl.copy(tracks = pl.tracks.map { if (it.id == track.id) updated else it })
@@ -1320,7 +1305,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val kgmaFiles = mutableListOf<DocumentFile>()
         val seenDocumentIds = hashSetOf<String>()
         var visited = 0
-        while (queue.isNotEmpty()) {
+        val control = currentImport.get()
+        while (queue.isNotEmpty() && control?.isCancelled != true) {
+            if (visited % 50 == 0) importProgress.value = ImportProgress("扫描目录", completed = visited, detail = "已检查 $visited 项")
             val document = queue.removeFirst()
             require(++visited <= MAX_DOCUMENTS) { "文件夹中的项目过多，请选择更小的目录" }
             if (document.isDirectory) {
@@ -1342,20 +1329,24 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 "kgma", "kgm", "kgg" -> kgmaFiles += document
             }
         }
-        kgmaFiles.forEachIndexed { index, document ->
+        for ((index, document) in kgmaFiles.withIndex()) {
+            if (control?.isCancelled == true) break
+            importProgress.value = ImportProgress("转换音频", document.name.orEmpty(), index, kgmaFiles.size, index.toFloat() / kgmaFiles.size.coerceAtLeast(1))
             runCatching { decryptKgmaMp3(document) }
                 .onSuccess { converted ->
                     tracks += converted
                 }
                 .onFailure {
                     skipped++
-                    if (warnings.size < 5) warnings += "转换失败 ${index + 1}/${kgmaFiles.size} ${document.name}: ${it.message.orEmpty()}"
+                    if (control?.isCancelled == true) skipped--
+                    else if (warnings.size < 5) warnings += "转换失败 ${index + 1}/${kgmaFiles.size} ${document.name}: ${it.message.orEmpty()}"
                 }
         }
         return ImportReport(
             tracks = tracks.sortedWith(compareBy(Track::artist, Track::title)),
             skippedCount = skipped,
             warnings = warnings,
+            cancelled = control?.isCancelled == true,
         )
     }
 
@@ -1414,6 +1405,8 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     private fun decryptKgmaMp3(document: DocumentFile): Track {
+        require(!document.name.orEmpty().endsWith(".kgg", true)) { "Android 暂不支持 KGG 密钥库；请在 Windows 转换后导出歌单" }
+        currentImport.get()?.check()
         val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
             .toPath().resolve("Resonance")
         Files.createDirectories(managed)
@@ -1439,11 +1432,16 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                     val buffer = ByteArray(256 * 1024)
                     var position = 0L
                     while (true) {
+                        currentImport.get()?.check()
                         val read = input.read(buffer)
                         if (read < 0) break
                         KgmaCipher.decryptInPlace(buffer, read, position, boxes)
                         output.write(buffer, 0, read)
                         position += read
+                        importProgress.value?.let { current ->
+                            val totalBytes = (document.length() - audioOffset).coerceAtLeast(1)
+                            importProgress.value = current.copy(stage = "解密音频", fraction = (current.completed + (position.toFloat() / totalBytes * 0.7f)) / current.total.coerceAtLeast(1), detail = "${position / 1024} / ${totalBytes / 1024} KB")
+                        }
                     }
                 }
             }
@@ -1454,7 +1452,8 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 temporary
             } else {
                 val output = Files.createTempFile(managed, ".kgma-transcode-", ".mp3")
-                val session = FFmpegKit.executeWithArguments(
+                val latch = java.util.concurrent.CountDownLatch(1)
+                val session = FFmpegKit.executeWithArgumentsAsync(
                     arrayOf(
                         "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
                         "-i", temporary.toString(),
@@ -1462,8 +1461,23 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                         "-c:a", "libmp3lame", "-b:a", "320k",
                         "-c:v", "copy", "-id3v2_version", "3", "-write_id3v1", "1",
                         "-f", "mp3", output.toString(),
-                    ),
+                    ), { latch.countDown() },
                 )
+                conversionSession = session.sessionId
+                try {
+                    val deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MINUTES.toNanos(10)
+                    while (!latch.await(200, java.util.concurrent.TimeUnit.MILLISECONDS)) {
+                        currentImport.get()?.check()
+                        check(System.nanoTime() < deadline) { "单曲转换超过 10 分钟，已停止" }
+                    }
+                    currentImport.get()?.check()
+                } catch (error: Throwable) {
+                    FFmpegKit.cancel(session.sessionId)
+                    latch.await(5, java.util.concurrent.TimeUnit.SECONDS)
+                    Files.deleteIfExists(output)
+                    throw error
+                } finally { conversionSession = null }
+
                 if (!ReturnCode.isSuccess(session.returnCode) || !Files.isRegularFile(output)) {
                     Files.deleteIfExists(output)
                     error("FFmpeg 高音质转换失败：${session.failStackTrace.orEmpty().takeLast(300)}")
@@ -1568,58 +1582,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         return openTrackSource(value)
     }
 
-    @Synchronized
-    private fun loadSyncedTracks(): List<Track> {
-        val index = activity.filesDir.toPath().resolve("synced-library.properties")
-        val properties = com.resonance.player.io.AtomicPropertiesFile.read(index) {
-            com.resonance.player.io.AtomicPropertiesFile.validIndexed(it, "track", "source")
-        }
-        val count = properties.getProperty("count")?.toIntOrNull() ?: return emptyList()
-        return (0 until count).mapNotNull { indexValue ->
-            val prefix = "track.$indexValue."
-            val source = properties.getProperty(prefix + "source") ?: return@mapNotNull null
-            val uri = android.net.Uri.parse(source)
-            val path = uri.path?.let(Paths::get)
-            if (uri.scheme == "file" && (path == null || !Files.isRegularFile(path))) return@mapNotNull null
-            if (uri.scheme == "content" && !contentUriExists(uri)) return@mapNotNull null
-            Track(
-                id = properties.getProperty(prefix + "id") ?: return@mapNotNull null,
-                title = properties.getProperty(prefix + "title") ?: "未知歌曲",
-                artist = properties.getProperty(prefix + "artist") ?: "未知歌手",
-                album = properties.getProperty(prefix + "album") ?: "未知专辑",
-                durationText = properties.getProperty(prefix + "duration") ?: "0:00",
-                artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: 0,
-                isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
-                sourceUri = source,
-                artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
-                mimeType = properties.getProperty(prefix + "mime") ?: "audio/mpeg",
-            )
-        }
-    }
+    private fun loadSyncedTracks(): List<Track> = com.resonance.player.features.AndroidMusicAccess.readManaged(activity)
 
     private fun contentUriExists(uri: Uri): Boolean = runCatching {
         activity.contentResolver.openFileDescriptor(uri, "r")?.use { true } ?: false
     }.getOrDefault(false)
 
-    @Synchronized
-    private fun saveSyncedTracks(tracks: List<Track>) {
-        val index = activity.filesDir.toPath().resolve("synced-library.properties")
-        val properties = Properties().apply { setProperty("count", tracks.size.toString()) }
-        tracks.forEachIndexed { indexValue, track ->
-            val prefix = "track.$indexValue."
-            properties.setProperty(prefix + "id", track.id)
-            properties.setProperty(prefix + "title", track.title)
-            properties.setProperty(prefix + "artist", track.artist)
-            properties.setProperty(prefix + "album", track.album)
-            properties.setProperty(prefix + "duration", track.durationText)
-            properties.setProperty(prefix + "seed", track.artworkSeed.toString())
-            properties.setProperty(prefix + "favorite", track.isFavorite.toString())
-            properties.setProperty(prefix + "source", track.sourceUri.orEmpty())
-            properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
-            properties.setProperty(prefix + "mime", track.mimeType)
-        }
-        com.resonance.player.io.AtomicPropertiesFile.write(index, properties, "Resonance synced library")
-    }
+    private fun saveSyncedTracks(tracks: List<Track>) = com.resonance.player.features.AndroidMusicAccess.writeManaged(activity, tracks)
 
     @Synchronized
     private fun mergeSyncedTracks(tracks: List<Track>): List<Track> {

@@ -27,16 +27,15 @@ class CrossDeviceSyncFixtureTest {
                 artworkPath = artwork.toString(),
             )
             val output = media.resolve("cross-device-sync.resonance")
-            EncryptedSyncPackage().export(
+            PlainSyncPackage().export(
                 output,
-                "resonance-test-013",
                 listOf(track),
                 listOf(Playlist("cross-device-list", "Cross Device", "1 song", listOf(track), 13)),
                 { Files.newInputStream(audio) },
                 { Files.newInputStream(artwork) },
             )
             assertTrue(Files.size(output) > 10_000)
-            val imported = EncryptedSyncPackage().import(output, "resonance-test-013", media.resolve("cross-device-managed"))
+            val imported = PlainSyncPackage().import(output, media.resolve("cross-device-managed"))
             assertTrue(Files.isRegularFile(java.nio.file.Path.of(imported.tracks.single().sourceUri!!)))
             assertTrue(Files.isRegularFile(java.nio.file.Path.of(imported.tracks.single().artworkPath!!)))
         } finally {

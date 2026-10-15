@@ -17,21 +17,9 @@ class MainActivity : ComponentActivity() {
         // Creating the services lazily inside Compose can happen after RESUMED and crashes
         // on every Android version with a strict ActivityResultRegistry lifecycle check.
         val services = AndroidPlatformServices(this)
-        intent?.dataString?.let(LanSyncLinkBus::offer)
         setContent {
             App(services)
         }
     }
 
-    override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent)
-        setIntent(intent)
-        intent.dataString?.let(LanSyncLinkBus::offer)
-    }
-}
-
-object LanSyncLinkBus {
-    private val channel = Channel<String>(Channel.UNLIMITED)
-    val links = channel.receiveAsFlow()
-    fun offer(link: String) { channel.trySend(link) }
 }

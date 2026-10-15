@@ -237,8 +237,8 @@ private fun EnrichConfigView(
     EnrichOptionItem(
         checked = useAiFallback,
         onCheckedChange = onUseAiFallbackChange,
-        title = "启用 DeepSeek AI 智能兜底",
-        description = if (hasDeepSeekConfigured) "免费源未命中时才调用 AI，最大限度节省 Token；关闭则 100% 纯免费运行" else "未配置 DeepSeek Key，将仅使用免费官方源（0 Token）",
+        title = "启用 AI 智能兜底",
+        description = if (hasDeepSeekConfigured) "公共来源未命中时使用设置中的音乐助手模型" else "请在设置中配置音乐助手；当前仅使用公共来源",
         enabled = hasDeepSeekConfigured,
     )
 

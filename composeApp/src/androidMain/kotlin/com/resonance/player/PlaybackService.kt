@@ -27,6 +27,7 @@ import kotlinx.coroutines.*
 
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService : MediaSessionService() {
+    private var overlay: com.resonance.player.features.AndroidLyricsOverlay? = null
     private var mediaSession: MediaSession? = null
     private val preamp = com.resonance.player.audio.PreampAudioProcessor()
     private var baseMasterVolume = 1f
@@ -40,6 +41,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
+        activeService = this
         val renderers = object : DefaultRenderersFactory(this) {
             override fun buildAudioSink(context: android.content.Context, enableFloatOutput: Boolean,
                 enableAudioTrackPlaybackParams: Boolean): AudioSink = DefaultAudioSink.Builder(context)
@@ -51,10 +53,15 @@ class PlaybackService : MediaSessionService() {
             setHandleAudioBecomingNoisy(true)
             addListener(object : Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    activeMusicId = mediaItem?.mediaId
                     mediaItem?.let(::updateTrackAudio)
                     persistPlayback()
                 }
                 override fun onIsPlayingChanged(isPlaying: Boolean) { persistPlayback() }
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) activeMusicId = null
+                    else activeMusicId = currentMediaItem?.mediaId
+                }
             })
         }
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName) ?: Intent(this, MainActivity::class.java)
@@ -86,6 +93,7 @@ class PlaybackService : MediaSessionService() {
                     return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
                 }
             }).build()
+        overlay = com.resonance.player.features.AndroidLyricsOverlay(this, player, audioScope)
         handler.post(snapshotTick)
     }
 
@@ -95,18 +103,12 @@ class PlaybackService : MediaSessionService() {
         val player = mediaSession?.player as? ExoPlayer ?: return
         val prefs = getSharedPreferences("resonance_ui_state", MODE_PRIVATE)
         val id = item.mediaId
-        val playlistId = PlaybackSnapshotCodec.decode(prefs.getString("playback.snapshot", null))?.playlistId
-        baseMasterVolume = when {
-            prefs.contains("vol.track.$id") -> prefs.getFloat("vol.track.$id", 1f)
-            playlistId != null && prefs.contains("vol.playlist.$playlistId") -> prefs.getFloat("vol.playlist.$playlistId", 1f)
-            else -> prefs.getFloat("vol.global", 1f)
-        }
+        baseMasterVolume = prefs.getFloat("vol.global", 1f)
         val analyzer = AndroidLoudnessAnalyzer(this)
-        val calibrated = prefs.contains("gain.calibrated.$id")
+        val calibrated = false
         val automatic = prefs.getBoolean("gain.auto_enabled", true)
         val cached = if (automatic) analyzer.cached(id) else null
-        val gain = if (calibrated) prefs.getFloat("gain.calibrated.$id", 0f)
-            else if (automatic) cached ?: 0f else prefs.getFloat("gain.track.$id", 0f)
+        val gain = if (automatic) cached ?: 0f else 0f
         appliedGainDb = gain
         applyAudioGain(player, gain)
         if (!calibrated && automatic && cached == null) {
@@ -115,7 +117,7 @@ class PlaybackService : MediaSessionService() {
                 try {
                     val measured = analyzer.analyze(id, source)
                     if (player.currentMediaItem?.mediaId == id && prefs.getBoolean("gain.auto_enabled", true)
-                        && !prefs.contains("gain.calibrated.$id")) rampAudioGain(player, measured)
+                       ) rampAudioGain(player, measured)
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) { Log.w("ResonanceAudio", "Loudness analysis failed", error) }
             }
@@ -147,9 +149,25 @@ class PlaybackService : MediaSessionService() {
     override fun onDestroy() {
         persistPlayback()
         handler.removeCallbacks(snapshotTick)
+        overlay?.close()
+        activeService = null
+        activeMusicId = null
         audioScope.cancel()
         mediaSession?.run { player.release(); release() }
         mediaSession = null
         super.onDestroy()
     }
+    companion object {
+        @Volatile private var activeService: PlaybackService? = null
+        @Volatile var activeMusicId: String? = null
+            private set
+        fun stopTrack(id: String) {
+            val service = activeService ?: return
+            service.handler.post {
+                val player = service.mediaSession?.player ?: return@post
+                if (player.currentMediaItem?.mediaId == id) { player.pause(); player.clearMediaItems() }
+            }
+        }
+    }
+
 }

@@ -6,18 +6,13 @@ import com.resonance.player.model.DeepSeekTestResult
 import com.resonance.player.model.ImportReport
 import com.resonance.player.model.DeleteTrackReport
 import com.resonance.player.model.Playlist
-import com.resonance.player.model.PlaylistImportReport
 import com.resonance.player.model.SyncReport
-import com.resonance.player.model.LanShareInfo
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Track
 import com.resonance.player.lyrics.LrclibLyricsRepository
 import com.resonance.player.conversion.DesktopManagedMp3Converter
-import com.resonance.player.playlist.KugouPlaylistImporter
-import com.resonance.player.sync.EncryptedSyncPackage
 import com.resonance.player.sync.PlainSyncPackage
-import com.resonance.player.sync.DesktopLanShare
 import kotlinx.coroutines.Dispatchers
 import com.resonance.player.model.CalibrationStatus
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +21,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.cancel
 import org.jaudiotagger.audio.AudioFileIO
 import org.jaudiotagger.tag.FieldKey
 import java.io.File
@@ -42,6 +40,10 @@ import com.resonance.player.weather.AppearanceStorage
 import com.resonance.player.weather.WeatherClient
 
 class DesktopPlatformServices : PlatformServices {
+    override val supportsKgg = true
+    private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
+    override val importProgress = MutableStateFlow<ImportProgress?>(null)
+    override fun cancelImport() { currentImport.get()?.cancel() }
     private val loudnessAnalyzer = com.resonance.player.audio.DesktopLoudnessAnalyzer()
     override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
         com.resonance.player.playback.PlaybackSnapshotCodec.decode(library.readUiValue("playback.snapshot"))
@@ -50,6 +52,7 @@ class DesktopPlatformServices : PlatformServices {
         library.writeUiValue("playback.snapshot", com.resonance.player.playback.PlaybackSnapshotCodec.encode(snapshot))
     }
     override fun restorePausedPlayback(track: Track, queue: List<Track>, progress: Float, shuffle: Boolean, repeatMode: RepeatMode) {
+        playingMusicId = track.id
         player.play(track, autoPlay = false, initialProgress = progress)
     }
     override val foreground = MutableStateFlow(true)
@@ -174,8 +177,39 @@ class DesktopPlatformServices : PlatformServices {
         selected
     }
     private val library = DesktopLibraryStore()
+    @Volatile private var playingMusicId: String? = null
+    private val assistantScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+    private var recommendationJob: kotlinx.coroutines.Job? = null
+    private var recommendationSchedule: Pair<Boolean, Int>? = null
+    override val musicAssistant by lazy {
+        com.resonance.player.features.JvmMusicAssistant(
+            com.resonance.player.features.MusicJsonStore(library.appDirectory.resolve("music-assistant")), library.managedMusicDirectory,
+            com.resonance.player.features.DesktopMusicAccess(library, { id -> if (playingMusicId == id) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) } }, { playingMusicId }),
+            com.resonance.player.features.DesktopCredentialVault::encrypt, com.resonance.player.features.DesktopCredentialVault::decrypt,
+        )
+    }
+    override suspend fun configureBackgroundRecommendations(settings: MusicFeatureSettings) {
+        val schedule = (settings.recommendationsEnabled && settings.backgroundRecommendations) to settings.intervalHours
+        if (recommendationSchedule == schedule) return
+        recommendationSchedule = schedule
+        recommendationJob?.cancel()
+        if (settings.recommendationsEnabled && settings.backgroundRecommendations) {
+            recommendationJob = assistantScope.launch {
+                while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                    try { musicAssistant.recommend() } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) {}
+                    kotlinx.coroutines.delay(60_000)
+                }
+            }
+        }
+    }
+    override suspend fun chooseAssistantImages() = withContext(Dispatchers.IO) {
+        com.resonance.player.features.DesktopAssistantImages.slices(com.resonance.player.features.DesktopAssistantImages.select(true))
+    }
+    override suspend fun chooseCoverImage(): String? = withContext(Dispatchers.IO) {
+        com.resonance.player.features.DesktopAssistantImages.select(false).firstOrNull()?.toString()
+    }
     private val lyricsRepository = LrclibLyricsRepository(library.lyricsCacheDirectory)
-    private val deepSeekClient = DeepSeekClient()
+    private val deepSeekClient = DeepSeekClient { messages, tokens -> musicAssistant.completeText(messages.map { AssistantMessage(it.getValue("role"), it.getValue("content")) }, tokens) }
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
@@ -183,6 +217,7 @@ class DesktopPlatformServices : PlatformServices {
     override val playbackErrors: Flow<String> = errorEvents
     private val player = DesktopAudioPlayer(
         onEnded = {
+            playingMusicId = null
             isPlayingEvents.tryEmit(false)
             endedEvents.tryEmit(Unit)
         },
@@ -190,13 +225,11 @@ class DesktopPlatformServices : PlatformServices {
         onPlayingChanged = { isPlayingEvents.tryEmit(it) },
         onError = { errorEvents.tryEmit(it) },
     )
-    private var lanShare: DesktopLanShare? = null
 
     override val playbackEnded: Flow<Unit> = endedEvents
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     override val activeTrackChanges: Flow<String> = emptyFlow()
-    override val incomingLanLinks: Flow<String> = emptyFlow()
 
     override suspend fun loadLibrary(): List<Track> = withContext(Dispatchers.IO) { library.load() }
 
@@ -232,6 +265,10 @@ class DesktopPlatformServices : PlatformServices {
         get() = library.managedMusicDirectory.toString()
 
     override suspend fun loadDeepSeekConfig(): DeepSeekConfig = withContext(Dispatchers.IO) {
+        val settings = musicAssistant.settings()
+        settings.connections.firstOrNull { it.provider == settings.assistantProvider && it.configured }?.let {
+            return@withContext DeepSeekConfig(it.apiKey, it.baseUrl, it.model, true)
+        }
         library.loadDeepSeekConfig()
     }
 
@@ -259,16 +296,11 @@ class DesktopPlatformServices : PlatformServices {
             track = track,
             forceRefresh = forceRefresh,
             customLyricsFolder = library.loadCustomLyricsFolder(),
-            aiFallback = { reqTrack ->
-                val config = library.loadDeepSeekConfig()
-                if (config.isConfigured && config.enabled) {
-                    deepSeekClient.generateLyrics(config, reqTrack)
-                } else null
-            },
+            aiFallback = null,
         )
 
     override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
-        val config = library.loadDeepSeekConfig()
+        val config = loadDeepSeekConfig()
         val result = deepSeekClient.generateLyrics(config, track)
         if (result is LyricsFetchResult.Found) {
             lyricsRepository.writeCache(track, result)
@@ -304,60 +336,19 @@ class DesktopPlatformServices : PlatformServices {
         library.merge(imported.tracks)
         val mergedPlaylists = (library.loadPlaylists() + imported.playlists).associateBy(Playlist::id).values.toList()
         library.savePlaylists(mergedPlaylists)
-        SyncReport(true, "同步包导入完成", imported.tracks.size, imported.playlists.size)
-    }
-
-    override suspend fun startLanShare(): LanShareInfo = withContext(Dispatchers.IO) {
-        stopLanShare()
-        val playlists = library.loadPlaylists()
-        val tracks = tracksWithPlaylistArtwork(library.load(), playlists)
-        if (tracks.isEmpty()) return@withContext LanShareInfo(false, "音乐库为空，无法开始同步")
-        val passphrase = java.util.Base64.getUrlEncoder().withoutPadding()
-            .encodeToString(ByteArray(32).also(java.security.SecureRandom()::nextBytes))
-        val shareDirectory = library.managedMusicDirectory.parent
-        Files.createDirectories(shareDirectory)
-        val temporary = Files.createTempFile(shareDirectory, ".resonance-lan-", ".resonance")
-        try {
-            EncryptedSyncPackage().export(
-                temporary,
-                passphrase,
-                tracks,
-                playlists,
-                { track -> track.sourceUri?.let(Path::of)?.takeIf(Files::isRegularFile)?.let(Files::newInputStream) },
-                { track -> openArtworkSource(track.artworkPath) },
-            )
-            val share = DesktopLanShare(temporary, passphrase)
-            val qr = share.writeQr(shareDirectory.resolve("Resonance-LAN-QR.png"))
-            lanShare = share
-            LanShareInfo(true, "局域网分享已开启；扫码后会自动关闭", qr.toString(), "10 分钟")
-        } catch (error: Throwable) {
-            Files.deleteIfExists(temporary)
-            throw error
-        }
-    }
-
-    override suspend fun importLanShare(link: String): SyncReport =
-        SyncReport(false, "Windows 版当前作为局域网发送端")
-
-    override fun stopLanShare() {
-        lanShare?.close()
-        lanShare = null
+        SyncReport(true, "歌单文件导入完成", imported.tracks.size, imported.playlists.size)
     }
 
     override suspend fun importMusic(convertToMp3: Boolean): ImportReport = withContext(Dispatchers.IO) {
-        val folder = chooseFolderOnEdt() ?: return@withContext ImportReport(emptyList())
-        run {
-            val report = DesktopMusicScanner(
-                artworkDirectory = library.artworkDirectory,
-                managedMusicDirectory = library.managedMusicDirectory,
-            ).scan(folder, convertToMp3)
+        val control = com.resonance.player.io.ImportControl()
+        check(currentImport.compareAndSet(null, control)) { "已有导入任务正在运行" }
+        try {
+            val folder = chooseFolderOnEdt() ?: return@withContext ImportReport(emptyList())
+            val report = DesktopMusicScanner(library.artworkDirectory, library.managedMusicDirectory)
+                .scan(folder, convertToMp3, control) { importProgress.value = it }
             if (report.tracks.isNotEmpty()) library.merge(report.tracks)
             report
-        }
-    }
-
-    override suspend fun importPlaylistLink(link: String): PlaylistImportReport = withContext(Dispatchers.IO) {
-        KugouPlaylistImporter().import(link, library.load(), library.installationId())
+        } finally { currentImport.set(null); importProgress.value = null }
     }
 
     private val enricher = com.resonance.player.enrich.MetadataEnricher(
@@ -375,9 +366,9 @@ class DesktopPlatformServices : PlatformServices {
         tracks: List<Track>,
         onProgress: (com.resonance.player.model.BatchEnrichProgress) -> Unit,
     ): com.resonance.player.model.BatchEnrichReport = withContext(Dispatchers.IO) {
-        val config = library.loadDeepSeekConfig()
+        val config = loadDeepSeekConfig()
         val customFolder = library.loadCustomLyricsFolder()
-        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress)
+        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress) { updated -> library.updateTracks(listOf(updated)) }
         if (report.updatedTracks.isNotEmpty()) {
             library.updateTracks(report.updatedTracks)
         }
@@ -385,6 +376,7 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {
+        if (playingMusicId == track.id) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) }
         val rawSource = track.sourceUri ?: return@withContext DeleteTrackReport(false, false, "这首歌曲没有本地音频文件")
         val source = Path.of(rawSource).toAbsolutePath().normalize()
         val deleted = runCatching { Files.deleteIfExists(source) }.getOrDefault(false)
@@ -415,6 +407,7 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
+        playingMusicId = track.id
         isPlayingEvents.tryEmit(true)
         player.play(track)
     }
@@ -492,7 +485,7 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun close() {
-        stopLanShare()
+        assistantScope.cancel()
         player.close()
     }
 
@@ -518,10 +511,10 @@ class DesktopPlatformServices : PlatformServices {
         val selection = AtomicReference<Path?>()
         SwingUtilities.invokeAndWait {
             val chooser = JFileChooser().apply {
-                dialogTitle = if (save) "导出同步包" else "导入同步包"
+                dialogTitle = if (save) "导出歌单文件" else "导入歌单文件"
                 fileSelectionMode = JFileChooser.FILES_ONLY
                 isAcceptAllFileFilterUsed = false
-                fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Resonance 同步包 (*.resonance)", "resonance")
+                fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Resonance 歌单文件 (*.resonance)", "resonance")
                 currentDirectory = library.managedMusicDirectory.parent?.toFile()
                 if (save) selectedFile = library.managedMusicDirectory.parent.resolve("Resonance-Sync.resonance").toFile()
             }
@@ -554,44 +547,45 @@ internal class DesktopMusicScanner(
     private val audioExtensions = setOf("mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape", "kgma", "kgm", "kgg")
     private val converter = DesktopManagedMp3Converter(managedMusicDirectory)
 
-    fun scan(root: Path, convertToMp3: Boolean): ImportReport {
+    fun scan(root: Path, convertToMp3: Boolean,
+        control: com.resonance.player.io.ImportControl = com.resonance.player.io.ImportControl(),
+        progress: (ImportProgress) -> Unit = {},
+    ): ImportReport {
         val tracks = mutableListOf<Track>()
         val warnings = mutableListOf<String>()
         var skipped = 0
-
-        Files.walk(root).use { paths ->
-            paths.filter(Files::isRegularFile).forEach { path ->
-                val extension = path.fileName.toString().substringAfterLast('.', "").lowercase()
-                if (extension !in audioExtensions) return@forEach
-                val importPath = if (convertToMp3 || extension in listOf("kgma", "kgm", "kgg")) {
-                    runCatching { converter.importAsMp3(path) }
-                        .onFailure {
-                            skipped += 1
-                            if (warnings.size < 5) warnings += "转换失败 ${path.fileName}: ${it.message.orEmpty()}"
-                        }
-                        .getOrNull() ?: return@forEach
-                } else {
-                    path
+        try {
+            val candidates = mutableListOf<Path>()
+            Files.walk(root).use { paths ->
+                val iterator = paths.iterator()
+                while (iterator.hasNext()) {
+                    control.check()
+                    val path = iterator.next()
+                    if (Files.isRegularFile(path) && path.fileName.toString().substringAfterLast('.', "").lowercase() in audioExtensions) candidates += listOf(path)
+                    if (candidates.size % 100 == 0) progress(ImportProgress("扫描目录", completed = candidates.size, detail = "已发现 ${candidates.size} 个音频文件"))
                 }
-                runCatching { readAudioTrack(importPath) }
-                    .onSuccess { track ->
-                        tracks += track
-                    }
-                    .onFailure {
-                        skipped += 1
-                        if (warnings.size < 5) warnings += "无法读取 ${path.fileName}: ${it.message.orEmpty()}"
-                    }
             }
-        }
-
-        return ImportReport(
-            tracks = tracks.sortedWith(compareBy(Track::artist, Track::title)),
-            skippedCount = skipped,
-            warnings = warnings,
-        )
+            candidates.forEachIndexed { index, path ->
+                control.check()
+                val name = path.fileName.toString()
+                progress(ImportProgress("处理音频", name, index, candidates.size, index.toFloat() / candidates.size.coerceAtLeast(1)))
+                try {
+                    val ext = name.substringAfterLast('.', "").lowercase()
+                    val source = if (convertToMp3 || ext in listOf("kgma", "kgm", "kgg")) converter.importAsMp3(path, control) { done, total ->
+                        progress(ImportProgress("解密音频", name, index, candidates.size,
+                            (index + (if (total > 0) done.toFloat() / total * 0.7f else 0f)) / candidates.size.coerceAtLeast(1), "${done / 1024} / ${total / 1024} KB"))
+                    } else path
+                    control.check()
+                    tracks += readAudioTrack(source)
+                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                catch (error: Exception) { skipped++; if (warnings.size < 10) warnings += "$name：${error.message.orEmpty()}" }
+                progress(ImportProgress("处理音频", name, index + 1, candidates.size, (index + 1f) / candidates.size.coerceAtLeast(1)))
+            }
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { warnings += "已取消；已完成 ${tracks.size} 首，源文件保留" }
+        return ImportReport(tracks.sortedWith(compareBy(Track::artist, Track::title)), skipped, warnings, control.isCancelled)
     }
 
-    private fun readAudioTrack(path: Path): Track {
+    fun readAudioTrack(path: Path): Track {
         val file = AudioFileIO.read(path.toFile())
         val tag = file.tag
         val rawTitle = tag?.getFirst(FieldKey.TITLE)?.takeIf(String::isNotBlank)
@@ -647,7 +641,7 @@ internal class DesktopMusicScanner(
 }
 
 internal class DesktopLibraryStore(
-    private val appDirectory: Path = (System.getProperty("RESONANCE_DATA") ?: System.getenv("RESONANCE_DATA"))?.takeIf(String::isNotBlank)?.let(Path::of)
+    val appDirectory: Path = (System.getProperty("RESONANCE_DATA") ?: System.getenv("RESONANCE_DATA"))?.takeIf(String::isNotBlank)?.let(Path::of)
         ?: Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "Resonance"),
 ) {
     private val libraryFile = appDirectory.resolve("library.properties")
@@ -975,7 +969,7 @@ internal class DesktopLibraryStore(
             artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: id.hashCode(),
             isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
             artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
-            mimeType = properties.getProperty(prefix + "mime") ?: KugouPlaylistImporter.CATALOG_MIME_TYPE,
+            mimeType = properties.getProperty(prefix + "mime") ?: "application/vnd.resonance.catalog+audio",
         )
     }
 

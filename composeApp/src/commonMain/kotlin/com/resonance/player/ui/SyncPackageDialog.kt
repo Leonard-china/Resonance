@@ -29,9 +29,9 @@ import androidx.compose.ui.unit.dp
 import com.resonance.player.model.Playlist
 
 /**
- * 免密码同步包对话框。
- * 导出：选择单个歌单或整个音乐库，打包 MP3、封面与元数据为普通 Zip。
- * 导入：直接选择 .resonance 同步包即可，无需口令。
+ * 免密码歌单文件对话框。
+ * 导出：选择单个歌单或整个音乐库，打包音频、封面与元数据为普通 Zip。
+ * 导入：直接选择 .resonance 歌单文件即可，无需口令。
  */
 @Composable
 fun SyncPackageDialog(
@@ -44,12 +44,12 @@ fun SyncPackageDialog(
     com.resonance.player.platform.ResonanceBackHandler(enabled = true, onBack = onDismiss)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (exporting) "导出同步包" else "导入同步包") },
+        title = { Text(if (exporting) "导出歌单文件" else "导入歌单文件") },
         text = {
             if (exporting) {
                 Column {
                     Text(
-                        "选择要打包的内容。MP3、封面与歌曲元数据会写入一个普通 Zip 包（.resonance），无需密码。",
+                        "选择要打包的内容。音频、封面与歌曲元数据会写入一个普通 Zip 包（.resonance），无需密码。",
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -77,14 +77,14 @@ fun SyncPackageDialog(
                 }
             } else {
                 Text(
-                    "选择一个 .resonance 同步包（普通 Zip，无需密码）。包内的歌曲、封面和歌单会合并到本机音乐库。",
+                    "选择一个 .resonance 歌单文件（普通 Zip，无需密码）。包内的歌曲、封面和歌单会合并到本机音乐库。",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
         },
         confirmButton = {
             Button(onClick = { onConfirm(if (exporting) selectedPlaylistId else null) }) {
-                Text(if (exporting) "导出" else "选择同步包")
+                Text(if (exporting) "导出" else "选择歌单文件")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },

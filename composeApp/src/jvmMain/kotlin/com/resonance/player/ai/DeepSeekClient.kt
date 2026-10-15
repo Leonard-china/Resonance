@@ -17,11 +17,11 @@ import java.net.HttpURLConnection
 import java.net.URI
 import java.nio.charset.StandardCharsets
 
-class DeepSeekClient {
+class DeepSeekClient(private val completion: (suspend (List<Map<String, String>>, Int) -> String)? = null) {
 
     suspend fun testConnection(config: DeepSeekConfig): DeepSeekTestResult = withContext(Dispatchers.IO) {
         if (config.apiKey.isBlank()) {
-            return@withContext DeepSeekTestResult(false, "请输入 DeepSeek API Key")
+            return@withContext DeepSeekTestResult(false, "请先配置 AI API Key")
         }
         try {
             val response = sendChatCompletion(
@@ -32,7 +32,7 @@ class DeepSeekClient {
                 maxTokens = 10,
             )
             if (response.isNotBlank()) {
-                DeepSeekTestResult(true, "连接成功！DeepSeek API 响应正常。")
+                DeepSeekTestResult(true, "连接成功！AI API 响应正常。")
             } else {
                 DeepSeekTestResult(false, "API 返回了空响应")
             }
@@ -44,35 +44,38 @@ class DeepSeekClient {
 
     suspend fun generateLyrics(config: DeepSeekConfig, track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
         if (!config.isConfigured || !config.enabled) {
-            return@withContext LyricsFetchResult.Unavailable("未配置 DeepSeek API Key", retryable = false)
+            return@withContext LyricsFetchResult.Unavailable("未配置 AI 接口", retryable = false)
         }
         try {
             val prompt = buildString {
-                append("请为歌曲《${track.title}》（歌手：${track.artist.ifBlank { "未知" }}，专辑：${track.album.ifBlank { "未知" }}，时长：${track.durationText}）提供完整的标准 LRC 格式歌词。\n")
+                append("请为歌曲《${track.title}》（歌手：${track.artist.ifBlank { "未知" }}，专辑：${track.album.ifBlank { "未知" }}，时长：${track.durationText}）尽可能准确地提供纯文本歌词；不确定时明确说明未找到，不要编造。\n")
                 append("要求：\n")
-                append("1. 格式为标准 LRC，如 [00:12.34]歌词内容，时间戳递增。\n")
+                append("1. 每行一句歌词，不要生成未经音频对齐验证的时间戳。\n")
                 append("2. 如果该曲目是纯音乐/器乐演奏，请回复：[00:00.00]纯音乐，请欣赏\n")
-                append("3. 请直接输出 LRC 歌词文本，不要添加任何 Markdown 格式（如 ```lrc 或 ```）、不要包含额外解释说明。")
+                append("3. 请直接输出纯文本歌词，不要添加 Markdown 格式或额外解释。无法确认时仅回复未找到。")
             }
             val response = sendChatCompletion(
                 config = config,
                 messages = listOf(
-                    mapOf("role" to "system", "content" to "你是一个专业的音乐歌词助理，擅长提供准确的标准 LRC 格式同步歌词。"),
+                    mapOf("role" to "system", "content" to "你是一个专业的音乐歌词助理，仅提供可确认的歌词内容，无法确认时返回未找到，不生成猜测时间轴。"),
                     mapOf("role" to "user", "content" to prompt),
                 ),
                 maxTokens = 2048,
             )
             val cleaned = cleanLrcResponse(response)
+            if (cleaned.isBlank() || Regex("未找到|无法确认|无法提供|没有找到|not found|cannot provide", RegexOption.IGNORE_CASE).containsMatchIn(cleaned.take(300))) {
+                return@withContext LyricsFetchResult.Unavailable("AI 未找到可确认的歌词", retryable = true)
+            }
             val lines = parseLrc(cleaned)
             val isInstrumental = cleaned.contains("纯音乐") && (lines.isEmpty() || lines.size <= 2)
             if (lines.isNotEmpty()) {
                 LyricsFetchResult.Found(
                     Lyrics(
                         trackId = track.id,
-                        lines = lines,
-                        synchronized = true,
+                        lines = lines.map { it.copy(timestampMs = null) },
+                        synchronized = false,
                         instrumental = isInstrumental,
-                        source = "DeepSeek AI",
+                        source = "AI · ${config.model}",
                         fromCache = false,
                     )
                 )
@@ -89,7 +92,7 @@ class DeepSeekClient {
                             lines = plainLines,
                             synchronized = false,
                             instrumental = isInstrumental,
-                            source = "DeepSeek AI",
+                            source = "AI · ${config.model}",
                             fromCache = false,
                         )
                     )
@@ -97,8 +100,9 @@ class DeepSeekClient {
                     LyricsFetchResult.Unavailable("AI 未能生成有效的歌词", retryable = false)
                 }
             }
-        } catch (error: Throwable) {
-            LyricsFetchResult.Unavailable("DeepSeek AI 生成歌词失败：${error.message ?: "网络错误"}", retryable = true)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (error: Exception) {
+            LyricsFetchResult.Unavailable("AI 歌词检索失败：${error.message ?: "网络错误"}", retryable = true)
         }
     }
 
@@ -108,7 +112,7 @@ class DeepSeekClient {
         needLyrics: Boolean = true,
     ): AiEnrichResult = withContext(Dispatchers.IO) {
         if (!config.isConfigured || !config.enabled) {
-            return@withContext AiEnrichResult(false, message = "未配置 DeepSeek API Key")
+            return@withContext AiEnrichResult(false, message = "未配置 AI 接口")
         }
         try {
             val prompt = buildString {
@@ -120,7 +124,7 @@ class DeepSeekClient {
                 append("  \"album\": \"所属专辑名\",\n")
                 append("  \"isInstrumental\": false,\n")
                 if (needLyrics) {
-                    append("  \"lyrics\": \"标准LRC格式歌词文本（如[00:12.34]歌词内容），纯音乐则写 [00:00.00]纯音乐，请欣赏\"\n")
+                    append("  \"lyrics\": \"可确认的纯文本歌词，无法确认就写空串，不要生成时间戳\"\n")
                 } else {
                     append("  \"lyrics\": \"\"\n")
                 }
@@ -149,7 +153,8 @@ class DeepSeekClient {
                 lyrics = lyrics,
                 isInstrumental = isInstrumental,
             )
-        } catch (e: Throwable) {
+        } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (e: Exception) {
             AiEnrichResult(false, message = e.message ?: "AI 识别失败")
         }
     }
@@ -182,11 +187,12 @@ class DeepSeekClient {
         return text
     }
 
-    private fun sendChatCompletion(
+    private suspend fun sendChatCompletion(
         config: DeepSeekConfig,
         messages: List<Map<String, String>>,
         maxTokens: Int = 1024,
     ): String {
+        completion?.let { return it(messages, maxTokens) }
         val baseUrl = config.baseUrl.trim().removeSuffix("/")
         val endpoint = if (baseUrl.endsWith("/chat/completions")) baseUrl else "$baseUrl/chat/completions"
         val url = URI(endpoint).toURL()
