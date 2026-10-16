@@ -61,7 +61,10 @@ enum class LibraryDestination {
     Import,
     PlaylistArchive,
     Assistant,
+    Tasks,
+    Recommendations,
     AudioHelp,
+    About,
     Settings,
 }
 
@@ -124,6 +127,7 @@ data class PlayerState(
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.Off,
     val progress: Float = 0f,
+    val positionMs: Long? = null,
     val volume: Float = 1.0f,
     val playbackSpeed: Float = 1.0f,
     val sleepTimerOption: SleepTimerOption = SleepTimerOption.Off,

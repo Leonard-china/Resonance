@@ -1,6 +1,6 @@
-# 2026-10-15 — Resonance 文档入口与开发变更索引
+# 2026-10-16 — Resonance 文档入口与开发变更索引
 
-当前开发基线：版本 **0.4.0 / 23**，发布标记 `v0.4.0`，功能改造基于 `cdf7ee3`。Android 正式 APK 见 [v0.4.0 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.0)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)，本次发布验证见 [发布记录](changes/2026-10-15-13-release-0.4.0-android.md)。
+当前工作区：**0.4.1 / 24** 的 2026-10-16 正式发布构建。[本次发布说明](RELEASE_NOTES-0.4.1.md) · [本次发布记录](changes/2026-10-16-10-release-0.4.1.md)。GitHub 最新 Release 见 [v0.4.1 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.1)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
 
 ## 新 AI 从这里开始
 
@@ -16,13 +16,23 @@
 | [变更模板](CHANGE-TEMPLATE.md) | 日期、原因、具体修改、前后/数据、真实验证、限制 |
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
-| [0.3.5 发布说明入口](RELEASE_NOTES-0.3.5.md) | 发布脚本约定与产物核验，开发记录不等同发布 |
-| [0.4.0 发布说明](RELEASE_NOTES-0.4.0.md) | Android 正式版的新功能、兼容影响、签名与实际校验值 |
+| [0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) | v0.4.1 正式版更新重点、安装包校验与升级指引 |
+| [0.4.0 发布说明](RELEASE_NOTES-0.4.0.md) | 历史 0.4.0 Android 正式版记录 |
 
 ## 变更记录（最新在前）
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-16 | 升版 0.4.1、构建签名 Android Release APK 与 Windows 安装包并交付 GitHub | [具体修改](changes/2026-10-16-10-release-0.4.1.md) |
+| 2026-10-16 | AI助手多会话历史、模型溯源、桌面歌词权限引导与独立关于页面 | [具体修改](changes/2026-10-16-09-assistant-history-and-ui-polish.md) |
+| 2026-10-16 | 本轮优化两端发布版构建与验证 | [具体修改](changes/2026-10-16-08-release-build-verification.md) |
+| 2026-10-16 | 修复静止歌词并添加按音频时间戳生成同步歌词 | [具体修改](changes/2026-10-16-07-audio-synchronized-lyrics.md) |
+| 2026-10-16 | 新增持久任务列表和按失败步骤重试 | [具体修改](changes/2026-10-16-06-durable-music-tasks.md) |
+| 2026-10-16 | 为下载歌曲匹配真实专辑封面并缓存及保留视频兜底 | [具体修改](changes/2026-10-16-05-album-artwork.md) |
+| 2026-10-16 | 在歌单页固定每日推荐并提供独立推荐页面 | [具体修改](changes/2026-10-16-04-pinned-recommendations.md) |
+| 2026-10-16 | 音乐助手进入主导航并隐藏聊天页迷你播放器 | [具体修改](changes/2026-10-16-03-assistant-navigation.md) |
+| 2026-10-16 | 合并完整播放器过渡并降低动态背景重组开销 | [具体修改](changes/2026-10-16-02-player-layer-transition.md) |
+| 2026-10-16 | 恢复曲库切换动画并保留各栏目的浏览位置 | [具体修改](changes/2026-10-16-01-library-motion-and-scroll.md) |
 | 2026-10-15 | 升版 0.4.0、构建签名 Release APK 并交付 GitHub | [具体修改](changes/2026-10-15-13-release-0.4.0-android.md) |
 | 2026-10-15 | 深度优化的构建/设备回归、文档和交接 | [具体修改](changes/2026-10-15-12-verification-and-handoff.md) |
 | 2026-10-15 | 改进补全匹配与持久化并移除缺失计数横幅 | [具体修改](changes/2026-10-15-11-improve-metadata-enrichment.md) |

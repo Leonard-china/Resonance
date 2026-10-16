@@ -16,6 +16,7 @@ class MusicAssistantTest {
         var lists = emptyList<Playlist>()
         val deleted = mutableListOf<String>()
         var playing: String? = null
+        var speechPreparations = 0
         override suspend fun tracks() = songs.values.toList()
         override suspend fun playlists() = lists
         override suspend fun savePlaylists(playlists: List<Playlist>) { lists = playlists }
@@ -34,6 +35,7 @@ class MusicAssistantTest {
             return Track(id, request.title, request.artist, request.album, "3:00", 0, sourceUri = target.toString()).also { songs[id] = it }
         }
         override suspend fun transcode(input: Path, output: Path, request: VideoImportRequest, cover: Path?) { Files.copy(input, output) }
+        override suspend fun prepareSpeechAudio(track: Track, output: Path) { speechPreparations++; Files.write(output, ByteArray(96000)) }
     }
     private class Videos : MusicVideoSource {
         var unavailable = false
@@ -65,7 +67,7 @@ class MusicAssistantTest {
         val root = Files.createTempDirectory("resonance-assistant-test-")
         try {
             val library = Library(root); val videos = Videos(); val ai = Transport(); val store = MusicJsonStore(root.resolve("state"))
-            val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos)
+            val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos, artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null }, lyricSource = { LyricsFetchResult.Unavailable("fixture", false) })
             runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test-key")), recommendationsEnabled = true))
             runtime.settings()
             block(runtime, library, videos, ai, store)
@@ -215,6 +217,125 @@ class MusicAssistantTest {
             val last = ai.requests.takeLast(2)
             assertEquals(last.first().getJSONObject(0).toString(), last.last().getJSONObject(0).toString())
             assertEquals(last.first().getJSONObject(1).toString(), last.last().getJSONObject(1).toString())
+        }
+    }
+
+    @Test fun retryCoverDoesNotDownloadAudioAgainAndHistorySurvivesRestart() = runBlocking {
+        val root = Files.createTempDirectory("resonance-cover-retry-")
+        try {
+            val store = MusicJsonStore(root.resolve("state")); val library = Library(root); val videos = Videos(); val ai = Transport()
+            var available = false
+            val cover = root.resolve("album.jpg"); Files.write(cover, byteArrayOf(1))
+            val source = com.resonance.player.enrich.MusicArtworkSource { _, _ -> if (available) com.resonance.player.enrich.AlbumCover(cover, "Real Album", "fixture") else null }
+            val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos, artworkSource = source, lyricSource = { LyricsFetchResult.Unavailable("no lyrics", false) })
+            videos.search(SongRequest("Song", "Artist"))
+            val video = videos.known.values.single()
+            val track = runtime.importVideo(VideoImportRequest(video.bvid, "Song", "Artist", "单曲"))
+            assertEquals(1, videos.downloads)
+            val failed = runtime.state.value.tasks.single { it.kind == "cover" && it.outcome == MusicTaskOutcome.Failed }
+            assertTrue(failed.retryable)
+            assertTrue(Files.exists(Path.of(track.sourceUri!!)))
+            available = true
+            runtime.retryTask(failed.id)
+            assertEquals(1, videos.downloads)
+            assertEquals(cover.toString(), library.songs[track.id]?.artworkPath)
+            assertEquals("Real Album", library.songs[track.id]?.album)
+            val restarted = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos)
+            restarted.settings()
+            assertEquals(MusicTaskOutcome.Completed, restarted.state.value.tasks.first { it.id == failed.id }.outcome)
+        } finally { Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
+
+    @Test fun generatedLyricsUseAudioTimestampsAndCacheWithoutChargingTwice() = runBlocking {
+        val root = Files.createTempDirectory("resonance-generated-test-")
+        try {
+            val library = Library(root); val store = MusicJsonStore(root.resolve("state")); var calls = 0
+            val transport = com.resonance.player.lyrics.SpeechLyricsTransport { _, _, _, progress ->
+                calls++; progress(ImportProgress("fixture recognition"))
+                com.resonance.player.lyrics.SpeechRecognition(listOf(LyricLine(500, "你好"), LyricLine(1500, "世界")), listOf(
+                    com.resonance.player.lyrics.SpeechWord("你好", 500, 1000), com.resonance.player.lyrics.SpeechWord("世界", 1500, 2500)), 3)
+            }
+            val runtime = JvmMusicAssistant(store, root, library, speechClient = transport)
+            runtime.saveSettings(MusicFeatureSettings(speechApiKey = "fake-speech-key", monthlySpeechSeconds = 60))
+            val track = Track("sync", "Song", "Artist", "Album", "0:03", 0, sourceUri = root.resolve("song.mp3").toString())
+            library.songs[track.id] = track
+            val original = Lyrics(track.id, listOf(LyricLine(null, "你好"), LyricLine(null, "世界")), false, false, "plain")
+            val first = runtime.generateSynchronizedLyrics(track, original)
+            assertEquals(listOf(500L, 1500L), first.lines.map { it.timestampMs })
+            assertTrue(first.synchronized)
+            val second = runtime.generateSynchronizedLyrics(track, original)
+            assertTrue(second.fromCache)
+            assertEquals(1, calls); assertEquals(1, library.speechPreparations)
+            assertEquals(3, runtime.state.value.speechSeconds)
+            assertEquals(first.lines, runtime.cachedSynchronizedLyrics(track)?.lines)
+        } finally { Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
+
+    @Test fun interruptedTaskIsRecoveredAndSpeechBudgetRejectsBeforeUpload() = runBlocking {
+        val root = Files.createTempDirectory("resonance-interrupted-test-")
+        try {
+            val store = MusicJsonStore(root.resolve("state")); val library = Library(root)
+            val journal = MusicTaskJournal(store); val id = journal.begin("封面", "cover", "song")
+            var uploads = 0
+            val runtime = JvmMusicAssistant(store, root, library, speechClient = com.resonance.player.lyrics.SpeechLyricsTransport { _, _, _, _ -> uploads++; error("must not upload") })
+            runtime.saveSettings(MusicFeatureSettings(speechApiKey = "fake", monthlySpeechSeconds = 60))
+            runtime.settings()
+            assertEquals(MusicTaskOutcome.Interrupted, runtime.state.value.tasks.first { it.id == id }.outcome)
+            store.update { it.put("speech.${java.time.YearMonth.now()}", 59) }
+            val track = Track("song", "Song", "Artist", "", "0:03", 0)
+            assertFailsWith<IllegalStateException> { runtime.generateSynchronizedLyrics(track) }
+            assertEquals(0, uploads)
+            assertTrue(runtime.state.value.tasks.any { it.kind == "syncLyrics" && it.outcome == MusicTaskOutcome.Failed })
+        } finally { Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
+    @Test fun cancellationAfterAudioImportKeepsItInPendingRecommendationCleanup() = runBlocking {
+        val root = Files.createTempDirectory("resonance-cancel-metadata-")
+        try {
+            val store = MusicJsonStore(root.resolve("state")); val library = Library(root); val videos = Videos(); val ai = Transport()
+            val entered = CompletableDeferred<Unit>(); var block = true
+            val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos,
+                artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> if (block) { entered.complete(Unit); awaitCancellation() } else null },
+                lyricSource = { LyricsFetchResult.Unavailable("fixture", false) })
+            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test")), recommendationsEnabled = true, recommendationCount = 1))
+            ai.songs("Interrupted")
+            val work = launch { runtime.recommend(true) }
+            withTimeout(5000) { entered.await() }
+            runtime.cancel(); work.join()
+            val first = library.songs.values.single()
+            assertEquals(first.id, store.read().getJSONArray("recommendationPending").getString(0))
+            assertTrue(Files.exists(Path.of(first.sourceUri!!)))
+            block = false; ai.songs("Next"); runtime.recommend(true)
+            assertTrue(first.id in library.deleted)
+            assertFalse(Files.exists(Path.of(first.sourceUri!!)))
+        } finally { Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
+    @Test fun chatWithMultipleSessionsMaintainsIsolationAndAttribution() = runBlocking {
+        fixture { runtime, _, _, ai, _ ->
+            ai.content("First session reply")
+            runtime.chat("Hello session 1")
+            assertEquals("Hello session 1", runtime.state.value.sessions.first().title)
+            assertEquals("First session reply", runtime.state.value.messages.last().content)
+            assertEquals("通义千问 (qwen3-vl-flash)", runtime.state.value.messages.last().model)
+
+            val session1Id = runtime.state.value.currentSessionId
+            val session2Id = runtime.createSession("Second Session")
+            assertEquals(session2Id, runtime.state.value.currentSessionId)
+            assertTrue(runtime.state.value.messages.isEmpty())
+
+            ai.content("Second session reply")
+            runtime.chat("Hello session 2")
+            assertEquals(2, runtime.state.value.messages.size)
+            assertEquals("Second session reply", runtime.state.value.messages.last().content)
+
+            // Switch back to session 1
+            runtime.switchSession(session1Id)
+            assertEquals(session1Id, runtime.state.value.currentSessionId)
+            assertEquals("First session reply", runtime.state.value.messages.last().content)
+
+            // Delete session 2
+            runtime.deleteSession(session2Id)
+            assertEquals(1, runtime.state.value.sessions.size)
+            assertEquals(session1Id, runtime.state.value.sessions.single().id)
         }
     }
 }

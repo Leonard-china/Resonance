@@ -86,6 +86,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PictureInPicture
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
@@ -181,6 +182,7 @@ private enum class PlayerPane(val label: String, val icon: ImageVector) {
 
 @Composable
 internal fun NowPlayingOverlay(
+    ambientMotionEnabled: Boolean = true,
     playerState: PlayerState,
     queue: List<Track>,
     lyricsState: LyricsUiState,
@@ -239,7 +241,7 @@ internal fun NowPlayingOverlay(
                 val wide = maxWidth >= 720.dp || maxWidth > maxHeight * 1.35f
                 val short = maxHeight < 560.dp
                 val shortPaneHeight = (maxHeight - 290.dp).coerceIn(120.dp, 240.dp)
-                NowPlayingBackdrop(track.artworkSeed, playerState.isPlaying, Modifier.matchParentSize().hazeSource(glassState))
+                NowPlayingBackdrop(track.artworkSeed, playerState.isPlaying && ambientMotionEnabled, Modifier.matchParentSize().hazeSource(glassState))
                 Column(
                     modifier = Modifier.align(Alignment.Center).widthIn(max = 1280.dp).heightIn(max = 900.dp)
                         .fillMaxSize().padding(horizontal = if (wide) 32.dp else 20.dp, vertical = 10.dp),
@@ -502,6 +504,16 @@ private fun NowPlayingTopBar(
                 tint = if (track.isFavorite) SoftNeumorphicTokens.ActiveHeart else null,
                 glowColor = if (track.isFavorite) SoftNeumorphicTokens.ActiveHeart.copy(alpha = 0.45f) else null,
             )
+            if (onToggleFloatingLyrics != null) {
+                Spacer(Modifier.width(8.dp))
+                TactileTopBarButton(
+                    icon = Icons.Default.PictureInPicture,
+                    contentDescription = if (floatingLyricsEnabled) "关闭桌面歌词" else "开启桌面歌词",
+                    onClick = onToggleFloatingLyrics,
+                    tint = if (floatingLyricsEnabled) ResonanceColors.Primary else ResonanceColors.Muted,
+                    glowColor = if (floatingLyricsEnabled) ResonanceColors.Primary.copy(alpha = 0.45f) else null,
+                )
+            }
             Spacer(Modifier.width(8.dp))
             Box {
                 TactileTopBarButton(
@@ -511,6 +523,11 @@ private fun NowPlayingTopBar(
                     tint = ResonanceColors.Muted,
                 )
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    LocalMusicFeatures.current?.let { feature ->
+                        DropdownMenuItem(text = { Text("匹配专辑封面") }, onClick = { menuExpanded = false; feature.launch { feature.assistant?.matchCover(track); feature.onReload() } })
+                        DropdownMenuItem(text = { Text("自定义封面") }, onClick = { menuExpanded = false; feature.launch { feature.services.chooseCoverImage()?.let { feature.assistant?.setCover(track, it); feature.onReload() } } })
+                        DropdownMenuItem(text = { Text("生成同步歌词") }, onClick = { menuExpanded = false; feature.showGenerateLyrics = true })
+                    }
                     if (onOpenSleepTimer != null) DropdownMenuItem(
                         text = { Text("睡眠定时器") },
                         onClick = { menuExpanded = false; onOpenSleepTimer() },
@@ -652,6 +669,7 @@ private fun PaneContent(
                     HeroSyncedLyricsPreview(
                         track = track,
                         progress = playerState.progress,
+                        nativePositionMs = playerState.positionMs,
                         lyricsState = lyricsState,
                         onOpenFullLyrics = onOpenFullLyrics,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -661,6 +679,7 @@ private fun PaneContent(
             PlayerPane.Lyrics -> LyricsPane(
                 track = track,
                 progress = playerState.progress,
+                nativePositionMs = playerState.positionMs,
                 state = lyricsState,
                 onSeek = onSeek,
                 onRefresh = onRefreshLyrics,
@@ -677,6 +696,7 @@ private fun PaneContent(
 private fun HeroSyncedLyricsPreview(
     track: Track,
     progress: Float,
+    nativePositionMs: Long? = null,
     lyricsState: LyricsUiState,
     onOpenFullLyrics: () -> Unit,
     modifier: Modifier = Modifier,
@@ -684,7 +704,7 @@ private fun HeroSyncedLyricsPreview(
     val lyricMotion = resonanceSpring<androidx.compose.ui.unit.IntOffset>()
     val reducedMotion = LocalReducedMotion.current
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
-    val positionMs = (durationMs * progress.coerceIn(0f, 1f)).toLong()
+    val positionMs = (nativePositionMs ?: (durationMs * progress.coerceIn(0f, 1f)).toLong())
     val lyricsInteraction = remember { MutableInteractionSource() }
 
     Column(
@@ -782,7 +802,7 @@ private fun HeroSyncedLyricsPreview(
                         }
                     }
                 } else {
-                    val firstLine = lyrics.lines.firstOrNull()?.text ?: "…"
+                    val firstLine = "纯文本歌词 · 点击浏览或生成同步歌词"
                     Text(
                         firstLine,
                         style = MaterialTheme.typography.bodyMedium,
@@ -1195,6 +1215,7 @@ private fun VolumeAndSpeedRow(
 private fun LyricsPane(
     track: Track,
     progress: Float,
+    nativePositionMs: Long? = null,
     state: LyricsUiState,
     onSeek: (Float) -> Unit,
     onRefresh: () -> Unit,
@@ -1214,10 +1235,11 @@ private fun LyricsPane(
     ) {
         when (state) {
             LyricsUiState.Idle, LyricsUiState.Loading -> LyricsLoading()
-            is LyricsUiState.Unavailable -> LyricsUnavailable(state.message, onRefresh, onRequestAi)
+            is LyricsUiState.Unavailable -> Column(Modifier.fillMaxSize()) { TranslationControls(); Box(Modifier.weight(1f)) { LyricsUnavailable(state.message, onRefresh, onRequestAi) } }
             is LyricsUiState.Ready -> LyricsContent(
                 track = track,
                 progress = progress,
+                nativePositionMs = nativePositionMs,
                 lyrics = state.lyrics,
                 onSeek = onSeek,
                 onAdjustOffset = onAdjustOffset,
@@ -1270,6 +1292,7 @@ private fun LyricsUnavailable(message: String, onRefresh: () -> Unit, onRequestA
 private fun LyricsContent(
     track: Track,
     progress: Float,
+    nativePositionMs: Long? = null,
     lyrics: Lyrics,
     onSeek: (Float) -> Unit,
     onAdjustOffset: ((Long) -> Unit)? = null,
@@ -1291,7 +1314,7 @@ private fun LyricsContent(
     }
 
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
-    val positionMs = (durationMs * progress.coerceIn(0f, 1f)).toLong() + lyrics.offsetMs
+    val positionMs = (nativePositionMs ?: (durationMs * progress.coerceIn(0f, 1f)).toLong()) + lyrics.offsetMs
     val activeIndex = if (lyrics.synchronized) {
         lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
     } else {
@@ -1334,6 +1357,7 @@ private fun LyricsContent(
 
     Column(modifier = Modifier.fillMaxSize()) {
         TranslationControls()
+        Text(if (lyrics.synchronized) "同步歌词 · ${lyrics.source}" else "纯文本歌词 · 可手动滚动，或生成同步歌词", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, modifier = Modifier.padding(horizontal = 8.dp))
         if (lyrics.synchronized && onAdjustOffset != null) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
@@ -1389,7 +1413,7 @@ private fun LyricsContent(
                     LyricRow(
                         line = line,
                         active = isActive,
-                        onClick = line.timestampMs?.let { timestamp ->
+                        onClick = line.timestampMs?.takeIf { lyrics.synchronized }?.let { timestamp ->
                             {
                                 lastUserDragMark = null
                                 onSeek((timestamp - lyrics.offsetMs).coerceAtLeast(0L).toFloat() / durationMs.toFloat())

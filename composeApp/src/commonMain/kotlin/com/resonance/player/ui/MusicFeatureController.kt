@@ -18,6 +18,10 @@ class MusicFeatureController(val services: PlatformServices, private val scope: 
     var reasonTrack by mutableStateOf<Track?>(null)
     var translated by mutableStateOf<Lyrics?>(null)
     var translating by mutableStateOf(false)
+    var generatedLyrics by mutableStateOf<Lyrics?>(null)
+    var generatingLyrics by mutableStateOf(false)
+    var showGenerateLyrics by mutableStateOf(false)
+    var showOverlayPermissionPrompt by mutableStateOf(false)
     var onReload: suspend () -> Unit = {}
     var beforeTask: suspend () -> Unit = {}
     var onPlay: (Track) -> Unit = {}
@@ -34,7 +38,29 @@ class MusicFeatureController(val services: PlatformServices, private val scope: 
         settings = value
         settingsWriter.submitLatest("music.settings") { assistant?.saveSettings(value); services.configureBackgroundRecommendations(value) }
     }
-    fun toggleFloatingLyrics() = save(settings.copy(floatingLyrics = !settings.floatingLyrics))
+    fun toggleFloatingLyrics() {
+        if (!settings.floatingLyrics && !services.canDrawOverlays()) {
+            showOverlayPermissionPrompt = true
+            return
+        }
+        save(settings.copy(floatingLyrics = !settings.floatingLyrics))
+    }
+    suspend fun reloadGeneratedLyrics() {
+        val track = player.currentTrack ?: return
+        val result = assistant?.cachedSynchronizedLyrics(track)
+        if (player.currentTrack?.id == track.id) generatedLyrics = result
+    }
+    fun generateLyrics() {
+        val track = player.currentTrack ?: return
+        if (generatingLyrics) return
+        launch {
+            generatingLyrics = true
+            try {
+                val result = assistant?.generateSynchronizedLyrics(track, (lyrics as? LyricsUiState.Ready)?.lyrics)
+                if (player.currentTrack?.id == track.id) { generatedLyrics = result; translated = null }
+            } finally { generatingLyrics = false }
+        }
+    }
     fun translate(force: Boolean = false) {
         val current = (lyrics as? LyricsUiState.Ready)?.lyrics ?: return
         val track = player.currentTrack ?: return

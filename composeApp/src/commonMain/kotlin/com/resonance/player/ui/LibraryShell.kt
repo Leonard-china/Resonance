@@ -14,7 +14,14 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.animation.core.Animatable
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -211,7 +218,7 @@ private data class DestinationItem(
 
 private val destinationItems = listOf(
     DestinationItem(LibraryDestination.Library, "音乐库", Icons.Default.Home),
-    DestinationItem(LibraryDestination.Discover, "搜索", Icons.Default.Search),
+    DestinationItem(LibraryDestination.Assistant, "音乐助手", Icons.Default.AutoAwesome),
     DestinationItem(LibraryDestination.Profile, "工具", Icons.Default.Settings),
 )
 
@@ -280,6 +287,7 @@ fun LibraryShell(
     operationInProgress: Boolean,
 ) {
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
+    var mountPlayer by remember { mutableStateOf(false) }
     var trackPendingEdit by remember { mutableStateOf<Track?>(null) }
 
     val handleDestination: (LibraryDestination) -> Unit = { target ->
@@ -292,7 +300,7 @@ fun LibraryShell(
 
     if (destination == LibraryDestination.AudioHelp) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Settings) }
-    } else if (destination in listOf(LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Assistant)) {
+    } else if (destination in listOf(LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.About)) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Profile) }
     } else if (destination != LibraryDestination.Library) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Library) }
@@ -304,7 +312,7 @@ fun LibraryShell(
         FluidAmbientCanvas(
             modifier = Modifier.matchParentSize().hazeSource(glassState),
             seed = playerState.currentTrack?.artworkSeed ?: 0,
-            isPlaying = playerState.isPlaying,
+            isPlaying = playerState.isPlaying && !mountPlayer,
             intensity = 0.85f,
         )
 
@@ -365,32 +373,32 @@ fun LibraryShell(
         val isNowPlayingVisible = showNowPlaying && currentTrackForOverlay != null
         val reducedMotion = LocalReducedMotion.current
 
-        val overlayProgress by animateFloatAsState(
-            targetValue = if (isNowPlayingVisible) 1f else 0f,
-            animationSpec = if (reducedMotion) tween(0) else spring(
-                stiffness = 320f,
-                dampingRatio = 1.0f,
-            ),
-            label = "overlayProgress",
-        )
-
-        val backgroundModifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer {
-                if (!reducedMotion && overlayProgress > 0.001f) {
-                    scaleX = 1f - 0.035f * overlayProgress
-                    scaleY = 1f - 0.035f * overlayProgress
-                    translationY = -8.dp.toPx() * overlayProgress
-                    shape = RoundedCornerShape((18 * overlayProgress).dp)
-                    clip = true
-                }
+        val overlayMotion = remember { Animatable(0f) }
+        var playerSettled by remember { mutableStateOf(false) }
+        LaunchedEffect(isNowPlayingVisible, reducedMotion) {
+            playerSettled = false
+            if (isNowPlayingVisible) {
+                mountPlayer = true
+                // Allow the fixed-size player to compose before moving its layer.
+                withFrameNanos { }
+                withFrameNanos { }
             }
+            overlayMotion.animateTo(if (isNowPlayingVisible) 1f else 0f,
+                if (reducedMotion) tween(120) else ResonanceMotionTokens.PlayerSpec)
+            if (!isNowPlayingVisible) mountPlayer = false
+            playerSettled = isNowPlayingVisible
+        }
+        val backgroundModifier = Modifier.fillMaxSize()
 
         Box(modifier = backgroundModifier) {
             when (windowClass) {
                 WindowClass.Compact -> Column(Modifier.fillMaxSize()) {
                     Box(Modifier.weight(1f)) { sharedContent(true) }
-                    if (playerState.currentTrack != null) {
+                    AnimatedVisibility(
+                        visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut(),
+                    ) {
                         MiniPlayer(
                             playerState = playerState,
                             onTogglePlay = onTogglePlay,
@@ -406,7 +414,11 @@ fun LibraryShell(
                     SideNavigationRail(destination, handleDestination)
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         Box(Modifier.weight(1f)) { sharedContent(false) }
-                        if (playerState.currentTrack != null) {
+                        AnimatedVisibility(
+                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
                             MiniPlayer(
                                 playerState = playerState,
                                 onTogglePlay = onTogglePlay,
@@ -427,7 +439,11 @@ fun LibraryShell(
                     )
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         Box(Modifier.weight(1f)) { sharedContent(false) }
-                        if (playerState.currentTrack != null) {
+                        AnimatedVisibility(
+                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
                             MiniPlayer(
                                 playerState = playerState,
                                 onTogglePlay = onTogglePlay,
@@ -442,11 +458,12 @@ fun LibraryShell(
             }
         }
 
-        if (overlayProgress > 0.001f) {
+        if (mountPlayer) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.45f * overlayProgress))
+                    .graphicsLayer { alpha = overlayMotion.value }
+                    .background(Color.Black.copy(alpha = 0.45f))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -455,28 +472,13 @@ fun LibraryShell(
             )
         }
 
-        AnimatedVisibility(
-            visible = isNowPlayingVisible,
-            enter = if (reducedMotion) {
-                fadeIn(tween(0))
-            } else {
-                slideInVertically(
-                    animationSpec = spring(stiffness = 320f, dampingRatio = 1.0f),
-                    initialOffsetY = { fullHeight -> fullHeight },
-                )
-            },
-            exit = if (reducedMotion) {
-                fadeOut(tween(0))
-            } else {
-                slideOutVertically(
-                    animationSpec = spring(stiffness = 340f, dampingRatio = 1.0f),
-                    targetOffsetY = { fullHeight -> fullHeight },
-                )
-            },
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        if (mountPlayer) Box(Modifier.fillMaxSize().graphicsLayer {
+            translationY = if (reducedMotion) 0f else size.height * (1f - overlayMotion.value)
+            alpha = if (reducedMotion) overlayMotion.value else 1f
+        }) {
             if (currentTrackForOverlay != null) {
                 NowPlayingOverlay(
+                    ambientMotionEnabled = playerSettled,
                     playerState = if (playerState.currentTrack != null) playerState else playerState.copy(currentTrack = currentTrackForOverlay),
                     queue = playbackQueue,
                     lyricsState = lyricsState,
@@ -528,7 +530,8 @@ fun LibraryShell(
 }
 
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
-    LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Assistant, LibraryDestination.AudioHelp -> LibraryDestination.Profile
+    LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About -> LibraryDestination.Profile
+    LibraryDestination.Recommendations, LibraryDestination.Discover -> LibraryDestination.Library
     LibraryDestination.Playing -> LibraryDestination.Library
     else -> destination
 }
@@ -537,13 +540,14 @@ private val profileSubPages = setOf(
     LibraryDestination.Import,
     LibraryDestination.PlaylistArchive,
     LibraryDestination.Settings,
-    LibraryDestination.Assistant,
+    LibraryDestination.Tasks,
     LibraryDestination.AudioHelp,
+    LibraryDestination.About,
 )
 
 private fun mainTabIndexOf(destination: LibraryDestination): Int = when (tabDestinationOf(destination)) {
     LibraryDestination.Library -> 0
-    LibraryDestination.Discover -> 1
+    LibraryDestination.Assistant -> 1
     LibraryDestination.Profile -> 2
     else -> 0
 }
@@ -552,6 +556,7 @@ private fun subPageIndexOf(destination: LibraryDestination): Int = when (destina
     LibraryDestination.Import -> 0
     LibraryDestination.PlaylistArchive -> 1
     LibraryDestination.Settings -> 2
+    LibraryDestination.About -> 3
     else -> 0
 }
 
@@ -839,31 +844,34 @@ private fun DestinationContent(
     operationInProgress: Boolean,
 ) {
     val reducedMotion = LocalReducedMotion.current
+    val destinationStates = rememberSaveableStateHolder()
     AnimatedContent(
         targetState = destination,
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopStart,
         transitionSpec = {
             if (reducedMotion) {
                 (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
             } else if (initialState == LibraryDestination.Profile && targetState in profileSubPages) {
                 // 进入工具二级页面：从右侧满屏推入，主页面向左视差退场
                 (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
             } else if (initialState in profileSubPages && targetState == LibraryDestination.Profile) {
                 // 返回工具主页面：主页面从左侧视差归位，二级页面向右满屏滑出
                 (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
             } else if (initialState in profileSubPages && targetState in profileSubPages) {
                 // 工具二级页面之间切换：满屏丝滑平移
                 val dir = if (subPageIndexOf(targetState) >= subPageIndexOf(initialState)) 1 else -1
                 (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
             } else {
                 // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）：满屏丝滑平移
                 val fromTab = mainTabIndexOf(initialState)
@@ -872,13 +880,16 @@ private fun DestinationContent(
                 (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
             }
         },
         label = "destinationContent",
     ) { activeDestination ->
+        destinationStates.SaveableStateProvider(activeDestination.name) {
         when (activeDestination) {
-            LibraryDestination.Assistant -> AssistantScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
+            LibraryDestination.Assistant -> AssistantScreen(compact) { onDestinationChange(LibraryDestination.Library) }
+            LibraryDestination.Tasks -> MusicTasksScreen(compact) { onDestinationChange(LibraryDestination.Library) }
+            LibraryDestination.Recommendations -> RecommendationsScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.AudioHelp -> AudioBalanceHelpScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
 
             LibraryDestination.Library -> LibraryScreen(
@@ -931,6 +942,11 @@ private fun DestinationContent(
                 onOpenImport = { onDestinationChange(LibraryDestination.Import) },
                 onOpenSync = { onDestinationChange(LibraryDestination.PlaylistArchive) },
                 onOpenSettings = { onDestinationChange(LibraryDestination.Settings) },
+                onOpenAbout = { onDestinationChange(LibraryDestination.About) },
+            )
+            LibraryDestination.About -> AboutScreen(
+                compact = compact,
+                onBack = { onDestinationChange(LibraryDestination.Profile) },
             )
             LibraryDestination.Import -> ImportScreen(
                 compact = compact,
@@ -961,6 +977,7 @@ private fun DestinationContent(
                 onSaveCustomLyricsFolder = onSaveCustomLyricsFolder,
             )
         }
+    }
     }
 }
 
@@ -1108,13 +1125,13 @@ private fun LibraryScreen(
     message: String?,
     operationInProgress: Boolean,
 ) {
-    if (playlists.isEmpty() && libraryTracks.isEmpty()) {
-        if (operationInProgress) LibraryLoading() else EmptyLibrary(onCreatePlaylist, { onImport(false) }, message)
-        return
-    }
 
     var tab by rememberSaveable { mutableStateOf(LibraryTab.Playlists.name) }
     val activeTab = LibraryTab.entries.firstOrNull { it.name == tab } ?: LibraryTab.Playlists
+    val tracksScroll = rememberLazyListState()
+    val albumsScroll = rememberLazyListState()
+    val artistsScroll = rememberLazyListState()
+    val playlistsScroll = rememberLazyGridState()
     var detail by remember { mutableStateOf<LibraryDetail?>(null) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -1210,6 +1227,9 @@ private fun LibraryScreen(
                     selectedTrackIds = emptySet()
                 }) {
                     Icon(Icons.Default.Checklist, contentDescription = "多选", tint = ResonanceColors.Muted)
+                }
+                LocalMusicFeatures.current?.let { feature ->
+                    IconButton(onClick = { feature.onNavigate(LibraryDestination.Tasks) }) { Icon(Icons.Default.Checklist, "任务列表", tint = ResonanceColors.Muted) }
                 }
                 IconButton(onClick = {
                     onOpenSearch()
@@ -1325,10 +1345,12 @@ private fun LibraryScreen(
                         onSelect = { tab = it.name },
                         modifier = Modifier.padding(horizontal = pagePadding),
                     )
-                    Box(Modifier.fillMaxWidth().weight(1f).clipToBounds()) {
+                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                      LibraryTabTransition(activeTab.ordinal) {
                         val currentTab = activeTab
                         when (currentTab) {
                             LibraryTab.Tracks -> TrackListTab(
+                                trackListState = tracksScroll,
                                 tracks = libraryTracks,
                                 favoriteCount = favoriteTracks.size,
                                 playerState = playerState,
@@ -1344,6 +1366,7 @@ private fun LibraryScreen(
                                 contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
                             )
                             LibraryTab.Playlists -> PlaylistListTab(
+                                state = playlistsScroll,
                                 playlists = playlists,
                                 onOpenPlaylist = { playlist ->
                                     onPlaylistSelected(playlist.id)
@@ -1353,11 +1376,13 @@ private fun LibraryScreen(
                                 contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
                             )
                             LibraryTab.Albums -> AlbumListTab(
+                                state = albumsScroll,
                                 tracks = allKnownTracks,
                                 onOpenAlbum = { detail = LibraryDetail.AlbumDetail(it) },
                                 contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
                             )
                             LibraryTab.Artists -> ArtistListTab(
+                                state = artistsScroll,
                                 tracks = allKnownTracks,
                                 onOpenArtist = { detail = LibraryDetail.ArtistDetail(it) },
                                 contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
@@ -1367,6 +1392,7 @@ private fun LibraryScreen(
                 }
             }
         }
+    }
     }
 
     if (showRenameDialog && detailPlaylist != null) {
@@ -1487,6 +1513,7 @@ private fun LibraryTabRow(
 
 @Composable
 private fun TrackListTab(
+    trackListState: LazyListState,
     tracks: List<Track>,
     favoriteCount: Int,
     playerState: PlayerState,
@@ -1501,20 +1528,6 @@ private fun TrackListTab(
     onToggleTrackSelect: (String) -> Unit = {},
     contentPadding: PaddingValues,
 ) {
-    val trackListState = rememberLazyListState()
-    val currentTrackId = playerState.currentTrack?.id
-    LaunchedEffect(currentTrackId) {
-        if (currentTrackId != null) {
-            val idx = tracks.indexOfFirst { it.id == currentTrackId }
-            if (idx >= 0) {
-                val targetIndex = idx + 1
-                val isVisible = trackListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
-                if (!isVisible) {
-                    trackListState.animateScrollToItem(targetIndex)
-                }
-            }
-        }
-    }
     LazyColumn(state = trackListState, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         item {
             Row(
@@ -1568,6 +1581,7 @@ private fun TrackListTab(
 
 @Composable
 private fun AlbumListTab(
+    state: LazyListState,
     tracks: List<Track>,
     onOpenAlbum: (String) -> Unit,
     contentPadding: PaddingValues,
@@ -1576,7 +1590,7 @@ private fun AlbumListTab(
         .groupBy { it.album.ifBlank { "未知专辑" } }
         .toList()
         .sortedBy { (name, _) -> name } }
-    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+    LazyColumn(state = state, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         itemsIndexed(albums, key = { index, album -> "album-${album.first}-$index" }) { _, (album, albumTracks) ->
             val first = albumTracks.first()
             Row(
@@ -1623,6 +1637,7 @@ private fun AlbumListTab(
 
 @Composable
 private fun ArtistListTab(
+    state: LazyListState,
     tracks: List<Track>,
     onOpenArtist: (String) -> Unit,
     contentPadding: PaddingValues,
@@ -1631,7 +1646,7 @@ private fun ArtistListTab(
         .groupBy { it.artist.ifBlank { "未知艺术家" } }
         .toList()
         .sortedBy { (name, _) -> name } }
-    LazyColumn(contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
+    LazyColumn(state = state, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         itemsIndexed(artists, key = { index, artist -> "artist-${artist.first}-$index" }) { _, (artist, artistTracks) ->
             Row(
                 modifier = Modifier
@@ -1741,19 +1756,6 @@ private fun LibraryDetailView(
     }
     val playable = tracks.filter { it.sourceUri != null }
     val playlistListState = rememberLazyListState()
-    val currentTrackId = playerState.currentTrack?.id
-    LaunchedEffect(currentTrackId) {
-        if (currentTrackId != null) {
-            val idx = tracks.indexOfFirst { it.id == currentTrackId }
-            if (idx >= 0) {
-                val targetIndex = idx + 2
-                val isVisible = playlistListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
-                if (!isVisible) {
-                    playlistListState.animateScrollToItem(targetIndex)
-                }
-            }
-        }
-    }
 
     LazyColumn(
         state = playlistListState,

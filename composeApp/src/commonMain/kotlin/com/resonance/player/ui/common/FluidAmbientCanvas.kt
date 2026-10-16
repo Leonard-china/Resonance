@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -42,13 +43,13 @@ fun FluidAmbientCanvas(
     val moving = isPlaying && LocalAppForeground.current && !LocalReducedMotion.current
     val phases = if (moving) {
         val transition = rememberInfiniteTransition(label = "ambientMotion")
-        val one by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(24000, easing = LinearEasing)), label = "ambientOne")
-        val two by transition.animateFloat(0f, 360f, infiniteRepeatable(tween(32000, easing = LinearEasing)), label = "ambientTwo")
-        Triple(one, two, 1f)
-    } else Triple(0f, 60f, 1f)
+        val one = transition.animateFloat(0f, 360f, infiniteRepeatable(tween(24000, easing = LinearEasing)), label = "ambientOne")
+        val two = transition.animateFloat(0f, 360f, infiniteRepeatable(tween(32000, easing = LinearEasing)), label = "ambientTwo")
+        one to two
+    } else rememberUpdatedState(0f) to rememberUpdatedState(60f)
     val phaseOne = phases.first
     val phaseTwo = phases.second
-    val breathePulse = phases.third
+    val breathePulse = 1f
     val colors = listOf(ResonanceColors.Primary, ResonanceColors.Positive, ResonanceColors.Info)
 
     val baseAlpha = (if (isDark) 0.14f else 0.09f) * intensity
@@ -61,8 +62,8 @@ fun FluidAmbientCanvas(
         val h = size.height
         if (w <= 0f || h <= 0f) return@Canvas
 
-        val rad1 = (phaseOne * kotlin.math.PI / 180.0).toFloat()
-        val rad2 = (phaseTwo * kotlin.math.PI / 180.0).toFloat()
+        val rad1 = (phaseOne.value * kotlin.math.PI / 180.0).toFloat()
+        val rad2 = (phaseTwo.value * kotlin.math.PI / 180.0).toFloat()
 
         // 光斑 1（暖调/主导，右上方缓缓回旋）
         val x1 = w * (0.68f + 0.16f * cos(rad1))

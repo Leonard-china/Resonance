@@ -1,6 +1,6 @@
-# 2026-10-15 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
+# 2026-10-16 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
 
-源码核对日期：2026-10-15（Asia/Shanghai）；功能改造基准 HEAD `cdf7ee3`，当前版本为 `0.4.0 / 23`，发布标记 `v0.4.0`。功能回归与限制见 [深度优化验证](changes/2026-10-15-12-verification-and-handoff.md)，本次正式 APK 的构建、签名与交付见 [发布记录](changes/2026-10-15-13-release-0.4.0-android.md) 和 [版本说明](RELEASE_NOTES-0.4.0.md)。
+源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.1 / 24`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) 及 [发布记录](changes/2026-10-16-10-release-0.4.1.md)）。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -20,16 +20,16 @@ Kotlin / Compose Multiplatform 原生工程，目标 Android、Windows。没有 
 
 | 功能 | Android | Windows | 边界 |
 | --- | --- | --- | --- |
-| 本地库、搜索、收藏、歌单、专辑/歌手、多选 | 已接入 | 已接入 | Discover 是本地搜索，支持拼音首字母 |
+| 本地库、搜索、收藏、歌单、专辑/歌手、多选 | 已接入 | 已接入 | 主导航第二项为助手；Discover 从曲库右上角进入本地搜索，支持拼音首字母；工具页独立提供关于 Resonance 页面 |
 | KGMA v3 / slot 1 转 MP3 | 已接入 | 已接入 | 进度、取消、保留源文件；支持载荷转 320k MP3 |
 | KGG v5 转 MP3 | 不支持，明确提示 | 已接入 | 需要本机酷狗数据库中的匹配密钥 |
 | 播放/队列/随机/循环/变速/恢复 | Media3 服务 | FFmpeg/Java Sound | 原生后台播放与快照恢复 |
 | 自动音量平衡 | 单开关 | 单开关 | 全局音量、整曲分析/缓存，独立帮助页 |
 | 歌词与双向翻译 | 已接入 | 已接入 | 本地 LRC/KRC、LRCLIB、显式 AI、任意目标语言和双语模式 |
-| 后台悬浮歌词 | 系统 overlay | 透明置顶窗口 | 拖动、字号、锁定/点击穿透，系统权限/进程存活限制 |
+| 后台悬浮歌词 | 系统 overlay（带权限引导） | 透明置顶窗口 | 灵动岛展开全屏播放器常驻触觉切换按钮；拖动、字号、锁定/点击穿透，Android 悬浮窗未授权时自动弹出引导对话框并直达系统设置 |
 | 歌单文件导出/导入 | 已接入 | 已接入 | .resonance 明文 ZIP，含音频、封面、元数据和关系 |
-| B 站音频导入 | 已接入 | 已接入 | 链接/BV/分 P，编辑歌名歌手专辑与封面，转码入库 |
-| 多模型音乐助手 | 已接入 | 已接入 | 千问、DeepSeek、豆包、自定义 HTTPS 接口，文本/视觉角色分开 |
+| B 站音频导入 | 已接入 | 已接入 | 链接/BV/分 P，编辑歌名歌手专辑与封面，转码入库、专辑封面匹配/视频兜底 |
+| 多模型音乐助手 | 已接入 | 已接入 | 千问、DeepSeek、豆包、自定义 HTTPS 接口，支持多会话独立隔离、消息回复模型溯源与推荐 Chip 预选 |
 | 长截图歌单识别 | 已接入 | 已接入 | 区域分片、视觉 OCR、本地匹配、原版候选搜索、下载与歌单整理 |
 | 每日推荐 | 前台/后台可选 | 前台/托盘后台可选 | 自定义间隔/数量；临时曲目清理；收藏/入自建歌单保留 |
 | 元数据/封面/歌词补全 | 已接入 | 已接入 | 公共来源优先，显式 AI 兜底；歌曲页无常驻缺失计数 |
@@ -67,7 +67,7 @@ Media3 1.10.1、WorkManager 2.10.1、FFmpegKit audio 8.1.7、Smart Exception 0.2
 | C/model/LibraryModels.kt、MusicFeatureModels.kt | Track/Playlist/Lyrics、报告、模型连接、设置、进度、Token、推荐 |
 | [C/playback/PlaybackStateStore.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/playback/PlaybackStateStore.kt) | 激活代次、准备任务取消、用户设置版本、全局音量/自动增益 |
 | [C/data/PersistenceQueue.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/data/PersistenceQueue.kt) | submit 顺序屏障、submitLatest 合并、run 等待落盘；退出排空 |
-| C/ui/LibraryShell.kt、LibraryDetailTransition.kt | 响应式曲库/搜索/详情、多选、封面和迷你播放器；标签单树切换，详情独立过渡 |
+| C/ui/LibraryShell.kt、LibraryDetailTransition.kt | 响应式曲库/搜索/详情、多选、封面和迷你播放器；标签单树轻量图层动画/独立滚动位置，详情独立过渡 |
 | C/ui/NowPlayingOverlay.kt | 完整播放器、歌词/队列、单个平衡开关、翻译/显示、悬浮开关与编辑信息 |
 | C/ui/MusicFeatureController.kt、MusicFeatureScreens.kt | 共享设置、助手、B 站表单、音量帮助、任务进度、拒绝原因 |
 | C/ui/ToolsScreens.kt、SyncPackageDialog.kt、BatchEnrichDialog.kt | 导入、歌单文件、设置、导出范围、补全选项/报告 |
@@ -78,6 +78,8 @@ Media3 1.10.1、WorkManager 2.10.1、FFmpegKit audio 8.1.7、Smart Exception 0.2
 | J/features/MusicJsonStore.kt、MusicFeatureCodec.kt | 原子 JSON/备份恢复、设置/快照编解码、OCR/译文磁盘缓存 |
 | J/features/MusicLibraryAccess.kt | AI/Worker 所需的原生曲库读写/删除/收藏/转码桥接 |
 | [J/media/BilibiliClient.kt](../composeApp/src/jvmMain/kotlin/com/resonance/player/media/BilibiliClient.kt) | 公共 metadata、WBI、候选打分、音轨/CDN、封面；MusicVideoSource 可注入 |
+| J/features/MusicTaskJournal.kt、J/enrich/AlbumCoverRepository.kt | 持久步骤/中断恢复/重试、QQ音乐/iTunes/酷狗专辑封面及缓存 |
+| J/lyrics/ParaformerLyricsClient.kt、AudioLyricAlignment.kt、GeneratedLyricsStore.kt | 百炼WSS识别、音频词时间戳对齐、原文备份及持久缓存 |
 | J/media/Mp3Import.kt | FFmpeg 参数数组、320k MP3、真实标签/封面、流式 hash |
 | J/lyrics/LrclibLyricsRepository.kt、KrcDecoder.kt | 本地/缓存/LRCLIB，LRC/KRC、来源/偏移 |
 | J/ai/DeepSeekClient.kt、enrich/MetadataEnricher.kt | 兼容旧配置/文本解析及补全；实际 AI 转交统一选中模型 |
@@ -120,7 +122,7 @@ PersistenceQueue.submit 是顺序屏障，submitLatest 按键合并待写值，r
 | Lyrics / LyricLine | trackId、lines、synchronized、instrumental、source、fromCache；timestampMs 可空；新增 translation/translationLanguage |
 | ImportReport | tracks、skippedCount、warnings、cancelled；取消允许部分完成 |
 | MusicFeatureSettings | 连接列表/文本视觉角色、推荐开关/后台/间隔/数量、月预算、悬浮开关/锁/字号、翻译语言/显示、B 站 Cookie |
-| MusicAssistantState | 最近 40 条消息、任务状态/进度、月输入/缓存/输出 Token、推荐批 |
+| MusicAssistantState | 最近 40 条消息、任务状态/进度、最近100条持久步骤、月输入/缓存/输出 Token、语音秒数、推荐批 |
 | VideoImportRequest | link/title/artist/album/cover/playlistId；自定义字段写入新 MP3 |
 | RecommendationBatch | createdAt/trackIds/reasons；固定歌单 ID resonance-daily-recommendations |
 
@@ -171,6 +173,16 @@ LrclibLyricsRepository 处理本地/同名 LRC/KRC、缓存和 LRCLIB；成功�
 
 MetadataEnricher 公共 iTunes/酷狗、封面、本地/LRCLIB 优先；选项允许才 AI 兜底。只缺专辑也可触发 AI；公共结果匹配标题/已知歌手，不任取首项，未知歌手可按标题检索。每首变化立即 checkpoint 落盘，批次边界取消；封面最多 10 MB 并检图像签名。结束重载/清位图缓存，报告在本次流程显示，歌曲页不再挂缺失计数。公共源与 AI 不保证全量命中/事实准确。
 
+### 音频同步歌词（2026-10-16）
+
+PlayerState.positionMs 从两端原生播放器读取，歌词不再只用 durationText×progress；PlatformServices.playbackPositionMs 为可空兼容属性。纯文本明确标识并允许手动滚动，不能把第一句当作同步状态。
+
+LRCLIB 精确纯文本后继续搜索同步版本；时长偏差过大、仅0时间戳或超曲长时间轴不当作同步歌词。用户可显式生成：MusicFeatureController → JvmMusicAssistant.generateLyricsInternal → MusicLibraryAccess.prepareSpeechAudio → ParaformerLyricsClient(WSS) → AudioLyricAlignment → GeneratedLyricsStore。FFmpeg 在应用私有speech-staging目录准备16kHz单声道16bit PCM（最多30分钟），finally清理临时音频；ASR最终词/句时间戳是唯一时间来源。已有文本用字符序列对齐且校验覆盖率，失败则用识别文本；不猜测或均分时间。
+
+设置新增 speechApiKey（加密，可留空复用千问Key）、speechUrl（默认百炼北京域名）、monthlySpeechSeconds（默认3600）。主动生成/收费重试前提示上传与计费；按PCM整曲时长预留月秒数，失败/取消保守计入，与聊天Token分离。自动下载/推荐不会调用付费音频识别。结果及原文备份在 music-assistant/generated-lyrics/ 按曲目信息指纹保存；后续播放器/后台悬浮歌词优先复用。
+
+协议参考：[百炼WSS](https://help.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service)、[客户端事件](https://help.aliyun.com/zh/model-studio/paraformer-client-events)、[最终结果字段](https://help.aliyun.com/zh/model-studio/paraformer-server-events)。未提供用户Key时只能验证本地协议解析、模拟返回、缓存和预算，不能声称收费服务已验通。
+
 <a id="sync"></a>
 
 ## 9. 歌单文件导出/导入
@@ -192,8 +204,8 @@ Windows 数据根：系统属性 RESONANCE_DATA → 同名环境变量 → LOCAL
 | library.properties / playlists.properties | 库/成员/目录快照 |
 | ui-state.properties | 偏好、快照、主音量/自动响度、外观/天气、歌词目录、旧 AI 配置 |
 | artwork/、lyrics-cache/ | 解析/补全封面、歌词 |
-| music-assistant/music-assistant.json + .bak | 新连接、消息、月用量、批次/pending、拒绝原因、来源映射 |
-| music-assistant/cache/、artwork/ | hash 命名 OCR/译文、AI 封面 |
+| music-assistant/music-assistant.json + .bak | 新连接、消息、月用量/语音秒数、任务步骤、批次/pending、拒绝原因、来源/手选封面映射 |
+| music-assistant/cache/、artwork/ | hash 命名 OCR/译文、AI 封面；album-artwork/ 为真实专辑图片，generated-lyrics/ 为音频对齐歌词与原文备份 |
 | 托管音乐根 | 下载/转换/导入文件及封面；临时 .video-import-*、.staging-* |
 
 | Android 数据 | 内容 |
@@ -219,6 +231,7 @@ AtomicPropertiesFile、MusicJsonStore 用临时文件/原子替换/上一版 .ba
 | AI 聊天/推荐 | 稳定库摘要、歌单名、部分曲目、最近消息和拒绝原因；不上传整库音频 |
 | 截图 OCR / 翻译 | 用户图片分片 / 歌词文本及目标语言 |
 | B 站 | 搜索词、视频 ID、WBI、可选自有 Cookie |
+| 主动生成同步歌词 | 将准备后的整首音频发送到配置的WSS语音接口，独立时长计费 |
 | 天气 | 城市、粗坐标，现有天气/IP 定位接口 |
 
 AI 仅 HTTPS，无携 Key 重定向；15 秒连接、90 秒读取、有界响应和取消断开。B 站限制页面/CDN 主机、音频 1 GiB/封面 10 MB、下载超时/取消；官方登录/验证/412 要报真实原因，不无限重试或绕过限制。
@@ -229,9 +242,13 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 ## 11. UI、封面与悬浮歌词
 
-LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。LibraryDestination 新增 PlaylistArchive/Assistant/AudioHelp；主工具入口可进入歌单文件、助手、设置。
+LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。
 
-曲库常用标签直接切换单棵 Lazy 树，避免 AnimatedContent 双树/透明滑动；详情仍用 LibraryDetailTransition 的裁剪和不透明过渡底层。保留稳定 ID、减少动态效果，别再给高频标签添加重叠模糊层。
+曲库标签用 LibraryTabTransition：单棵 Lazy 树、160ms/24dp 入场与透明度，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
+
+每日推荐始终为歌单网格第一张卡；关闭时进入设置，开启时打开 RecommendationsScreen。持久每日歌单按 DAILY_PLAYLIST_ID 去重，其他歌单保持原顺序。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
+
+专辑封面：AlbumCoverRepository 优先QQ音乐目录并回退MetadataEnricher的iTunes/酷狗公开目录源，严格验证歌名/歌手，再按专辑缓存；新 B 站音频自动匹配，未命中保留视频图。播放菜单单首强制匹配/自定义；任务页按 videoOrigins 批量处理既有下载，customCovers 标记保护手选封面。库覆盖值用于显示，既有音频不会因此重编码。
 
 AlbumArtwork 通过 ArtworkMemoryCache：40 项且总像素约 800 万、3 并发、同路径 single-flight、不缓存失败；修订号触发现有图片重载并阻止清空前旧任务回写。两端解码约 768 像素。Android 缩略图异常/空继续从映射音频 URI 取内嵌封面，回退不能被外层异常短路。
 
@@ -321,6 +338,7 @@ adb shell am instrument -w -r com.resonance.player.debug.test/androidx.test.runn
 | DT | `sync/CrossDeviceSyncFixtureTest` | 明文包夹具 |
 | AT | `AudioSessionIntegrationTest` | 自定义命令授权、无 Activity 切歌、PCM 单声道、FFmpegKit 整曲与 Android regex |
 | AT | `MusicFeaturesIntegrationTest` | MP3标签/封面、缩略图回退、长图、密钥加密、删除 |
+| AT | `LibraryNavigationTest` | 300首列表位置、助手隐藏迷你播放器、推荐卡片、播放器反复展开/关闭 |
 | AT | `LibraryDetailTransitionTest` | 浅/深色、推入/返回/快速返回、减少动态效果的中途像素检查 |
 
 测试根目录：[commonTest](../composeApp/src/commonTest/kotlin/com/resonance/player)、[desktopTest](../composeApp/src/desktopTest/kotlin/com/resonance/player)、[androidInstrumentedTest](../composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player)。测试覆盖不等于所有外部接口在线有效；改网络匹配后还需说明是否做了真实服务检查。
@@ -382,7 +400,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 
 图片选择 → 区域分片 → 内容 hash 查 OCR 缓存 → 视觉返回歌单名/歌名/歌手 JSON → 重叠去重 → 确定 ID 截图歌单 → 本地匹配 → B 站搜索/下载 → 逐曲保存。单歌单最多300首，一次20歌单，错误列出具体歌曲。当前是用户发送后直接导入，不等待逐首批准。
 
-固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要含最多500首、歌手统计和歌单，工具可搜索大库。聊天最多40条落盘、取最近16条请求；OCR/翻译持久缓存避免重复成本。
+固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要含最多500首、歌手统计和歌单，工具可搜索大库。支持多会话隔离管理（最多持久化 30 个会话），首条消息自动截取前 20 字生成会话标题，各会话聊天独立落盘；请求严格仅取当前会话最近 16 条上下文，切换或新建会话 0 Token 消耗，彻底避免跨话题 Prompt 膨胀。消息气泡清晰标注回复模型（如 `回复自 通义千问 (qwen3-vl-flash)`），API 设置页提供常用主流模型 Chip 预选与一键恢复默认地址/模型按钮。OCR/翻译持久缓存避免重复成本。
 
 按 YearMonth 累计输入/缓存命中/输出 Token；统一请求包括连接测试计预算。默认月上限1000000，可配置，前置估算含图片和输出；这不是人民币账单保证，供应商失败请求/图片计费可能不同。云端缓存时效由供应商控制，不承诺隔天命中，也不付费发心跳保活。
 
@@ -390,7 +408,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 
 默认关闭，1–168小时/1–30首；前台到期生成或允许后台。Android WorkManager 受节电/网络调度限制，下载有 dataSync 前台通知；Windows 托盘每分钟检查，完全退出后不运行。
 
-按曲库/歌手分布/收藏/拒绝理由找真实候选，过滤已有/拒绝歌曲并自动下载。至少一首成功才提交新批；总失败保留旧批/时间。每首完成写 recommendationPending，中断待提交音频在下次成功批统一处理。
+按曲库/歌手分布/收藏/拒绝理由找真实候选，过滤已有/拒绝歌曲并自动下载。至少一首成功才提交新批；总失败保留旧批/时间。每首音频入库立即写 recommendationPending（在封面/歌词后处理前），中断待提交音频在下次成功批统一处理。
 
 新批成功时，未收藏且未在自建歌单的旧曲物理删除；当前播放延后。保护按当前收藏/成员关系判断，取消收藏并移出歌单后不永久保护；retained 兼容记录不是清理依据。
 
@@ -405,12 +423,13 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 | 音量、快速切歌竞争 | PlaybackStateStore、PlaybackService、平台响度 | PlaybackStateStoreTest、AudioSessionIntegrationTest |
 | 转换慢/取消 | ImportControl、Scanner/scanDocumentTree、两端 FFmpeg | DesktopManagedMp3ConverterTest，源文件/staging/阶段 |
 | 列表封面 | DynamicArtwork、audioArtwork、ArtworkMemoryCache、SyncArtwork | MusicFeaturesIntegrationTest、CatalogArtworkRematchTest |
-| 切标签/详情撕裂 | LibraryShell、LibraryDetailTransition、Lazy key | LibraryDetailTransitionTest，实际大库帧率另测 |
+| 切标签/播放器掉帧 | LibraryShell、LibraryTabTransition、LibraryDetailTransition、FluidAmbientCanvas | LibraryNavigationTest / LibraryDetailTransitionTest，实际真机帧率另测 |
 | 包格式/FLAC | PlainSyncPackage、平台导入 | PlainSyncPackageTest、PlaylistArchiveFormatTest |
 | B 站412/匹配错误 | BilibiliClient.json/inspect/search/candidateScore | 官方验证/网络/Cookie，MusicAssistantTest |
 | AI工具/截图/预算 | JvmMusicAssistant、MusicAiClient、AssistantImages、Codec | MusicAssistantTest、MusicFeaturesIntegrationTest |
 | 推荐误删/清理失败 | recommendInternal/pending、原生 delete/activeMusicId | rollover/failure/current-playing/dislike 回归 |
-| 翻译/时间轴 | translate/cachedTranslation、LyricDisplay、FloatingLyricsHost | MusicAssistantTest、FloatingLyricsTest |
+| 翻译/时间轴/音频识别 | ParaformerLyricsClient、AudioLyricAlignment、GeneratedLyricsStore、原生positionMs | AudioLyricAlignmentTest / MusicAssistantTest / FloatingLyricsTest |
+| 任务重试/中断 | MusicTaskJournal、JvmMusicAssistant.step/retryTask | 持久恢复、封面重试、推荐pending取消回归 |
 | 后台歌词 | PlaybackService/AndroidLyricsOverlay、DesktopFloatingLyrics/Main | overlay权限/原生播放/进程/锁定/托盘 |
 | 数据恢复/旧值覆盖 | PersistenceQueue、Store锁、AtomicPropertiesFile、MusicJsonStore | PersistenceQueueTest、LibraryPersistenceTest、MusicJsonStoreTest |
 | 补全未命中 | MetadataEnricher、当前模型/公共源 | MetadataEnricherTest；未命中无常驻横幅 |

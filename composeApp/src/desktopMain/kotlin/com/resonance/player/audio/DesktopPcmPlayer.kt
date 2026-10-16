@@ -86,7 +86,7 @@ class DesktopPcmPlayer(
                     val now = System.nanoTime()
                     if (now - lastProgress >= 250_000_000L && active(target)) {
                         val duration = durationTextToSeconds(target.track.durationText)
-                        if (duration > 0) onProgress((target.position() / duration).toFloat().coerceIn(0f, 1f))
+                        onProgress(if (duration > 0) (target.position() / duration).toFloat().coerceIn(0f, 1f) else 0f)
                         lastProgress = now
                     }
                 }
@@ -104,6 +104,8 @@ class DesktopPcmPlayer(
             log?.let { runCatching { Files.deleteIfExists(it) } }
         }
     }
+
+    val positionMs: Long? get() = session?.takeUnless { it.closed.get() }?.let { (it.position() * 1000).toLong().coerceAtLeast(0L) }
 
     fun setPlaying(playing: Boolean) {
         session?.takeIf { playing && it.closed.get() }?.let { play(it.track); return }

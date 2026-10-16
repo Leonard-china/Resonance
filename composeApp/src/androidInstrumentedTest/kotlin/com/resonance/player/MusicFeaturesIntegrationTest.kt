@@ -61,6 +61,25 @@ class MusicFeaturesIntegrationTest {
             AndroidArtworkResolver.audioArtwork[missingThumbnail] = track.sourceUri!!
             assertNotNull("A missing MediaStore thumbnail must fall back to embedded artwork", decodeArtwork(missingThumbnail))
             access.savePlaylists(listOf(Playlist("mine", "测试歌单", "", listOf(track), 1)))
+            val pcm = root.resolve("speech.pcm")
+            access.prepareSpeechAudio(track, pcm)
+            assertTrue("Speech preparation must produce mono 16 kHz PCM", Files.size(pcm) in 31000..34000)
+            // Exercise Java NIO paths on API 32, below Path.of's Android API 34 requirement.
+            assertNull(com.resonance.player.lyrics.LrclibLyricsRepository(root.resolve("lyrics-cache")).findLocalLyrics(track))
+            val generated = Lyrics(track.id, listOf(LyricLine(0, "First"), LyricLine(500, "Second")), true, false, "fixture")
+            com.resonance.player.lyrics.GeneratedLyricsStore.write(root.resolve("generated"), track, generated, null)
+            assertEquals(generated.lines, com.resonance.player.lyrics.GeneratedLyricsStore.read(root.resolve("generated"), track)?.lines)
+            var prepared: java.nio.file.Path? = null
+            val runtime = JvmMusicAssistant(MusicJsonStore(root.resolve("speech-runtime")), access.musicDirectory, access,
+                speechClient = com.resonance.player.lyrics.SpeechLyricsTransport { _, _, audio, _ ->
+                    prepared = audio
+                    assertTrue(audio.startsWith(root.resolve("speech-runtime/speech-staging")))
+                    assertTrue(Files.size(audio) in 31000..34000)
+                    com.resonance.player.lyrics.SpeechRecognition(generated.lines, emptyList(), 1)
+                })
+            runtime.saveSettings(MusicFeatureSettings(speechApiKey = "instrumentation-fake-key"))
+            assertEquals(generated.lines, runtime.generateSynchronizedLyrics(track).lines)
+            assertFalse(Files.exists(prepared!!))
             access.favorite(track, true)
             assertTrue(access.tracks().single().isFavorite)
             access.update(track.copy(title = "修改后的歌名"))

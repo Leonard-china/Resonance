@@ -41,7 +41,18 @@ internal class DesktopMusicAccess(private val store: DesktopLibraryStore, privat
         try {
             withTimeout(600_000) { while (!process.waitFor(200, TimeUnit.MILLISECONDS)) { ensureActive() } }
             check(process.exitValue() == 0) { "音频转换失败：${Files.readString(log).takeLast(400)}" }
-        } finally { process.destroyForcibly(); Files.deleteIfExists(log) }
+        } finally { process.destroyForcibly(); process.waitFor(3, TimeUnit.SECONDS); Files.deleteIfExists(log) }
+    }
+    override suspend fun prepareSpeechAudio(track: Track, output: Path) = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: error("音频文件不可用")
+        val input = if (source.startsWith("file:")) Path.of(java.net.URI(source)).toString() else source
+        val log = Files.createTempFile("resonance-speech-", ".log")
+        val process = ProcessBuilder(FfmpegExecutable.locate(), "-nostdin", "-y", "-v", "error", "-i", input, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-t", "1801", "-f", "s16le", output.toString())
+            .redirectError(log.toFile()).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
+        try {
+            withTimeout(180_000) { while (!process.waitFor(200, TimeUnit.MILLISECONDS)) ensureActive() }
+            check(process.exitValue() == 0) { "准备语音音频失败" }
+        } finally { process.destroyForcibly(); process.waitFor(3, TimeUnit.SECONDS); Files.deleteIfExists(log) }
     }
 }
 

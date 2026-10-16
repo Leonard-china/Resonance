@@ -33,6 +33,9 @@ class LrclibLyricsRepository(
         customLyricsFolder: String? = null,
         aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
     ): LyricsFetchResult = withContext(Dispatchers.IO) {
+        if (!forceRefresh) GeneratedLyricsStore.read(cacheDirectory.parent.resolve("music-assistant/generated-lyrics"), track)?.let {
+            return@withContext LyricsFetchResult.Found(it)
+        }
         // 1. 本地歌词文件（同级目录、Lyrics 目录、用户自定义歌词目录）
         if (!forceRefresh) {
             findLocalLyrics(track, customLyricsFolder)?.let { return@withContext it }
@@ -79,7 +82,7 @@ class LrclibLyricsRepository(
         val rawSource = track.sourceUri
         if (!rawSource.isNullOrBlank() && !rawSource.startsWith("http://") && !rawSource.startsWith("https://") && !rawSource.startsWith("content://")) {
             val audioPath = runCatching {
-                if (rawSource.startsWith("file:/")) Path.of(URI(rawSource)) else Path.of(rawSource)
+                if (rawSource.startsWith("file:/")) java.nio.file.Paths.get(URI(rawSource)) else java.nio.file.Paths.get(rawSource)
             }.getOrNull()
             if (audioPath != null) {
                 val parent = audioPath.parent
@@ -104,10 +107,10 @@ class LrclibLyricsRepository(
 
         // 检查常用酷狗歌词目录及用户自定义歌词目录
         val foldersToCheck = listOfNotNull(
-            customLyricsFolder?.takeIf(String::isNotBlank)?.let { runCatching { Path.of(it) }.getOrNull() },
-            Path.of("D:\\Music\\Kugou\\Leonard\\Lyrics"),
-            Path.of("D:\\Music\\Lyrics"),
-            Path.of(System.getProperty("user.home"), "Music", "Lyrics"),
+            customLyricsFolder?.takeIf(String::isNotBlank)?.let { runCatching { java.nio.file.Paths.get(it) }.getOrNull() },
+            java.nio.file.Paths.get("D:\\Music\\Kugou\\Leonard\\Lyrics"),
+            java.nio.file.Paths.get("D:\\Music\\Lyrics"),
+            java.nio.file.Paths.get(System.getProperty("user.home") ?: "", "Music", "Lyrics"),
         ).filter { Files.isDirectory(it) }
 
         val trackTitleNorm = normalize(track.title)
@@ -130,7 +133,7 @@ class LrclibLyricsRepository(
                         Lyrics(
                             trackId = track.id,
                             lines = lines,
-                            synchronized = lines.any { it.timestampMs != null },
+                            synchronized = usableTimeline(lines, durationTextToSeconds(track.durationText)),
                             instrumental = false,
                             source = "本地歌词 (${candidate.fileName})",
                             fromCache = false,
@@ -162,7 +165,7 @@ class LrclibLyricsRepository(
                         Lyrics(
                             trackId = track.id,
                             lines = lines,
-                            synchronized = lines.any { it.timestampMs != null },
+                            synchronized = usableTimeline(lines, durationTextToSeconds(track.durationText)),
                             instrumental = false,
                             source = "本地歌词 (${matchedFile.fileName})",
                             fromCache = false,
@@ -189,6 +192,7 @@ class LrclibLyricsRepository(
 
     private fun fetchRemote(track: Track): LyricsFetchResult {
         val duration = durationTextToSeconds(track.durationText)
+        var plainFallback: Lyrics? = null
         if (duration > 0) {
             when (val exact = request(
                 "/api/get",
@@ -200,7 +204,8 @@ class LrclibLyricsRepository(
                 ),
             )) {
                 is HttpResult.Success -> parseRecord(exact.body, track, fromCache = false)?.let {
-                    return LyricsFetchResult.Found(it)
+                    if (it.synchronized || it.instrumental) return LyricsFetchResult.Found(it)
+                    plainFallback = it
                 }
                 is HttpResult.Failure -> if (exact.code != HttpURLConnection.HTTP_NOT_FOUND) {
                     throw IllegalStateException("歌词服务返回 HTTP ${exact.code}")
@@ -212,10 +217,12 @@ class LrclibLyricsRepository(
             put("track_name", track.title)
             if (normalize(track.artist) != normalize("未知歌手")) put("artist_name", track.artist)
         }
-        val search = request("/api/search", searchParameters)
+        val search = try { request("/api/search", searchParameters) }
+        catch (error: Exception) { return plainFallback?.let(LyricsFetchResult::Found) ?: throw error }
         if (search is HttpResult.Failure) {
+            if (plainFallback != null) return LyricsFetchResult.Found(plainFallback)
             if (search.code == HttpURLConnection.HTTP_NOT_FOUND) {
-                return LyricsFetchResult.Unavailable("暂未找到这首歌的歌词", retryable = false)
+                return plainFallback?.let(LyricsFetchResult::Found) ?: LyricsFetchResult.Unavailable("暂未找到这首歌的歌词", retryable = false)
             }
             throw IllegalStateException("歌词服务返回 HTTP ${search.code}")
         }
@@ -226,7 +233,7 @@ class LrclibLyricsRepository(
             .filter { it.second >= MINIMUM_MATCH_SCORE }
             .maxByOrNull { it.second }
             ?.first
-            ?: return LyricsFetchResult.Unavailable("暂未找到匹配的歌词", retryable = false)
+            ?: return plainFallback?.let(LyricsFetchResult::Found) ?: LyricsFetchResult.Unavailable("暂未找到匹配的歌词", retryable = false)
 
         return parseRecord(best.toString(), track, fromCache = false)
             ?.let(LyricsFetchResult::Found)
@@ -276,8 +283,8 @@ class LrclibLyricsRepository(
         if (!instrumental && lines.isEmpty()) return null
         return Lyrics(
             trackId = track.id,
-            lines = lines,
-            synchronized = synchronizedLines.isNotEmpty(),
+            lines = if (usableTimeline(synchronizedLines, durationTextToSeconds(track.durationText))) lines else lines.map { it.copy(timestampMs = null) },
+            synchronized = usableTimeline(synchronizedLines, durationTextToSeconds(track.durationText)),
             instrumental = instrumental,
             source = record.optString("source", "LRCLIB"),
             fromCache = fromCache,
@@ -302,6 +309,7 @@ class LrclibLyricsRepository(
         if (normalize(candidate.optString("albumName")) == normalize(track.album)) score += 2
         if (requestedDuration > 0) {
             val difference = abs(candidate.optDouble("duration", 0.0) - requestedDuration)
+            if (difference > maxOf(8.0, requestedDuration * 0.04)) return Int.MIN_VALUE
             score += when {
                 difference <= 2.0 -> 6
                 difference <= 8.0 -> 3
@@ -431,4 +439,11 @@ internal fun parseLrc(raw: String): List<LyricLine> {
             LyricLine(timestampMs = minutes * 60_000 + seconds * 1_000 + milliseconds, text = text)
         }
     }.sortedBy { it.timestampMs }.distinctBy { it.timestampMs to it.text }.toList()
+}
+
+internal fun usableTimeline(lines: List<LyricLine>, seconds: Int): Boolean {
+    val times = lines.mapNotNull { it.timestampMs }
+    if (times.distinct().size < 2 || times.any { it < 0 }) return false
+    if (seconds > 0 && times.last() > seconds * 1000L + 8000L) return false
+    return true
 }

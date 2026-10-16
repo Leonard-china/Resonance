@@ -121,6 +121,33 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
             }
         }
     }
+    override suspend fun prepareSpeechAudio(track: Track, output: Path) = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: error("音频文件不可用")
+        val temporary = if (source.startsWith("content:")) Files.createTempFile(context.cacheDir.toPath(), "speech-source-", ".audio") else null
+        try {
+            if (temporary != null) {
+                context.contentResolver.openInputStream(Uri.parse(source))?.use { input ->
+                    Files.newOutputStream(temporary).use { out ->
+                        val bytes = ByteArray(65536); var size = 0L
+                        while (true) { ensureActive(); val n = input.read(bytes); if (n < 0) break; size += n; require(size <= 200_000_000) { "音频文件超过 200 MB" }; out.write(bytes, 0, n) }
+                    }
+                } ?: error("无法读取音频文件")
+            }
+            val input = temporary?.toString() ?: if (source.startsWith("file:")) java.nio.file.Paths.get(java.net.URI(source)).toString() else source
+            withTimeout(180_000) {
+                suspendCancellableCoroutine<Unit> { continuation ->
+                    val args = arrayOf("-nostdin", "-y", "-v", "error", "-i", input, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-t", "1801", "-f", "s16le", output.toString())
+                    val session = FFmpegKit.executeWithArgumentsAsync(args) { done ->
+                        if (continuation.isActive) {
+                            if (ReturnCode.isSuccess(done.returnCode)) continuation.resume(Unit)
+                            else continuation.resumeWith(Result.failure(IllegalStateException("准备语音音频失败")))
+                        }
+                    }
+                    continuation.invokeOnCancellation { FFmpegKit.cancel(session.sessionId) }
+                }
+            }
+        } finally { temporary?.let { Files.deleteIfExists(it) } }
+    }
     companion object {
         fun lock(context: Context): Any = context.filesDir.absolutePath.intern()
         fun readManaged(context: Context): List<Track> = synchronized(lock(context)) {

@@ -28,14 +28,33 @@ internal fun PlaylistListTab(
     onOpenPlaylist: (Playlist) -> Unit,
     onCreatePlaylist: () -> Unit,
     contentPadding: PaddingValues,
+    state: LazyGridState = rememberLazyGridState(),
 ) {
+    val feature = LocalMusicFeatures.current
+    val enabled = feature?.settings?.recommendationsEnabled == true
+    val daily = playlists.firstOrNull { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }
     LazyVerticalGrid(
+        state = state,
         columns = GridCells.Adaptive(144.dp),
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
+        item(key = "pinned-daily") {
+            Column(Modifier.clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
+                feature?.onNavigate(if (enabled) com.resonance.player.model.LibraryDestination.Recommendations else com.resonance.player.model.LibraryDestination.Settings)
+            }.semantics(mergeDescendants = true) { contentDescription = if (enabled) "打开每日推荐" else "每日推荐未开启，打开推荐设置" }) {
+                Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp)).background(ResonanceColors.PrimarySoft), contentAlignment = Alignment.Center) {
+                    AlbumArtwork(daily?.artworkSeed ?: 7, Modifier.fillMaxSize(), 16.dp, daily?.tracks?.firstNotNullOfOrNull(Track::artworkPath))
+                    Surface(Modifier.align(Alignment.BottomStart).padding(10.dp), color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
+                        Text("置顶", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                Text("每日推荐", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
+                Text(if (!enabled) "未开启推荐 · 点击设置" else "${daily?.tracks?.size ?: 0} 首 · 按你的口味更新", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+            }
+        }
         if (playlists.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
             Column(Modifier.padding(vertical = 24.dp)) {
                 Text("为喜欢的音乐建一个歌单", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.TextPrimary)
@@ -43,7 +62,7 @@ internal fun PlaylistListTab(
                 Text("新建歌单，或在工具中导入已有歌单。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
             }
         }
-        items(playlists, key = { it.id }) { playlist ->
+        items(playlists.filterNot { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }, key = { it.id }) { playlist ->
             Column(Modifier.clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) { onOpenPlaylist(playlist) }
                 .semantics(mergeDescendants = true) { contentDescription = "打开歌单 ${playlist.name}，${playlist.tracks.size} 首歌曲" }) {
                 AlbumArtwork(playlist.artworkSeed, Modifier.fillMaxWidth().aspectRatio(1f), 16.dp,

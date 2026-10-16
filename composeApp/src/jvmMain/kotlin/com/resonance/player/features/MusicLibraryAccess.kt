@@ -13,5 +13,6 @@ interface MusicLibraryAccess {
     suspend fun favorite(track: Track, value: Boolean)
     suspend fun importAudio(path: Path, request: VideoImportRequest, cover: Path?): Track
     suspend fun transcode(input: Path, output: Path, request: VideoImportRequest, cover: Path?)
+    suspend fun prepareSpeechAudio(track: Track, output: Path) { error("此平台未提供音频识别准备能力") }
     fun playingTrackId(): String? = null
 }

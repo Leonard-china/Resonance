@@ -23,6 +23,8 @@ interface PlatformServices {
     suspend fun chooseCoverImage(): String? = null
     suspend fun configureBackgroundRecommendations(settings: com.resonance.player.model.MusicFeatureSettings) {}
     fun updateFloatingLyrics(player: com.resonance.player.model.PlayerState, lyrics: com.resonance.player.model.LyricsUiState, settings: com.resonance.player.model.MusicFeatureSettings) {}
+    fun canDrawOverlays(): Boolean = true
+    fun requestOverlayPermission(): Boolean = false
     val playbackErrors: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
     suspend fun loadPlaybackSnapshot(): com.resonance.player.playback.PlaybackSnapshot? = null
     suspend fun savePlaybackSnapshot(snapshot: com.resonance.player.playback.PlaybackSnapshot) {}
@@ -34,6 +36,7 @@ interface PlatformServices {
         seekTo(progress)
     }
     val playbackEnded: Flow<Unit>
+    val playbackPositionMs: Long? get() = null
     val playbackProgress: Flow<Float>
     val isPlayingChanges: Flow<Boolean>
     val activeTrackChanges: Flow<String>

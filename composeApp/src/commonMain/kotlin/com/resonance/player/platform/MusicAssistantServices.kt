@@ -19,5 +19,15 @@ interface MusicAssistantServices {
     suspend fun recordDislikeReason(track: Track, reason: String)
     suspend fun retain(trackId: String)
     suspend fun updateLibrarySnapshot(tracks: List<Track>, playlists: List<Playlist>)
+    suspend fun retryTask(id: String)
+    suspend fun matchCover(track: Track, force: Boolean = true): Track
+    suspend fun matchVideoCovers()
+    suspend fun setCover(track: Track, path: String): Track
+    suspend fun generateSynchronizedLyrics(track: Track, lyrics: Lyrics? = null): Lyrics
+    suspend fun cachedSynchronizedLyrics(track: Track): Lyrics?
+    suspend fun createSession(title: String = "新对话"): String
+    suspend fun switchSession(sessionId: String)
+    suspend fun deleteSession(sessionId: String)
+    suspend fun clearCurrentSession()
     fun cancel()
 }

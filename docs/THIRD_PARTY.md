@@ -1,4 +1,4 @@
-# 2026-10-15 — 第三方组件、模型服务、B 站和本地凭据
+# 2026-10-16 — 第三方组件、模型服务、B 站和本地凭据
 
 精确依赖见 [Gradle](../composeApp/build.gradle.kts) 与 [版本目录](../gradle/libs.versions.toml)；本文说明实际调用和发送内容，不代表所有外部服务已在线验通。
 
@@ -16,6 +16,7 @@
 | JNA platform 5.17.0 | Windows DPAPI 与歌词窗口点击穿透 |
 | sqlite-jdbc 3.47.1.0 | 本机酷狗数据库密钥，不是曲库数据库 |
 | org.json 20250517 | 两端 JSON 编解码 |
+| OkHttp 4.12.0 / Okio | 两端 WSS 语音识别连接，遵循组件 Apache 2.0 许可 |
 
 ZXing 和 jdk.httpserver 随 LAN/二维码功能删除。KGG 实现注释记录 FlyMouseFormat 移植来源，发布应核对上游声明/许可；仓库无项目级 LICENSE。Windows FFmpeg 非固定 Gradle 二进制，需对实际 ffmpeg -version/-buildconf、许可证与对应源码分发条件核验；本文不声称已完成新 Release 许可证审计。Android 依赖为 audio 包，发布仍按实际内容核验。
 
@@ -53,3 +54,15 @@ Android 悬浮权限 SYSTEM_ALERT_WINDOW 由系统设置授予；后台推荐使
 - [yt-dlp Bilibili extractor](https://github.com/yt-dlp/yt-dlp/blob/master/yt_dlp/extractor/bilibili.py)：正常 WBI/音轨请求的实现参考；项目没有引入 yt-dlp 运行依赖。
 
 来源仅供实现/后续排查，不构成外部接口长期可用承诺。本轮真实服务验证限制见 [验证记录](changes/2026-10-15-12-verification-and-handoff.md)。
+
+## 音频同步歌词服务（2026-10-16）
+
+新增百炼 Paraformer 实时 WSS 音频识别：模型 paraformer-realtime-v2，默认北京接口；也可填写相同协议的 WSS 地址。仅主动点击生成或确认收费重试时，将整首16 kHz单声道PCM上传，最多30分钟；无需麦克风权限。不自动调用付费识别。Key独立配置或复用千问Key，沿用DPAPI/AndroidKeyStore加密。任务参数不写入Key。
+
+音频按时长收费，与聊天Token预算不同；本机按整曲时长保守预留月秒数，失败/取消可能仍计费。此计数不是供应商人民币账单。生成结果与原文备份保存在本机，之后按指纹缓存复用。
+
+真实专辑封面使用QQ音乐、iTunes/酷狗公开元数据来源，不上传音频；无匹配继续显示视频封面。服务覆盖和在线可用性无法保证。
+
+- [WSS协议](https://help.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service)
+- [客户端事件](https://help.aliyun.com/zh/model-studio/paraformer-client-events)
+- [服务端时间戳字段](https://help.aliyun.com/zh/model-studio/paraformer-server-events)

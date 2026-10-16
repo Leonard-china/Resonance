@@ -128,6 +128,8 @@ fun motionDuration(duration: Int): Int = if (LocalReducedMotion.current) 0 else 
  * 杜绝僵硬突兀的瞬时跳变，赋予画面丝滑连贯的空间位置感。
  */
 object ResonanceMotionTokens {
+    val ExitEasing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
+    val PlayerSpec: FiniteAnimationSpec<Float> = tween(280, easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f))
     // 页面横向滑动的流畅规范：320ms fluid cubic-bezier (0.2, 0.0, 0.0, 1.0)，丝滑优美，位移明确连贯
     val PageSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
         durationMillis = 320,

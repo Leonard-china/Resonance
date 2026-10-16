@@ -5,6 +5,11 @@ import com.resonance.player.platform.floatingLyricLines
 import kotlin.test.*
 
 class FloatingLyricsTest {
+    @Test fun nativePositionInPlayerStateOverridesMissingMetadataDuration() {
+        val track = Track("t", "Test", "Artist", "", "0:00", 0)
+        val lyrics = LyricsUiState.Ready(Lyrics("t", listOf(LyricLine(0, "First"), LyricLine(2000, "Second")), true, false, "Local"))
+        assertEquals("Second", floatingLyricLines(PlayerState(currentTrack = track, positionMs = 2500), lyrics, MusicFeatureSettings()).first)
+    }
     @Test fun nativePositionKeepsBackgroundLyricsMovingWhenTrackDurationIsNotReady() {
         val track = Track("t", "Test", "Artist", "", "0:00", 0)
         val lyrics = LyricsUiState.Ready(Lyrics("t", listOf(LyricLine(0, "First"), LyricLine(2000, "Second")), true, false, "Local"))

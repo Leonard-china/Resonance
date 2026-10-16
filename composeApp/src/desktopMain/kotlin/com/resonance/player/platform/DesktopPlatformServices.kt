@@ -227,6 +227,7 @@ class DesktopPlatformServices : PlatformServices {
     )
 
     override val playbackEnded: Flow<Unit> = endedEvents
+    override val playbackPositionMs: Long? get() = player.positionMs
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     override val activeTrackChanges: Flow<String> = emptyFlow()
@@ -1004,6 +1005,7 @@ private class DesktopAudioPlayer(
     onError: (String) -> Unit,
 ) {
     private val backend = com.resonance.player.audio.DesktopPcmPlayer(onEnded, onProgress, onPlayingChanged, onError)
+    val positionMs: Long? get() = backend.positionMs
     fun play(track: Track, autoPlay: Boolean = true, initialProgress: Float = 0f) = backend.play(track, autoPlay, initialProgress)
     fun setPlaying(isPlaying: Boolean) = backend.setPlaying(isPlaying)
     fun setVolume(volume: Float) = backend.setVolume(volume)

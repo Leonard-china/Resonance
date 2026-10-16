@@ -114,14 +114,16 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         recommendationSchedule = schedule
         com.resonance.player.features.RecommendationWorker.configure(activity, settings)
     }
-    private var requestedOverlayPermission = false
+    override fun canDrawOverlays(): Boolean = android.provider.Settings.canDrawOverlays(activity)
+    override fun requestOverlayPermission(): Boolean {
+        if (!canDrawOverlays()) {
+            activity.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${activity.packageName}")))
+            return true
+        }
+        return false
+    }
     override fun updateFloatingLyrics(player: PlayerState, lyrics: LyricsUiState, settings: MusicFeatureSettings) {
         com.resonance.player.features.AndroidOverlayBus.frame.value = com.resonance.player.features.OverlayFrame(player, lyrics, settings)
-        if (settings.floatingLyrics && !android.provider.Settings.canDrawOverlays(activity) && !requestedOverlayPermission) {
-            requestedOverlayPermission = true
-            activity.startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${activity.packageName}")))
-        }
-        if (!settings.floatingLyrics) requestedOverlayPermission = false
     }
     private val loudnessAnalyzer = com.resonance.player.audio.AndroidLoudnessAnalyzer(activity)
     override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
@@ -234,6 +236,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override val playbackEnded: Flow<Unit> = endedEvents
+    override val playbackPositionMs: Long? get() = player?.currentPosition?.coerceAtLeast(0L)
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     override val activeTrackChanges: Flow<String> = trackEvents
@@ -282,9 +285,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 delay(500)
                 val activePlayer = player ?: continue
                 val duration = activePlayer.duration
-                if (duration > 0) {
-                    progressEvents.tryEmit((activePlayer.currentPosition.toFloat() / duration).coerceIn(0f, 1f))
-                }
+                progressEvents.tryEmit(if (duration > 0) (activePlayer.currentPosition.toFloat() / duration).coerceIn(0f, 1f) else 0f)
             }
         }
     }

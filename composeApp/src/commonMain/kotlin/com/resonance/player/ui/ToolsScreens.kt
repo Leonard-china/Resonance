@@ -182,6 +182,7 @@ internal fun ProfileScreen(
     onOpenImport: () -> Unit,
     onOpenSync: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenAbout: () -> Unit,
 ) {
     val features = LocalMusicFeatures.current
     val pagePadding = if (compact) 16.dp else 32.dp
@@ -215,8 +216,66 @@ internal fun ProfileScreen(
             icon = Icons.Default.Info,
             title = "关于 Resonance",
             subtitle = "版本 v$APP_VERSION · 本地优先",
-            onClick = onOpenSettings,
+            onClick = onOpenAbout,
         )
+    }
+}
+
+@Composable
+internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
+    ToolPage("关于 Resonance", onBack, compact) {
+        val appFeatures = listOf(
+            "本地优先架构与数据自治" to "Resonance 没有中心化用户系统或服务端，不收集任何用户隐私数据。所有曲库元数据、播放统计、歌单索引、本地分析缓存与 AI 会话均持久化保存在本机，用户拥有对自己音频资产的完全控制权。",
+            "全格式无损播放与自适应响度平衡" to "支持 FLAC、APE、WAV、MP3、AAC、OGG 等几乎所有主流音频格式。内置自主研发的无损响度分析算法（统一播放音量），自动平滑补偿不同歌曲忽大忽小的差异，在播放管线中动态计算增益，完全不改写源音频文件。",
+            "加密格式（KGMA / KGG）无损提取转码" to "支持直接导入并离线转换 KGMA 与 KGG 专有加密音乐文件为通用高品质音频格式，还原纯净音频流，免除平台绑定限制。",
+            "AI 智能助手与多会话隔离管理" to "深度整合千问（Qwen）、DeepSeek、豆包（Doubao）等主流大语言模型。支持多会话独立切换与隔离管理，会话内自动使用滑动窗口严控 Token 消耗；支持长截图识别解析并一键入库为歌单，提供曲库风格偏好分析与每日个性化推荐。",
+            "阿里云百炼 Paraformer 音频对齐歌词" to "针对缺乏时间轴的纯文本歌词或本地曲目，可一键调用高精度语音大模型，根据人声演唱识别逐字逐句时间戳，生成精准双语/原文同步歌词并写入本地持久化缓存。",
+            "系统级悬浮置顶桌面歌词" to "Windows 端支持置顶悬浮、透明背景与鼠标穿透；Android 端深度适配系统悬浮窗权限，切换状态即时反馈，在任意应用界面上轻松掌控实时律动。",
+            "B 站高品质音频提取与智能标签" to "支持输入 B 站视频链接或 BV 号（支持多 P 分集选曲），直接提取高码率音频，智能匹配原视频高清封面并自动整理歌手与专辑信息。",
+            "无损跨端数据归档与迁移 (.resonance)" to "具备防篡改校验机制的专属歌单归档方案。一键导出打包完整音频文件、内嵌及外挂歌词、高清专辑封面与歌单结构，轻松在 Android 与 Windows 之间无缝迁移整个曲库。",
+            "流体微光设计与沉浸式灵动岛" to "基于曲目封面主色彩实时渲染 Fluid Ambient 动态流体微光背景；沉浸式全屏播放器与灵动岛交互无缝联动，触觉质感操作控件让听歌更加赏心悦目。",
+        )
+
+        val usageGuides = listOf(
+            "如何快速开始" to "在「工具」->「导入音乐」中选择本地音乐文件夹或单曲即可建立曲库。导入时可自动扫描歌词与专辑封面；支持直接拖拽音频文件（Windows）或选择转换加密音频。",
+            "如何使用 AI 音乐助手" to "在「设置」中填入支持的模型 API Key 即可激活。点击助手右上角「新对话」可开启全新独立话题，历史对话可在「历史」中随时切换或清理，完全不浪费额外 Token。",
+            "桌面悬浮歌词使用提示" to "在播放界面或灵动岛展开后，点击顶部画中画图标即可一键开启桌面歌词。Android 设备初次开启需授予「悬浮窗」权限；Windows 端可通过右键进行锁定或穿透设置。",
+            "数据备份与迁移技巧" to "建议定期使用「工具」->「歌单导入与导出」将重要歌单导出为 .resonance 归档文件。在新设备上直接导入该文件即可完整恢复所有歌曲和封面，无需重新扫描整理。",
+        )
+
+        SectionHeader("应用信息")
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        ) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Resonance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                Text("版本：v$APP_VERSION", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Primary)
+                Text("平台：Android / Windows 原生跨平台 (Kotlin Multiplatform + Compose)", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+                Text("架构模式：Local-First · Zero Cloud Dependency · High Fidelity", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+            }
+        }
+
+        SectionHeader("核心功能与特色")
+        appFeatures.forEach { (title, desc) ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = ResonanceColors.TextPrimary)
+                Spacer(Modifier.height(4.dp))
+                Text(desc, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
+            }
+        }
+
+        SectionHeader("使用说明与技巧")
+        usageGuides.forEach { (title, desc) ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(4.dp))
+                Text(desc, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim)
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
     }
 }
 

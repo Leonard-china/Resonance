@@ -1,5 +1,7 @@
 package com.resonance.player.features
 
+import com.resonance.player.enrich.*
+import com.resonance.player.lyrics.*
 import com.resonance.player.ai.MusicAiClient
 import com.resonance.player.ai.MusicAiTransport
 import com.resonance.player.media.MusicVideoSource
@@ -29,6 +31,9 @@ class JvmMusicAssistant(
     private val decrypt: (String) -> String = { it },
     private val client: MusicAiTransport = MusicAiClient(),
     videoSource: MusicVideoSource? = null,
+    private val artworkSource: MusicArtworkSource = AlbumCoverRepository(store),
+    private val speechClient: SpeechLyricsTransport = ParaformerLyricsClient(),
+    private val lyricSource: (suspend (Track) -> LyricsFetchResult)? = null,
 ) : MusicAssistantServices {
     private val key = store.directory.toAbsolutePath().normalize().toString()
     private val mutex = locks.getOrPut(key) { Mutex() }
@@ -39,7 +44,14 @@ class JvmMusicAssistant(
     @Volatile private var cachedSettings: MusicFeatureSettings? = null
     private val bili = videoSource ?: BilibiliClient { cachedSettings?.bilibiliCookie.orEmpty() }
 
+    private val journal = MusicTaskJournal(store)
+    private val activeTasks = ArrayDeque<String>()
+    private var lastPersistedStage = ""
+    private var recommendationAcquiring = false
+    private val lyricsRepository = LrclibLyricsRepository(store.directory.parent.resolve("lyrics-cache"))
+
     override suspend fun settings(): MusicFeatureSettings = withContext(Dispatchers.IO) {
+        if (job.get() == null && journal.entries().any { it.outcome == MusicTaskOutcome.Running }) journal.interrupted()
         MusicFeatureCodec.settings(store.read().optJSONObject("settings"), decrypt).also { cachedSettings = it; restoreState() }
     }
     override suspend fun saveSettings(settings: MusicFeatureSettings) = withContext(Dispatchers.IO) {
@@ -48,19 +60,258 @@ class JvmMusicAssistant(
     }
     private fun restoreState() {
         val root = store.read()
-        val messages = root.optJSONArray("messages")?.let { a -> (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let { AssistantMessage(it.optString("role"), it.optString("content")) } } }.orEmpty()
+        val sessionsArray = root.optJSONArray("sessions")
+        val parsedSessions = if (sessionsArray != null) {
+            (0 until sessionsArray.length()).mapNotNull { i ->
+                val s = sessionsArray.optJSONObject(i) ?: return@mapNotNull null
+                val sMessages = s.optJSONArray("messages")?.let { a ->
+                    (0 until a.length()).mapNotNull { j ->
+                        a.optJSONObject(j)?.let {
+                            AssistantMessage(it.optString("role"), it.optString("content"), it.optString("model").takeIf(String::isNotBlank))
+                        }
+                    }
+                }.orEmpty()
+                AssistantSession(
+                    id = s.optString("id"),
+                    title = s.optString("title", "对话"),
+                    createdAt = s.optLong("createdAt"),
+                    updatedAt = s.optLong("updatedAt"),
+                    messages = sMessages,
+                )
+            }
+        } else emptyList()
+
+        val legacyMessages = root.optJSONArray("messages")?.let { a ->
+            (0 until a.length()).mapNotNull { i ->
+                a.optJSONObject(i)?.let {
+                    AssistantMessage(it.optString("role"), it.optString("content"), it.optString("model").takeIf(String::isNotBlank))
+                }
+            }
+        }.orEmpty()
+
+        val sessions = if (parsedSessions.isEmpty()) {
+            if (legacyMessages.isNotEmpty()) {
+                val now = System.currentTimeMillis()
+                val firstText = legacyMessages.firstOrNull { it.role == "user" }?.content?.take(20)?.trim() ?: "历史对话"
+                listOf(AssistantSession("session-default", firstText, now, now, legacyMessages))
+            } else {
+                listOf(AssistantSession("session-1", "新对话", System.currentTimeMillis(), System.currentTimeMillis(), emptyList()))
+            }
+        } else parsedSessions
+
+        val storedCurrentId = root.optString("currentSessionId")
+        val currentSessionId = if (sessions.any { it.id == storedCurrentId }) storedCurrentId else sessions.first().id
+        val currentMessages = sessions.firstOrNull { it.id == currentSessionId }?.messages ?: legacyMessages
+
         val batch = root.optJSONObject("recommendations") ?: JSONObject()
         val ids = batch.optJSONArray("trackIds")?.let { a -> (0 until a.length()).map(a::getString) }.orEmpty()
         val reasons = batch.optJSONObject("reasons")?.let { j -> j.keys().asSequence().associateWith { j.optString(it) } }.orEmpty()
         val usage = root.optJSONObject("usage.${YearMonth.now()}") ?: JSONObject()
-        mutableState.value = mutableState.value.copy(messages = messages, recommendations = RecommendationBatch(batch.optLong("createdAt"), ids, reasons), usage = AssistantUsage(usage.optLong("input"), usage.optLong("cached"), usage.optLong("output")))
+        mutableState.value = mutableState.value.copy(
+            messages = currentMessages,
+            sessions = sessions,
+            currentSessionId = currentSessionId,
+            recommendations = RecommendationBatch(batch.optLong("createdAt"), ids, reasons),
+            usage = AssistantUsage(usage.optLong("input"), usage.optLong("cached"), usage.optLong("output")),
+            tasks = journal.entries(),
+            speechSeconds = root.optInt("speech.${YearMonth.now()}")
+        )
     }
-    private fun status(progress: ImportProgress) { mutableState.value = mutableState.value.copy(task = MusicTaskStatus(true, progress)) }
-    private fun message(role: String, text: String) {
+    private fun status(progress: ImportProgress) {
+        val active = activeTasks.lastOrNull()
+        mutableState.value = mutableState.value.copy(task = MusicTaskStatus(true, progress), tasks = mutableState.value.tasks.map {
+            if (it.id == active) it.copy(progress = progress) else it
+        })
+        if (active != null && lastPersistedStage != "$active:${progress.stage}") {
+            journal.update(active, progress = progress); lastPersistedStage = "$active:${progress.stage}"
+        }
+    }
+    private suspend fun <T> step(title: String, kind: String = "", trackId: String = "", payload: JSONObject = JSONObject(), block: suspend () -> T): T {
+        val id = journal.begin(title, kind, trackId, payload)
+        activeTasks.addLast(id); restoreState(); status(ImportProgress(title))
+        try {
+            val result = block()
+            journal.update(id, outcome = MusicTaskOutcome.Completed, message = "处理完成")
+            return result
+        } catch (timeout: TimeoutCancellationException) {
+            journal.update(id, outcome = MusicTaskOutcome.Failed, message = "此步骤处理超时，可稍后重试")
+            throw IllegalStateException("此步骤处理超时，可稍后重试", timeout)
+        } catch (cancelled: CancellationException) {
+            journal.update(id, outcome = MusicTaskOutcome.Cancelled, message = "已取消；已入库音频保留")
+            throw cancelled
+        } catch (error: Exception) {
+            journal.update(id, outcome = MusicTaskOutcome.Failed, message = error.message ?: "处理失败")
+            throw error
+        } finally { activeTasks.removeLast(); restoreState() }
+    }
+    private fun message(role: String, text: String, model: String? = null) {
+        val now = System.currentTimeMillis()
         store.update { j ->
-            val previous = j.optJSONArray("messages") ?: JSONArray()
-            val items = (0 until previous.length()).toList().takeLast(39).map { previous.getJSONObject(it) } + JSONObject().put("role", role).put("content", text.take(16000))
-            j.put("messages", JSONArray(items))
+            val rootState = mutableState.value
+            val currentId = rootState.currentSessionId.ifBlank { "session-1" }
+            val existingSessions = rootState.sessions.toMutableList()
+            val sessionIndex = existingSessions.indexOfFirst { it.id == currentId }
+
+            val msg = AssistantMessage(role, text.take(16000), model)
+            val updatedSession = if (sessionIndex >= 0) {
+                val s = existingSessions[sessionIndex]
+                val newTitle = if ((s.title == "新对话" || s.title == "对话") && role == "user" && text.isNotBlank()) {
+                    text.take(20).trim().replace("\n", " ")
+                } else s.title
+                s.copy(
+                    title = newTitle,
+                    updatedAt = now,
+                    messages = (s.messages.takeLast(49) + msg),
+                )
+            } else {
+                AssistantSession(
+                    id = currentId,
+                    title = if (role == "user" && text.isNotBlank()) text.take(20).trim().replace("\n", " ") else "新对话",
+                    createdAt = now,
+                    updatedAt = now,
+                    messages = listOf(msg),
+                )
+            }
+
+            if (sessionIndex >= 0) {
+                existingSessions[sessionIndex] = updatedSession
+            } else {
+                existingSessions.add(0, updatedSession)
+            }
+
+            val cappedSessions = existingSessions.take(30)
+            val sessionsArray = JSONArray()
+            cappedSessions.forEach { s ->
+                val sObj = JSONObject()
+                    .put("id", s.id)
+                    .put("title", s.title)
+                    .put("createdAt", s.createdAt)
+                    .put("updatedAt", s.updatedAt)
+                val mArray = JSONArray()
+                s.messages.forEach { m ->
+                    val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                    if (m.model != null) mObj.put("model", m.model)
+                    mArray.put(mObj)
+                }
+                sObj.put("messages", mArray)
+                sessionsArray.put(sObj)
+            }
+            j.put("sessions", sessionsArray)
+            j.put("currentSessionId", currentId)
+
+            val legacyArray = JSONArray()
+            updatedSession.messages.takeLast(40).forEach { m ->
+                val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                if (m.model != null) mObj.put("model", m.model)
+                legacyArray.put(mObj)
+            }
+            j.put("messages", legacyArray)
+        }
+        restoreState()
+    }
+
+    override suspend fun createSession(title: String): String = withContext(Dispatchers.IO) {
+        val id = "session-" + System.currentTimeMillis()
+        val now = System.currentTimeMillis()
+        store.update { j ->
+            val rootState = mutableState.value
+            val newSession = AssistantSession(id, title, now, now, emptyList())
+            val sessions = listOf(newSession) + rootState.sessions.filterNot { it.id == id }.take(29)
+            val sessionsArray = JSONArray()
+            sessions.forEach { s ->
+                val sObj = JSONObject().put("id", s.id).put("title", s.title).put("createdAt", s.createdAt).put("updatedAt", s.updatedAt)
+                val mArray = JSONArray()
+                s.messages.forEach { m ->
+                    val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                    if (m.model != null) mObj.put("model", m.model)
+                    mArray.put(mObj)
+                }
+                sObj.put("messages", mArray)
+                sessionsArray.put(sObj)
+            }
+            j.put("sessions", sessionsArray)
+            j.put("currentSessionId", id)
+            j.put("messages", JSONArray())
+        }
+        restoreState()
+        id
+    }
+
+    override suspend fun switchSession(sessionId: String) = withContext(Dispatchers.IO) {
+        store.update { j ->
+            j.put("currentSessionId", sessionId)
+            val session = mutableState.value.sessions.firstOrNull { it.id == sessionId }
+            val mArray = JSONArray()
+            session?.messages?.takeLast(40)?.forEach { m ->
+                val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                if (m.model != null) mObj.put("model", m.model)
+                mArray.put(mObj)
+            }
+            j.put("messages", mArray)
+        }
+        restoreState()
+    }
+
+    override suspend fun deleteSession(sessionId: String) = withContext(Dispatchers.IO) {
+        store.update { j ->
+            val rootState = mutableState.value
+            val remaining = rootState.sessions.filterNot { it.id == sessionId }
+            val nextSessions = if (remaining.isEmpty()) {
+                val id = "session-" + System.currentTimeMillis()
+                val now = System.currentTimeMillis()
+                listOf(AssistantSession(id, "新对话", now, now, emptyList()))
+            } else remaining
+
+            val nextCurrentId = if (rootState.currentSessionId == sessionId) nextSessions.first().id else rootState.currentSessionId
+
+            val sessionsArray = JSONArray()
+            nextSessions.forEach { s ->
+                val sObj = JSONObject().put("id", s.id).put("title", s.title).put("createdAt", s.createdAt).put("updatedAt", s.updatedAt)
+                val mArray = JSONArray()
+                s.messages.forEach { m ->
+                    val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                    if (m.model != null) mObj.put("model", m.model)
+                    mArray.put(mObj)
+                }
+                sObj.put("messages", mArray)
+                sessionsArray.put(sObj)
+            }
+            j.put("sessions", sessionsArray)
+            j.put("currentSessionId", nextCurrentId)
+
+            val currentMessages = nextSessions.firstOrNull { it.id == nextCurrentId }?.messages.orEmpty()
+            val legacyArray = JSONArray()
+            currentMessages.takeLast(40).forEach { m ->
+                val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                if (m.model != null) mObj.put("model", m.model)
+                legacyArray.put(mObj)
+            }
+            j.put("messages", legacyArray)
+        }
+        restoreState()
+    }
+
+    override suspend fun clearCurrentSession() = withContext(Dispatchers.IO) {
+        val currentId = mutableState.value.currentSessionId
+        store.update { j ->
+            val rootState = mutableState.value
+            val sessions = rootState.sessions.map {
+                if (it.id == currentId) it.copy(messages = emptyList(), updatedAt = System.currentTimeMillis(), title = "新对话") else it
+            }
+            val sessionsArray = JSONArray()
+            sessions.forEach { s ->
+                val sObj = JSONObject().put("id", s.id).put("title", s.title).put("createdAt", s.createdAt).put("updatedAt", s.updatedAt)
+                val mArray = JSONArray()
+                s.messages.forEach { m ->
+                    val mObj = JSONObject().put("role", m.role).put("content", m.content)
+                    if (m.model != null) mObj.put("model", m.model)
+                    mArray.put(mObj)
+                }
+                sObj.put("messages", mArray)
+                sessionsArray.put(sObj)
+            }
+            j.put("sessions", sessionsArray)
+            j.put("messages", JSONArray())
         }
         restoreState()
     }
@@ -70,7 +321,7 @@ class JvmMusicAssistant(
         status(ImportProgress(title))
         try {
             cachedSettings = MusicFeatureCodec.settings(store.read().optJSONObject("settings"), decrypt)
-            val result = block()
+            val result = step(title, block = block)
             mutableState.value = mutableState.value.copy(task = MusicTaskStatus(message = "处理完成"))
             result
         } catch (cancelled: CancellationException) {
@@ -124,7 +375,10 @@ class JvmMusicAssistant(
     }
     override suspend fun inspectVideo(link: String): BilibiliVideo = task("读取视频信息") { bili.inspect(link) }
     override suspend fun importVideo(request: VideoImportRequest): Track = task("导入 B 站音频") { download(request) }
-    private suspend fun download(request: VideoImportRequest): Track {
+    private suspend fun download(request: VideoImportRequest): Track = step("下载 · ${request.artist} - ${request.title}", "video", payload = videoPayload(request)) {
+        downloadAudio(request)
+    }
+    private suspend fun downloadAudio(request: VideoImportRequest): Track {
         require(request.title.isNotBlank() && request.artist.isNotBlank()) { "请填写歌名和歌手" }
         val video = bili.inspect(request.link)
         val origin = "${video.bvid}:${video.cid}"
@@ -143,12 +397,126 @@ class JvmMusicAssistant(
             library.transcode(raw, encoded, request, cover)
             currentCoroutineContext().ensureActive()
             require(Files.isRegularFile(encoded) && Files.size(encoded) > 0) { "音频转换没有生成文件" }
-            val track = library.importAudio(encoded, request, cover)
+            var track = library.importAudio(encoded, request, cover)
             store.update { root -> root.put("videoOrigins", (root.optJSONObject("videoOrigins") ?: JSONObject()).put(origin, track.id)) }
+            if (recommendationAcquiring) recordPendingRecommendation(track.id)
+            if (request.cover.isNotBlank() && request.cover != video.coverUrl) store.update {
+                it.put("customCovers", (it.optJSONObject("customCovers") ?: JSONObject()).put(track.id, true))
+            }
             addToPlaylist(request.playlistId, listOf(track))
+            // Independent stages: a catalog/lyrics miss must not discard a completed download.
+            if (request.cover.isBlank() || request.cover == video.coverUrl) {
+                try { track = coverStep(track, false) }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { /* The video thumbnail stays; retry the cover stage later. */ }
+            }
+            try { fetchLyricsStep(track) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* A retryable lyrics record is retained. */ }
             return track
         } finally { Files.walk(stage).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
     }
+    private fun videoPayload(r: VideoImportRequest) = JSONObject().put("link", r.link).put("title", r.title).put("artist", r.artist).put("album", r.album).put("cover", r.cover).put("playlistId", r.playlistId)
+    override suspend fun retryTask(id: String) = task("重试任务") {
+        val record = journal.record(id) ?: error("任务记录已过期")
+        require(record.optString("outcome") != "Completed") { "此任务已完成" }
+        val track = library.tracks().firstOrNull { it.id == record.optString("trackId") }
+        when (record.optString("kind")) {
+            "video" -> {
+                val r = record.getJSONObject("payload")
+                download(VideoImportRequest(r.getString("link"), r.getString("title"), r.getString("artist"), r.getString("album"), r.optString("cover"), r.optString("playlistId").takeUnless { it.isBlank() || it == "null" }))
+            }
+            "cover" -> coverStep(track ?: error("歌曲已移出曲库"), true)
+            "lyrics" -> fetchLyricsStep(track ?: error("歌曲已移出曲库"), true)
+            "syncLyrics" -> {
+                val t = track ?: error("歌曲已移出曲库")
+                generateLyricsInternal(t, null)
+            }
+            else -> error("此任务需要回到原页面重新发起")
+        }
+        journal.update(id, outcome = MusicTaskOutcome.Completed, message = "此步骤已重试完成")
+        restoreState()
+    }
+    override suspend fun matchCover(track: Track, force: Boolean): Track = task("匹配专辑封面") { coverStep(track, force) }
+    override suspend fun matchVideoCovers() = task("匹配已下载歌曲封面") {
+        val root = store.read()
+        val origins = root.optJSONObject("videoOrigins")
+        val ids = origins?.keys()?.asSequence()?.map { origins.optString(it) }?.toSet().orEmpty()
+        val manual = root.optJSONObject("customCovers") ?: JSONObject()
+        val tracks = library.tracks().filter { it.id in ids && !manual.optBoolean(it.id) }
+        tracks.forEachIndexed { n, track ->
+            currentCoroutineContext().ensureActive()
+            status(ImportProgress("匹配已下载歌曲封面", track.title, n, tracks.size, n.toFloat() / tracks.size.coerceAtLeast(1)))
+            try { coverStep(track, false) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Each miss retains a retryable child, without replacing the current cover. */ }
+        }
+    }
+    private suspend fun coverStep(track: Track, force: Boolean): Track = step("封面匹配 · ${track.title}", "cover", track.id) {
+        status(ImportProgress("匹配真实专辑封面", track.title))
+        val cover = artworkSource.find(SongRequest(track.title, track.artist, track.album), force) ?: error("未找到可信的专辑封面，已保留现有封面")
+        currentCoroutineContext().ensureActive()
+        if (force) com.resonance.player.platform.ArtworkMemoryCache.invalidate(cover.path.toString())
+        val updated = track.copy(artworkPath = cover.path.toString(), album = if (track.isMissingAlbum || track.album in setOf("单曲", "B 站音乐")) cover.album.ifBlank { track.album } else track.album)
+        library.update(updated)
+        updated
+    }
+    override suspend fun setCover(track: Track, path: String): Track = task("设置自定义封面") {
+        val directory = store.directory.resolve("custom-artwork"); Files.createDirectories(directory)
+        val target = directory.resolve("${java.util.UUID.randomUUID()}.cover")
+        val local = bili.cover(path, target) ?: error("无法读取封面图片")
+        require(Files.size(local) in 12..10_000_000) { "封面无效或超过 10 MB" }
+        if (local != target) Files.copy(local, target, StandardCopyOption.REPLACE_EXISTING)
+        val updated = track.copy(artworkPath = target.toString()); library.update(updated)
+        store.update { it.put("customCovers", (it.optJSONObject("customCovers") ?: JSONObject()).put(track.id, true)) }
+        updated
+    }
+    private suspend fun fetchLyricsStep(track: Track, force: Boolean = false): Lyrics = step("歌词获取 · ${track.title}", "lyrics", track.id) {
+        status(ImportProgress("匹配歌曲版本与歌词", track.title))
+        val result = lyricSource?.invoke(track) ?: lyricsRepository.fetch(track, forceRefresh = force)
+        val lyrics = (result as? LyricsFetchResult.Found)?.lyrics ?: error((result as? LyricsFetchResult.Unavailable)?.message ?: "暂无歌词")
+        lyricsRepository.writeCache(track, LyricsFetchResult.Found(lyrics))
+        lyrics
+    }
+    override suspend fun cachedSynchronizedLyrics(track: Track): Lyrics? = withContext(Dispatchers.IO) {
+        GeneratedLyricsStore.read(store.directory.resolve("generated-lyrics"), track)
+    }
+    override suspend fun generateSynchronizedLyrics(track: Track, lyrics: Lyrics?): Lyrics = task("生成同步歌词") { generateLyricsInternal(track, lyrics) }
+    private suspend fun generateLyricsInternal(track: Track, lyrics: Lyrics?): Lyrics = step("同步歌词 · ${track.title}", "syncLyrics", track.id) {
+        cachedSynchronizedLyrics(track)?.let { return@step it }
+        val config = cachedSettings ?: settings()
+        val key = config.speechApiKey.ifBlank { config.connections.firstOrNull { it.provider == AiProvider.Qwen && it.configured }?.apiKey.orEmpty() }
+        require(key.isNotBlank()) { "请先在设置配置百炼语音 Key 或千问 Key" }
+        val endpoint = runCatching { java.net.URI(config.speechUrl) }.getOrNull()
+        require(endpoint?.scheme == "wss" && endpoint.host != null && endpoint.userInfo == null && endpoint.rawQuery == null) { "请填写有效的 WSS 语音接口地址" }
+        val staging = store.directory.resolve("speech-staging")
+        Files.createDirectories(staging)
+        val file = Files.createTempFile(staging, "lyrics-", ".pcm")
+        try {
+            status(ImportProgress("准备识别音频", track.title))
+            library.prepareSpeechAudio(track, file)
+            val seconds = ((Files.size(file) + 31999) / 32000).toInt()
+            require(seconds in 1..1800) { "仅支持 30 分钟以内的非空歌曲" }
+            val usageKey = "speech.${YearMonth.now()}"
+            // Reserve the full duration before upload. Cancelled/failed requests may also be billed.
+            store.update { root ->
+                val used = root.optInt(usageKey)
+                check(used.toLong() + seconds <= config.monthlySpeechSeconds) { "超过本月语音处理上限，请在设置调整" }
+                root.put(usageKey, used + seconds)
+            }
+            restoreState()
+            val recognized = speechClient.recognize(key, config.speechUrl, file, ::status)
+            val original = lyrics ?: (lyricsRepository.readCache(track) as? LyricsFetchResult.Found)?.lyrics
+            status(ImportProgress("对齐歌词并保存", track.title))
+            val lines = AudioLyricAlignment.align(original, recognized)
+            val durationMs = seconds * 1000L
+            require(lines.isNotEmpty() && lines.all { it.timestampMs != null && it.timestampMs in 0..durationMs }) { "识别时间轴无效，原歌词已保留" }
+            val result = Lyrics(track.id, lines, true, false, "音频识别 · Paraformer")
+            GeneratedLyricsStore.write(store.directory.resolve("generated-lyrics"), track, result, original)
+            result
+        } finally { Files.deleteIfExists(file) }
+    }
+
     private suspend fun addToPlaylist(id: String?, tracks: List<Track>) {
         if (id == null) return
         require(library.playlists().any { it.id == id }) { "目标歌单不存在，请先创建歌单" }
@@ -163,6 +531,10 @@ class JvmMusicAssistant(
 
     override suspend fun chat(message: String, images: List<AiImage>) = task("音乐助手") {
         require(message.isNotBlank() || images.isNotEmpty()) { "请输入消息或选择歌单截图" }
+        val activeProvider = (cachedSettings ?: settings()).assistantProvider
+        val activeConnection = (cachedSettings ?: settings()).connections.firstOrNull { it.provider == activeProvider } ?: AiConnection(activeProvider)
+        val activeModelTag = "${activeProvider.label} (${activeConnection.model.ifBlank { activeProvider.defaultModel }})"
+
         this@JvmMusicAssistant.message("user", message.ifBlank { "从截图导入歌单" } + if (images.isNotEmpty()) "（${images.size} 张图片）" else "")
         try {
             if (images.isNotEmpty()) {
@@ -180,7 +552,7 @@ class JvmMusicAssistant(
                     messages.put(answer)
                     val calls = answer.optJSONArray("tool_calls")
                     if (calls == null || calls.length() == 0) {
-                        this@JvmMusicAssistant.message("assistant", answer.optString("content").ifBlank { "已完成音乐管理操作" })
+                        this@JvmMusicAssistant.message("assistant", answer.optString("content").ifBlank { "已完成音乐管理操作" }, model = activeModelTag)
                         finished = true
                     } else {
                         require(calls.length() <= 20) { "单轮操作过多，已停止" }
@@ -193,10 +565,10 @@ class JvmMusicAssistant(
                         }
                     }
                 }
-                if (!finished) this@JvmMusicAssistant.message("assistant", "本次已达到 16 轮操作上限。已完成的操作已保存，可以继续发送指令。")
+                if (!finished) this@JvmMusicAssistant.message("assistant", "本次已达到 16 轮操作上限。已完成的操作已保存，可以继续发送指令。", model = activeModelTag)
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: Exception) { this@JvmMusicAssistant.message("assistant", "处理未完成：${error.message}"); throw error }
+        catch (error: Exception) { this@JvmMusicAssistant.message("assistant", "处理未完成：${error.message}", model = activeModelTag); throw error }
     }
     private suspend fun importScreenshots(instruction: String, images: List<AiImage>) {
         require(images.size <= 40 && images.sumOf { it.bytes.size.toLong() } <= 30_000_000) { "截图过多或过大，请分批选择" }
@@ -274,12 +646,9 @@ class JvmMusicAssistant(
             try {
                 val existed = library.tracks().any { songKey(it.title, it.artist) == songKey(song.title, song.artist) }
                 if (!existed) {
-                    val track = obtain(song); acquired += track; reasons[track.id] = song.reason
-                    store.update { root ->
-                        val pending = root.optJSONArray("recommendationPending") ?: JSONArray()
-                        val ids = (0 until pending.length()).map(pending::getString).toMutableSet(); ids += track.id
-                        root.put("recommendationPending", JSONArray(ids.toList()))
-                    }
+                    val track = try { recommendationAcquiring = true; obtain(song) } finally { recommendationAcquiring = false }
+                    acquired += track; reasons[track.id] = song.reason
+                    recordPendingRecommendation(track.id)
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { failures += "${song.title}：${error.message}" }
@@ -302,6 +671,13 @@ class JvmMusicAssistant(
         store.update { root -> root.put("recommendations", JSONObject().put("createdAt", System.currentTimeMillis()).put("trackIds", JSONArray(batchTracks.map(Track::id))).put("reasons", JSONObject(reasons))); root.remove("recommendationPending") }
         restoreState()
         message("assistant", "已下载 ${acquired.size} 首推荐，未保存的上一批已清理。" + if (failures.isEmpty()) "" else "\n部分歌曲未找到合适音源：${failures.take(8).joinToString("；")}")
+    }
+    private fun recordPendingRecommendation(trackId: String) {
+        store.update { root ->
+            val pending = root.optJSONArray("recommendationPending") ?: JSONArray()
+            val ids = (0 until pending.length()).map(pending::getString).toMutableSet(); ids += trackId
+            root.put("recommendationPending", JSONArray(ids.toList()))
+        }
     }
     override suspend fun dislike(track: Track, reason: String) = task("移除不喜欢的歌曲") {
         store.update { root ->
@@ -383,6 +759,7 @@ class JvmMusicAssistant(
                 library.savePlaylists(updated); "已更新歌单，音频保留"
             }
             "favorite_tracks" -> { selected().forEach { library.favorite(it, args.optBoolean("favorite", true)); if (args.optBoolean("favorite", true)) retain(it.id) }; "已更新收藏" }
+            "match_album_cover" -> { selected().forEach { coverStep(it, true) }; "已匹配真实专辑封面" }
             "update_metadata" -> {
                 val old = selected().single()
                 val url = args.optString("cover_url")
@@ -436,6 +813,7 @@ class JvmMusicAssistant(
                 .put(tool("add_to_playlist", "把真实歌曲ID加入现有歌单", mapOf("ids" to "array", "playlist_id" to "string"), listOf("ids", "playlist_id")))
                 .put(tool("favorite_tracks", "更新收藏", mapOf("ids" to "array", "favorite" to "boolean"), listOf("ids", "favorite")))
                 .put(tool("update_metadata", "修改曲库中的歌名歌手专辑和封面；cover_url仅限B站公开图片链接", mapOf("id" to "string", "title" to "string", "artist" to "string", "album" to "string", "cover_url" to "string"), listOf("id")))
+                .put(tool("match_album_cover", "按歌曲和歌手匹配真实专辑封面，失败保留现有封面", mapOf("id" to "string"), listOf("id")))
                 .put(tool("delete_tracks", "用户本轮明确要求时，删除音频并移出所有歌单", mapOf("ids" to "array"), listOf("ids")))
                 .put(tool("find_and_download", "按歌名和歌手寻找原版音源并下载入库，可指定歌单", mapOf("title" to "string", "artist" to "string", "album" to "string", "playlist_id" to "string"), listOf("title", "artist")))
                 .put(tool("search_bilibili", "寻找原版B站视频候选", mapOf("title" to "string", "artist" to "string"), listOf("title", "artist")))

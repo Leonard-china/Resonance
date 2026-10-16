@@ -15,6 +15,27 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class LrclibLyricsRepositoryTest {
+    @Test fun exactPlainLyricsContinueSearchingForSynchronizedVersion() = runBlocking {
+        val root = Files.createTempDirectory("resonance-plain-sync-")
+        val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            createContext("/api/get") { exchange ->
+                val body = """{"plainLyrics":"First\nSecond","syncedLyrics":""}""".toByteArray()
+                exchange.sendResponseHeaders(200, body.size.toLong()); exchange.responseBody.use { it.write(body) }
+            }
+            createContext("/api/search") { exchange ->
+                val body = """[{"trackName":"Song","artistName":"Artist","albumName":"Album","duration":10,"syncedLyrics":"[00:01]First\n[00:05]Second"},{"trackName":"Song","artistName":"Artist","duration":100,"syncedLyrics":"[00:09]Wrong version\n[01:00]Wrong"}]""".toByteArray()
+                exchange.sendResponseHeaders(200, body.size.toLong()); exchange.responseBody.use { it.write(body) }
+            }
+            start()
+        }
+        try {
+            val track = Track("search", "Song", "Artist", "Album", "0:10", 0)
+            val result = LrclibLyricsRepository(root, URI("http://127.0.0.1:${server.address.port}")).fetch(track)
+            val lyrics = assertIs<LyricsFetchResult.Found>(result).lyrics
+            assertTrue(lyrics.synchronized)
+            assertEquals(listOf(1000L, 5000L), lyrics.lines.map { it.timestampMs })
+        } finally { server.stop(0); Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
+    }
     @Test
     fun parsesMultipleTimestampsAndFractions() {
         val lines = parseLrc("[00:01.2][00:02.345] First\n[01:03] Second\n[ar:Artist]")

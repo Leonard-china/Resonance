@@ -41,15 +41,32 @@ data class MusicFeatureSettings(
     val translationLanguage: String = "中文",
     val lyricDisplay: LyricDisplay = LyricDisplay.Bilingual,
     val bilibiliCookie: String = "",
+    val speechApiKey: String = "",
+    val speechUrl: String = "wss://dashscope.aliyuncs.com/api-ws/v1/inference",
+    val monthlySpeechSeconds: Int = 3600,
 )
 
 enum class LyricDisplay { Original, Translation, Bilingual }
 data class AiImage(val bytes: ByteArray, val mimeType: String = "image/jpeg")
-data class AssistantMessage(val role: String, val content: String)
+data class AssistantMessage(val role: String, val content: String, val model: String? = null)
+data class AssistantSession(
+    val id: String,
+    val title: String,
+    val createdAt: Long = 0,
+    val updatedAt: Long = 0,
+    val messages: List<AssistantMessage> = emptyList(),
+)
 data class AssistantUsage(val inputTokens: Long = 0, val cachedTokens: Long = 0, val outputTokens: Long = 0) {
     val total get() = inputTokens + outputTokens
 }
 data class MusicTaskStatus(val running: Boolean = false, val progress: ImportProgress = ImportProgress(), val message: String = "")
+enum class MusicTaskOutcome { Running, Completed, Failed, Cancelled, Interrupted }
+data class MusicTaskEntry(
+    val id: String, val title: String, val kind: String = "", val trackId: String = "",
+    val outcome: MusicTaskOutcome = MusicTaskOutcome.Running,
+    val progress: ImportProgress = ImportProgress(), val message: String = "", val createdAt: Long = 0,
+    val retryable: Boolean = false,
+)
 data class BilibiliVideo(val bvid: String, val cid: Long, val title: String, val uploader: String, val coverUrl: String, val durationSeconds: Int, val page: Int = 1)
 data class VideoImportRequest(val link: String, val title: String, val artist: String, val album: String, val cover: String = "", val playlistId: String? = null)
 data class SongRequest(val title: String, val artist: String, val album: String = "", val reason: String = "")
@@ -59,7 +76,13 @@ data class MusicAssistantState(
     val task: MusicTaskStatus = MusicTaskStatus(),
     val usage: AssistantUsage = AssistantUsage(),
     val recommendations: RecommendationBatch = RecommendationBatch(),
+    val tasks: List<MusicTaskEntry> = emptyList(),
+    val speechSeconds: Int = 0,
+    val sessions: List<AssistantSession> = emptyList(),
+    val currentSessionId: String = "",
 )
+
+const val DAILY_PLAYLIST_ID = "resonance-daily-recommendations"
 
 fun Lyrics.withTranslation(lines: List<String>, language: String): Lyrics = copy(
     lines = this.lines.mapIndexed { i, line -> line.copy(translation = lines.getOrNull(i)) },

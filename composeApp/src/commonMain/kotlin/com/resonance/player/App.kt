@@ -96,7 +96,6 @@ fun App(services: PlatformServices) {
         features.library = importedTracks
         features.playlists = playlists
         features.player = player
-        features.lyrics = lyricsState
         features.onNavigate = { destination = it }
         features.beforeTask = { persistence.run {} }
         features.onToggleBalance = {
@@ -148,13 +147,16 @@ fun App(services: PlatformServices) {
                 catch (error: Exception) { features.message = "曲库刷新失败：${error.message}" }
             }
         }
+        val originalLyrics = features.generatedLyrics?.takeIf { it.trackId == player.currentTrack?.id }?.let { LyricsUiState.Ready(it) } ?: lyricsState
+        LaunchedEffect(player.currentTrack?.id) { features.generatedLyrics = null; features.reloadGeneratedLyrics() }
         val translatedLyrics = features.translated?.takeIf { translated ->
-            val original = (lyricsState as? LyricsUiState.Ready)?.lyrics
+            val original = (originalLyrics as? LyricsUiState.Ready)?.lyrics
             translated.trackId == player.currentTrack?.id && translated.translationLanguage == features.settings.translationLanguage && original?.lines?.map { it.text } == translated.lines.map { it.text }
         }
-        val displayLyrics = translatedLyrics?.let { LyricsUiState.Ready(it) } ?: lyricsState
-        LaunchedEffect(lyricsState, features.settings.translationLanguage) {
-            val original = (lyricsState as? LyricsUiState.Ready)?.lyrics
+        features.lyrics = originalLyrics
+        val displayLyrics = translatedLyrics?.let { LyricsUiState.Ready(it) } ?: originalLyrics
+        LaunchedEffect(originalLyrics, features.settings.translationLanguage) {
+            val original = (originalLyrics as? LyricsUiState.Ready)?.lyrics
             features.translated = original?.let { services.musicAssistant?.cachedTranslation(it, features.settings.translationLanguage) }
         }
         LaunchedEffect(player, displayLyrics, features.settings) { services.updateFloatingLyrics(player, displayLyrics, features.settings) }
@@ -357,7 +359,7 @@ fun App(services: PlatformServices) {
             services.playbackEnded.collect { moveInQueue(direction = 1, automatic = true) }
         }
         LaunchedEffect(services) {
-            services.playbackProgress.collect { progress -> player = player.copy(progress = progress) }
+            services.playbackProgress.collect { progress -> player = player.copy(progress = progress, positionMs = services.playbackPositionMs) }
         }
         LaunchedEffect(services) {
             services.isPlayingChanges.collect { isPlaying -> player = player.copy(isPlaying = isPlaying) }

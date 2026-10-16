@@ -39,7 +39,7 @@ class PlaybackStateStore(
         audioJob?.cancel()
         val start = StartAction(prepare, onReady)
         pendingStart = start
-        state.value = state.value.copy(currentTrack = track, progress = 0f,
+        state.value = state.value.copy(currentTrack = track, progress = 0f, positionMs = null,
             trackGainDb = 0f, isCurrentTrackCalibrated = false)
         if (resetGain) services.setTrackGain(0f)
         audioJob = scope.launch {
@@ -106,7 +106,7 @@ class PlaybackStateStore(
         current.currentTrack?.let {
             val pending = pendingStart
             activate(it, playlistId, resetGain = false, prepare = pending?.prepare ?: {}, onReady = pending?.ready ?: {})
-            state.value = state.value.copy(progress = current.progress, isPlaying = current.isPlaying)
+            state.value = state.value.copy(progress = current.progress, positionMs = current.positionMs, isPlaying = current.isPlaying)
         }
     }
 
