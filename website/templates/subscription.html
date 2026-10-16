@@ -1,0 +1,3 @@
+{% extends 'base.html' %}{% from '_macros.html' import fields,icon %}
+{% block title %}{{ '确认订阅' if kind == 'confirm' else '退订邮件' }} · Resonance{% endblock %}
+{% block main %}<main id="main" class="page-shell message-page">{{ icon('mail', 'message-icon') }}<h1>{{ '确认订阅' if kind == 'confirm' else '退订邮件' }}</h1>{% if kind == 'confirm' %}<p>确认接收：{% if choices.updates %}版本更新{% endif %}{% if choices.updates and choices.promotions %}、{% endif %}{% if choices.promotions %}推广与活动{% endif %}。</p><p class="fine">每封邮件都带有退订入口。</p>{% else %}<p>确认后，将停止接收所有 Resonance 邮件。</p>{% endif %}<form method="post">{{ fields(csrf) }}<button class="button primary">{{ '确认订阅' if kind == 'confirm' else '确认退订' }}</button></form></main>{% endblock %}

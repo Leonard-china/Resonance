@@ -1,0 +1,27 @@
+[Unit]
+Description=Resonance mail queue and package cleanup
+After=network-online.target resonance-site.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=resonance
+Group=resonance
+WorkingDirectory=/opt/resonance/website
+EnvironmentFile=/opt/resonance/website/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/resonance/website/.venv/bin/python manage.py worker
+Restart=on-failure
+RestartSec=10
+StateDirectory=resonance-site
+StateDirectoryMode=0700
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/resonance-site
+MemoryMax=192M
+
+[Install]
+WantedBy=multi-user.target

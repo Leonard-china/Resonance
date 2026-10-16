@@ -1,0 +1,26 @@
+[Unit]
+Description=Resonance website
+After=network.target
+
+[Service]
+Type=simple
+User=resonance
+Group=resonance
+WorkingDirectory=/opt/resonance/website
+EnvironmentFile=/opt/resonance/website/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/resonance/website/.venv/bin/gunicorn -c deploy/gunicorn.conf.py wsgi:app
+Restart=on-failure
+RestartSec=5
+StateDirectory=resonance-site
+StateDirectoryMode=0700
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/resonance-site
+MemoryMax=512M
+
+[Install]
+WantedBy=multi-user.target

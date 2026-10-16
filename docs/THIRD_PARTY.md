@@ -66,3 +66,11 @@ Android 悬浮权限 SYSTEM_ALERT_WINDOW 由系统设置授予；后台推荐使
 - [WSS协议](https://help.aliyun.com/zh/model-studio/websocket-for-paraformer-real-time-service)
 - [客户端事件](https://help.aliyun.com/zh/model-studio/paraformer-client-events)
 - [服务端时间戳字段](https://help.aliyun.com/zh/model-studio/paraformer-server-events)
+
+## 独立官网（2026-10-16）
+
+`website/requirements.txt` 单独管理 Flask 3.1.3、Pillow 12.3.0、Ubuntu Gunicorn 26.2.0，不改变播放器 Gradle 依赖。SQLite、SMTP、TLS 和密码/会话处理分别来自 Python 标准库与 Flask/Werkzeug。没有第三方统计、CDN 字体或浏览器侧邮件 SDK。
+
+官网只保存访客主动提交的帖子/回复/截图、邮箱订阅偏好与版本信息，不读取播放器曲库。截图经重编码移除 EXIF；匿名限速使用带站点密钥的 IP HMAC，不在 SQLite 存原始 IP。邮箱不出现在公共页面，版本/推广分别确认、独立发送，TLS/STARTTLS 邮件仅交给作者配置的 SMTP 服务，真实 SMTP 尚未验证。
+
+当前应用图标来自 `composeApp/src/desktopMain/resources/resonance-icon.png`；官网截图复制工程已有测试素材，不含用户音频。GitHub 按钮与历史版本跳转 `Leonard-china/Resonance`；最新版二进制来自作者在网站发布的本地存储。没有把未经提供的收款码或真实凭据作为静态资源提交。

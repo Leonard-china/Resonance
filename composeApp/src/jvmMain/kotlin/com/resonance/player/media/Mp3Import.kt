@@ -7,7 +7,7 @@ import java.security.MessageDigest
 
 object Mp3Import {
     fun arguments(input: Path, output: Path, request: VideoImportRequest, cover: Path?): Array<String> {
-        val args = mutableListOf("-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", input.toString())
+        val args = mutableListOf("-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-threads", "0", "-i", input.toString())
         if (cover != null) args += listOf("-i", cover.toString())
         args += listOf("-map", "0:a:0")
         if (cover != null) args += listOf("-map", "1:v:0", "-c:v", "mjpeg", "-disposition:v:0", "attached_pic")

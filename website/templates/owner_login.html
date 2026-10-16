@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% from '_macros.html' import fields,icon %}
+{% block title %}作者登录 · Resonance{% endblock %}
+{% block head %}<meta name="robots" content="noindex,nofollow,noarchive">{% endblock %}
+{% block main %}<main id="main" class="page-shell login-page"><img src="{{ url_for('static', filename='assets/icon.png') }}" width="64" height="64" alt=""><h1>作者登录</h1><form method="post" class="editor-form">{{ fields(csrf, false) }}<label>密码<input type="password" name="password" required maxlength="256" autocomplete="current-password"></label><button class="button primary">登录</button></form></main>{% endblock %}

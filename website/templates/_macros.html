@@ -1,0 +1,39 @@
+{% macro icon(name, class='') -%}
+<svg class="icon {{ class }}" aria-hidden="true" width="20" height="20"><use href="{{ url_for('static', filename='icons.svg') }}#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro fields(csrf, trap=true) -%}
+<input type="hidden" name="csrf" value="{{ csrf }}">
+{% if trap %}<div class="form-trap" aria-hidden="true"><label>Website<input name="website" tabindex="-1" autocomplete="off"></label></div>{% endif %}
+{%- endmacro %}
+
+{% macro subscription(csrf, mail_ready) -%}
+<section class="subscription" aria-labelledby="subscribe-heading">
+  <div class="subscription-heading">{{ icon('mail') }}<h2 id="subscribe-heading">订阅更新</h2><span class="fine">可随时退订</span></div>
+  <form action="{{ url_for('subscribe') }}" method="post" class="subscribe-form">
+    {{ fields(csrf) }}
+    <div class="email-row"><label class="sr-only" for="subscribe-email">邮箱地址</label><input id="subscribe-email" name="email" type="email" maxlength="254" placeholder="邮箱地址" autocomplete="email" required{% if not mail_ready %} disabled{% endif %}><button class="button primary"{% if not mail_ready %} disabled{% endif %}>订阅</button></div>
+    <div class="subscription-options"><label><input name="updates" type="checkbox" value="1" checked>版本更新</label><label><input name="promotions" type="checkbox" value="1">推广与活动<span class="fine">（可选）</span></label></div>
+    {% if not mail_ready %}<p class="fine subscription-status">邮件订阅暂未开放。</p>{% else %}<p class="fine subscription-status">提交后需要到邮箱确认。邮箱不会显示在论坛。</p>{% endif %}
+  </form>
+</section>
+{%- endmacro %}
+
+{% macro topic_sidebar(topics, selected=none) -%}
+<aside class="topic-sidebar" id="topic-sidebar" aria-label="论坛话题">
+  <a class="topic-all {{ 'selected' if not selected else '' }}" href="{{ url_for('forum') }}">{{ icon('messages') }}全部讨论</a>
+  {% for category in ['UI','功能','其他'] %}
+  <div class="topic-group"><h2>{{ category }}</h2>
+    {% for topic in topics if topic.category == category %}<a href="{{ url_for('forum', slug=topic.slug) }}" class="topic-link {{ 'selected' if selected and selected.id == topic.id else '' }}">{{ icon('hash') }}<span>{{ topic.name }}</span></a>{% endfor %}
+    {% if category == '其他' %}<a class="topic-request" href="{{ url_for('request_topic') }}">{{ icon('plus') }}申请新话题</a>{% endif %}
+  </div>{% endfor %}
+</aside>
+{%- endmacro %}
+
+{% macro visitor_fields() -%}
+<label class="nickname-field">昵称<span class="fine">（可不填）</span><input name="nickname" maxlength="24" placeholder="留空则自动分配访客名" autocomplete="off"></label>
+{%- endmacro %}
+
+{% macro upload_field() -%}
+<label class="upload-field">{{ icon('image') }}<span>添加截图<span class="fine"> · PNG / JPG / WebP，最多 3 MB</span></span><input name="image" type="file" accept="image/png,image/jpeg,image/webp" data-image-input></label><span class="fine" data-image-name></span>
+{%- endmacro %}

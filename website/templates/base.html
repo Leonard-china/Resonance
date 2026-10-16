@@ -1,0 +1,25 @@
+{% from '_macros.html' import icon %}
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f1f6f3">
+  <meta name="description" content="Resonance 本地音乐播放器，支持 Windows 和 Android。下载最新版、查看更新记录，或到论坛反馈问题。">
+  <title>{% block title %}Resonance · 本地音乐播放器{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/icon.png') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='site.css') }}">
+  <script src="{{ url_for('static', filename='site.js') }}" defer></script>
+  {% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<a class="skip-link" href="#main">跳到正文</a>
+{% block header %}
+<header class="site-header"><div class="header-inner">
+  <a class="brand" href="{{ url_for('home') }}" aria-label="Resonance 首页"><img src="{{ url_for('static', filename='assets/icon.png') }}" width="34" height="34" alt=""><span>Resonance</span></a>
+  <nav class="main-nav" aria-label="主导航"><a href="{{ url_for('home') }}"{% if active == 'home' %} aria-current="page"{% endif %}>首页</a><a href="{{ url_for('downloads') }}"{% if active == 'downloads' %} aria-current="page"{% endif %}>下载</a><a href="{{ url_for('forum') }}"{% if active == 'forum' %} aria-current="page"{% endif %}>论坛</a><a href="{{ github }}" target="_blank" rel="noopener noreferrer" class="github-nav">GitHub{{ icon('external') }}</a><a href="{{ url_for('support') }}"{% if active == 'support' %} aria-current="page"{% endif %}>充电</a></nav>
+</div></header>
+{% endblock %}
+{% with flashes = get_flashed_messages(with_categories=true) %}{% if flashes %}<div class="flash-stack" role="status">{% for category,message in flashes %}<p class="flash {{ category }}">{{ message }}</p>{% endfor %}</div>{% endif %}{% endwith %}
+{% block main %}{% endblock %}
+{% block footer %}<footer class="site-footer"><span>Resonance</span><a href="{{ github }}" target="_blank" rel="noopener noreferrer">GitHub {{ icon('external') }}</a></footer>{% endblock %}
+</body></html>

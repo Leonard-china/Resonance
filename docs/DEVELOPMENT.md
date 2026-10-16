@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
 
-源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.1 / 24`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) 及 [发布记录](changes/2026-10-16-10-release-0.4.1.md)）。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.2 / 25`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.2 发布说明](RELEASE_NOTES-0.4.2.md) 及 [发布记录](changes/2026-10-16-13-release-0.4.2.md)）。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -11,12 +11,13 @@
 - [扫描/转换/歌单](#library)、[播放与音量](#playback)、[歌词/翻译/补全](#lyrics)
 - [歌单文件](#sync)、[存储/凭据](#storage)、[UI/封面/悬浮歌词](#ui)
 - [构建与发布](#build)、[AI/截图/推荐](#assistant)、[任务定位与限制](#gaps)、[维护](#maintenance)
+- [独立官网与匿名论坛](#website)
 
 <a id="scope"></a>
 
 ## 1. 范围与当前能力
 
-Kotlin / Compose Multiplatform 原生工程，目标 Android、Windows。没有 Web 前端、自有服务器、云端音乐库或账号系统。音频保存在本机；歌词、补全、天气、AI、B 站会联网。扫描/转换保留输入；主动删除、不喜欢、临时推荐清理会删除相关音频。
+播放器为 Kotlin / Compose Multiplatform 原生工程，目标 Android、Windows；播放器本身没有 Web 前端、云端音乐库或账号系统。仓库另有独立的 `website/` 官网和匿名论坛，见[第 16 节](#website)，不连接用户本机曲库。音频保存在本机；歌词、补全、天气、AI、B 站会联网。扫描/转换保留输入；主动删除、不喜欢、临时推荐清理会删除相关音频。
 
 | 功能 | Android | Windows | 边界 |
 | --- | --- | --- | --- |
@@ -53,7 +54,7 @@ Media3 1.10.1、WorkManager 2.10.1、FFmpegKit audio 8.1.7、Smart Exception 0.2
 | desktopMain（D） | Windows 文件、FFmpeg/JavaSound、JNA、托盘、歌词窗口 |
 | commonTest / desktopTest / androidInstrumentedTest | 共享、桌面 JVM、Android 设备回归 |
 
-只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `composeApp/src/<源集>/kotlin/com/resonance/player/`。`scripts` 管理构建/显式升版/产物，`docs` 管理当前基线与逐次记录。
+Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `composeApp/src/<源集>/kotlin/com/resonance/player/`。`scripts` 管理构建/显式升版/产物，`docs` 管理当前基线与逐次记录。`website/` 为独立的 Flask / SQLite / HTML / CSS / JS 网站，不加入 Gradle 构建。
 
 <a id="modules"></a>
 
@@ -242,7 +243,7 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 ## 11. UI、封面与悬浮歌词
 
-LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。
+LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
 曲库标签用 LibraryTabTransition：单棵 Lazy 树、160ms/24dp 入场与透明度，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
 
@@ -434,6 +435,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 | 数据恢复/旧值覆盖 | PersistenceQueue、Store锁、AtomicPropertiesFile、MusicJsonStore | PersistenceQueueTest、LibraryPersistenceTest、MusicJsonStoreTest |
 | 补全未命中 | MetadataEnricher、当前模型/公共源 | MetadataEnricherTest；未命中无常驻横幅 |
 | 构建/签名/FFmpeg | Gradle、version.properties、scripts、CI | SDK/JDK/实际二进制/不自动升版 |
+| 官网/论坛/下载发布/订阅 | website/README.md、app.py、releases.py、mailing.py | website/tests/test_site.py；桌面/手机浏览器；Ubuntu/SMTP 部署单独验证 |
 
 当前网络 B 站公共 metadata 探测 HTTP 412；真实账号下载链未验通，没有用户 Key，未做付费 AI 服务实测。可注入音源/AI测试不等于服务商在线验证。
 
@@ -452,3 +454,18 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 独立任务新增 docs/changes/YYYY-MM-DD-NN-主题.md，标题含日期和主要修改；写具体原因、文件/符号、前后行为、平台/数据、实际验证及限制；更新索引与当前说明，历史记录不覆盖。发布说明另外维护。
 
 不读/输出真实签名私钥、API Key。普通构建不升版，不手改生成 BuildVersion。删除/导入测试隔离数据和音乐目录；临时夹具/截图/日志放忽略的 build，不能提交用户音频或本机工具。
+
+<a id="website"></a>
+
+## 16. 独立官网与匿名论坛（2026-10-16 核对）
+
+实现与部署入口：[website/README.md](../website/README.md)，本次修改见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)。使用 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP；Ubuntu 以 Nginx + Gunicorn 26.2.0（1 进程/4 线程）提供 HTTP，独立 worker 发送邮件与重试清理旧包。没有常驻 Node 进程或前端构建服务。
+
+- 公共页面：`/`、`/downloads`、`/forum`、`/forum/topic/<slug>`、帖子/回复、话题申请和 `/support`。小屏使用 2×2 首页入口、电脑/手机截图切换、可展开话题列表、单列下载和表单；320/390/768/1440px 浏览器检查见本次记录。
+- 版本发布：`releases.publish` 先把 Windows EXE 和 Android APK 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换两端版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，Unix 下已打开下载不受旧文件 unlink 影响。
+- `manage.py import-release` 从应用 `version.properties`、同版说明与实际产物导入，不改变应用版本；正式网站可由作者上传与真实版本一致的两端安装包。官网不会自动升级或重建播放器。
+- `data/site.sqlite3` 保存话题、匿名帖子/回复、订阅偏好、邮件草稿/队列和发布记录，WAL + 写事务；截图压缩并去 EXIF，收款码无损编码。真实 `.env`、`secret.key`、`owner.json`、运行数据库及上传文件忽略，不进入部署源码 ZIP 或 Git。
+- 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可公告、审批话题、删留言、发布版本、预览/测试/群发邮件、上传收款码。
+- 邮件：确认页面的 POST 才生效，版本更新与推广独立选择；推广默认不勾选，邮件独立投递、支持退订，发送前重新检查偏好。未配置 SMTP 明确关闭订阅/发送。发布安装包不会自动群发。worker 重启保留队列，但 SMTP 成功后进程中断可能少量重复送达。
+
+验证边界：Windows 本地 Python/真实浏览器已验证；本轮没有服务器 SSH/域名/SMTP 配置，未执行 Ubuntu 远程部署、HTTPS 证书或真实邮件投递，也未重新构建 Kotlin 应用。首页图片是已有测试样本截图，正式展示素材仍可替换。数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。

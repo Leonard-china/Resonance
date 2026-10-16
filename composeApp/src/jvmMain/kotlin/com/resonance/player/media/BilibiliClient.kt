@@ -6,6 +6,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URLEncoder
@@ -29,7 +31,7 @@ class BilibiliClient(private val cookie: () -> String = { "" }) : MusicVideoSour
     private var lastRequest = 0L
     private fun connection(url: String): HttpURLConnection = (URI(url).toURL().openConnection() as HttpURLConnection).apply {
         connectTimeout = 15_000; readTimeout = 30_000; instanceFollowRedirects = false
-        setRequestProperty("User-Agent", "Mozilla/5.0 Resonance/${APP_VERSION}")
+        setRequestProperty("User-Agent", BILI_USER_AGENT)
         setRequestProperty("Referer", "https://www.bilibili.com/")
         if (URI(url).host == "bilibili.com" || URI(url).host.endsWith(".bilibili.com")) cookie().takeIf(String::isNotBlank)?.let { setRequestProperty("Cookie", it.replace("\r", "").replace("\n", "")) }
     }
@@ -169,22 +171,25 @@ class BilibiliClient(private val cookie: () -> String = { "" }) : MusicVideoSour
             val size = http.contentLengthLong
             require(size <= limit) { "下载文件超过大小限制" }
             Files.createDirectories(destination.parent)
-            http.inputStream.use { input -> Files.newOutputStream(destination).use { output ->
-                val buffer = ByteArray(128 * 1024); var done = 0L; var last = 0L
-                while (true) {
-                    currentCoroutineContext().ensureActive()
-                    val count = input.read(buffer); if (count < 0) break
-                    done += count; require(done <= limit) { "下载文件超过大小限制" }
-                    output.write(buffer, 0, count)
-                    val now = System.currentTimeMillis()
-                    if (now - last >= 150) { progress(done, size); last = now }
+            BufferedInputStream(http.inputStream, 256 * 1024).use { input ->
+                BufferedOutputStream(Files.newOutputStream(destination), 256 * 1024).use { output ->
+                    val buffer = ByteArray(256 * 1024); var done = 0L; var last = 0L
+                    while (true) {
+                        currentCoroutineContext().ensureActive()
+                        val count = input.read(buffer); if (count < 0) break
+                        done += count; require(done <= limit) { "下载文件超过大小限制" }
+                        output.write(buffer, 0, count)
+                        val now = System.currentTimeMillis()
+                        if (now - last >= 100) { progress(done, size); last = now }
+                    }
+                    require(done > 0 && (size <= 0 || done == size)) { "音频下载不完整" }
+                    progress(done, size)
                 }
-                require(done > 0 && (size <= 0 || done == size)) { "音频下载不完整" }
-                progress(done, size)
-            } }
+            }
         } finally { watchdog.cancel(); http.disconnect() }
     }
     companion object {
+        const val BILI_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
         private fun encode(query: Map<String, String>) = query.entries.joinToString("&") { "${URLEncoder.encode(it.key, "UTF-8")}=${URLEncoder.encode(it.value, "UTF-8")}" }
         private fun isPageHost(host: String?) = host == "b23.tv" || host == "bilibili.com" || host?.endsWith(".bilibili.com") == true
         private fun isMediaHost(host: String?) = listOf("bilibili.com", "bilivideo.com", "bilivideo.cn", "hdslb.com", "akamaized.net").any { host == it || host?.endsWith(".$it") == true }

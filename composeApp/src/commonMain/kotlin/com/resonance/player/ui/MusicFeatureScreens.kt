@@ -217,7 +217,15 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(if (compact) 16.dp else 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        Modifier.fillMaxSize().padding(
+            start = if (compact) 16.dp else 28.dp,
+            end = if (compact) 16.dp else 28.dp,
+            top = if (compact) 12.dp else 24.dp,
+            bottom = if (compact) (if (imeBottom > 0.dp) 8.dp else 16.dp) else 28.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
             Column(modifier = Modifier.weight(1f)) {

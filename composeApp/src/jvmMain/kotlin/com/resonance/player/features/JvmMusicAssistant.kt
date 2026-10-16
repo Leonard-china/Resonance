@@ -404,15 +404,23 @@ class JvmMusicAssistant(
                 it.put("customCovers", (it.optJSONObject("customCovers") ?: JSONObject()).put(track.id, true))
             }
             addToPlaylist(request.playlistId, listOf(track))
-            // Independent stages: a catalog/lyrics miss must not discard a completed download.
-            if (request.cover.isBlank() || request.cover == video.coverUrl) {
-                try { track = coverStep(track, false) }
-                catch (cancelled: CancellationException) { throw cancelled }
-                catch (_: Exception) { /* The video thumbnail stays; retry the cover stage later. */ }
+            // Independent stages: fetch cover and lyrics concurrently to avoid blocking download progress.
+            coroutineScope {
+                val coverJob = if (request.cover.isBlank() || request.cover == video.coverUrl) {
+                    async {
+                        try { withTimeout(8_000) { coverStep(track, false) } }
+                        catch (cancelled: CancellationException) { throw cancelled }
+                        catch (_: Exception) { null }
+                    }
+                } else null
+                val lyricsJob = async {
+                    try { withTimeout(8_000) { fetchLyricsStep(track) } }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (_: Exception) { null }
+                }
+                coverJob?.await()?.let { track = it }
+                lyricsJob.await()
             }
-            try { fetchLyricsStep(track) }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { /* A retryable lyrics record is retained. */ }
             return track
         } finally { Files.walk(stage).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
     }

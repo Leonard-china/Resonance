@@ -43,6 +43,9 @@ import androidx.compose.material3.ripple
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -392,23 +395,33 @@ fun LibraryShell(
 
         Box(modifier = backgroundModifier) {
             when (windowClass) {
-                WindowClass.Compact -> Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) { sharedContent(true) }
-                    AnimatedVisibility(
-                        visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant,
-                        enter = expandVertically() + fadeIn(),
-                        exit = shrinkVertically() + fadeOut(),
-                    ) {
-                        MiniPlayer(
-                            playerState = playerState,
-                            onTogglePlay = onTogglePlay,
-                            onPrevious = onPrevious,
-                            onNext = onNext,
-                            onOpenNowPlaying = { showNowPlaying = true },
-                            compact = true,
-                        )
+                WindowClass.Compact -> {
+                    val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+                    val isImeVisible = imeBottom > 0.dp
+                    Column(Modifier.fillMaxSize()) {
+                        Box(Modifier.weight(1f)) { sharedContent(true) }
+                        AnimatedVisibility(
+                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant && !isImeVisible,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            MiniPlayer(
+                                playerState = playerState,
+                                onTogglePlay = onTogglePlay,
+                                onPrevious = onPrevious,
+                                onNext = onNext,
+                                onOpenNowPlaying = { showNowPlaying = true },
+                                compact = true,
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = !isImeVisible,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut(),
+                        ) {
+                            BottomNavigationBar(destination, handleDestination)
+                        }
                     }
-                    BottomNavigationBar(destination, handleDestination)
                 }
                 WindowClass.Medium -> Row(Modifier.fillMaxSize()) {
                     SideNavigationRail(destination, handleDestination)

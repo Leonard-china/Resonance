@@ -1,0 +1,12 @@
+bind = '127.0.0.1:8860'
+workers = 1
+threads = 4
+timeout = 240
+graceful_timeout = 30
+keepalive = 5
+max_requests = 2000
+max_requests_jitter = 100
+accesslog = None  # Do not log private author URLs or subscription capability links.
+errorlog = '-'
+capture_output = True
+forwarded_allow_ips = '127.0.0.1'

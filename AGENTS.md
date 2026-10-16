@@ -10,13 +10,14 @@
 
 ## 实现边界
 
-- 这是 Kotlin / Compose Multiplatform 原生项目，目标是 Android 和 Windows；没有 Web 前端或服务端。不要套用旧网页设计规范。
+- 播放器是 Kotlin / Compose Multiplatform 原生项目，目标是 Android 和 Windows。`website/` 是独立的 Python 官网与匿名论坛，部署和数据都与播放器隔离；不要把官网样式套到原生 UI，也不要把播放器改成 Web 应用。
 - `commonMain` 存放共享模型、UI、状态及平台接口，`jvmMain` 存放两端共用的 JVM 实现；平台能力分别落在 `androidMain`、`desktopMain`。
 - 修改平台接口时检查两端实现；修改播放、持久化或同步时检查对应回归测试及数据兼容性。
 - 保留原音频的转换流程、播放任务防竞争机制、配置写入顺序、原子文件与备份恢复、同步包校验和路径边界。
 - 文件删除会影响用户真实音频；元数据写回可能改变文件。不得把文档中列出的待办或风险当成用户已经授权修复的需求。
 - 不读取或输出真实 `keystore.properties`、签名私钥和用户 API Key，不把用户数据、歌曲或本机工具路径当作可提交资源。
 - 版本唯一来源是 `version.properties`；普通开发和构建不自动升版，不手写生成的 `BuildVersion.kt`。
+- 官网任务先读 `website/README.md`；真实 `.env`、作者入口/密码、数据库、收款码和上传图片只放忽略的运行数据目录。单改官网运行网站测试，不把未执行的 Kotlin 回归或 Ubuntu/SMTP 部署写成已验证。
 
 ## 每次功能开发或 Bug 修复的交付要求
 

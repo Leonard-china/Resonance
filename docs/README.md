@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.4.1 / 24** 的 2026-10-16 正式发布构建。[本次发布说明](RELEASE_NOTES-0.4.1.md) · [本次发布记录](changes/2026-10-16-10-release-0.4.1.md)。GitHub 最新 Release 见 [v0.4.1 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.1)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
+当前工作区：**0.4.2 / 25** 的 2026-10-16 正式发布构建。[本次发布说明](RELEASE_NOTES-0.4.2.md) · [本次发布记录](changes/2026-10-16-13-release-0.4.2.md)。GitHub 最新 Release 见 [v0.4.2 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.2)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
 
 ## 新 AI 从这里开始
 
@@ -16,13 +16,18 @@
 | [变更模板](CHANGE-TEMPLATE.md) | 日期、原因、具体修改、前后/数据、真实验证、限制 |
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
-| [0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) | v0.4.1 正式版更新重点、安装包校验与升级指引 |
+| [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.4.2 发布说明](RELEASE_NOTES-0.4.2.md) | v0.4.2 正式版更新重点、安装包校验与升级指引 |
+| [0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) | 历史 0.4.1 Android/Windows 正式版记录 |
 | [0.4.0 发布说明](RELEASE_NOTES-0.4.0.md) | 历史 0.4.0 Android 正式版记录 |
 
 ## 变更记录（最新在前）
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-16 | 升版 0.4.2、构建签名 Android Release APK 与 Windows 安装包并交付 | [具体修改](changes/2026-10-16-13-release-0.4.2.md) |
+| 2026-10-16 | 修复软键盘与聊天框大空隙并大幅提升歌曲下载速度 | [具体修改](changes/2026-10-16-12-fix-ime-gap-and-download-speed.md) |
+| 2026-10-16 | 新增适配手机的独立官网、匿名论坛、最新版下载与私有作者管理 | [具体修改](changes/2026-10-16-11-responsive-website-and-community.md) |
 | 2026-10-16 | 升版 0.4.1、构建签名 Android Release APK 与 Windows 安装包并交付 GitHub | [具体修改](changes/2026-10-16-10-release-0.4.1.md) |
 | 2026-10-16 | AI助手多会话历史、模型溯源、桌面歌词权限引导与独立关于页面 | [具体修改](changes/2026-10-16-09-assistant-history-and-ui-polish.md) |
 | 2026-10-16 | 本轮优化两端发布版构建与验证 | [具体修改](changes/2026-10-16-08-release-build-verification.md) |
