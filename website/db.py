@@ -74,6 +74,29 @@ def connect(path):
     return db
 
 
+DEFAULT_ANNOUNCEMENT_TITLE = 'Resonance 软件详细介绍与核心特色'
+DEFAULT_ANNOUNCEMENT_BODY = (
+    "Resonance（共鸣）是一款专注于纯粹听歌体验的原生跨平台本地音乐播放器，覆盖 Windows 与 Android 双平台。\n\n"
+    "【核心理念与设计】\n"
+    "• 本地优先与隐私安全：坚持 Local-First 理念，无云端账号体系，不采集任何用户隐私；所有音频、歌词、歌单、会话记录均完全保存在您的本地设备中。\n"
+    "• 原生多端性能：基于 Kotlin & Compose Multiplatform 深度打磨原生体验，界面清爽流畅，告别臃肿的 Web 套壳与商业广告。\n\n"
+    "【主要功能特色】\n"
+    "1. 本地曲库与格式支持：\n"
+    "   支持 FLAC、APE、WAV、MP3、AAC、OGG、M4A 等主流高品质音频格式；自动扫描本地目录，精准解析与编辑内嵌元数据和封面；支持 KGMA/KGG 等音频格式转换与 .resonance 独立离线歌单包导入导出。\n"
+    "2. 智能音量平衡（EBU R128）：\n"
+    "   内置响度增益平衡技术，自动分析曲目响度并平滑过渡，告别不同录音版本或平台音频忽大忽小的问题，杜绝爆音失真。\n"
+    "3. 歌词解析与双语翻译：\n"
+    "   支持本地 LRC/KRC 及 LRCLIB 在线检索；支持 AI 智能翻译与双语对照展示；Windows 支持置顶桌面悬浮歌词，Android 支持系统级悬浮歌词与锁屏控制。\n"
+    "4. B 站音频导入与全端登录：\n"
+    "   支持 BV 号与视频链接直接提取高保真音频入库，可自由编辑歌名、歌手与封面；支持全端矢量二维码扫码与 Android 网页快捷登录，轻松同步收藏。\n"
+    "5. 多模型 AI 音乐助手与截图导歌单：\n"
+    "   接入千问、DeepSeek、豆包等大语言模型或自定义端点；支持发送外部平台歌单长截图，智能 OCR 分片识别并一键检索入库，可用自然语言对话轻松整理曲库。\n"
+    "6. 双模式新手教程：\n"
+    "   内置首次启动“快速了解”图文速览与“跟着操作”真实界面交互教学，设置页常驻教程目录与离线学习进度，新手轻松掌握全部进阶功能。\n\n"
+    "欢迎在论坛发帖交流、提出功能建议或反馈 Bug，感谢每一位朋友的支持与充电！"
+)
+
+
 def initialize(path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with connect(path) as db:
@@ -82,8 +105,8 @@ def initialize(path):
         for i, (slug, category, name) in enumerate(DEFAULT_TOPICS):
             db.execute('INSERT OR IGNORE INTO topics(slug,category,name,position) VALUES(?,?,?,?)',
                        (slug, category, name, i))
-        for key, value in [('announcement_title', '欢迎来到 Resonance 论坛'),
-                           ('announcement_body', '软件问题和功能建议可以发在这里。'),
+        for key, value in [('announcement_title', DEFAULT_ANNOUNCEMENT_TITLE),
+                           ('announcement_body', DEFAULT_ANNOUNCEMENT_BODY),
                            ('wechat_qr', ''), ('alipay_qr', '')]:
             db.execute('INSERT OR IGNORE INTO settings VALUES(?,?)', (key, value))
 

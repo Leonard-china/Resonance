@@ -28,6 +28,7 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-16 | 官网论坛公告更新为播放器详细介绍并于首页增设跳转指引 | [具体修改](changes/2026-10-16-25-website-announcement-software-introduction-and-home-callout.md) |
 | 2026-10-16 | 关于页新增官网/充电/爱发电/GitHub，发布 v0.4.5 并同步双平台 | [具体修改](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md) |
 | 2026-10-16 | 官网下载同步最新双模式教程安装包并更新生产校验和 | [具体修改](changes/2026-10-16-23-website-download-tutorial-release.md) |
 | 2026-10-16 | 作者登录后参与论坛，作者回复显示标签并置顶 | [具体修改](changes/2026-10-16-22-author-forum-pinned-replies.md) |

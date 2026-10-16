@@ -97,6 +97,15 @@ class SiteTest(unittest.TestCase):
         self.assertRegex(html, r'name="updates"[^>]* checked')
         self.assertNotRegex(html, r'name="promotions"[^>]*checked')
 
+    def test_home_and_forum_announcement_link_and_content(self):
+        home = self.client.get('/').get_data(as_text=True)
+        self.assertIn('/forum#announcement', home)
+        self.assertIn('详细介绍在“论坛公告”（点击就能跳转）', home)
+        forum = self.client.get('/forum').get_data(as_text=True)
+        self.assertIn('id="announcement"', forum)
+        self.assertIn('Resonance 软件详细介绍与核心特色', forum)
+        self.assertIn('本地优先与隐私安全', forum)
+
     def test_csrf_protects_public_and_author_mutations(self):
         self.assertEqual(self.client.post('/forum/new', data={'title':'x'}).status_code, 400)
         self.assertEqual(self.client.post(self.private, data={'password':self.password}).status_code, 400)
