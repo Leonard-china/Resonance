@@ -49,6 +49,8 @@ interface PlatformServices {
     suspend fun saveLastSelectedPlaylistId(playlistId: String?)
     suspend fun loadThemeMode(): com.resonance.player.model.ThemeMode
     suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode)
+    suspend fun loadTutorialProgress(): com.resonance.player.tutorial.TutorialProgress = com.resonance.player.tutorial.TutorialProgress()
+    suspend fun saveTutorialProgress(progress: com.resonance.player.tutorial.TutorialProgress) {}
     suspend fun loadPlaybackMode(): com.resonance.player.model.PlaybackModePreference = com.resonance.player.model.PlaybackModePreference()
     suspend fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {}
     val foreground: kotlinx.coroutines.flow.StateFlow<Boolean>

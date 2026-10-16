@@ -46,3 +46,14 @@ private fun decodeBounded(bytes: ByteArray): android.graphics.Bitmap? {
     while (maxOf(options.outWidth, options.outHeight) / options.inSampleSize > 768) options.inSampleSize *= 2
     return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
 }
+
+actual fun loadSponsorQr(isWeChat: Boolean): ImageBitmap? = runCatching {
+    val app = runCatching { AndroidArtworkResolver.application }.getOrNull() ?: return@runCatching null
+    val resName = if (isWeChat) "sponsor_wechat" else "sponsor_alipay"
+    val resId = app.resources.getIdentifier(resName, "drawable", app.packageName)
+    if (resId != 0) {
+        BitmapFactory.decodeResource(app.resources, resId)?.asImageBitmap()
+    } else {
+        null
+    }
+}.getOrNull()

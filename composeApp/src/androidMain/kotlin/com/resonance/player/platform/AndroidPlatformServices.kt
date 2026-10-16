@@ -418,6 +418,18 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         Unit
     }
 
+    override suspend fun loadTutorialProgress() = withContext(Dispatchers.IO) {
+        com.resonance.player.features.TutorialProgressCodec.decode(
+            activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+                .getString(com.resonance.player.features.TutorialProgressCodec.KEY, null))
+    }
+
+    override suspend fun saveTutorialProgress(progress: com.resonance.player.tutorial.TutorialProgress): Unit = withContext(Dispatchers.IO) {
+        check(activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE).edit()
+            .putString(com.resonance.player.features.TutorialProgressCodec.KEY, com.resonance.player.features.TutorialProgressCodec.encode(progress))
+            .commit()) { "无法保存教程进度" }
+    }
+
     override suspend fun loadPlaybackMode(): com.resonance.player.model.PlaybackModePreference = withContext(Dispatchers.IO) {
         val prefs = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
         val shuffle = prefs.getBoolean("playback.shuffleEnabled", false)

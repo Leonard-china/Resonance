@@ -255,6 +255,12 @@ class DesktopPlatformServices : PlatformServices {
     override suspend fun saveThemeMode(mode: com.resonance.player.model.ThemeMode): Unit = withContext(Dispatchers.IO) {
         library.saveThemeMode(mode)
     }
+    override suspend fun loadTutorialProgress() = withContext(Dispatchers.IO) {
+        com.resonance.player.features.TutorialProgressCodec.decode(library.readUiValue(com.resonance.player.features.TutorialProgressCodec.KEY))
+    }
+    override suspend fun saveTutorialProgress(progress: com.resonance.player.tutorial.TutorialProgress): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue(com.resonance.player.features.TutorialProgressCodec.KEY, com.resonance.player.features.TutorialProgressCodec.encode(progress))
+    }
     override suspend fun loadPlaybackMode(): PlaybackModePreference = withContext(Dispatchers.IO) {
         library.loadPlaybackMode()
     }

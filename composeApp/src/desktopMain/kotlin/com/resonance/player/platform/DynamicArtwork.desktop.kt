@@ -47,3 +47,13 @@ private fun decodeSkiaArtwork(bytes: ByteArray): ImageBitmap = org.jetbrains.ski
         }
     }
 }
+
+actual fun loadSponsorQr(isWeChat: Boolean): ImageBitmap? = runCatching {
+    val name = if (isWeChat) "sponsor_wechat.png" else "sponsor_alipay.png"
+    val stream = Thread.currentThread().contextClassLoader?.getResourceAsStream(name)
+        ?: ClassLoader.getSystemResourceAsStream(name)
+    stream?.use {
+        val bytes = it.readBytes()
+        org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()
+    }
+}.getOrNull()

@@ -171,6 +171,8 @@ import com.resonance.player.model.LyricsUiState
 import com.resonance.player.model.PlayerState
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Track
+import com.resonance.player.tutorial.TutorialTarget
+import com.resonance.player.tutorial.TutorialCompletion
 import com.resonance.player.model.durationTextToSeconds
 import com.resonance.player.platform.ResonanceBackHandler
 
@@ -216,6 +218,11 @@ internal fun NowPlayingOverlay(
     val track = playerState.currentTrack ?: return
     var paneName by rememberSaveable { mutableStateOf(PlayerPane.Cover.name) }
     val pane = PlayerPane.entries.firstOrNull { it.name == paneName } ?: PlayerPane.Cover
+    val tutorial = LocalTutorial.current
+    LaunchedEffect(pane, tutorial?.step?.id) {
+        if (pane == PlayerPane.Lyrics) tutorial?.event(TutorialCompletion.LyricsViewed)
+        if (pane == PlayerPane.Queue) tutorial?.event(TutorialCompletion.QueueViewed)
+    }
 
     ResonanceBackHandler(enabled = true, onBack = onDismiss)
 
@@ -501,6 +508,7 @@ private fun NowPlayingTopBar(
                 icon = if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                 contentDescription = if (track.isFavorite) "取消收藏" else "收藏",
                 onClick = { onToggleFavorite(track) },
+                modifier = Modifier.tutorialTarget(TutorialTarget.PlayerFavorite),
                 tint = if (track.isFavorite) SoftNeumorphicTokens.ActiveHeart else null,
                 glowColor = if (track.isFavorite) SoftNeumorphicTokens.ActiveHeart.copy(alpha = 0.45f) else null,
             )
@@ -576,6 +584,11 @@ private fun PaneSwitcher(selected: PlayerPane, onSelect: (PlayerPane) -> Unit) {
                 )
                 Row(
                     modifier = Modifier
+                        .then(when (pane) {
+                            PlayerPane.Lyrics -> Modifier.tutorialTarget(TutorialTarget.PlayerLyrics)
+                            PlayerPane.Queue -> Modifier.tutorialTarget(TutorialTarget.PlayerQueue)
+                            else -> Modifier
+                        })
                         .graphicsLayer { scaleX = scale; scaleY = scale }
                         .resonancePressable(interaction, pressedScale = 0.94f)
                         .clip(ResonanceShapes.Capsule)

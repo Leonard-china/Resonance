@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.Track
+import com.resonance.player.tutorial.TutorialTarget
+import com.resonance.player.tutorial.TutorialCompletion
 
 @Composable
 internal fun PlaylistListTab(
@@ -31,6 +33,7 @@ internal fun PlaylistListTab(
     state: LazyGridState = rememberLazyGridState(),
 ) {
     val feature = LocalMusicFeatures.current
+    val tutorial = LocalTutorial.current
     val enabled = feature?.settings?.recommendationsEnabled == true
     val daily = playlists.firstOrNull { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }
     LazyVerticalGrid(
@@ -42,8 +45,9 @@ internal fun PlaylistListTab(
         modifier = Modifier.fillMaxSize(),
     ) {
         item(key = "pinned-daily") {
-            Column(Modifier.clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
+            Column(Modifier.tutorialTarget(TutorialTarget.DailyCard).clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
                 feature?.onNavigate(if (enabled) com.resonance.player.model.LibraryDestination.Recommendations else com.resonance.player.model.LibraryDestination.Settings)
+                if (enabled) tutorial?.event(TutorialCompletion.DailyOpened)
             }.semantics(mergeDescendants = true) { contentDescription = if (enabled) "打开每日推荐" else "每日推荐未开启，打开推荐设置" }) {
                 Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp)).background(ResonanceColors.PrimarySoft), contentAlignment = Alignment.Center) {
                     AlbumArtwork(daily?.artworkSeed ?: 7, Modifier.fillMaxSize(), 16.dp, daily?.tracks?.firstNotNullOfOrNull(Track::artworkPath))

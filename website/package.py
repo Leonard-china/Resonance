@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 FILES = ['app.py', 'db.py', 'releases.py', 'mailing.py', 'manage.py', 'wsgi.py',
-         'requirements.txt', 'README.md', '.env.example', '.gitignore', 'package.py']
+         'requirements.txt', 'README.md', 'OPERATIONS.md', '.env.example', '.gitignore', 'package.py']
 DIRECTORIES = ['templates', 'static', 'deploy', 'tests']
 
 

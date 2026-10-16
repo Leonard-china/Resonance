@@ -22,6 +22,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.model.*
+import com.resonance.player.tutorial.TutorialTarget
+import com.resonance.player.tutorial.TutorialCompletion
 
 @Composable
 fun MusicTaskProgress(progress: ImportProgress, onCancel: (() -> Unit)? = null) {
@@ -39,8 +41,8 @@ fun MusicTaskProgress(progress: ImportProgress, onCancel: (() -> Unit)? = null) 
 }
 
 @Composable
-private fun ToggleSetting(title: String, checked: Boolean, change: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+private fun ToggleSetting(title: String, checked: Boolean, modifier: Modifier = Modifier, change: (Boolean) -> Unit) {
+    Row(modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         Switch(checked = checked, onCheckedChange = change)
     }
@@ -51,17 +53,21 @@ internal fun MusicFeatureSettingsSection() {
     val feature = LocalMusicFeatures.current ?: return
     val settings = feature.settings
     var configureAi by rememberSaveable { mutableStateOf(false) }
+    val tutorial = LocalTutorial.current
+    LaunchedEffect(tutorial?.step?.target) {
+        if (tutorial?.step?.target in setOf(TutorialTarget.AiConfig, TutorialTarget.AiTest)) configureAi = true
+    }
     SectionHeader("播放")
     ToggleSetting("统一播放音量", feature.player.autoLoudnessEnabled) { feature.onToggleBalance() }
     SettingRow(Icons.Default.HelpOutline, "音量平衡使用说明", "了解自动分析、音量与原始文件", { feature.onNavigate(LibraryDestination.AudioHelp) })
-    ToggleSetting("桌面悬浮歌词", settings.floatingLyrics) { feature.toggleFloatingLyrics() }
+    ToggleSetting("桌面悬浮歌词", settings.floatingLyrics, Modifier.tutorialTarget(TutorialTarget.FloatingLyrics)) { feature.toggleFloatingLyrics() }
     if (settings.floatingLyrics) {
         ToggleSetting("锁定歌词位置并允许点击穿透", settings.floatingLyricsLocked) { feature.save(settings.copy(floatingLyricsLocked = it)) }
         Text("歌词字号 ${settings.floatingLyricsSize}", style = MaterialTheme.typography.labelMedium)
         Slider(settings.floatingLyricsSize.toFloat(), { feature.settings = feature.settings.copy(floatingLyricsSize = it.toInt()) }, onValueChangeFinished = { feature.save(feature.settings) }, valueRange = 14f..56f)
     }
     SectionHeader("歌词翻译")
-    OutlinedTextField(settings.translationLanguage, { feature.save(settings.copy(translationLanguage = it.take(40))) }, label = { Text("目标语言，例如中文 / English / 日本語") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+    OutlinedTextField(settings.translationLanguage, { feature.save(settings.copy(translationLanguage = it.take(40))) }, label = { Text("目标语言，例如中文 / English / 日本語") }, modifier = Modifier.fillMaxWidth().tutorialTarget(TutorialTarget.TranslationSettings), singleLine = true)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(LyricDisplay.Original to "原文", LyricDisplay.Translation to "译文", LyricDisplay.Bilingual to "双语").forEach { (mode, label) ->
             FilterChip(settings.lyricDisplay == mode, { feature.save(settings.copy(lyricDisplay = mode)) }, label = { Text(label) })
@@ -72,7 +78,7 @@ internal fun MusicFeatureSettingsSection() {
     TextButton(onClick = { configureAi = !configureAi }) { Text(if (configureAi) "收起模型设置" else "配置模型与 API Key") }
     if (configureAi) AiConnectionEditor(feature)
     SectionHeader("每日推荐")
-    ToggleSetting("自动推荐并下载", settings.recommendationsEnabled) { feature.save(settings.copy(recommendationsEnabled = it)) }
+    ToggleSetting("自动推荐并下载", settings.recommendationsEnabled, Modifier.tutorialTarget(TutorialTarget.RecommendationSettings)) { feature.save(settings.copy(recommendationsEnabled = it)) }
     if (settings.recommendationsEnabled) {
         ToggleSetting("允许后台定时生成", settings.backgroundRecommendations) { feature.save(settings.copy(backgroundRecommendations = it)) }
         if (!settings.backgroundRecommendations) Text("打开应用时检查是否到期", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
@@ -89,7 +95,7 @@ internal fun MusicFeatureSettingsSection() {
     OutlinedTextField(limit, { limit = it.filter(Char::isDigit).take(9) }, label = { Text("每月 AI Token 上限") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
     TextButton(onClick = { feature.save(settings.copy(monthlyTokenLimit = limit.toLongOrNull()?.coerceIn(10_000, 100_000_000) ?: 1_000_000)); feature.message = "预算上限已保存" }) { Text("保存预算") }
     SectionHeader("同步歌词生成")
-    Text("根据实际音频识别人声并生成时间轴。使用阿里云百炼 Paraformer，独立按音频时长计费，不计入聊天 Token。仅点击生成时上传音频，结果保存在本机。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+    Text("根据实际音频识别人声并生成时间轴。使用阿里云百炼 Paraformer，独立按音频时长计费，不计入聊天 Token。仅点击生成时上传音频，结果保存在本机。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted, modifier = Modifier.tutorialTarget(TutorialTarget.SpeechSettings))
     var speechKey by remember(settings.speechApiKey) { mutableStateOf(settings.speechApiKey) }
     var speechUrl by remember(settings.speechUrl) { mutableStateOf(settings.speechUrl) }
     var speechMinutes by remember(settings.monthlySpeechSeconds) { mutableStateOf((settings.monthlySpeechSeconds / 60).toString()) }
@@ -128,7 +134,7 @@ internal fun MusicFeatureSettingsSection() {
 
     SectionHeader("B 站账号（可选）")
     Text("用于解析和导入 B 站音频。可使用扫码登录或网页快捷登录自动获取 Cookie，免去手动抓包复制。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth().tutorialTarget(TutorialTarget.BiliLogin)) {
         OutlinedButton(onClick = { showQrLogin = true }) {
             Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
@@ -186,7 +192,7 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).tutorialTarget(TutorialTarget.AiConfig),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AiProvider.entries.forEach { p -> FilterChip(selected == p, { provider = p.name }, label = { Text(p.label) }) }
@@ -227,7 +233,7 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
                 val c = AiConnection(selected, url.trim(), model.trim(), key.trim(), vision)
                 feature.save(settings.copy(connections = settings.connections.filterNot { it.provider == selected } + c)); feature.message = "模型配置已保存"
             }) { Text("保存") }
-            TextButton(onClick = { feature.launch { feature.message = feature.assistant?.testConnection(AiConnection(selected, url.trim(), model.trim(), key.trim(), vision)).orEmpty() } }, enabled = key.isNotBlank() && model.isNotBlank()) { Text("测试连接") }
+            TextButton(onClick = { feature.launch { feature.message = feature.assistant?.testConnection(AiConnection(selected, url.trim(), model.trim(), key.trim(), vision)).orEmpty() } }, enabled = key.isNotBlank() && model.isNotBlank(), modifier = Modifier.tutorialTarget(TutorialTarget.AiTest)) { Text("测试连接") }
         }
         Text("音乐助手：${settings.assistantProvider.label} · 图片识别：${settings.visionProvider.label}", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -256,6 +262,7 @@ internal fun AudioBalanceHelpScreen(compact: Boolean, onBack: () -> Unit) {
 internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
     val feature = LocalMusicFeatures.current ?: return
     val assistant = feature.assistant ?: return
+    val tutorial = LocalTutorial.current
     val state by assistant.state.collectAsState()
     var input by rememberSaveable { mutableStateOf("") }
     var images by remember { mutableStateOf(emptyList<AiImage>()) }
@@ -342,9 +349,9 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             TextButton(onClick = { images = emptyList() }) { Text("移除图片") }
         }
         OutlinedTextField(input, { input = it }, placeholder = { Text("例如：把截图中的歌单整理到我的曲库") }, modifier = Modifier.fillMaxWidth(), maxLines = 4)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } }, enabled = !state.task.running) { Text("歌单截图") }
-            Button(onClick = { val text = input; val attachments = images; input = ""; images = emptyList(); feature.launch { assistant.chat(text, attachments); feature.onReload() } }, enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty())) { Text("发送") }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.tutorialTarget(TutorialTarget.AssistantSend)) {
+            OutlinedButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } }, enabled = !state.task.running, modifier = Modifier.tutorialTarget(TutorialTarget.Screenshot)) { Text("歌单截图") }
+            Button(onClick = { val text = input; val attachments = images; input = ""; images = emptyList(); feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) } }, enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty())) { Text("发送") }
         }
     }
 

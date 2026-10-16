@@ -65,6 +65,7 @@ enum class LibraryDestination {
     Recommendations,
     AudioHelp,
     About,
+    Tutorial,
     Settings,
 }
 

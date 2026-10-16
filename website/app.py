@@ -38,6 +38,15 @@ def load_env():
 def create_app(overrides=None):
     load_env()
     app = Flask(__name__)
+    static_root = ROOT / 'static'
+    static_versions = {path.relative_to(static_root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()[:16]
+                       for path in static_root.rglob('*') if path.is_file() and not path.is_symlink()}
+
+    @app.url_defaults
+    def static_version(endpoint, values):
+        if endpoint == 'static' and values.get('filename') in static_versions:
+            values.setdefault('v', static_versions[values['filename']])
+
     data = Path(os.environ.get('DATA_DIR', ROOT / 'data'))
     if not data.is_absolute():
         data = ROOT / data
@@ -46,6 +55,7 @@ def create_app(overrides=None):
         PRODUCTION=os.environ.get('PRODUCTION') == '1', MAX_CONTENT_LENGTH=512 * 1024 * 1024,
         MAX_FORM_MEMORY_SIZE=256 * 1024, MAX_FORM_PARTS=24,
         SESSION_COOKIE_NAME='resonance_site', SESSION_COOKIE_HTTPONLY=True,
+        SESSION_REFRESH_EACH_REQUEST=False,
         SESSION_COOKIE_SAMESITE='Lax', PERMANENT_SESSION_LIFETIME=timedelta(days=30),
         SMTP_HOST=os.environ.get('SMTP_HOST', ''), SMTP_PORT=int(os.environ.get('SMTP_PORT', '465')),
         SMTP_SECURITY=os.environ.get('SMTP_SECURITY', 'tls'), SMTP_USER=os.environ.get('SMTP_USER', ''),
@@ -174,6 +184,8 @@ def create_app(overrides=None):
 
     @app.before_request
     def prepare():
+        if request.endpoint == 'static':
+            return None  # Public assets must not create or refresh a visitor's session cookie.
         session.permanent = True
         if 'visitor' not in session:
             session['visitor'] = secrets.token_hex(12)
@@ -203,7 +215,11 @@ def create_app(overrides=None):
             response.headers['Strict-Transport-Security'] = 'max-age=31536000'
         if request.path.startswith(private) or request.path.startswith('/subscription/'):
             response.headers['X-Robots-Tag'] = 'noindex, nofollow, noarchive'
-        if request.endpoint != 'static':
+        if request.endpoint == 'static' and response.status_code in (200, 206, 304):
+            version = static_versions.get((request.view_args or {}).get('filename'))
+            if version and request.args.get('v') == version:
+                response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        else:
             response.headers['Cache-Control'] = 'no-store'
         return response
 
@@ -352,7 +368,7 @@ def create_app(overrides=None):
         with connect(app.config['DATABASE']) as db:
             entry = db.execute('SELECT p.*,t.name AS topic_name,t.slug AS topic_slug FROM posts p '
                                'JOIN topics t ON t.id=p.topic_id WHERE p.id=?', (post_id,)).fetchone()
-            replies = db.execute('SELECT * FROM replies WHERE post_id=? ORDER BY id LIMIT 200', (post_id,)).fetchall()
+            replies = db.execute('SELECT * FROM replies WHERE post_id=? ORDER BY is_author DESC,id LIMIT 200', (post_id,)).fetchall()
             topics = db.execute('SELECT * FROM topics ORDER BY position,id').fetchall()
         if not entry:
             abort(404)

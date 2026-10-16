@@ -2,7 +2,7 @@
 
 Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量平衡、双语与桌面歌词、B 站音频导入及多模型音乐助手。
 
-开发入口：[文档索引](docs/README.md) · [详细开发说明](docs/DEVELOPMENT.md) · [AI 协作规则](AGENTS.md)。当前版本 **v0.4.4 / versionCode 27**，最新发布包见 [v0.4.4 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.4) 与 [版本说明](docs/RELEASE_NOTES-0.4.4.md)。
+开发入口：[文档索引](docs/README.md) · [详细开发说明](docs/DEVELOPMENT.md) · [AI 协作规则](AGENTS.md)。当前版本 **v0.4.5 / versionCode 28**，最新发布包见 [v0.4.5 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.5) 与 [版本说明](docs/RELEASE_NOTES-0.4.5.md)。
 
 ## 功能
 
@@ -24,6 +24,8 @@ Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量�
 设备/LAN/二维码同步和酷狗歌单链接导入已移除；已有音乐与歌单保留。酷狗元数据补全、Windows KGG 密钥读取不受此移除影响。
 
 ## 使用
+
+首次启动可选择“快速了解”图文教程或“跟着操作”逐章学习，也可以跳过。以后在 **设置 → 使用教程** 中查看完整说明、继续进度或重新练习；教程离线可读。
 
 1. 打开“导入”，扫描系统音频或选择文件夹。转换页显示阶段、文件和进度，可取消，源文件保留。Android 不支持 KGG，请在 Windows 转换后通过歌单文件导入。
 2. 播放器/设置开启“统一播放音量”；详细操作在单独的“音量平衡使用说明”页面。系统音量和播放器主音量仍由你控制。

@@ -61,6 +61,14 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
+import com.resonance.player.platform.loadSponsorQr
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.LightMode
@@ -175,6 +183,7 @@ import com.resonance.player.model.Track
 import com.resonance.player.platform.decodeArtwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.resonance.player.tutorial.TutorialTarget
 
 @Composable
 internal fun ProfileScreen(
@@ -223,6 +232,9 @@ internal fun ProfileScreen(
 
 @Composable
 internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
+    var showSponsorDialog by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
+
     ToolPage("关于 Resonance", onBack, compact) {
         val appFeatures = listOf(
             "本地优先架构与数据自治" to "Resonance 没有中心化用户系统或服务端，不收集任何用户隐私数据。所有曲库元数据、播放统计、歌单索引、本地分析缓存与 AI 会话均持久化保存在本机，用户拥有对自己音频资产的完全控制权。",
@@ -257,6 +269,32 @@ internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
             }
         }
 
+        SectionHeader("官方链接与支持")
+        SettingRow(
+            icon = Icons.Default.Language,
+            title = "官方网站",
+            subtitle = "https://leonard.asia · 访问官网、论坛社区与最新下载",
+            onClick = { runCatching { uriHandler.openUri("https://leonard.asia") } },
+        )
+        SettingRow(
+            icon = Icons.Default.Favorite,
+            title = "为作者充电",
+            subtitle = "微信支付 · 支付宝收款码支持",
+            onClick = { showSponsorDialog = true },
+        )
+        SettingRow(
+            icon = Icons.Default.FavoriteBorder,
+            title = "爱发电地址",
+            subtitle = "https://afdian.com/a/Leonucs · 通过爱发电平台赞助作者",
+            onClick = { runCatching { uriHandler.openUri("https://afdian.com/a/Leonucs") } },
+        )
+        SettingRow(
+            icon = Icons.Default.Code,
+            title = "Github地址",
+            subtitle = "https://github.com/Leonard-china/Resonance · 源码开源仓库与问题反馈",
+            onClick = { runCatching { uriHandler.openUri("https://github.com/Leonard-china/Resonance") } },
+        )
+
         SectionHeader("核心功能与特色")
         appFeatures.forEach { (title, desc) ->
             Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
@@ -277,6 +315,131 @@ internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
 
         Spacer(Modifier.height(24.dp))
     }
+
+    if (showSponsorDialog) {
+        SponsorDialog(onDismiss = { showSponsorDialog = false })
+    }
+}
+
+@Composable
+internal fun SponsorDialog(onDismiss: () -> Unit) {
+    var isWeChat by remember { mutableStateOf(false) }
+    val uriHandler = LocalUriHandler.current
+    val qrImage = remember(isWeChat) { loadSponsorQr(isWeChat) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Favorite, contentDescription = null, tint = ResonanceColors.Primary)
+                Spacer(Modifier.width(8.dp))
+                Text("为作者充电", style = MaterialTheme.typography.titleLarge)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    "感谢你对 Resonance 独立开发者的支持与喜爱！你的鼓励是软件保持纯粹、本地优先与持续演进的最大动力。",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = ResonanceColors.Dim,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    val aliBg = if (!isWeChat) ResonanceColors.PrimarySoft else Color.Transparent
+                    val wxBg = if (isWeChat) ResonanceColors.PrimarySoft else Color.Transparent
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(aliBg)
+                            .clickable { isWeChat = false }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            "支付宝",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (!isWeChat) ResonanceColors.Primary else ResonanceColors.Muted,
+                            fontWeight = if (!isWeChat) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(wxBg)
+                            .clickable { isWeChat = true }
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            "微信支付",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (isWeChat) ResonanceColors.Primary else ResonanceColors.Muted,
+                            fontWeight = if (isWeChat) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                Box(
+                    modifier = Modifier
+                        .width(230.dp)
+                        .height(310.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White)
+                        .padding(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (qrImage != null) {
+                        Image(
+                            bitmap = qrImage,
+                            contentDescription = if (isWeChat) "微信收款码" else "支付宝收款码",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text("收款码加载中...", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (!isWeChat) {
+                    FilledTonalButton(
+                        onClick = { runCatching { uriHandler.openUri("https://qr.alipay.com/fkx196124amke88z1kqoe97") } },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    ) {
+                        Text("直接拉起支付宝扫码支付")
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { runCatching { uriHandler.openUri("https://afdian.com/a/Leonucs") } },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                ) {
+                    Text("前往爱发电主页赞助 (afdian.com)")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
 }
 
 @Composable
@@ -284,6 +447,7 @@ internal fun ToolPage(
     title: String,
     onBack: () -> Unit,
     compact: Boolean,
+    backLabel: String = "返回工具",
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val pagePadding = if (compact) 16.dp else 32.dp
@@ -292,7 +456,7 @@ internal fun ToolPage(
             modifier = Modifier.widthIn(max = 880.dp).fillMaxWidth().padding(start = pagePadding - 12.dp, end = pagePadding, top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AccessibleIconButton("返回工具", onClick = onBack) {
+            AccessibleIconButton(backLabel, onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = ResonanceColors.TextPrimary)
             }
             Text(title, style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.TextPrimary)
@@ -350,6 +514,7 @@ internal fun ImportScreen(
             title = "扫描本机音乐",
             subtitle = "自动查找 MP3 / FLAC / M4A 等音频文件",
             onClick = onImport,
+            modifier = Modifier.tutorialTarget(TutorialTarget.LocalImport),
         )
         SettingRow(
             icon = Icons.Default.FolderOpen,
@@ -359,7 +524,11 @@ internal fun ImportScreen(
         )
 
         val features = LocalMusicFeatures.current
-        SettingRow(Icons.Default.VideoLibrary, "从 B 站视频导入音频", "自定义歌名、歌手、专辑和封面", { features?.showVideoImport = true })
+        val tutorial = LocalTutorial.current
+        SettingRow(Icons.Default.VideoLibrary, "从 B 站视频导入音频", "自定义歌名、歌手、专辑和封面", {
+            features?.showVideoImport = true
+            tutorial?.event(com.resonance.player.tutorial.TutorialCompletion.VideoFormOpened)
+        }, Modifier.tutorialTarget(TutorialTarget.VideoImport))
 
     }
 }
@@ -390,12 +559,14 @@ internal fun SyncScreen(
             title = "导出歌单",
             subtitle = "将歌曲音频、封面和歌单打包为 .resonance",
             onClick = onExportSync,
+            modifier = Modifier.tutorialTarget(TutorialTarget.ExportArchive),
         )
         SettingRow(
             icon = Icons.AutoMirrored.Filled.QueueMusic,
             title = "导入歌单",
             subtitle = "校验完整性后合并到本机音乐库",
             onClick = onImportSync,
+            modifier = Modifier.tutorialTarget(TutorialTarget.ImportArchive),
         )
     }
 }
@@ -420,6 +591,8 @@ internal fun SettingsScreen(
     var folderSavedMessage by remember { mutableStateOf<String?>(null) }
 
     ToolPage(title = "设置", onBack = onBack, compact = compact) {
+        val tutorial = LocalTutorial.current
+        SettingRow(Icons.Default.Info, "使用教程", "快速了解 · 跟着操作 · 随时继续学习", { tutorial?.directory() })
         SectionHeader("外观")
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -573,13 +746,14 @@ internal fun SettingRow(
     title: String,
     subtitle: String,
     onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
     val clickableModifier = if (onClick != null) {
         Modifier.clickable(onClick = onClick)
     } else {
         Modifier
     }
-    Column {
+    Column(modifier) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -612,4 +786,3 @@ internal fun SettingRow(
         HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
     }
 }
-

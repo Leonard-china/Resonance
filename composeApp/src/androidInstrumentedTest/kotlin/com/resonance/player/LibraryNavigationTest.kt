@@ -28,7 +28,11 @@ class LibraryNavigationTest {
             when (method.name) { "getState" -> state; else -> null }
         } as MusicAssistantServices
         val platform = Proxy.newProxyInstance(PlatformServices::class.java.classLoader, arrayOf(PlatformServices::class.java)) { _, method, _ ->
-            when (method.name) { "getMusicAssistant" -> assistant; else -> null }
+            when (method.name) {
+                "getMusicAssistant" -> assistant
+                "getSupportsWebLogin", "getSupportsKgg" -> false
+                else -> null
+            }
         } as PlatformServices
         ui.setContent {
             val scope = rememberCoroutineScope()

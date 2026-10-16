@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.4.4 / 27** 的 2026-10-16 正式发布构建。[本次发布说明](RELEASE_NOTES-0.4.4.md) · [本次发布记录](changes/2026-10-16-18-release-0.4.4.md)。GitHub 最新 Release 见 [v0.4.4 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.4)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
+当前工作区：**0.4.5 / 28**，关于页新增官方网站、为作者充电（微信/支付宝）、爱发电主页与 GitHub 开源地址，构建正式双端发布版。[本次发布说明](RELEASE_NOTES-0.4.5.md) · [本次发布记录](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md)。GitHub 发布版本见 [v0.4.5 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.5)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
 
 ## 新 AI 从这里开始
 
@@ -17,7 +17,8 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
-| [0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) | v0.4.4 正式版更新重点、安装包校验与升级指引 |
+| [0.4.5 发布说明](RELEASE_NOTES-0.4.5.md) | v0.4.5 正式版更新重点、安装包校验与升级指引 |
+| [0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) | 历史 0.4.4 Android/Windows 正式版记录 |
 | [0.4.3 发布说明](RELEASE_NOTES-0.4.3.md) | 历史 0.4.3 Android/Windows 正式版记录 |
 | [0.4.2 发布说明](RELEASE_NOTES-0.4.2.md) | 历史 0.4.2 Android/Windows 正式版记录 |
 | [0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) | 历史 0.4.1 Android/Windows 正式版记录 |
@@ -27,6 +28,12 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-16 | 关于页新增官网/充电/爱发电/GitHub，发布 v0.4.5 并同步双平台 | [具体修改](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md) |
+| 2026-10-16 | 官网下载同步最新双模式教程安装包并更新生产校验和 | [具体修改](changes/2026-10-16-23-website-download-tutorial-release.md) |
+| 2026-10-16 | 作者登录后参与论坛，作者回复显示标签并置顶 | [具体修改](changes/2026-10-16-22-author-forum-pinned-replies.md) |
+| 2026-10-16 | 官网增加页面淡入淡出、内容指纹缓存与轻量展示图 | [具体修改](changes/2026-10-16-21-site-fades-and-static-cache.md) |
+| 2026-10-16 | 核对 leonard.asia 生产部署并记录容器运维方式 | [具体修改](changes/2026-10-16-20-production-site-handoff.md) |
+| 2026-10-16 | 新增首次启动快速图文、真实操作教学、设置教程目录与学习进度，并构建两端发布版 | [具体修改](changes/2026-10-16-19-native-onboarding-and-tutorial.md) |
 | 2026-10-16 | 升版 0.4.4、构建签名 Android Release APK 与 Windows 安装包并交付 | [具体修改](changes/2026-10-16-18-release-0.4.4.md) |
 | 2026-10-16 | 支持 B 站扫码登录与 Android 网页快捷登录自动获取 Cookie | [具体修改](changes/2026-10-16-17-bilibili-qr-and-web-login.md) |
 | 2026-10-16 | 升版 0.4.3、构建签名 Android Release APK 与 Windows 安装包并交付 | [具体修改](changes/2026-10-16-16-release-0.4.3.md) |

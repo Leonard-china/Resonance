@@ -201,6 +201,8 @@ import com.resonance.player.platform.decodeArtwork
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
+import com.resonance.player.tutorial.TutorialTarget
+import com.resonance.player.tutorial.TutorialCompletion
 import com.resonance.player.util.LibrarySearchIndex
 
 private enum class WindowClass { Compact, Medium, Expanded }
@@ -292,6 +294,20 @@ fun LibraryShell(
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     var mountPlayer by remember { mutableStateOf(false) }
     var trackPendingEdit by remember { mutableStateOf<Track?>(null) }
+    val tutorial = LocalTutorial.current
+    var wasTeaching by remember { mutableStateOf(false) }
+    LaunchedEffect(tutorial?.locationRequest, tutorial?.activeChapterId, playerState.currentTrack?.id) {
+        if (tutorial?.step != null) {
+            wasTeaching = true
+            showNowPlaying = tutorial.step?.destination == LibraryDestination.Playing && playerState.currentTrack != null
+        } else if (wasTeaching) {
+            showNowPlaying = false
+            wasTeaching = false
+        }
+    }
+    LaunchedEffect(showNowPlaying) {
+        if (showNowPlaying) tutorial?.event(TutorialCompletion.PlayerOpened)
+    }
 
     val handleDestination: (LibraryDestination) -> Unit = { target ->
         if (target == LibraryDestination.Playing && playerState.currentTrack != null) {
@@ -301,7 +317,9 @@ fun LibraryShell(
         }
     }
 
-    if (destination == LibraryDestination.AudioHelp) {
+    if (destination == LibraryDestination.Tutorial) {
+        ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Settings) }
+    } else if (destination == LibraryDestination.AudioHelp) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Settings) }
     } else if (destination in listOf(LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.About)) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Profile) }
@@ -401,7 +419,7 @@ fun LibraryShell(
                     Column(Modifier.fillMaxSize()) {
                         Box(Modifier.weight(1f)) { sharedContent(true) }
                         AnimatedVisibility(
-                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant && !isImeVisible,
+                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant && destination != LibraryDestination.Tutorial && !isImeVisible,
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut(),
                         ) {
@@ -415,7 +433,7 @@ fun LibraryShell(
                             )
                         }
                         AnimatedVisibility(
-                            visible = !isImeVisible,
+                            visible = !isImeVisible && !(destination == LibraryDestination.Tutorial && tutorial?.quickMode == true),
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut(),
                         ) {
@@ -428,7 +446,7 @@ fun LibraryShell(
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         Box(Modifier.weight(1f)) { sharedContent(false) }
                         AnimatedVisibility(
-                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant,
+                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant && destination != LibraryDestination.Tutorial,
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut(),
                         ) {
@@ -453,7 +471,7 @@ fun LibraryShell(
                     Column(Modifier.weight(1f).fillMaxHeight()) {
                         Box(Modifier.weight(1f)) { sharedContent(false) }
                         AnimatedVisibility(
-                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant,
+                            visible = playerState.currentTrack != null && destination != LibraryDestination.Assistant && destination != LibraryDestination.Tutorial,
                             enter = expandVertically() + fadeIn(),
                             exit = shrinkVertically() + fadeOut(),
                         ) {
@@ -527,6 +545,8 @@ fun LibraryShell(
             }
         }
 
+        if (tutorial?.step != null) TutorialCoach(tutorial)
+
         trackPendingEdit?.let { track ->
             EditTrackDialog(
                 track = track,
@@ -543,7 +563,7 @@ fun LibraryShell(
 }
 
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
-    LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About -> LibraryDestination.Profile
+    LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About, LibraryDestination.Tutorial -> LibraryDestination.Profile
     LibraryDestination.Recommendations, LibraryDestination.Discover -> LibraryDestination.Library
     LibraryDestination.Playing -> LibraryDestination.Library
     else -> destination
@@ -556,6 +576,7 @@ private val profileSubPages = setOf(
     LibraryDestination.Tasks,
     LibraryDestination.AudioHelp,
     LibraryDestination.About,
+    LibraryDestination.Tutorial,
 )
 
 private fun mainTabIndexOf(destination: LibraryDestination): Int = when (tabDestinationOf(destination)) {
@@ -904,6 +925,7 @@ private fun DestinationContent(
             LibraryDestination.Tasks -> MusicTasksScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.Recommendations -> RecommendationsScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.AudioHelp -> AudioBalanceHelpScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
+            LibraryDestination.Tutorial -> TutorialScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
 
             LibraryDestination.Library -> LibraryScreen(
                 playlists = playlists,
@@ -1146,6 +1168,20 @@ private fun LibraryScreen(
     val artistsScroll = rememberLazyListState()
     val playlistsScroll = rememberLazyGridState()
     var detail by remember { mutableStateOf<LibraryDetail?>(null) }
+    val tutorial = LocalTutorial.current
+    LaunchedEffect(tutorial?.locationRequest) {
+        tutorial?.step?.let { step ->
+            if (step.destination == LibraryDestination.Library || (step.needsTrack && !tutorial.hasTrack)) {
+                detail = null
+                tab = if (step.needsTrack && !tutorial.hasTrack) LibraryTab.Tracks.name else step.libraryTab ?: LibraryTab.Playlists.name
+                if (tab == LibraryTab.Tracks.name) {
+                    val currentIndex = libraryTracks.indexOfFirst { it.id == playerState.currentTrack?.id }
+                    tracksScroll.scrollToItem(if (step.target == TutorialTarget.TrackMenu && currentIndex >= 0) currentIndex + 1 else 0)
+                }
+                else if (tab == LibraryTab.Playlists.name) playlistsScroll.scrollToItem(0)
+            }
+        }
+    }
     var showRenameDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
@@ -1242,7 +1278,7 @@ private fun LibraryScreen(
                     Icon(Icons.Default.Checklist, contentDescription = "多选", tint = ResonanceColors.Muted)
                 }
                 LocalMusicFeatures.current?.let { feature ->
-                    IconButton(onClick = { feature.onNavigate(LibraryDestination.Tasks) }) { Icon(Icons.Default.Checklist, "任务列表", tint = ResonanceColors.Muted) }
+                    IconButton(onClick = { feature.onNavigate(LibraryDestination.Tasks) }, modifier = Modifier.tutorialTarget(TutorialTarget.Tasks)) { Icon(Icons.Default.Checklist, "任务列表", tint = ResonanceColors.Muted) }
                 }
                 IconButton(onClick = {
                     onOpenSearch()
@@ -1253,7 +1289,7 @@ private fun LibraryScreen(
                         tint = ResonanceColors.Muted,
                     )
                 }
-                AccessibleIconButton("新建歌单", onClick = onCreatePlaylist) {
+                AccessibleIconButton("新建歌单", onClick = onCreatePlaylist, modifier = Modifier.tutorialTarget(TutorialTarget.CreatePlaylist)) {
                     Icon(Icons.Default.Add, contentDescription = "新建歌单", tint = ResonanceColors.Muted)
                 }
             } else {
@@ -1541,6 +1577,7 @@ private fun TrackListTab(
     onToggleTrackSelect: (String) -> Unit = {},
     contentPadding: PaddingValues,
 ) {
+    val firstPlayableId = remember(tracks) { tracks.firstOrNull { it.sourceUri != null }?.id }
     LazyColumn(state = trackListState, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         item {
             Row(
@@ -1586,7 +1623,8 @@ private fun TrackListTab(
                 isMultiSelectMode = isMultiSelectMode,
                 isMultiSelected = selectedTrackIds.contains(track.id),
                 onToggleMultiSelect = { onToggleTrackSelect(track.id) },
-                modifier = if (LocalReducedMotion.current) Modifier else Modifier.animateItem(),
+                modifier = (if (LocalReducedMotion.current) Modifier else Modifier.animateItem())
+                    .then(if (track.id == firstPlayableId) Modifier.tutorialTarget(TutorialTarget.TrackList) else Modifier),
             )
         }
     }
@@ -2314,7 +2352,8 @@ private fun TrackRow(
             )
             if (!isMultiSelectMode) {
                 Box {
-                    AccessibleIconButton("更多操作", onClick = { menuExpanded = true }) {
+                    AccessibleIconButton("更多操作", onClick = { menuExpanded = true },
+                        modifier = if (selected) Modifier.tutorialTarget(TutorialTarget.TrackMenu) else Modifier) {
                         Icon(
                             Icons.Default.MoreVert,
                             contentDescription = "更多操作",
@@ -2478,6 +2517,7 @@ private fun MiniPlayer(
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .tutorialTarget(TutorialTarget.MiniPlayer)
             .padding(
                 start = if (compact) 12.dp else 20.dp,
                 end = if (compact) 12.dp else 20.dp,

@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
 
-源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.4 / 27`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) 及 [发布记录](changes/2026-10-16-18-release-0.4.4.md)）。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.5 / 28`**，关于页新增官方网站、为作者充电（微信/支付宝）、爱发电主页与 GitHub 开源地址，构建双端发布版。最新正式发布见 [v0.4.5 发布说明](RELEASE_NOTES-0.4.5.md) 及 [发布记录](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md)。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -22,6 +22,7 @@
 | 功能 | Android | Windows | 边界 |
 | --- | --- | --- | --- |
 | 本地库、搜索、收藏、歌单、专辑/歌手、多选 | 已接入 | 已接入 | 主导航第二项为助手；Discover 从曲库右上角进入本地搜索，支持拼音首字母；工具页独立提供关于 Resonance 页面 |
+| 首次启动与使用教程 | 已接入 | 已接入 | 首次选择快速图文/跟着操作/跳过；设置固定教程目录，七章说明/真实控件教学，支持暂停、跳过、继续与重新练习 |
 | KGMA v3 / slot 1 转 MP3 | 已接入 | 已接入 | 进度、取消、保留源文件；支持载荷转 320k MP3 |
 | KGG v5 转 MP3 | 不支持，明确提示 | 已接入 | 需要本机酷狗数据库中的匹配密钥 |
 | 播放/队列/随机/循环/变速/恢复 | Media3 服务 | FFmpeg/Java Sound | 原生后台播放与快照恢复 |
@@ -72,6 +73,7 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 | C/ui/NowPlayingOverlay.kt | 完整播放器、歌词/队列、单个平衡开关、翻译/显示、悬浮开关与编辑信息 |
 | C/ui/MusicFeatureController.kt、MusicFeatureScreens.kt、BilibiliLoginDialogs.kt | 共享设置、助手、B 站扫码/Web登录与表单、音量帮助、任务进度、拒绝原因 |
 | C/ui/ToolsScreens.kt、SyncPackageDialog.kt、BatchEnrichDialog.kt | 导入、歌单文件、设置、导出范围、补全选项/报告 |
+| C/tutorial/TutorialCatalog.kt、ui/TutorialController.kt、ui/TutorialScreens.kt | 离线教程内容、首次选择、逐章进度、实际控件锚点/高亮、滚动定位与事件推进；J/features/TutorialProgressCodec.kt 编解码本地偏好 |
 | C/platform/ArtworkMemoryCache.kt、SyncArtwork.kt | 位图 LRU/并发限制/同路径合并，曲库与歌单封面回退 |
 | C/design/*、ui/AppearanceSettings.kt | 主题、天气配色、减少动态效果、外观设置 |
 | [J/features/JvmMusicAssistant.kt](../composeApp/src/jvmMain/kotlin/com/resonance/player/features/JvmMusicAssistant.kt) | 音乐工具 Agent、OCR、视频入库、翻译、推荐生命周期、预算/稳定上下文 |
@@ -242,6 +244,14 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 <a id="ui"></a>
 
 ## 11. UI、封面与悬浮歌词
+
+### 使用教程（2026-10-16 核对）
+
+`App` 加载 `PlatformServices.loadTutorialProgress` 后，在曲库初始加载完成时首次提示快速了解、跟着操作或跳过。选择后持久记住，不按普通版本更新重弹；旧安装没有教程键时在首次升级启动显示一次。设置顶部固定“使用教程”，`LibraryDestination.Tutorial` 属于工具子页，支持四页快速介绍、七章图文/操作教学和常见问题。
+
+`TutorialController` 导航到实际页面；`tutorialTarget` 记录控件窗口坐标并通过 BringIntoView 定位，图层入场完成后刷新实际坐标；`TutorialCoach` 绘制透空高亮及可收起/滚动说明，暂停按钮固定在顶部，实际控件仍接收点击。教程页隐藏迷你播放器，手机快速浏览同时隐藏底栏。导入、当前歌曲、收藏、歌单和配置按实际状态判断；播放器展开、歌词/队列等按实际事件推进。缺少歌曲先回曲库，错误事件不推进；完成、跳过分别保存，暂停后继续原步。系统选择器、登录弹窗仍由原平台处理。
+
+内容与示意内置，无新增联网/权限。教程不会主动登录、扫描、下载、删除或发送付费请求；推荐清理、真实删除、AI/语音收费和上传在相关章节说明，危险操作只阅读。进度键 `tutorial.progress.v1` 存 Android `resonance_ui_state` / Windows 原子 `ui-state.properties`，不含音乐/凭据，不进入歌单文件；Windows 沿用同步锁、原子写和备份，Android 检查 commit，UI 经 PersistenceQueue 顺序保存。回归入口为 `TutorialProgressTest` 与 Android `TutorialNavigationTest`。
 
 LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
@@ -425,6 +435,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 | 转换慢/取消 | ImportControl、Scanner/scanDocumentTree、两端 FFmpeg | DesktopManagedMp3ConverterTest，源文件/staging/阶段 |
 | 列表封面 | DynamicArtwork、audioArtwork、ArtworkMemoryCache、SyncArtwork | MusicFeaturesIntegrationTest、CatalogArtworkRematchTest |
 | 切标签/播放器掉帧 | LibraryShell、LibraryTabTransition、LibraryDetailTransition、FluidAmbientCanvas | LibraryNavigationTest / LibraryDetailTransitionTest，实际真机帧率另测 |
+| 首次教程/学习进度/操作定位 | TutorialCatalog、TutorialController、TutorialScreens、TutorialProgressCodec、App | TutorialProgressTest / TutorialNavigationTest；首次跳过、跨启动继续、透空点击与滚动目标 |
 | 包格式/FLAC | PlainSyncPackage、平台导入 | PlainSyncPackageTest、PlaylistArchiveFormatTest |
 | B 站412/匹配错误 | BilibiliClient.json/inspect/search/candidateScore | 官方验证/网络/Cookie，MusicAssistantTest |
 | AI工具/截图/预算 | JvmMusicAssistant、MusicAiClient、AssistantImages、Codec | MusicAssistantTest、MusicFeaturesIntegrationTest |
@@ -459,13 +470,15 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 ## 16. 独立官网与匿名论坛（2026-10-16 核对）
 
-实现与部署入口：[website/README.md](../website/README.md)，实现见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)，最新版导入及作者操作见 [交接记录](changes/2026-10-16-14-website-latest-release-and-handoff.md)。使用 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP；Ubuntu 以 Nginx + Gunicorn 26.2.0（1 进程/4 线程）提供 HTTP，独立 worker 发送邮件与重试清理旧包。没有常驻 Node 进程或前端构建服务。
+实现与部署入口：[website/README.md](../website/README.md)，实现见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)。现网 [leonard.asia](https://leonard.asia) 使用翼龙 Ubuntu 容器、Java 启动器守护 Gunicorn 26.2.0（1 进程/4 线程）与独立邮件 worker，Cloudflare Tunnel 转发到 `127.0.0.1:50034`；路径和重启方式先读 [现网运维](../website/OPERATIONS.md) 与 [核对记录](changes/2026-10-16-20-production-site-handoff.md)。仓库 Nginx/systemd 配置保留为其他主机部署方案。依赖仍为 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP，没有常驻 Node 服务。
 
 - 公共页面：`/`、`/downloads`、`/forum`、`/forum/topic/<slug>`、帖子/回复、话题申请和 `/support`。小屏使用 2×2 首页入口、电脑/手机截图切换、可展开话题列表、单列下载和表单；320/390/768/1440px 浏览器检查见本次记录。
+- 页面使用 200ms 正文淡入及原生同源跨文档淡入淡出，仅 opacity、既有 easing；不支持时保留普通导航，减弱动态时即时显示。展示图使用 WebP；静态 URL 带内容摘要，匹配时公共缓存一年且不写会话 Cookie，动态页仍 no-store。见 [渐变与缓存记录](changes/2026-10-16-21-site-fades-and-static-cache.md)。
+- 作者登录后保持同一会话即可发帖、回复；身份只由服务端认证判定。`replies` 按 `is_author DESC,id` 返回，作者回复显示作者/置顶标签；同组保持时间顺序，旧数据无迁移。见 [论坛作者记录](changes/2026-10-16-22-author-forum-pinned-replies.md)。
 - 版本发布：`releases.publish` 先把 Windows EXE 和 Android APK 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换两端版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，Unix 下已打开下载不受旧文件 unlink 影响。
 - `manage.py import-release` 从应用 `version.properties`、同版说明与实际产物导入，不改变应用版本；正式网站可由作者上传与真实版本一致的两端安装包。官网不会自动升级或重建播放器。
 - `data/site.sqlite3` 保存话题、匿名帖子/回复、订阅偏好、邮件草稿/队列和发布记录，WAL + 写事务；截图压缩并去 EXIF，收款码无损编码。真实 `.env`、`secret.key`、`owner.json`、运行数据库及上传文件忽略，不进入部署源码 ZIP 或 Git。
 - 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可公告、审批话题、删留言、发布版本、预览/测试/群发邮件、上传收款码。
 - 邮件：确认页面的 POST 才生效，版本更新与推广独立选择；推广默认不勾选，邮件独立投递、支持退订，发送前重新检查偏好。未配置 SMTP 明确关闭订阅/发送。发布安装包不会自动群发。worker 重启保留队列，但 SMTP 成功后进程中断可能少量重复送达。
 
-验证边界：Windows 本地 Python/真实浏览器已验证；本轮没有服务器 SSH/域名/SMTP 配置，未执行 Ubuntu 远程部署、HTTPS 证书或真实邮件投递，也未重新构建 Kotlin 应用。首页图片是已有测试样本截图，正式展示素材仍可替换。数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。
+验证边界：已通过生产 HTTPS 核对首页、下载、论坛与两端 Range，通过现有面板客户端读取资源状态和指定源码；不等同于服务器故障恢复或真实 SMTP 测试。首页图片仍是已有测试样本截图。网站任务不重新构建 Kotlin 应用；数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。后台私有入口、密码、面板 Key 与 tunnel token 不写入文档。

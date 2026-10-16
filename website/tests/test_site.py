@@ -122,6 +122,40 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(self.submit(self.private + '/topic/1/approve').status_code, 303)
         self.assertIn('音乐分享', self.client.get('/forum').get_data(as_text=True))
 
+    def test_author_can_participate_and_replies_are_pinned_for_every_reader(self):
+        post_id = self.add_post()
+        self.submit(f'/forum/post/{post_id}', {'body':'访客早回复'})
+        self.login()
+        page = self.client.get(f'/forum/post/{post_id}').get_data(as_text=True)
+        self.assertIn('当前以作者身份回复', page)
+        self.assertNotIn('name="nickname"', page)
+        self.submit(f'/forum/post/{post_id}', {'body':'作者第一条回复', 'nickname':'假名字'})
+        self.submit(f'/forum/post/{post_id}', {'body':'作者第二条回复'})
+        author_post = self.add_post('作者发布的主题')
+        self.assertEqual(self.query('SELECT is_author FROM posts WHERE id=?', (author_post,))[0][0], 1)
+        self.assertIn('author-badge', self.client.get(f'/forum/post/{author_post}').get_data(as_text=True))
+        self.submit(self.private + '/logout')
+        self.client.get(f'/forum/post/{post_id}')  # A fresh visitor gets a fresh CSRF token after logout.
+        self.submit(f'/forum/post/{post_id}', {'body':'访客晚回复', 'nickname':'作者', 'is_author':'1'})
+        page = self.client.get(f'/forum/post/{post_id}').get_data(as_text=True)
+        positions = [page.index(text) for text in ('作者第一条回复','作者第二条回复','访客早回复','访客晚回复')]
+        self.assertEqual(positions, sorted(positions))
+        self.assertEqual(page.count('class="pinned-label"'), 2)
+        self.assertIn('作者（访客）', page)
+        flags = self.query('SELECT is_author FROM replies WHERE post_id=? ORDER BY id', (post_id,))
+        self.assertEqual([row[0] for row in flags], [0,1,1,0])
+
+    def test_existing_author_replies_stay_pinned_after_restart(self):
+        post_id = self.add_post()
+        with transaction(self.app.config['DATABASE']) as db:
+            for body, verified in [('旧访客留言',0),('旧作者说明',1)]:
+                db.execute('INSERT INTO replies(post_id,body,author,visitor,is_author,created_at) VALUES(?,?,?,?,?,1)',
+                           (post_id,body,'历史用户','fixture',verified))
+        app2 = create_app(dict(TESTING=True, DATA_DIR=self.data, SITE_URL='http://localhost', PRODUCTION=False))
+        page = app2.test_client().get(f'/forum/post/{post_id}').get_data(as_text=True)
+        self.assertLess(page.index('旧作者说明'), page.index('旧访客留言'))
+        self.assertEqual(page.count('class="pinned-label"'), 1)
+
     def test_author_deletion_is_protected_and_cascades(self):
         post_id = self.add_post()
         self.submit(f'/forum/post/{post_id}', {'body':'待删除回复'})
@@ -355,6 +389,41 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(response.headers['X-Content-Type-Options'], 'nosniff')
         self.assertIn("frame-ancestors 'none'", response.headers['Content-Security-Policy'])
         self.assertEqual(self.client.get(self.private).headers['X-Robots-Tag'], 'noindex, nofollow, noarchive')
+
+    def test_versioned_public_assets_cache_without_cookies(self):
+        html = self.client.get('/').get_data(as_text=True)
+        asset = re.search(r'href="(/static/site.css\?v=[a-f0-9]{16})"', html).group(1)
+        for client in (self.client, self.app.test_client()):
+            with client.get(asset) as response:
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.headers['Cache-Control'], 'public, max-age=31536000, immutable')
+                self.assertNotIn('Set-Cookie', response.headers)
+                self.assertNotIn('Cookie', response.headers.get('Vary', ''))
+                with client.get(asset, headers={'If-None-Match':response.headers['ETag']}) as conditional:
+                    self.assertEqual(conditional.status_code, 304)
+        self.assertEqual(self.client.get('/').headers['Cache-Control'], 'no-store')
+        self.login()
+        self.assertEqual(self.client.get(self.private+'/dashboard').headers['Cache-Control'], 'no-store')
+
+    def test_unversioned_or_wrong_asset_versions_do_not_get_immutable_cache(self):
+        for path in ('/static/site.css','/static/site.css?v=wrong','/static/missing.css?v=wrong'):
+            with self.client.get(path) as response:
+                self.assertNotIn('immutable', response.headers['Cache-Control'])
+
+    def test_asset_version_matches_bytes_and_changes_with_content(self):
+        import hashlib
+        from flask import url_for
+        with self.app.test_request_context():
+            url = url_for('static', filename='site.css')
+        version = url.split('v=')[1]
+        self.assertEqual(version, hashlib.sha256((Path(__file__).resolve().parents[1]/'static/site.css').read_bytes()).hexdigest()[:16])
+        fixture_root = self.data/'changed-source'
+        (fixture_root/'static').mkdir(parents=True)
+        (fixture_root/'static/site.css').write_text('/* changed asset fixture */', encoding='utf-8')
+        with patch('app.ROOT', fixture_root):
+            app2 = create_app(dict(TESTING=True, DATA_DIR=self.data, SITE_URL='http://localhost', PRODUCTION=False))
+        with app2.test_request_context():
+            self.assertNotEqual(url, url_for('static', filename='site.css'))
 
 
 if __name__ == '__main__':

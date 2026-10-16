@@ -41,6 +41,10 @@ import com.resonance.player.ui.LibraryShell
 import com.resonance.player.ui.MusicFeatureController
 import com.resonance.player.ui.LocalMusicFeatures
 import com.resonance.player.ui.MusicFeatureDialogs
+import com.resonance.player.ui.LocalTutorial
+import com.resonance.player.ui.TutorialController
+import com.resonance.player.ui.TutorialDialogs
+import com.resonance.player.tutorial.TutorialCompletion
 import com.resonance.player.platform.FloatingLyricsHost
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -82,6 +86,16 @@ fun App(services: PlatformServices) {
         val persistence = remember(services) { PersistenceQueue(scope) {
             importMessage = "保存失败：${it.message.orEmpty()}"
         } }
+        val tutorial = remember(services) { TutorialController { value ->
+            persistence.submitLatest("tutorial.progress") { services.saveTutorialProgress(value) }
+        } }
+        tutorial.onNavigate = { destination = it }
+        tutorial.currentDestination = destination
+        tutorial.hasTrack = player.currentTrack != null
+        LaunchedEffect(services) {
+            try { tutorial.restore(services.loadTutorialProgress()) }
+            catch (error: Exception) { importMessage = "教程进度读取失败：${error.message.orEmpty()}" }
+        }
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
         var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
         var deepSeekConfig by remember { mutableStateOf(com.resonance.player.model.DeepSeekConfig()) }
@@ -93,6 +107,22 @@ fun App(services: PlatformServices) {
         var batchEnrichJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
         val features = remember(services) { MusicFeatureController(services, scope) }
+        LaunchedEffect(tutorial.activeChapterId, tutorial.step?.id, importedTracks, playlists, player.currentTrack, features.settings) {
+            val completion = tutorial.step?.completion
+            val satisfied = when (completion) {
+                TutorialCompletion.MusicAvailable -> importedTracks.any { it.sourceUri != null }
+                TutorialCompletion.TrackSelected -> player.currentTrack != null
+                TutorialCompletion.TrackFavorite -> player.currentTrack?.isFavorite == true
+                TutorialCompletion.PlaylistCreated -> playlists.any { it.id != com.resonance.player.model.DAILY_PLAYLIST_ID }
+                TutorialCompletion.TrackAdded -> player.currentTrack?.id?.let { id -> playlists.any { it.id != com.resonance.player.model.DAILY_PLAYLIST_ID && it.tracks.any { track -> track.id == id } } } == true
+                TutorialCompletion.CookieAvailable -> features.settings.bilibiliCookie.isNotBlank()
+                TutorialCompletion.AiConfigured -> features.settings.connections.any { it.provider == features.settings.assistantProvider && it.configured }
+                TutorialCompletion.RecommendationsEnabled -> features.settings.recommendationsEnabled
+                TutorialCompletion.FloatingEnabled -> features.settings.floatingLyrics
+                else -> false
+            }
+            if (satisfied && completion != null) tutorial.event(completion)
+        }
         features.library = importedTracks
         features.playlists = playlists
         features.player = player
@@ -410,7 +440,7 @@ fun App(services: PlatformServices) {
             }
         }
         features.onPlay = { track -> startTrack(track, importedTracks) }
-        CompositionLocalProvider(LocalMusicFeatures provides features) {
+        CompositionLocalProvider(LocalMusicFeatures provides features, LocalTutorial provides tutorial) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background,
@@ -669,7 +699,7 @@ fun App(services: PlatformServices) {
                         message = importMessage,
                         operationInProgress = operationInProgress || initialLoadInProgress,
                     )
-
+                TutorialDialogs(tutorial, ready = !initialLoadInProgress)
 
                 AnimatedVisibility(
                     visible = showCreateDialog,
