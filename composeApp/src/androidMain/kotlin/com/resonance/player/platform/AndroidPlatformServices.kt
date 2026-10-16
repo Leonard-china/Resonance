@@ -828,7 +828,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 tracks = tracks,
                 playlists = selectedPlaylists,
                 openAudio = { track -> openTrackSource(track.sourceUri) },
-                openArtwork = { track -> openArtworkSource(track.artworkPath) },
+                openArtwork = { track -> openArtworkSource(track) },
             )
             val destination = saveToDownloads(temporary)
             SyncReport(true, "已导出到下载/Resonance：$destination", tracks.size, selectedPlaylists.size)
@@ -1561,27 +1561,61 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         return name
     }
 
-    private fun openTrackSource(value: String?): java.io.InputStream? {
+    private fun openTrackSource(value: String?): java.io.InputStream? = runCatching {
         value ?: return null
-        return if (value.startsWith("content://")) {
+        if (value.startsWith("content://")) {
             activity.contentResolver.openInputStream(android.net.Uri.parse(value))
         } else {
             val uri = android.net.Uri.parse(value)
             val path = if (uri.scheme == "file") Paths.get(uri.path!!) else Paths.get(value)
             if (Files.isRegularFile(path)) Files.newInputStream(path) else null
         }
-    }
+    }.getOrNull()
 
-    private fun openArtworkSource(value: String?): java.io.InputStream? {
-        value ?: return null
-        if (value.startsWith("https://")) {
-            return java.net.URL(value).openConnection().apply {
-                connectTimeout = 8_000
-                readTimeout = 12_000
-            }.getInputStream().buffered()
+    private fun openArtworkSource(track: Track): java.io.InputStream? = runCatching {
+        val value = track.artworkPath
+        if (!value.isNullOrBlank()) {
+            if (value.startsWith("https://")) {
+                val stream = runCatching {
+                    java.net.URL(value).openConnection().apply {
+                        connectTimeout = 8_000
+                        readTimeout = 12_000
+                    }.getInputStream().buffered()
+                }.getOrNull()
+                if (stream != null) return stream
+            }
+            if (value.startsWith("content://")) {
+                val stream = runCatching {
+                    activity.contentResolver.openInputStream(Uri.parse(value))
+                }.getOrNull()
+                if (stream != null) return stream
+            } else {
+                val uri = runCatching { Uri.parse(value) }.getOrNull()
+                val path = if (uri?.scheme == "file") Paths.get(uri.path!!) else runCatching { Paths.get(value) }.getOrNull()
+                if (path != null && Files.isRegularFile(path)) {
+                    val stream = runCatching { Files.newInputStream(path) }.getOrNull()
+                    if (stream != null) return stream
+                }
+            }
         }
-        return openTrackSource(value)
-    }
+        extractEmbeddedArtworkStream(track.sourceUri)
+    }.getOrNull()
+
+    private fun extractEmbeddedArtworkStream(sourceUri: String?): java.io.InputStream? = runCatching {
+        sourceUri ?: return null
+        android.media.MediaMetadataRetriever().let { retriever ->
+            try {
+                if (sourceUri.startsWith("content://")) {
+                    retriever.setDataSource(activity, Uri.parse(sourceUri))
+                } else {
+                    retriever.setDataSource(sourceUri)
+                }
+                retriever.embeddedPicture?.takeIf { it.isNotEmpty() }?.let { java.io.ByteArrayInputStream(it) }
+            } finally {
+                retriever.release()
+            }
+        }
+    }.getOrNull()
 
     private fun loadSyncedTracks(): List<Track> = com.resonance.player.features.AndroidMusicAccess.readManaged(activity)
 

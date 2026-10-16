@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
 
-源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.2 / 25`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.2 发布说明](RELEASE_NOTES-0.4.2.md) 及 [发布记录](changes/2026-10-16-13-release-0.4.2.md)）。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.3 / 26`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.3 发布说明](RELEASE_NOTES-0.4.3.md) 及 [发布记录](changes/2026-10-16-16-release-0.4.3.md)）。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -459,7 +459,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 ## 16. 独立官网与匿名论坛（2026-10-16 核对）
 
-实现与部署入口：[website/README.md](../website/README.md)，本次修改见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)。使用 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP；Ubuntu 以 Nginx + Gunicorn 26.2.0（1 进程/4 线程）提供 HTTP，独立 worker 发送邮件与重试清理旧包。没有常驻 Node 进程或前端构建服务。
+实现与部署入口：[website/README.md](../website/README.md)，实现见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)，最新版导入及作者操作见 [交接记录](changes/2026-10-16-14-website-latest-release-and-handoff.md)。使用 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP；Ubuntu 以 Nginx + Gunicorn 26.2.0（1 进程/4 线程）提供 HTTP，独立 worker 发送邮件与重试清理旧包。没有常驻 Node 进程或前端构建服务。
 
 - 公共页面：`/`、`/downloads`、`/forum`、`/forum/topic/<slug>`、帖子/回复、话题申请和 `/support`。小屏使用 2×2 首页入口、电脑/手机截图切换、可展开话题列表、单列下载和表单；320/390/768/1440px 浏览器检查见本次记录。
 - 版本发布：`releases.publish` 先把 Windows EXE 和 Android APK 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换两端版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，Unix 下已打开下载不受旧文件 unlink 影响。

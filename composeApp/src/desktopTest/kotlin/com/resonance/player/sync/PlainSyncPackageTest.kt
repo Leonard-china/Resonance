@@ -124,4 +124,43 @@ class PlainSyncPackageTest {
             Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
         }
     }
+
+    @Test
+    fun exportAndImportSucceedWhenArtworkIsMissing() {
+        val root = Files.createTempDirectory("resonance-plain-sync-test-")
+        try {
+            val audio = root.resolve("no-art.mp3")
+            Files.write(audio, "ID3-audio-no-art".encodeToByteArray())
+            val track = Track(
+                id = "track-without-art",
+                title = "No Art Song",
+                artist = "Artist",
+                album = "Album",
+                durationText = "2:30",
+                artworkSeed = 99,
+                sourceUri = audio.toString(),
+                artworkPath = "content://media/external/audio/albumart/99999",
+            )
+            val playlist = Playlist("pl-1", "My List", "1 song", listOf(track), 1)
+            val pkg = root.resolve("no-art.resonance")
+
+            // 模拟 openArtwork 在无法获取封面时安全返回 null（如 Android 报 No album art found 被捕获降级）
+            PlainSyncPackage().export(
+                target = pkg,
+                tracks = listOf(track),
+                playlists = listOf(playlist),
+                openAudio = { Files.newInputStream(audio) },
+                openArtwork = { null },
+            )
+
+            assertTrue(Files.isRegularFile(pkg), "应成功生成歌单归档文件")
+
+            val imported = PlainSyncPackage().import(pkg, root.resolve("managed-no-art"))
+            assertEquals(1, imported.tracks.size)
+            assertEquals("No Art Song", imported.tracks.single().title)
+            assertEquals(null, imported.tracks.single().artworkPath, "无封面曲目导入后 artworkPath 应为 null")
+        } finally {
+            Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
+        }
+    }
 }
