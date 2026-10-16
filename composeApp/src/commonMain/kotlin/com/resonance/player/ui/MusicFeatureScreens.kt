@@ -88,7 +88,6 @@ internal fun MusicFeatureSettingsSection() {
     var limit by remember(settings.monthlyTokenLimit) { mutableStateOf(settings.monthlyTokenLimit.toString()) }
     OutlinedTextField(limit, { limit = it.filter(Char::isDigit).take(9) }, label = { Text("每月 AI Token 上限") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
     TextButton(onClick = { feature.save(settings.copy(monthlyTokenLimit = limit.toLongOrNull()?.coerceIn(10_000, 100_000_000) ?: 1_000_000)); feature.message = "预算上限已保存" }) { Text("保存预算") }
-    var cookie by remember(settings.bilibiliCookie) { mutableStateOf(settings.bilibiliCookie) }
     SectionHeader("同步歌词生成")
     Text("根据实际音频识别人声并生成时间轴。使用阿里云百炼 Paraformer，独立按音频时长计费，不计入聊天 Token。仅点击生成时上传音频，结果保存在本机。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
     var speechKey by remember(settings.speechApiKey) { mutableStateOf(settings.speechApiKey) }
@@ -98,9 +97,71 @@ internal fun MusicFeatureSettingsSection() {
     OutlinedTextField(speechUrl, { speechUrl = it }, label = { Text("语音 WebSocket 地址（北京地域）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
     OutlinedTextField(speechMinutes, { speechMinutes = it.filter(Char::isDigit).take(5) }, label = { Text("每月语音处理上限（分钟）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
     TextButton(onClick = { feature.save(feature.settings.copy(speechApiKey = speechKey.trim(), speechUrl = speechUrl.trim(), monthlySpeechSeconds = (speechMinutes.toIntOrNull() ?: 60).coerceIn(1, 6000) * 60)); feature.message = "语音配置已保存" }) { Text("保存语音配置") }
+    var cookie by remember(settings.bilibiliCookie) { mutableStateOf(settings.bilibiliCookie) }
+    var showQrLogin by remember { mutableStateOf(false) }
+    var showWebLogin by remember { mutableStateOf(false) }
+
+    if (showQrLogin) {
+        BilibiliQrLoginDialog(
+            services = feature.services,
+            onDismiss = { showQrLogin = false },
+            onSuccess = { newCookie ->
+                cookie = newCookie
+                feature.save(settings.copy(bilibiliCookie = newCookie))
+                feature.message = "B 站登录成功，Cookie 已自动保存"
+                showQrLogin = false
+            }
+        )
+    }
+
+    if (showWebLogin) {
+        BilibiliWebLoginDialog(
+            onDismiss = { showWebLogin = false },
+            onSuccess = { newCookie ->
+                cookie = newCookie
+                feature.save(settings.copy(bilibiliCookie = newCookie))
+                feature.message = "B 站登录成功，Cookie 已自动保存"
+                showWebLogin = false
+            }
+        )
+    }
+
     SectionHeader("B 站账号（可选）")
-    OutlinedTextField(cookie, { cookie = it }, label = { Text("自己的登录 Cookie") }, modifier = Modifier.fillMaxWidth(), visualTransformation = PasswordVisualTransformation(), singleLine = true)
-    TextButton(onClick = { feature.save(settings.copy(bilibiliCookie = cookie.trim())); feature.message = "B 站账号配置已保存" }) { Text("保存账号配置") }
+    Text("用于解析和导入 B 站音频。可使用扫码登录或网页快捷登录自动获取 Cookie，免去手动抓包复制。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { showQrLogin = true }) {
+            Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("扫码登录")
+        }
+        if (feature.services.supportsWebLogin) {
+            OutlinedButton(onClick = { showWebLogin = true }) {
+                Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("网页快捷登录")
+            }
+        }
+    }
+    OutlinedTextField(
+        value = cookie,
+        onValueChange = { cookie = it },
+        label = { Text(if (cookie.isNotBlank()) "已配置 Cookie（可手动修改）" else "自己的登录 Cookie（可手动粘贴）") },
+        modifier = Modifier.fillMaxWidth(),
+        visualTransformation = PasswordVisualTransformation(),
+        singleLine = true
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = { feature.save(settings.copy(bilibiliCookie = cookie.trim())); feature.message = "B 站账号配置已保存" }) { Text("保存账号配置") }
+        if (cookie.isNotBlank()) {
+            TextButton(onClick = {
+                cookie = ""
+                feature.save(settings.copy(bilibiliCookie = ""))
+                feature.message = "已清除 B 站 Cookie"
+            }) {
+                Text("清除 Cookie", color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
     if (feature.message.isNotBlank()) Text(feature.message, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
 }
 

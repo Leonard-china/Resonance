@@ -6,6 +6,7 @@ import com.resonance.player.ai.MusicAiClient
 import com.resonance.player.ai.MusicAiTransport
 import com.resonance.player.media.MusicVideoSource
 import com.resonance.player.media.BilibiliClient
+import com.resonance.player.media.BilibiliLoginService
 import com.resonance.player.model.*
 import com.resonance.player.platform.MusicAssistantServices
 import kotlinx.coroutines.*
@@ -34,6 +35,7 @@ class JvmMusicAssistant(
     private val artworkSource: MusicArtworkSource = AlbumCoverRepository(store),
     private val speechClient: SpeechLyricsTransport = ParaformerLyricsClient(),
     private val lyricSource: (suspend (Track) -> LyricsFetchResult)? = null,
+    private val biliLogin: BilibiliLoginService = BilibiliLoginService(),
 ) : MusicAssistantServices {
     private val key = store.directory.toAbsolutePath().normalize().toString()
     private val mutex = locks.getOrPut(key) { Mutex() }
@@ -333,6 +335,8 @@ class JvmMusicAssistant(
         } finally { job.set(null); mutex.unlock() }
     }
     override fun cancel() { job.get()?.cancel() }
+    override suspend fun createBilibiliQrSession(): BiliQrSession? = biliLogin.createQrSession()
+    override suspend fun pollBilibiliQrStatus(qrcodeKey: String): BiliQrPollResult = biliLogin.pollQrStatus(qrcodeKey)
 
     private suspend fun ask(messages: JSONArray, vision: Boolean = false, tools: JSONArray? = null, maxTokens: Int = 3000, overrideConnection: AiConnection? = null): JSONObject = requestMutex.withLock {
         val config = cachedSettings ?: settings()

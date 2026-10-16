@@ -70,6 +70,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
+    override val supportsWebLogin: Boolean get() = true
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     private var conversionSession: Long? = null
     override val importProgress = MutableStateFlow<ImportProgress?>(null)

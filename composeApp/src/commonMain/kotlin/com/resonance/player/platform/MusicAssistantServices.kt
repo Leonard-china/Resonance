@@ -30,4 +30,6 @@ interface MusicAssistantServices {
     suspend fun deleteSession(sessionId: String)
     suspend fun clearCurrentSession()
     fun cancel()
+    suspend fun createBilibiliQrSession(): BiliQrSession? = null
+    suspend fun pollBilibiliQrStatus(qrcodeKey: String): BiliQrPollResult = BiliQrPollResult(BiliQrPollStatus.ERROR, message = "不支持该操作")
 }

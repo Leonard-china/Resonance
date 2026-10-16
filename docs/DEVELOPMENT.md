@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
 
-源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.3 / 26`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.3 发布说明](RELEASE_NOTES-0.4.3.md) 及 [发布记录](changes/2026-10-16-16-release-0.4.3.md)）。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.4 / 27`**，已完成全部优化并构建 Android Release APK 与 Windows 安装包（见 [v0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) 及 [发布记录](changes/2026-10-16-18-release-0.4.4.md)）。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -70,7 +70,7 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 | [C/data/PersistenceQueue.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/data/PersistenceQueue.kt) | submit 顺序屏障、submitLatest 合并、run 等待落盘；退出排空 |
 | C/ui/LibraryShell.kt、LibraryDetailTransition.kt | 响应式曲库/搜索/详情、多选、封面和迷你播放器；标签单树轻量图层动画/独立滚动位置，详情独立过渡 |
 | C/ui/NowPlayingOverlay.kt | 完整播放器、歌词/队列、单个平衡开关、翻译/显示、悬浮开关与编辑信息 |
-| C/ui/MusicFeatureController.kt、MusicFeatureScreens.kt | 共享设置、助手、B 站表单、音量帮助、任务进度、拒绝原因 |
+| C/ui/MusicFeatureController.kt、MusicFeatureScreens.kt、BilibiliLoginDialogs.kt | 共享设置、助手、B 站扫码/Web登录与表单、音量帮助、任务进度、拒绝原因 |
 | C/ui/ToolsScreens.kt、SyncPackageDialog.kt、BatchEnrichDialog.kt | 导入、歌单文件、设置、导出范围、补全选项/报告 |
 | C/platform/ArtworkMemoryCache.kt、SyncArtwork.kt | 位图 LRU/并发限制/同路径合并，曲库与歌单封面回退 |
 | C/design/*、ui/AppearanceSettings.kt | 主题、天气配色、减少动态效果、外观设置 |
@@ -395,7 +395,7 @@ DeepSeek 文本可配千问/豆包视觉；未配置视觉则提示，不把图�
 
 手动：链接/BV/短链接/分 P → metadata → 编辑歌名/歌手/专辑/封面/目标歌单 → DASH音轨或单段 fallback → staging转 MP3 → 原生入库/关系。自动按 SongRequest 完成相同链路。来源 bvid:cid 去重。
 
-candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现场/live/翻唱/cover/伴奏/混音/变速/合集。无可信候选就报告失败，不随便替换；规则不保证真伪。B 站需要官方登录/验证时显示错误，可设置自有 Cookie。
+candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现场/live/翻唱/cover/伴奏/混音/变速/合集。无可信候选就报告失败，不随便替换；规则不保证真伪。B 站需要官方登录/验证时显示错误，支持扫码登录（全端通用）或 Android 网页快捷登录（WebView 自动捕获 CookieManager 凭据），亦可手动粘贴 Cookie。
 
 ### 截图流水线与缓存
 

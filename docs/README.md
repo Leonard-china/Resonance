@@ -1,6 +1,6 @@
 # 2026-10-16 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.4.3 / 26** 的 2026-10-16 正式发布构建。[本次发布说明](RELEASE_NOTES-0.4.3.md) · [本次发布记录](changes/2026-10-16-16-release-0.4.3.md)。GitHub 最新 Release 见 [v0.4.3 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.3)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
+当前工作区：**0.4.4 / 27** 的 2026-10-16 正式发布构建。[本次发布说明](RELEASE_NOTES-0.4.4.md) · [本次发布记录](changes/2026-10-16-18-release-0.4.4.md)。GitHub 最新 Release 见 [v0.4.4 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.4)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
 
 ## 新 AI 从这里开始
 
@@ -17,7 +17,8 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
-| [0.4.3 发布说明](RELEASE_NOTES-0.4.3.md) | v0.4.3 正式版更新重点、安装包校验与升级指引 |
+| [0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) | v0.4.4 正式版更新重点、安装包校验与升级指引 |
+| [0.4.3 发布说明](RELEASE_NOTES-0.4.3.md) | 历史 0.4.3 Android/Windows 正式版记录 |
 | [0.4.2 发布说明](RELEASE_NOTES-0.4.2.md) | 历史 0.4.2 Android/Windows 正式版记录 |
 | [0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) | 历史 0.4.1 Android/Windows 正式版记录 |
 | [0.4.0 发布说明](RELEASE_NOTES-0.4.0.md) | 历史 0.4.0 Android 正式版记录 |
@@ -26,6 +27,8 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-16 | 升版 0.4.4、构建签名 Android Release APK 与 Windows 安装包并交付 | [具体修改](changes/2026-10-16-18-release-0.4.4.md) |
+| 2026-10-16 | 支持 B 站扫码登录与 Android 网页快捷登录自动获取 Cookie | [具体修改](changes/2026-10-16-17-bilibili-qr-and-web-login.md) |
 | 2026-10-16 | 升版 0.4.3、构建签名 Android Release APK 与 Windows 安装包并交付 | [具体修改](changes/2026-10-16-16-release-0.4.3.md) |
 | 2026-10-16 | 修复 Android 导出歌单因部分音频无封面导致 No album art found 异常中断 | [具体修改](changes/2026-10-16-15-fix-export-playlist-missing-artwork.md) |
 | 2026-10-16 | 官网下载同步 v0.4.2，补全作者操作说明与部署交接 | [具体修改](changes/2026-10-16-14-website-latest-release-and-handoff.md) |

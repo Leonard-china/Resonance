@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface PlatformServices {
     val supportsKgg: Boolean get() = false
+    val supportsWebLogin: Boolean get() = false
     val musicAssistant: MusicAssistantServices? get() = null
     val importProgress: StateFlow<com.resonance.player.model.ImportProgress?> get() = MutableStateFlow(null)
     fun cancelImport() {}

@@ -88,3 +88,24 @@ fun Lyrics.withTranslation(lines: List<String>, language: String): Lyrics = copy
     lines = this.lines.mapIndexed { i, line -> line.copy(translation = lines.getOrNull(i)) },
     translationLanguage = language,
 )
+
+data class BiliQrSession(
+    val qrcodeKey: String,
+    val loginUrl: String,
+    val matrixSize: Int,
+    val bits: BooleanArray,
+)
+
+enum class BiliQrPollStatus {
+    WAITING,
+    SCANNED,
+    EXPIRED,
+    SUCCESS,
+    ERROR
+}
+
+data class BiliQrPollResult(
+    val status: BiliQrPollStatus,
+    val cookie: String? = null,
+    val message: String = "",
+)
