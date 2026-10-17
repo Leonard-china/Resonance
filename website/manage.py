@@ -30,6 +30,8 @@ def main():
     release.add_argument('--windows')
     release.add_argument('--android')
     release.add_argument('--notes')
+    announcement = sub.add_parser('publish-announcement', help='发布已审核的更新公告与软件介绍（须先发布对应安装包）')
+    announcement.add_argument('content', help='含 version、title、body 的 UTF-8 JSON 文件')
     args = parser.parse_args()
     app = create_app()
     data = Path(app.config['DATA_DIR'])
@@ -70,6 +72,10 @@ def main():
         with windows.open('rb') as win, android.open('rb') as apk:
             publish(data, app.config['DATABASE'], version, notes, {'windows': win, 'android': apk})
         print(f'已导入 v{version} 的 Windows / Android 真实产物，并计算本次 SHA-256。')
+    elif args.command == 'publish-announcement':
+        from announcements import publish_announcement
+        version = publish_announcement(app.config['DATABASE'], args.content)
+        print(f'已发布 v{version} 更新公告与软件介绍；未创建邮件群发。')
     elif args.command == 'cleanup':
         cleanup(data, app.config['DATABASE'])
         print('旧版安装包清理已执行。')

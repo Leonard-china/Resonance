@@ -73,11 +73,14 @@ kotlin {
                 implementation("org.json:json:20250517")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("com.google.zxing:core:3.5.3")
+                compileOnly("com.microsoft.onnxruntime:onnxruntime:1.20.0")
             }
         }
         val desktopMain by getting {
             dependsOn(jvmMain)
+            resources.srcDir("src/ocrModels")
             dependencies {
+                implementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.jaudiotagger)
@@ -88,6 +91,7 @@ kotlin {
         val androidMain by getting {
             dependsOn(jvmMain)
             dependencies {
+                implementation("com.microsoft.onnxruntime:onnxruntime-android:1.23.2")
                 implementation("androidx.activity:activity-compose:1.10.1")
                 implementation("androidx.documentfile:documentfile:1.1.0")
                 implementation("androidx.work:work-runtime-ktx:2.10.1")
@@ -110,6 +114,7 @@ android {
     namespace = "com.resonance.player"
     compileSdk = 36
     buildToolsVersion = "36.0.0"
+    sourceSets.getByName("main").assets.srcDir("src/ocrModels")
 
     defaultConfig {
         applicationId = "com.resonance.player"

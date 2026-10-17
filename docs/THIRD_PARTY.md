@@ -76,3 +76,9 @@ Android 悬浮权限 SYSTEM_ALERT_WINDOW 由系统设置授予；后台推荐使
 现网 leonard.asia 经 Cloudflare Tunnel 提供 HTTPS，运行于用户配置的 Pterodactyl 容器；本机独立运维客户端使用面板 API。Cloudflare 处理网站流量，面板控制服务器文件/进程，均不是播放器云端账户。面板配置、隧道 token 和作者凭据不进入本仓库。实际路径及验证范围见 [现网运维](../website/OPERATIONS.md)。
 
 当前应用图标来自 `composeApp/src/desktopMain/resources/resonance-icon.png`；官网截图复制工程已有测试素材，不含用户音频。GitHub 按钮与历史版本跳转 `Leonard-china/Resonance`；最新版二进制来自作者在网站发布的本地存储。没有把未经提供的收款码或真实凭据作为静态资源提交。
+
+## 本地截图 OCR 与截断名称核对（2026-10-17）
+
+Android 和 Windows 随包内置 PP-OCRv5 mobile 检测/识别模型与字典，ONNX Runtime（Android 1.23.2 / Windows 1.20.0） 在 CPU 推理；两者为 Apache-2.0，模型原始来源、SHA-256、许可和复现脚本见 [模型说明](../composeApp/src/ocrModels/README.md)。本地不加载 Python、不向模型服务上传截图、不调用收费识图 API；设置可手动选择原云端视觉 API。会话按识别任务创建并关闭。
+
+截断名称核对只向 QQ音乐/iTunes/B站发送可见歌名与歌手等文本，用匹配结果补全新导入信息；没有把缺失文字当作 OCR 已识别内容。旧 Key/视觉连接配置保留，识图模式作为独立设置存储。

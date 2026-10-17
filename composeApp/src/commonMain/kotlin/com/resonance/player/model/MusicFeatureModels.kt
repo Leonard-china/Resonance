@@ -44,7 +44,13 @@ data class MusicFeatureSettings(
     val speechApiKey: String = "",
     val speechUrl: String = "wss://dashscope.aliyuncs.com/api-ws/v1/inference",
     val monthlySpeechSeconds: Int = 3600,
+    val screenshotRecognition: ScreenshotRecognition = ScreenshotRecognition.LocalOcr,
 )
+
+enum class ScreenshotRecognition(val label: String) {
+    LocalOcr("本地 OCR"),
+    CloudApi("云端 API"),
+}
 
 enum class LyricDisplay { Original, Translation, Bilingual }
 data class AiImage(val bytes: ByteArray, val mimeType: String = "image/jpeg")

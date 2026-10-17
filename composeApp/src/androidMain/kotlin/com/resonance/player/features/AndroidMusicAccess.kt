@@ -173,7 +173,8 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
             val operations = if (delete == null) access else object : MusicLibraryAccess by access {
                 override suspend fun delete(track: Track) = delete.invoke(track)
             }
-            return JvmMusicAssistant(MusicJsonStore(app.filesDir.toPath().resolve("music-assistant")), access.musicDirectory, operations, AndroidCredentialVault::encrypt, AndroidCredentialVault::decrypt)
+            return JvmMusicAssistant(MusicJsonStore(app.filesDir.toPath().resolve("music-assistant")), access.musicDirectory, operations, AndroidCredentialVault::encrypt, AndroidCredentialVault::decrypt,
+                screenshotOcr = androidScreenshotOcr(app))
         }
     }
 }

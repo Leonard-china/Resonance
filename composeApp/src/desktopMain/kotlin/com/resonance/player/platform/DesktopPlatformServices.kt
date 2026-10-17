@@ -186,6 +186,7 @@ class DesktopPlatformServices : PlatformServices {
             com.resonance.player.features.MusicJsonStore(library.appDirectory.resolve("music-assistant")), library.managedMusicDirectory,
             com.resonance.player.features.DesktopMusicAccess(library, { id -> if (playingMusicId == id) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) } }, { playingMusicId }),
             com.resonance.player.features.DesktopCredentialVault::encrypt, com.resonance.player.features.DesktopCredentialVault::decrypt,
+            screenshotOcr = com.resonance.player.features.desktopScreenshotOcr(),
         )
     }
     override suspend fun configureBackgroundRecommendations(settings: MusicFeatureSettings) {

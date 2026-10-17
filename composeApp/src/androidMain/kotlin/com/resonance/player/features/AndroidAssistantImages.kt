@@ -20,7 +20,10 @@ object AndroidAssistantImages {
                 try {
                     val width = decoder.width; val height = decoder.height
                     require(width.toLong() * height <= 120_000_000) { "截图像素过多，请分段选择" }
-                    val sample = ((width + 1599) / 1600).coerceAtLeast(1)
+                    // BitmapFactory rounds non-power-of-two sample sizes down. Choose a real
+                    // decoder scale so 4K screenshots cannot silently exceed the slice limit.
+                    var sample = 1
+                    while ((width + sample - 1) / sample > 1600) sample *= 2
                     var y = 0
                     while (y < height) {
                         require(result.size < 40) { "截图过长，请分批导入" }

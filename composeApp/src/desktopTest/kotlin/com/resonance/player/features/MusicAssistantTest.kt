@@ -68,7 +68,7 @@ class MusicAssistantTest {
         try {
             val library = Library(root); val videos = Videos(); val ai = Transport(); val store = MusicJsonStore(root.resolve("state"))
             val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos, artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null }, lyricSource = { LyricsFetchResult.Unavailable("fixture", false) })
-            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test-key")), recommendationsEnabled = true))
+            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test-key")), recommendationsEnabled = true, screenshotRecognition = ScreenshotRecognition.CloudApi))
             runtime.settings()
             block(runtime, library, videos, ai, store)
         } finally { Files.walk(root).use { files -> files.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
@@ -155,7 +155,7 @@ class MusicAssistantTest {
         fixture { runtime, library, videos, ai, _ ->
             ai.content("{\"playlists\":[{\"name\":\"My screenshot\",\"tracks\":[{\"title\":\"Song\",\"artist\":\"Artist\"}]}]}")
             val image = AiImage(byteArrayOf(1, 2, 3))
-            runtime.chat("导入歌单", listOf(image)); runtime.chat("再导入一次", listOf(image))
+            runtime.chat("导入歌单", listOf(image)); runtime.chat("导入歌单", listOf(image))
             assertEquals(1, ai.requests.size)
             assertEquals(1, videos.downloads)
             assertEquals(1, library.lists.single().tracks.size)
@@ -217,6 +217,43 @@ class MusicAssistantTest {
             val last = ai.requests.takeLast(2)
             assertEquals(last.first().getJSONObject(0).toString(), last.last().getJSONObject(0).toString())
             assertEquals(last.first().getJSONObject(1).toString(), last.last().getJSONObject(1).toString())
+        }
+    }
+    @Test fun localScreenshotImportNeedsNoApiKeyAndCompletesTitlesBeforeDownload() = runBlocking {
+        fixture { _, library, videos, ai, store ->
+            var reads = 0
+            val runtime = JvmMusicAssistant(store, store.directory.parent, library, client = ai, videoSource = videos,
+                artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null },
+                lyricSource = { LyricsFetchResult.Unavailable("fixture", false) },
+                screenshotOcr = com.resonance.player.ocr.ScreenshotOcr { _, _ ->
+                    reads++
+                    listOf(com.resonance.player.ocr.OcrPage(900, 900, listOf(
+                        com.resonance.player.ocr.OcrLine("Long Song...", 90, 100, 600, 135),
+                        com.resonance.player.ocr.OcrLine("Artist - Album", 90, 145, 600, 172))))
+                },
+                songMetadata = com.resonance.player.media.SongMetadataLookup { listOf(SongRequest("Long Song Full Title (feat. Guest)", "Artist", "Album")) })
+            runtime.saveSettings(MusicFeatureSettings())
+            val image = AiImage(byteArrayOf(1, 2, 3))
+            runtime.chat("导入", listOf(image)); runtime.chat("导入", listOf(image))
+            assertEquals(1, reads)
+            assertTrue(ai.requests.isEmpty())
+            assertEquals(1, videos.downloads)
+            assertEquals("Long Song Full Title (feat. Guest)", library.songs.values.single().title)
+            assertEquals("Long Song Full Title (feat. Guest)", library.lists.single().tracks.single().title)
+            assertEquals("Long Song Full Title", videos.known.values.single().title)
+            assertEquals(0L, runtime.state.value.usage.total)
+            assertEquals("本地 OCR · PP-OCRv5", runtime.state.value.messages.last().model)
+        }
+    }
+    @Test fun localRecognitionFailureNeverFallsBackToPaidApi() = runBlocking {
+        fixture { _, library, videos, ai, store ->
+            val runtime = JvmMusicAssistant(store, store.directory.parent, library, client = ai, videoSource = videos,
+                screenshotOcr = com.resonance.player.ocr.ScreenshotOcr { _, _ -> error("fixture OCR failure") })
+            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "fixture"))))
+            assertFailsWith<IllegalStateException> { runtime.chat("导入", listOf(AiImage(byteArrayOf(1)))) }
+            assertTrue(ai.requests.isEmpty())
+            assertEquals(0, videos.downloads)
+            assertTrue(library.lists.isEmpty())
         }
     }
 

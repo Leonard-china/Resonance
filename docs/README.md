@@ -1,6 +1,6 @@
-# 2026-10-16 — Resonance 文档入口与开发变更索引
+# 2026-10-17 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.4.5 / 28**，关于页新增官方网站、为作者充电（微信/支付宝）、爱发电主页与 GitHub 开源地址，构建正式双端发布版。[本次发布说明](RELEASE_NOTES-0.4.5.md) · [本次发布记录](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md)。GitHub 发布版本见 [v0.4.5 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.5)。功能回归见 [本轮交接](changes/2026-10-15-12-verification-and-handoff.md)。
+当前工作区：**0.4.6 / 29**，双端内置本地歌单 OCR、保留 API 切换，并核对截图截断歌名后导入。[本次发布说明](RELEASE_NOTES-0.4.6.md) · [本次发布记录](changes/2026-10-17-03-release-0.4.6.md)。GitHub 发布见 [v0.4.6 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.6)。实际验证与限制见各单项记录。
 
 ## 新 AI 从这里开始
 
@@ -17,6 +17,7 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.4.6 发布说明](RELEASE_NOTES-0.4.6.md) | 本地截图 OCR 与完整歌名导入的双端正式发布 |
 | [0.4.5 发布说明](RELEASE_NOTES-0.4.5.md) | v0.4.5 正式版更新重点、安装包校验与升级指引 |
 | [0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) | 历史 0.4.4 Android/Windows 正式版记录 |
 | [0.4.3 发布说明](RELEASE_NOTES-0.4.3.md) | 历史 0.4.3 Android/Windows 正式版记录 |
@@ -28,6 +29,10 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-17 | 官网发布对应版本更新公告与详细软件介绍 | [具体修改](changes/2026-10-17-04-release-announcement-and-introduction.md) |
+| 2026-10-17 | 发布 v0.4.6 双端安装包并同步 GitHub 和官网 | [具体修改](changes/2026-10-17-03-release-0.4.6.md) |
+| 2026-10-17 | 截断歌名核对完整信息后再下载及写入标签 | [具体修改](changes/2026-10-17-02-complete-truncated-song-titles.md) |
+| 2026-10-17 | 双端内置本地歌单 OCR，保留云端 API 切换并按任务释放模型 | [具体修改](changes/2026-10-17-01-local-screenshot-ocr.md) |
 | 2026-10-16 | 官网论坛公告更新为播放器详细介绍并于首页增设跳转指引 | [具体修改](changes/2026-10-16-25-website-announcement-software-introduction-and-home-callout.md) |
 | 2026-10-16 | 关于页新增官网/充电/爱发电/GitHub，发布 v0.4.5 并同步双平台 | [具体修改](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md) |
 | 2026-10-16 | 官网下载同步最新双模式教程安装包并更新生产校验和 | [具体修改](changes/2026-10-16-23-website-download-tutorial-release.md) |

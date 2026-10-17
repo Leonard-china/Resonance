@@ -7,6 +7,11 @@ import com.resonance.player.ai.MusicAiTransport
 import com.resonance.player.media.MusicVideoSource
 import com.resonance.player.media.BilibiliClient
 import com.resonance.player.media.BilibiliLoginService
+import com.resonance.player.media.SongIdentityResolver
+import com.resonance.player.media.SongMetadataLookup
+import com.resonance.player.media.PublicSongMetadataLookup
+import com.resonance.player.ocr.ScreenshotOcr
+import com.resonance.player.ocr.ScreenshotPlaylistParser
 import com.resonance.player.model.*
 import com.resonance.player.platform.MusicAssistantServices
 import kotlinx.coroutines.*
@@ -36,6 +41,8 @@ class JvmMusicAssistant(
     private val speechClient: SpeechLyricsTransport = ParaformerLyricsClient(),
     private val lyricSource: (suspend (Track) -> LyricsFetchResult)? = null,
     private val biliLogin: BilibiliLoginService = BilibiliLoginService(),
+    private val screenshotOcr: ScreenshotOcr? = null,
+    private val songMetadata: SongMetadataLookup = PublicSongMetadataLookup(),
 ) : MusicAssistantServices {
     private val key = store.directory.toAbsolutePath().normalize().toString()
     private val mutex = locks.getOrPut(key) { Mutex() }
@@ -388,8 +395,16 @@ class JvmMusicAssistant(
         val origin = "${video.bvid}:${video.cid}"
         val knownId = store.read().optJSONObject("videoOrigins")?.optString(origin)
         library.tracks().firstOrNull { it.id == knownId }?.let { existing ->
-            addToPlaylist(request.playlistId, listOf(existing))
-            return existing
+            val corrected = existing.copy(
+                title = if (SongIdentityResolver.truncated(existing.title) && !SongIdentityResolver.truncated(request.title)) request.title else existing.title,
+                artist = if (SongIdentityResolver.truncated(existing.artist) && !SongIdentityResolver.truncated(request.artist)) request.artist else existing.artist,
+            )
+            if (corrected != existing) {
+                library.update(corrected)
+                library.savePlaylists(library.playlists().map { list -> list.copy(tracks = list.tracks.map { if (it.id == corrected.id) corrected else it }) })
+            }
+            addToPlaylist(request.playlistId, listOf(corrected))
+            return corrected
         }
         Files.createDirectories(musicDirectory)
         val stage = Files.createTempDirectory(musicDirectory, ".video-import-")
@@ -535,9 +550,21 @@ class JvmMusicAssistant(
         library.savePlaylists(library.playlists().map { if (it.id == id) it.copy(tracks = (it.tracks + tracks).distinctBy(Track::id), subtitle = "${(it.tracks + tracks).distinctBy(Track::id).size} 首") else it })
         if (id != DAILY_ID) tracks.forEach { retain(it.id) }
     }
-    private suspend fun obtain(song: SongRequest): Track {
+    private suspend fun obtain(input: SongRequest): Track {
+        var song = input
+        if (SongIdentityResolver.truncated(input.title) || SongIdentityResolver.truncated(input.artist)) {
+            status(ImportProgress("核对完整歌名", "${input.artist} - ${input.title}"))
+            val local = library.tracks().map { SongRequest(it.title, it.artist, it.album) }
+            song = SongIdentityResolver.choose(input, local)
+                ?: SongIdentityResolver.choose(input, songMetadata.search(input))
+                ?: run {
+                    val candidates = bili.search(input.copy(title = SongIdentityResolver.prefix(input.title), artist = SongIdentityResolver.prefix(input.artist)))
+                    SongIdentityResolver.choose(input, SongIdentityResolver.videoNames(input, candidates))
+                }
+                ?: error("截图中的歌名或歌手被截断，未找到可确认的完整名称，请补充：${input.artist} - ${input.title}")
+        }
         library.tracks().firstOrNull { normalize(it.title) == normalize(song.title) && normalize(it.artist) == normalize(song.artist) }?.let { return it }
-        val found = bili.search(song).firstOrNull() ?: error("没有找到可信的原版候选：${song.artist} - ${song.title}")
+        val found = bili.search(song.copy(title = SongIdentityResolver.searchTitle(song.title))).firstOrNull() ?: error("没有找到可信的原版候选：${song.artist} - ${song.title}")
         return download(VideoImportRequest("https://www.bilibili.com/video/${found.bvid}?p=${found.page}", song.title, song.artist, song.album.ifBlank { "单曲" }, found.coverUrl))
     }
 
@@ -545,7 +572,8 @@ class JvmMusicAssistant(
         require(message.isNotBlank() || images.isNotEmpty()) { "请输入消息或选择歌单截图" }
         val activeProvider = (cachedSettings ?: settings()).assistantProvider
         val activeConnection = (cachedSettings ?: settings()).connections.firstOrNull { it.provider == activeProvider } ?: AiConnection(activeProvider)
-        val activeModelTag = "${activeProvider.label} (${activeConnection.model.ifBlank { activeProvider.defaultModel }})"
+        val activeModelTag = if (images.isNotEmpty() && (cachedSettings ?: settings()).screenshotRecognition == ScreenshotRecognition.LocalOcr) "本地 OCR · PP-OCRv5"
+            else "${activeProvider.label} (${activeConnection.model.ifBlank { activeProvider.defaultModel }})"
 
         this@JvmMusicAssistant.message("user", message.ifBlank { "从截图导入歌单" } + if (images.isNotEmpty()) "（${images.size} 张图片）" else "")
         try {
@@ -584,9 +612,20 @@ class JvmMusicAssistant(
     }
     private suspend fun importScreenshots(instruction: String, images: List<AiImage>) {
         require(images.size <= 40 && images.sumOf { it.bytes.size.toLong() } <= 30_000_000) { "截图过多或过大，请分批选择" }
-        val cacheKey = "ocr-v1:" + images.joinToString(":") { MusicJsonStore.hash(it.bytes) }
+        val config = cachedSettings ?: settings()
+        val local = config.screenshotRecognition == ScreenshotRecognition.LocalOcr
+        val connection = config.connections.firstOrNull { it.provider == config.visionProvider }
+        val backend = if (local) ScreenshotPlaylistParser.VERSION else "api:${config.visionProvider}:${connection?.baseUrl}:${connection?.model}"
+        val cacheKey = "ocr-v2:" + MusicJsonStore.hash(backend + ":" + instruction.take(1000) + ":" + images.joinToString(":") { MusicJsonStore.hash(it.bytes) })
         val cached = store.cache(cacheKey)
-        val data = cached ?: run {
+        val data = cached ?: if (local) {
+            val recognizer = screenshotOcr ?: error("此安装包未提供本地 OCR，请重新安装正式版或在设置切换到云端 API")
+            val pages = recognizer.recognize(images, ::status)
+            val playlists = ScreenshotPlaylistParser.parse(pages, instruction)
+            require(playlists.isNotEmpty()) { "本地 OCR 未能可靠配对歌名与歌手；请提供更清晰的歌单截图，或在设置切换到云端 API" }
+            JSONObject().put("playlists", JSONArray(playlists.map { playlist -> JSONObject().put("name", playlist.name).put("tracks", JSONArray(playlist.songs.map { song -> JSONObject().put("title", song.title).put("artist", song.artist).put("album", song.album) })) }))
+                .also { store.cache(cacheKey, it) }
+        } else run {
             status(ImportProgress("识别歌单截图"))
             val content = JSONArray().put(JSONObject().put("type", "text").put("text", "识别全部歌单名称和歌曲，跨图重叠行去重。不要补写看不清的歌曲。仅返回JSON：{\"playlists\":[{\"name\":\"歌单名\",\"tracks\":[{\"title\":\"歌名\",\"artist\":\"歌手\",\"album\":\"\"}]}]}。用户备注仅供识别：${instruction.take(1000)}"))
             images.forEach { content.put(JSONObject().put("type", "image_url").put("image_url", JSONObject().put("url", "data:${it.mimeType};base64,${Base64.getEncoder().encodeToString(it.bytes)}"))) }
@@ -611,7 +650,8 @@ class JvmMusicAssistant(
                 catch (error: Exception) { errors += "${song.title}：${error.message}" }
             }
         }
-        message("assistant", "截图歌单处理完成，已匹配或下载 $added 首。" + if (errors.isEmpty()) "" else "\n未完成 ${errors.size} 首：\n${errors.take(30).joinToString("\n")}")
+        message("assistant", "截图歌单处理完成，已匹配或下载 $added 首。" + if (errors.isEmpty()) "" else "\n未完成 ${errors.size} 首：\n${errors.take(30).joinToString("\n")}",
+            model = if (local) "本地 OCR · PP-OCRv5" else "${config.visionProvider.label} (${connection?.model.orEmpty()})")
     }
 
     override suspend fun translate(track: Track, lyrics: Lyrics, language: String, force: Boolean): Lyrics = task("翻译歌词") {

@@ -22,7 +22,8 @@ object MusicFeatureCodec {
             json.optString("translationLanguage", "中文").take(40),
             LyricDisplay.entries.firstOrNull { it.name == json.optString("lyricDisplay") } ?: LyricDisplay.Bilingual,
             decrypt(json.optString("bilibiliCookie")), decrypt(json.optString("speechApiKey")),
-            json.optString("speechUrl", "wss://dashscope.aliyuncs.com/api-ws/v1/inference"), json.optInt("monthlySpeechSeconds", 3600).coerceIn(60, 360000))
+            json.optString("speechUrl", "wss://dashscope.aliyuncs.com/api-ws/v1/inference"), json.optInt("monthlySpeechSeconds", 3600).coerceIn(60, 360000),
+            ScreenshotRecognition.entries.firstOrNull { it.name == json.optString("screenshotRecognition") } ?: ScreenshotRecognition.LocalOcr)
     }
     fun encode(s: MusicFeatureSettings, encrypt: (String) -> String = { it }): JSONObject = JSONObject()
         .put("connections", JSONArray(s.connections.map { c -> JSONObject().put("provider", c.provider.name).put("baseUrl", c.baseUrl.trim()).put("model", c.model.trim()).put("key", encrypt(c.apiKey.trim())).put("vision", c.vision) }))
@@ -32,6 +33,7 @@ object MusicFeatureCodec {
         .put("floatingLyrics", s.floatingLyrics).put("floatingLyricsLocked", s.floatingLyricsLocked).put("floatingLyricsSize", s.floatingLyricsSize.coerceIn(14, 56))
         .put("translationLanguage", s.translationLanguage.take(40)).put("lyricDisplay", s.lyricDisplay.name).put("bilibiliCookie", encrypt(s.bilibiliCookie))
         .put("speechApiKey", encrypt(s.speechApiKey)).put("speechUrl", s.speechUrl).put("monthlySpeechSeconds", s.monthlySpeechSeconds)
+        .put("screenshotRecognition", s.screenshotRecognition.name)
     fun track(t: Track): JSONObject = JSONObject().put("id", t.id).put("title", t.title).put("artist", t.artist).put("album", t.album)
         .put("duration", t.durationText).put("seed", t.artworkSeed).put("favorite", t.isFavorite).put("source", t.sourceUri).put("artwork", t.artworkPath).put("mime", t.mimeType)
     fun track(j: JSONObject): Track = Track(j.getString("id"), j.getString("title"), j.optString("artist", "未知歌手"), j.optString("album", "本地音乐"), j.optString("duration", "0:00"), j.optInt("seed"), j.optBoolean("favorite"), j.optString("source").takeIf { it.isNotBlank() && it != "null" }, j.optString("artwork").takeIf { it.isNotBlank() && it != "null" }, j.optString("mime", "audio/mpeg"))

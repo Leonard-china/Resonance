@@ -1,6 +1,6 @@
-# 2026-10-16 — Resonance 详细开发说明：曲库、音乐助手、推荐与歌词
+# 2026-10-17 — Resonance 详细开发说明：本地截图 OCR、曲库、音乐助手与歌词
 
-源码核对日期：2026-10-16（Asia/Shanghai）；当前版本为 **`0.4.5 / 28`**，关于页新增官方网站、为作者充电（微信/支付宝）、爱发电主页与 GitHub 开源地址，构建双端发布版。最新正式发布见 [v0.4.5 发布说明](RELEASE_NOTES-0.4.5.md) 及 [发布记录](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md)。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-17（Asia/Shanghai）；当前版本为 **`0.4.6 / 29`**，双端内置本地截图 OCR、保留云端 API 切换，并在下载前核对截断歌名。发布与实际验证见 [v0.4.6 发布说明](RELEASE_NOTES-0.4.6.md) 及 [发布记录](changes/2026-10-17-03-release-0.4.6.md)。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -32,7 +32,7 @@
 | 歌单文件导出/导入 | 已接入 | 已接入 | .resonance 明文 ZIP，含音频、封面、元数据和关系 |
 | B 站音频导入 | 已接入 | 已接入 | 链接/BV/分 P，编辑歌名歌手专辑与封面，转码入库、专辑封面匹配/视频兜底 |
 | 多模型音乐助手 | 已接入 | 已接入 | 千问、DeepSeek、豆包、自定义 HTTPS 接口，支持多会话独立隔离、消息回复模型溯源与推荐 Chip 预选 |
-| 长截图歌单识别 | 已接入 | 已接入 | 区域分片、视觉 OCR、本地匹配、原版候选搜索、下载与歌单整理 |
+| 长截图歌单识别 | 本地 OCR / 云端 API | 本地 OCR / 云端 API | 内置 PP-OCRv5、逐片识别、文字行配对/去重；截断名称核对后下载，不自动切换收费 API |
 | 每日推荐 | 前台/后台可选 | 前台/托盘后台可选 | 自定义间隔/数量；临时曲目清理；收藏/入自建歌单保留 |
 | 元数据/封面/歌词补全 | 已接入 | 已接入 | 公共来源优先，显式 AI 兜底；歌曲页无常驻缺失计数 |
 | 歌曲信息编辑 | 曲库覆盖值 | 原有入口可写标签 | B 站新 MP3 两端都真实写入标签与封面 |
@@ -124,7 +124,7 @@ PersistenceQueue.submit 是顺序屏障，submitLatest 按键合并待写值，r
 | Playlist | id/name/subtitle/tracks/artworkSeed；成员快照可恢复旧目录条目 |
 | Lyrics / LyricLine | trackId、lines、synchronized、instrumental、source、fromCache；timestampMs 可空；新增 translation/translationLanguage |
 | ImportReport | tracks、skippedCount、warnings、cancelled；取消允许部分完成 |
-| MusicFeatureSettings | 连接列表/文本视觉角色、推荐开关/后台/间隔/数量、月预算、悬浮开关/锁/字号、翻译语言/显示、B 站 Cookie |
+| MusicFeatureSettings | 连接列表/文本视觉角色、推荐开关/后台/间隔/数量、月预算、悬浮开关/锁/字号、翻译语言/显示、B 站 Cookie；screenshotRecognition（默认 LocalOcr，可选 CloudApi） |
 | MusicAssistantState | 最近 40 条消息、任务状态/进度、最近100条持久步骤、月输入/缓存/输出 Token、语音秒数、推荐批 |
 | VideoImportRequest | link/title/artist/album/cover/playlistId；自定义字段写入新 MP3 |
 | RecommendationBatch | createdAt/trackIds/reasons；固定歌单 ID resonance-daily-recommendations |
@@ -232,7 +232,8 @@ AtomicPropertiesFile、MusicJsonStore 用临时文件/原子替换/上一版 .ba
 | --- | --- |
 | LRCLIB / 补全 | 歌名歌手专辑/时长/检索词，下载公开封面 |
 | AI 聊天/推荐 | 稳定库摘要、歌单名、部分曲目、最近消息和拒绝原因；不上传整库音频 |
-| 截图 OCR / 翻译 | 用户图片分片 / 歌词文本及目标语言 |
+| 截图 OCR / 翻译 | 本地 OCR 不上传图片；CloudApi 发送图片分片，翻译发送歌词文本及目标语言 |
+| 截断歌曲信息核对 | 可见歌名/歌手前缀发给 QQ音乐、iTunes/B站；不发送截图或音频 |
 | B 站 | 搜索词、视频 ID、WBI、可选自有 Cookie |
 | 主动生成同步歌词 | 将准备后的整首音频发送到配置的WSS语音接口，独立时长计费 |
 | 天气 | 城市、粗坐标，现有天气/IP 定位接口 |
@@ -409,7 +410,13 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 
 ### 截图流水线与缓存
 
-图片选择 → 区域分片 → 内容 hash 查 OCR 缓存 → 视觉返回歌单名/歌名/歌手 JSON → 重叠去重 → 确定 ID 截图歌单 → 本地匹配 → B 站搜索/下载 → 逐曲保存。单歌单最多300首，一次20歌单，错误列出具体歌曲。当前是用户发送后直接导入，不等待逐首批准。
+2026-10-17：截图识别由 `screenshotRecognition` 独立选择，旧配置默认 `LocalOcr`，原 `visionProvider` 和 API 配置保留。`PaddleScreenshotOcr` 使用 ONNX Runtime（Android 1.23.2 / Windows 1.20.0） CPU、内置 PP-OCRv5 移动版检测/识别及字典，Android assets / Windows classpath 分别由 `androidScreenshotOcr` / `desktopScreenshotOcr` 接入；无 Python/外部模型服务。逐片解码、单行推理、2 个推理线程，任务结束/错误/取消均关闭会话与张量；不会自动退回云端。`ScreenshotPlaylistParser` 按坐标整理水平歌名/歌手行、过滤界面文字并跨片去重，复杂排版与旋转照片不保证识别。模型来源、校验和、Apache-2.0 许可和复现方式见 `composeApp/src/ocrModels/README.md`。
+
+本地识别结果与云端识别结果共用后续导入。`ocr-v2` 缓存键包含后端版本/云端连接、用户备注与图片摘要；切换后端不会复用旧 API 结果。本地识图不要求 Key、不调用 `ask`、不占用云端 Token 预算；只有 `CloudApi` 才发送图片至所选视觉服务。截图图片仍受 40 片/30 MB 上限约束。
+
+`SongIdentityResolver` 检测末尾省略号，结合本地完整曲名、QQ音乐/iTunes公开目录，必要时结合有歌手证据和书名号等明确边界的 B 站标题核对；多候选/无证据报告未完成，不生成缺失文字。确认结果进入 `VideoImportRequest`，两端新 MP3 标签与曲库使用同一完整信息。没有批量修改历史曲库；重新导入已存在同一视频时，仅修正原截断曲库覆盖值/歌单快照，不重编码旧音频。
+
+图片选择 → 区域分片 → 后端/备注/内容 hash 查 OCR 缓存 → 本地 OCR 布局整理或视觉 API 返回歌单名/歌名/歌手 JSON → 重叠去重 → 确定 ID 截图歌单 → 本地匹配 → B 站搜索/下载 → 逐曲保存。单歌单最多300首，一次20歌单，错误列出具体歌曲。当前是用户发送后直接导入，不等待逐首批准。
 
 固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要含最多500首、歌手统计和歌单，工具可搜索大库。支持多会话隔离管理（最多持久化 30 个会话），首条消息自动截取前 20 字生成会话标题，各会话聊天独立落盘；请求严格仅取当前会话最近 16 条上下文，切换或新建会话 0 Token 消耗，彻底避免跨话题 Prompt 膨胀。消息气泡清晰标注回复模型（如 `回复自 通义千问 (qwen3-vl-flash)`），API 设置页提供常用主流模型 Chip 预选与一键恢复默认地址/模型按钮。OCR/翻译持久缓存避免重复成本。
 
@@ -438,7 +445,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 | 首次教程/学习进度/操作定位 | TutorialCatalog、TutorialController、TutorialScreens、TutorialProgressCodec、App | TutorialProgressTest / TutorialNavigationTest；首次跳过、跨启动继续、透空点击与滚动目标 |
 | 包格式/FLAC | PlainSyncPackage、平台导入 | PlainSyncPackageTest、PlaylistArchiveFormatTest |
 | B 站412/匹配错误 | BilibiliClient.json/inspect/search/candidateScore | 官方验证/网络/Cookie，MusicAssistantTest |
-| AI工具/截图/预算 | JvmMusicAssistant、MusicAiClient、AssistantImages、Codec | MusicAssistantTest、MusicFeaturesIntegrationTest |
+| AI工具/截图/预算 | JvmMusicAssistant、MusicAiClient、AssistantImages、Codec、ocr/*、SongIdentityResolver | MusicAssistantTest、ScreenshotOcrTest、LocalScreenshotOcrTest、MusicFeaturesIntegrationTest |
 | 推荐误删/清理失败 | recommendInternal/pending、原生 delete/activeMusicId | rollover/failure/current-playing/dislike 回归 |
 | 翻译/时间轴/音频识别 | ParaformerLyricsClient、AudioLyricAlignment、GeneratedLyricsStore、原生positionMs | AudioLyricAlignmentTest / MusicAssistantTest / FloatingLyricsTest |
 | 任务重试/中断 | MusicTaskJournal、JvmMusicAssistant.step/retryTask | 持久恢复、封面重试、推荐pending取消回归 |
@@ -468,7 +475,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 <a id="website"></a>
 
-## 16. 独立官网与匿名论坛（2026-10-16 核对）
+## 16. 独立官网与匿名论坛（2026-10-17 核对）
 
 实现与部署入口：[website/README.md](../website/README.md)，实现见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)。现网 [leonard.asia](https://leonard.asia) 使用翼龙 Ubuntu 容器、Java 启动器守护 Gunicorn 26.2.0（1 进程/4 线程）与独立邮件 worker，Cloudflare Tunnel 转发到 `127.0.0.1:50034`；路径和重启方式先读 [现网运维](../website/OPERATIONS.md) 与 [核对记录](changes/2026-10-16-20-production-site-handoff.md)。仓库 Nginx/systemd 配置保留为其他主机部署方案。依赖仍为 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP，没有常驻 Node 服务。
 
@@ -480,5 +487,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 - `data/site.sqlite3` 保存话题、匿名帖子/回复、订阅偏好、邮件草稿/队列和发布记录，WAL + 写事务；截图压缩并去 EXIF，收款码无损编码。真实 `.env`、`secret.key`、`owner.json`、运行数据库及上传文件忽略，不进入部署源码 ZIP 或 Git。
 - 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可公告、审批话题、删留言、发布版本、预览/测试/群发邮件、上传收款码。
 - 邮件：确认页面的 POST 才生效，版本更新与推广独立选择；推广默认不勾选，邮件独立投递、支持退订，发送前重新检查偏好。未配置 SMTP 明确关闭订阅/发送。发布安装包不会自动群发。worker 重启保留队列，但 SMTP 成功后进程中断可能少量重复送达。
+
+2026-10-17：官网新增 `announcements.publish_announcement` 与 `manage.py publish-announcement content/0.4.6.json`，校验已发布版本及公开内容，在单一事务更新公告标题/正文，不新建邮件任务；源码打包白名单包含公告模块与公开内容。直连安装包链接带 `v=release.version`，避免新版本沿用旧缓存 URL。生产发布及实际校验见 [v0.4.6 发布记录](changes/2026-10-17-03-release-0.4.6.md)。
 
 验证边界：已通过生产 HTTPS 核对首页、下载、论坛与两端 Range，通过现有面板客户端读取资源状态和指定源码；不等同于服务器故障恢复或真实 SMTP 测试。首页图片仍是已有测试样本截图。网站任务不重新构建 Kotlin 应用；数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。后台私有入口、密码、面板 Key 与 tunnel token 不写入文档。

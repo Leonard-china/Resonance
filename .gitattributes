@@ -1,0 +1,2 @@
+composeApp/src/ocrModels/ocr/*.onnx binary
+composeApp/src/ocrModels/ocr/characters.txt text eol=lf

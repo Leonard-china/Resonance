@@ -75,6 +75,13 @@ internal fun MusicFeatureSettingsSection() {
     }
     SectionHeader("AI 音乐助手")
     SettingRow(Icons.Default.AutoAwesome, "打开音乐助手", "聊天管理、截图导入与每日推荐", { feature.onNavigate(LibraryDestination.Assistant) })
+    Text("歌单截图识别", style = MaterialTheme.typography.labelLarge)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ScreenshotRecognition.entries.forEach { mode ->
+            FilterChip(settings.screenshotRecognition == mode, { feature.save(settings.copy(screenshotRecognition = mode)) }, label = { Text(mode.label) })
+        }
+    }
+    Text(if (settings.screenshotRecognition == ScreenshotRecognition.LocalOcr) "图片在本机识别，无需 API Key；查找完整歌名和下载歌曲仍需联网。" else "图片发送给所选视觉 API，按服务商规则计费。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
     TextButton(onClick = { configureAi = !configureAi }) { Text(if (configureAi) "收起模型设置" else "配置模型与 API Key") }
     if (configureAi) AiConnectionEditor(feature)
     SectionHeader("每日推荐")
@@ -235,10 +242,10 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
             }) { Text("保存") }
             TextButton(onClick = { feature.launch { feature.message = feature.assistant?.testConnection(AiConnection(selected, url.trim(), model.trim(), key.trim(), vision)).orEmpty() } }, enabled = key.isNotBlank() && model.isNotBlank(), modifier = Modifier.tutorialTarget(TutorialTarget.AiTest)) { Text("测试连接") }
         }
-        Text("音乐助手：${settings.assistantProvider.label} · 图片识别：${settings.visionProvider.label}", style = MaterialTheme.typography.bodySmall)
+        Text("音乐助手：${settings.assistantProvider.label} · 图片识别：${if (settings.screenshotRecognition == ScreenshotRecognition.LocalOcr) "本地 OCR" else settings.visionProvider.label}", style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = { feature.save(feature.settings.copy(assistantProvider = selected)) }) { Text("用于音乐管理") }
-            TextButton(onClick = { feature.save(feature.settings.copy(visionProvider = selected)) }, enabled = vision) { Text("用于截图识别") }
+            TextButton(onClick = { feature.save(feature.settings.copy(visionProvider = selected, screenshotRecognition = ScreenshotRecognition.CloudApi)) }, enabled = vision) { Text("用于截图识别") }
         }
     }
 }
@@ -345,7 +352,7 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             if (!state.task.running && state.task.message.isNotBlank()) item { Text(state.task.message, style = MaterialTheme.typography.bodySmall) }
         }
         if (images.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("已选择 ${images.size} 个截图片段", modifier = Modifier.weight(1f))
+            Text("已选择 ${images.size} 个截图片段 · ${feature.settings.screenshotRecognition.label}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { images = emptyList() }) { Text("移除图片") }
         }
         OutlinedTextField(input, { input = it }, placeholder = { Text("例如：把截图中的歌单整理到我的曲库") }, modifier = Modifier.fillMaxWidth(), maxLines = 4)

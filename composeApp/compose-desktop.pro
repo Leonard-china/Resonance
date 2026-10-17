@@ -19,3 +19,8 @@
 -dontwarn org.conscrypt.**
 -dontwarn org.bouncycastle.jsse.**
 -dontwarn org.openjsse.**
+
+# ProGuard cannot resolve MethodHandle.invokeExact's signature-polymorphic
+# short/float calls in ORT's optional FP16 conversions against JDK 17 stubs.
+# Screenshot OCR uses float32; preserve the class and suppress only this probe.
+-dontwarn ai.onnxruntime.platform.Fp16Conversions
