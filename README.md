@@ -2,7 +2,7 @@
 
 Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量平衡、双语与桌面歌词、B 站音频导入及多模型音乐助手。
 
-开发入口：[文档索引](docs/README.md) · [详细开发说明](docs/DEVELOPMENT.md) · [AI 协作规则](AGENTS.md)。当前版本 **v0.4.6 / versionCode 29**，最新发布包见 [v0.4.6 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.6) 与 [版本说明](docs/RELEASE_NOTES-0.4.6.md)。
+开发入口：[文档索引](docs/README.md) · [详细开发说明](docs/DEVELOPMENT.md) · [AI 协作规则](AGENTS.md)。当前版本 **v0.4.8 / versionCode 31**，最新发布包见 [v0.4.8 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.8)、[版本说明](docs/RELEASE_NOTES-0.4.8.md) 与 [新版详细介绍](docs/Resonance-v0.4.8-新版详细介绍.md)。
 
 ## 功能
 

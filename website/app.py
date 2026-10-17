@@ -184,8 +184,8 @@ def create_app(overrides=None):
 
     @app.before_request
     def prepare():
-        if request.endpoint == 'static':
-            return None  # Public assets must not create or refresh a visitor's session cookie.
+        if request.endpoint in ('static', 'download'):
+            return None  # Public assets and download binaries must not create or refresh session cookies.
         session.permanent = True
         if 'visitor' not in session:
             session['visitor'] = secrets.token_hex(12)
@@ -219,6 +219,8 @@ def create_app(overrides=None):
             version = static_versions.get((request.view_args or {}).get('filename'))
             if version and request.args.get('v') == version:
                 response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        elif request.endpoint == 'download' and response.status_code in (200, 206):
+            response.headers['Cache-Control'] = 'public, max-age=86400, stale-while-revalidate=3600'
         else:
             response.headers['Cache-Control'] = 'no-store'
         return response
@@ -329,7 +331,7 @@ def create_app(overrides=None):
             posts = db.execute('SELECT p.*,t.name AS topic_name,t.slug AS topic_slug,'
                                '(SELECT COUNT(*) FROM replies WHERE post_id=p.id) AS reply_count '
                                'FROM posts p JOIN topics t ON t.id=p.topic_id ' + clause +
-                               ' ORDER BY p.updated_at DESC,p.id DESC LIMIT 20 OFFSET ?',
+                               ' ORDER BY p.is_pinned DESC,p.updated_at DESC,p.id DESC LIMIT 20 OFFSET ?',
                                parameters + [(page - 1) * 20]).fetchall()
         return dict(topics=topics, selected=selected, posts=posts, page=page, total=total)
 
@@ -479,9 +481,23 @@ def create_app(overrides=None):
     @app.get(private + '/dashboard')
     @owner_only
     def owner_dashboard():
+        q = request.args.get('q', '').strip()
         with connect(app.config['DATABASE']) as db:
             requests = db.execute("SELECT * FROM topic_requests WHERE status='pending' ORDER BY id").fetchall()
-            posts = db.execute('SELECT p.*,t.name AS topic_name FROM posts p JOIN topics t ON t.id=p.topic_id ORDER BY p.id DESC LIMIT 100').fetchall()
+            topics = db.execute(
+                'SELECT t.*, (SELECT COUNT(*) FROM posts WHERE topic_id=t.id) AS post_count '
+                'FROM topics t ORDER BY t.position, t.id'
+            ).fetchall()
+            if q:
+                filter_num = int(q) if q.isdigit() else -1
+                posts = db.execute(
+                    'SELECT p.*,t.name AS topic_name FROM posts p JOIN topics t ON t.id=p.topic_id '
+                    'WHERE p.id=? OR p.title LIKE ? OR p.body LIKE ? OR p.author LIKE ? '
+                    'ORDER BY p.id DESC LIMIT 100',
+                    (filter_num, f'%{q}%', f'%{q}%', f'%{q}%')
+                ).fetchall()
+            else:
+                posts = db.execute('SELECT p.*,t.name AS topic_name FROM posts p JOIN topics t ON t.id=p.topic_id ORDER BY p.id DESC LIMIT 100').fetchall()
             replies = db.execute('SELECT r.*,p.title FROM replies r JOIN posts p ON p.id=r.post_id ORDER BY r.id DESC LIMIT 100').fetchall()
             campaigns = db.execute('SELECT c.*,(SELECT COUNT(*) FROM outbox WHERE campaign_id=c.id AND status=\'sent\') AS sent,'
                                    '(SELECT COUNT(*) FROM outbox WHERE campaign_id=c.id) AS recipients '
@@ -489,8 +505,15 @@ def create_app(overrides=None):
             counts = dict(db.execute('SELECT status,COUNT(*) FROM outbox GROUP BY status').fetchall())
             subscribers = db.execute('SELECT COUNT(*) AS total,COALESCE(SUM(updates),0) AS updates,'
                                      'COALESCE(SUM(promotions),0) AS promotions FROM subscribers WHERE confirmed=1').fetchone()
-        return render_template('owner.html', private=private, requests=requests, posts=posts, replies=replies,
-                               campaigns=campaigns, counts=counts, subscribers=subscribers)
+            stats = dict(
+                posts=db.execute('SELECT COUNT(*) FROM posts').fetchone()[0],
+                replies=db.execute('SELECT COUNT(*) FROM replies').fetchone()[0],
+                topics=len(topics),
+                requests=len(requests),
+                subscribers=subscribers['total'] if subscribers else 0,
+            )
+        return render_template('owner.html', private=private, requests=requests, topics=topics, posts=posts, replies=replies,
+                               campaigns=campaigns, counts=counts, subscribers=subscribers, stats=stats, q=q)
 
     @app.post(private + '/announcement')
     @owner_only
@@ -534,11 +557,128 @@ def create_app(overrides=None):
                 if db.execute('SELECT id FROM topics WHERE name=?', (row['name'],)).fetchone():
                     flash('同名话题已存在，申请已合并处理。', 'success')
                 else:
-                    db.execute('INSERT INTO topics(slug,category,name,position) VALUES(?,?,?,100)',
-                               ('other-' + secrets.token_hex(6), '其他', row['name']))
+                    max_pos = db.execute('SELECT COALESCE(MAX(position), 0) FROM topics').fetchone()[0]
+                    db.execute('INSERT INTO topics(slug,category,name,position) VALUES(?,?,?,?)',
+                               ('other-' + secrets.token_hex(6), '其他', row['name'], max_pos + 10))
             db.execute('UPDATE topic_requests SET status=? WHERE id=?', (decision, request_id))
         flash('申请已处理。', 'success')
         return redirect(private + '/dashboard#topics', code=303)
+
+    @app.post(private + '/topic/create')
+    @owner_only
+    def owner_topic_create():
+        name = text('name', 30, 2)
+        category = text('category', 20, 1)
+        raw_slug = request.form.get('slug', '').strip().lower()
+        if raw_slug:
+            if not re.fullmatch(r'[a-z0-9_-]{2,40}', raw_slug):
+                abort(400, description='话题标识需为 2–40 位小写字母、数字、下划线或短横线。')
+            slug = raw_slug
+        else:
+            slug = 'topic-' + secrets.token_hex(4)
+        pos = request.form.get('position', type=int)
+        with transaction(app.config['DATABASE']) as db:
+            if db.execute('SELECT id FROM topics WHERE name=?', (name,)).fetchone():
+                flash(f'同名话题「{name}」已存在。', 'error')
+                return redirect(private + '/dashboard#topics', code=303)
+            while db.execute('SELECT id FROM topics WHERE slug=?', (slug,)).fetchone():
+                slug = 'topic-' + secrets.token_hex(4)
+            if pos is None:
+                max_pos = db.execute('SELECT COALESCE(MAX(position), 0) FROM topics').fetchone()[0]
+                pos = max_pos + 10
+            db.execute('INSERT INTO topics(slug,category,name,position) VALUES(?,?,?,?)',
+                       (slug, category, name, pos))
+        flash(f'新话题「{name}」已添加并向论坛开放。', 'success')
+        return redirect(private + '/dashboard#topics', code=303)
+
+    @app.post(private + '/topic/<int:topic_id>/delete')
+    @owner_only
+    def owner_topic_delete(topic_id):
+        with transaction(app.config['DATABASE']) as db:
+            topic = db.execute('SELECT * FROM topics WHERE id=?', (topic_id,)).fetchone()
+            if not topic:
+                abort(404)
+            count = db.execute('SELECT COUNT(*) FROM posts WHERE topic_id=?', (topic_id,)).fetchone()[0]
+            if count > 0:
+                flash(f'无法删除话题「{topic["name"]}」：该话题下仍有 {count} 篇帖子，请先清理或迁移其中的帖子。', 'error')
+                return redirect(private + '/dashboard#topics', code=303)
+            db.execute('DELETE FROM topics WHERE id=?', (topic_id,))
+        flash(f'话题「{topic["name"]}」已删除。', 'success')
+        return redirect(private + '/dashboard#topics', code=303)
+
+    @app.post(private + '/topic/<int:topic_id>/edit')
+    @owner_only
+    def owner_topic_edit(topic_id):
+        name = text('name', 30, 2)
+        category = text('category', 20, 1)
+        pos = request.form.get('position', 100, type=int)
+        with transaction(app.config['DATABASE']) as db:
+            topic = db.execute('SELECT * FROM topics WHERE id=?', (topic_id,)).fetchone()
+            if not topic:
+                abort(404)
+            conflict = db.execute('SELECT id FROM topics WHERE name=? AND id!=?', (name, topic_id)).fetchone()
+            if conflict:
+                flash('已有其他话题使用此名称。', 'error')
+                return redirect(private + '/dashboard#topics', code=303)
+            db.execute('UPDATE topics SET name=?, category=?, position=? WHERE id=?', (name, category, pos, topic_id))
+        flash(f'话题「{name}」已更新。', 'success')
+        return redirect(private + '/dashboard#topics', code=303)
+
+    @app.post(private + '/pin/post/<int:post_id>')
+    @owner_only
+    def owner_pin_post(post_id):
+        with transaction(app.config['DATABASE']) as db:
+            row = db.execute('SELECT is_pinned FROM posts WHERE id=?', (post_id,)).fetchone()
+            if not row:
+                abort(404)
+            new_status = 0 if row['is_pinned'] else 1
+            db.execute('UPDATE posts SET is_pinned=? WHERE id=?', (new_status, post_id))
+        flash('帖子已置顶。' if new_status else '已取消置顶。', 'success')
+        ref = request.referrer
+        if ref and (private in ref or '/forum' in ref):
+            return redirect(ref, code=303)
+        return redirect(private + '/dashboard#moderation', code=303)
+
+    @app.post(private + '/delete/post-by-query')
+    @owner_only
+    def owner_delete_post_by_query():
+        raw = request.form.get('query', '').strip()
+        match = re.search(r'(\d+)', raw)
+        if not match:
+            flash('请输入有效的帖子 ID 或帖子链接。', 'error')
+            return redirect(private + '/dashboard#moderation', code=303)
+        post_id = int(match.group(1))
+        with transaction(app.config['DATABASE']) as db:
+            row = db.execute('SELECT * FROM posts WHERE id=?', (post_id,)).fetchone()
+            if not row:
+                flash(f'未找到 ID 为 {post_id} 的帖子。', 'error')
+                return redirect(private + '/dashboard#moderation', code=303)
+            images = [row['image']]
+            images += [r['image'] for r in db.execute('SELECT image FROM replies WHERE post_id=?', (post_id,))]
+            db.execute('DELETE FROM posts WHERE id=?', (post_id,))
+        remove_images(images)
+        flash(f'帖子 #{post_id}「{row["title"]}」及其关联回复和附图已删除。', 'success')
+        return redirect(private + '/dashboard#moderation', code=303)
+
+    @app.post(private + '/delete/reply-by-query')
+    @owner_only
+    def owner_delete_reply_by_query():
+        raw = request.form.get('query', '').strip()
+        match = re.search(r'(\d+)', raw)
+        if not match:
+            flash('请输入有效的回复 ID。', 'error')
+            return redirect(private + '/dashboard#moderation', code=303)
+        reply_id = int(match.group(1))
+        with transaction(app.config['DATABASE']) as db:
+            row = db.execute('SELECT * FROM replies WHERE id=?', (reply_id,)).fetchone()
+            if not row:
+                flash(f'未找到 ID 为 {reply_id} 的回复。', 'error')
+                return redirect(private + '/dashboard#moderation', code=303)
+            image = row['image']
+            db.execute('DELETE FROM replies WHERE id=?', (reply_id,))
+        remove_images([image])
+        flash(f'回复 #{reply_id} 已删除。', 'success')
+        return redirect(private + '/dashboard#moderation', code=303)
 
     @app.post(private + '/delete/<kind>/<int:item_id>')
     @owner_only
@@ -556,6 +696,12 @@ def create_app(overrides=None):
             db.execute(f'DELETE FROM {table} WHERE id=?', (item_id,))
         remove_images(images)
         flash('内容已删除。', 'success')
+        ref = request.referrer
+        if ref:
+            if kind == 'post' and f'/forum/post/{item_id}' in ref:
+                return redirect('/forum', code=303)
+            if private in ref or '/forum' in ref:
+                return redirect(ref, code=303)
         return redirect(private + '/dashboard#moderation', code=303)
 
     @app.post(private + '/payment')

@@ -1,8 +1,10 @@
 # 2026-10-17 — Resonance 详细开发说明：本地截图 OCR、曲库、音乐助手与歌词
 
-源码核对日期：2026-10-17（Asia/Shanghai）；当前版本为 **`0.4.6 / 29`**，双端内置本地截图 OCR、保留云端 API 切换，并在下载前核对截断歌名。发布与实际验证见 [v0.4.6 发布说明](RELEASE_NOTES-0.4.6.md) 及 [发布记录](changes/2026-10-17-03-release-0.4.6.md)。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-17（Asia/Shanghai）；当前版本为 **`0.4.8 / 31`**，双端集成滑动换页跟手动画、动效流畅度优化与内置三大免配置歌源。发布与实际验证见 [v0.4.8 发布说明](RELEASE_NOTES-0.4.8.md)、[新版详细介绍](Resonance-v0.4.8-新版详细介绍.md) 及 [发布记录](changes/2026-10-17-18-release-0.4.8.md)。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
+
+工作区新增的手势跟手动画、流体减速曲库过渡、动效裁剪优化及网易云/酷我/酷狗三大内置歌源已完成全量单元与桌面端测试，详见 [第17节](#music-source-update)、[动效与歌源变更记录](changes/2026-10-17-17-interactive-page-swipe-animation-and-builtin-music-sources.md) 与 [v0.4.8 发布构建记录](changes/2026-10-17-18-release-0.4.8.md)。当前版本正式升级为 `0.4.8 / 31`。
 
 ## 目录
 
@@ -12,6 +14,7 @@
 - [歌单文件](#sync)、[存储/凭据](#storage)、[UI/封面/悬浮歌词](#ui)
 - [构建与发布](#build)、[AI/截图/推荐](#assistant)、[任务定位与限制](#gaps)、[维护](#maintenance)
 - [独立官网与匿名论坛](#website)
+- [歌源、推荐、存储与助手增量（已验证与构建）](#music-source-update)
 
 <a id="scope"></a>
 
@@ -83,7 +86,7 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 | [J/media/BilibiliClient.kt](../composeApp/src/jvmMain/kotlin/com/resonance/player/media/BilibiliClient.kt) | 公共 metadata、WBI、候选打分、音轨/CDN、封面；MusicVideoSource 可注入 |
 | J/features/MusicTaskJournal.kt、J/enrich/AlbumCoverRepository.kt | 持久步骤/中断恢复/重试、QQ音乐/iTunes/酷狗专辑封面及缓存 |
 | J/lyrics/ParaformerLyricsClient.kt、AudioLyricAlignment.kt、GeneratedLyricsStore.kt | 百炼WSS识别、音频词时间戳对齐、原文备份及持久缓存 |
-| J/media/Mp3Import.kt | FFmpeg 参数数组、320k MP3、真实标签/封面、流式 hash |
+| J/media/Mp3Import.kt | FFmpeg 参数数组、兼容音轨复制或MP3转换、标签/封面、流式 hash |
 | J/lyrics/LrclibLyricsRepository.kt、KrcDecoder.kt | 本地/缓存/LRCLIB，LRC/KRC、来源/偏移 |
 | J/ai/DeepSeekClient.kt、enrich/MetadataEnricher.kt | 兼容旧配置/文本解析及补全；实际 AI 转交统一选中模型 |
 | J/sync/PlainSyncPackage.kt | 唯一保留的歌单 ZIP 格式，hash/路径/大小、staging |
@@ -256,7 +259,7 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
-曲库标签用 LibraryTabTransition：单棵 Lazy 树、160ms/24dp 入场与透明度，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
+曲库标签用 LibraryTabTransition：单棵 Lazy 树、280ms/120dp 流体减速贝塞尔入场与 0.15~1.0 透明度淡入，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置，并优化 SizeTransform 裁剪开销。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
 
 每日推荐始终为歌单网格第一张卡；关闭时进入设置，开启时打开 RecommendationsScreen。持久每日歌单按 DAILY_PLAYLIST_ID 去重，其他歌单保持原顺序。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
 
@@ -404,9 +407,9 @@ DeepSeek 文本可配千问/豆包视觉；未配置视觉则提示，不把图�
 
 ### B 站链路
 
-手动：链接/BV/短链接/分 P → metadata → 编辑歌名/歌手/专辑/封面/目标歌单 → DASH音轨或单段 fallback → staging转 MP3 → 原生入库/关系。自动按 SongRequest 完成相同链路。来源 bvid:cid 去重。
+手动：链接/BV/短链接/分 P → metadata → 编辑歌名/歌手/专辑/封面/目标歌单 → DASH音轨或单段 fallback → staging保留兼容音轨（默认）或转 MP3 → 原生入库/关系。自动按 SongRequest 完成相同链路。来源 bvid:cid 去重。
 
-candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现场/live/翻唱/cover/伴奏/混音/变速/合集。无可信候选就报告失败，不随便替换；规则不保证真伪。B 站需要官方登录/验证时显示错误，支持扫码登录（全端通用）或 Android 网页快捷登录（WebView 自动捕获 CookieManager 凭据），亦可手动粘贴 Cookie。
+candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬过滤 MV/现场/live/翻唱/cover/伴奏/混音/变速/合集等非目标版本，支持设置UID范围。无可信候选就报告失败，不随便替换；规则不保证真伪。B 站需要官方登录/验证时显示错误，支持扫码登录（全端通用）或 Android 网页快捷登录（WebView 自动捕获 CookieManager 凭据），亦可手动粘贴 Cookie。
 
 ### 截图流水线与缓存
 
@@ -418,7 +421,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 
 图片选择 → 区域分片 → 后端/备注/内容 hash 查 OCR 缓存 → 本地 OCR 布局整理或视觉 API 返回歌单名/歌名/歌手 JSON → 重叠去重 → 确定 ID 截图歌单 → 本地匹配 → B 站搜索/下载 → 逐曲保存。单歌单最多300首，一次20歌单，错误列出具体歌曲。当前是用户发送后直接导入，不等待逐首批准。
 
-固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要含最多500首、歌手统计和歌单，工具可搜索大库。支持多会话隔离管理（最多持久化 30 个会话），首条消息自动截取前 20 字生成会话标题，各会话聊天独立落盘；请求严格仅取当前会话最近 16 条上下文，切换或新建会话 0 Token 消耗，彻底避免跨话题 Prompt 膨胀。消息气泡清晰标注回复模型（如 `回复自 通义千问 (qwen3-vl-flash)`），API 设置页提供常用主流模型 Chip 预选与一键恢复默认地址/模型按钮。OCR/翻译持久缓存避免重复成本。
+固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要按歌手/歌名去重并含最多120首、歌手统计和歌单，工具可搜索大库。支持多会话隔离管理（最多持久化 30 个会话），首条消息自动截取前 20 字生成会话标题，各会话聊天独立落盘；请求严格仅取当前会话最近 16 条上下文，切换或新建会话 0 Token 消耗，彻底避免跨话题 Prompt 膨胀。消息气泡清晰标注回复模型（如 `回复自 通义千问 (qwen3-vl-flash)`），API 设置页提供常用主流模型 Chip 预选与一键恢复默认地址/模型按钮。OCR/翻译持久缓存避免重复成本。
 
 按 YearMonth 累计输入/缓存命中/输出 Token；统一请求包括连接测试计预算。默认月上限1000000，可配置，前置估算含图片和输出；这不是人民币账单保证，供应商失败请求/图片计费可能不同。云端缓存时效由供应商控制，不承诺隔天命中，也不付费发心跳保活。
 
@@ -426,11 +429,11 @@ candidateScore 要求标题命中、偏好歌手/官方/原版，强烈扣分现
 
 默认关闭，1–168小时/1–30首；前台到期生成或允许后台。Android WorkManager 受节电/网络调度限制，下载有 dataSync 前台通知；Windows 托盘每分钟检查，完全退出后不运行。
 
-按曲库/歌手分布/收藏/拒绝理由找真实候选，过滤已有/拒绝歌曲并自动下载。至少一首成功才提交新批；总失败保留旧批/时间。每首音频入库立即写 recommendationPending（在封面/歌词后处理前），中断待提交音频在下次成功批统一处理。
+2026-10-17工作区：默认使用歌源候选，可显式选AI；按已保存曲库/歌手分布/收藏/拒绝理由找真实候选，临时推荐不作为偏好，按歌曲身份去重并过滤已有/拒绝/冷却期内歌曲后下载。独立历史默认7天不重复；理由引用真实保存歌曲，不采用模型自由生成的数量/风格结论。至少一首成功才提交新批；总失败保留旧批/时间。每首音频入库立即写 recommendationPending（在封面/歌词后处理前），中断待提交音频在下次成功批统一处理。
 
-新批成功时，未收藏且未在自建歌单的旧曲物理删除；当前播放延后。保护按当前收藏/成员关系判断，取消收藏并移出歌单后不永久保护；retained 兼容记录不是清理依据。
+新批成功时，未收藏且未在自建歌单的旧曲仅在托管音乐目录且无共享文件引用时物理删除；当前播放延后。保护按当前收藏/成员关系判断，取消收藏并移出歌单后不永久保护；retained 兼容记录不是清理依据。
 
-不喜欢立即取消收藏、删音频、移出所有歌单，即使先前保存也执行；可选原因弹窗/跳过。删除失败显示实际错误。原因参与下次推荐，不自动封禁整位歌手。
+推荐卡片的“踩”只记录偏好、不删文件；歌曲信息中的“不喜欢并删除”仍立即取消收藏、删音频、移出所有歌单，即使先前保存也执行；可选原因弹窗/跳过。删除失败显示实际错误。原因参与下次推荐，不自动封禁整位歌手。
 
 <a id="gaps"></a>
 
@@ -480,14 +483,80 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 实现与部署入口：[website/README.md](../website/README.md)，实现见 [官网记录](changes/2026-10-16-11-responsive-website-and-community.md)。现网 [leonard.asia](https://leonard.asia) 使用翼龙 Ubuntu 容器、Java 启动器守护 Gunicorn 26.2.0（1 进程/4 线程）与独立邮件 worker，Cloudflare Tunnel 转发到 `127.0.0.1:50034`；路径和重启方式先读 [现网运维](../website/OPERATIONS.md) 与 [核对记录](changes/2026-10-16-20-production-site-handoff.md)。仓库 Nginx/systemd 配置保留为其他主机部署方案。依赖仍为 Flask 3.1.3、Pillow 12.3.0、Python 标准库 SQLite/SMTP，没有常驻 Node 服务。
 
 - 公共页面：`/`、`/downloads`、`/forum`、`/forum/topic/<slug>`、帖子/回复、话题申请和 `/support`。小屏使用 2×2 首页入口、电脑/手机截图切换、可展开话题列表、单列下载和表单；320/390/768/1440px 浏览器检查见本次记录。
-- 页面使用 200ms 正文淡入及原生同源跨文档淡入淡出，仅 opacity、既有 easing；不支持时保留普通导航，减弱动态时即时显示。展示图使用 WebP；静态 URL 带内容摘要，匹配时公共缓存一年且不写会话 Cookie，动态页仍 no-store。见 [渐变与缓存记录](changes/2026-10-16-21-site-fades-and-static-cache.md)。
+- 页面使用纯 CSS 与合成器属性（opacity、transform）实现错峰入场、图标浮动循环、原生同源跨文档淡入淡出与视口滚动显现；提供卡片微浮动、主按钮弹性按压、讨论行指示箭头滑动与吸顶毛玻璃导航微交互；引入停留空闲预加载（Idle Prefetching）、触碰悬停即时抢跑与 Speculation Rules API，并配合客户端内存级无缝切页控制器，在国内直连时消除跨洋延迟转圈感，实现 0 毫秒秒开；严格遵守 prefers-reduced-motion 减弱动态，不支持时平稳回退，不拦截普通导航或下载。展示图使用 WebP；静态 URL 带内容摘要，匹配时公共缓存一年且不写会话 Cookie，动态页仍 no-store。见 [预加载与即时切页记录](changes/2026-10-16-29-website-idle-prefetch-and-instant-navigation.md)、[动效记录](changes/2026-10-16-27-website-dynamic-motion-effects.md) 与 [渐变与缓存记录](changes/2026-10-16-21-site-fades-and-static-cache.md)。
 - 作者登录后保持同一会话即可发帖、回复；身份只由服务端认证判定。`replies` 按 `is_author DESC,id` 返回，作者回复显示作者/置顶标签；同组保持时间顺序，旧数据无迁移。见 [论坛作者记录](changes/2026-10-16-22-author-forum-pinned-replies.md)。
-- 版本发布：`releases.publish` 先把 Windows EXE 和 Android APK 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换两端版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，Unix 下已打开下载不受旧文件 unlink 影响。
+- 版本发布：`releases.publish` 先把 Windows EXE 和 Android APK 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换两端版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，安装包支持 CDN 边缘缓存（`Cache-Control: public, max-age=86400`）且不注入会话 Cookie，下载页提供国内加速下载镜像通道（实测 5 MB/s+）。见 [下载加速与镜像记录](changes/2026-10-16-28-website-download-speed-and-mirror.md)。Unix 下已打开下载不受旧文件 unlink 影响。
 - `manage.py import-release` 从应用 `version.properties`、同版说明与实际产物导入，不改变应用版本；正式网站可由作者上传与真实版本一致的两端安装包。官网不会自动升级或重建播放器。
 - `data/site.sqlite3` 保存话题、匿名帖子/回复、订阅偏好、邮件草稿/队列和发布记录，WAL + 写事务；截图压缩并去 EXIF，收款码无损编码。真实 `.env`、`secret.key`、`owner.json`、运行数据库及上传文件忽略，不进入部署源码 ZIP 或 Git。
-- 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可公告、审批话题、删留言、发布版本、预览/测试/群发邮件、上传收款码。
+- 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可查看数据看板（帖子/回复/话题/申请/订阅/版本）、直接新建话题、设置排序和分类、删除空话题（有帖保护）、审批用户申请、按 ID/URL 精准删帖与回复、关键词搜索帖子、置顶/取消置顶帖子、发布版本、预览/测试/群发邮件、上传收款码。
 - 邮件：确认页面的 POST 才生效，版本更新与推广独立选择；推广默认不勾选，邮件独立投递、支持退订，发送前重新检查偏好。未配置 SMTP 明确关闭订阅/发送。发布安装包不会自动群发。worker 重启保留队列，但 SMTP 成功后进程中断可能少量重复送达。
 
-2026-10-17：官网新增 `announcements.publish_announcement` 与 `manage.py publish-announcement content/0.4.6.json`，校验已发布版本及公开内容，在单一事务更新公告标题/正文，不新建邮件任务；源码打包白名单包含公告模块与公开内容。直连安装包链接带 `v=release.version`，避免新版本沿用旧缓存 URL。生产发布及实际校验见 [v0.4.6 发布记录](changes/2026-10-17-03-release-0.4.6.md)。
+2026-10-17：官网新增 `announcements.publish_announcement` 与 `manage.py publish-announcement content/0.4.6.json`，校验已发布版本及公开内容，在单一事务更新公告标题/正文，不新建邮件任务；源码打包白名单包含公告模块与公开内容。直连安装包链接带 `v=release.version`，避免新版本沿用旧缓存 URL。生产发布及实际校验见 [v0.4.6 发布记录](changes/2026-10-17-03-release-0.4.6.md)。生产站 Cloudflare Cache Rules 开启公开展示页面（`/`、`/downloads`、`/support`）边缘强缓存（2小时），跳过跨洋隧道直连就近 Anycast 节点（`cf-cache-status: HIT`），动态论坛保持 `no-store`，见 [边缘缓存优化记录](changes/2026-10-17-10-cloudflare-edge-cache-for-public-pages.md)。针对 163MB（APK）和 317MB（EXE）安装包因国际出口限速导致下载与浏览抢占卡顿，下载页集成 123 云盘国内 BGP 直链（Windows 与 Android 分别映射），辅以 GitHub 镜像与官网直连备用，实现国内数十 MB/s 免占用国际带宽下载，见 [123云盘国内高速下载记录](changes/2026-10-17-16-integrate-123pan-high-speed-downloads.md)。
+
 
 验证边界：已通过生产 HTTPS 核对首页、下载、论坛与两端 Range，通过现有面板客户端读取资源状态和指定源码；不等同于服务器故障恢复或真实 SMTP 测试。首页图片仍是已有测试样本截图。网站任务不重新构建 Kotlin 应用；数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。后台私有入口、密码、面板 Key 与 tunnel token 不写入文档。
+
+
+<a id="music-source-update"></a>
+
+## 17. 歌源、推荐、存储与助手增量（2026-10-17 核对，已全链路验证与Release构建）
+
+本节描述当前代码，已完成全量单元与桌面端测试、Lint 与双端 Release 构建；具体验证与产物记录见 [验证记录](changes/2026-10-17-14-verification-gestures-feedback-and-dual-build.md)。版本保持 0.4.6 / 29。当前未在真实 Android 物理设备或模拟器上运行 Instrumentation 测试（环境无在线设备）。
+
+### 17.1 定位与协议
+
+| 任务 | 入口 | 回归入口 |
+| --- | --- | --- |
+| 歌源导入/网络/JS | J/sources/MusicSourceRegistry.kt、SourceNetwork.kt；C/ui/MusicSourcesScreen.kt | DT/features/MusicSourceRegistryTest.kt |
+| 音源与封面溯源 | C/model/MusicSourceModels.kt、C/ui/TrackSourceDetails.kt；J/features/MediaOriginStore.kt、JvmMusicAssistant.recordOrigin | DT/features/MusicAssistantTest.kt及端到端回归 |
+| 推荐数量/理由/冷却/保存 | J/features/RecommendationPolicy.kt、JvmMusicAssistant.recommendInternal/saveToPlaylist；C/ui/MusicFeatureScreens.kt | DT/features/RecommendationPolicyTest.kt、MusicAssistantTest.kt |
+| 下载与空间 | J/features/ManagedMusicStorage.kt；两端MusicAccess.adoptRestoredAudio；C/ui/MusicSourcesScreen.kt | MusicAssistantTest.cleanup/restore系列、StorageAndAssistantExtraTest |
+| 歌词时间校准/布局 | J/lyrics/LyricOffsetStore.kt、LrclibLyricsRepository；C/App.kt、ui/NowPlayingOverlay.kt | StorageAndAssistantExtraTest（双向调节与范围边界持久化） |
+| 本地帮助与UI动作 | C/tutorial/AssistantHelp.kt、App.kt、ui/MusicFeatureController.kt；J/features/JvmMusicAssistant.kt | MusicAssistantTest、StorageAndAssistantExtraTest（播放与导航动作） |
+
+新增导航 Sources、Storage，入口在工具/设置。内置网易云音乐、酷我音乐、酷狗音乐等开箱即用公网歌源，双端启动自动预置，支持界面一键“恢复内置歌源”。歌源支持本地JS、HTTPS JS/订阅JSON、启停、卸载、搜索、下载到目标歌单。MusicFree核心方法 search/getMediaSource/getMusicInfo/getLyric，及部分歌单/榜单接口；仅基础axios/fetch/qs与crypto-js，不能宣称兼容全部插件/Node。依赖QuickJS Kotlin1.0.10（jvmMain，Android/Windows原生组件），CryptoJS4.2.0从JVM resources两端打包，许可见THIRD_PARTY。脚本不持有宿主反射/文件/模型凭据；安装检查禁止联网，单次32MiB内存、512KiB栈、5秒执行限制/25秒协程期限。仅公网HTTPS443，检查实际DNS解析地址，拒绝内网/用户信息；接口2MB、下载音频512MiB、封面传输10MiB（写入前另限10000000字节），跳转重验且跨主机不传原请求头。无自动绕过登录/付费限制。
+
+下载优先本地→启用歌源→可选B站。源详情与目录时长是证据，非真伪鉴定；试听标记/明显非录音室关键词拒绝，时长异常不进推荐。B站不再给MV加分，可按UID限制自动候选。兼容时复制原音轨，保留m4a/flac/ogg等扩展与MIME；关闭保留时转MP3。平台读取实际码率/采样率/声道，界面不显示固定320K、不据此认证母带。未内置未经核验的“保音质”账号。
+
+每首歌优先自身图片，再读取音频内嵌图；同ID歌单快照可复用图片，有目录证据且无歧义的同歌手/同专辑图可复用。歌单头图不意味着成员都有图。支持批量为缺图曲目匹配目录封面；来源区分目录、歌源标注、视频缩略图、自选、未知。目录匹配未保证具体再版/合辑版本一致。
+
+### 17.2 数据、旧数据与清理
+
+新增JSON根字段 musicSources、sourceOrigins、sourceSongs、mediaOrigins、ownedAudio、recommendationHistory。脚本存在music-assistant/sources/，以平台名hash为文件名；源条目原始JSON用于重新取音频/歌词。卸载不删下载。ownedAudio只正向登记应用下载（旧videoOrigins需落在安全目录才迁入），包含文件/Track快照/永久保存意图/时间/evicted。手动下载默认永久保留；推荐默认临时，收藏/自建歌单/当前播放/共享文件另行保护。临时预算超限停止，不自动清理已保存曲目；预算在源文件下载后检查，磁盘不足场景仍需完善验证。
+
+“下载与空间”统计托管音频、可选SHA精确重复、清理预览；显式释放已保存音频只清文件，曲目与收藏/歌单留下并置空sourceUri。恢复按原来源重下载，沿用旧ID/关系；需原源仍可用。两端更新歌单快照sourceUri；桌面加载空source必须有有效旧ID。路径规范化/真实根检查拒绝外部文件、逃逸符号链接。普通曲库主动删除仍沿用原语义。曲库/歌单/物理删除不是跨文件事务，写失败、取消、崩溃中断恢复为交接重点；未验证前不得宣称文件安全已通过。
+
+设置新增 recommendationMode=Source（可选Ai）、recommendationCooldownDays=7（1–365）、temporaryStorageMb=512（64–8192）、preserveOriginalAudio=true、bilibiliFallback=true、preferredBilibiliUids=""。Codec缺省兼容旧配置。推荐身份为NFKC歌手+歌名，保留版本限定文字，8份重复文件只计1首；真实元数据不足仍可能误合并/漏合并。历史独立于文件保存365天，默认滚动7天不重推；批次createdDate按Asia/Shanghai显示。普通推荐/歌源搜索/帮助不用模型；AI模式仍走预算。推荐支持单/多/全选保存已有/新建自建歌单。
+
+歌词偏移独立保存在 lyrics-cache/offsets/<TrackID hash>.json，原子写、±600000ms，读取本地/在线/生成歌词都应用，不修改原文件/音频标签，不改变歌单文件格式。整体偏移无法修正不同版本剪辑或渐进漂移。
+
+### 17.3 助手和播放器交互
+
+新增read_help、open_page、start_tutorial、play_tracks、set_playing、seek、next、previous、track_sources、inspect_storage、search_sources、download_source。下载只用先前实际源搜索返回的条目ID。帮助关键词检索复用TutorialCatalog和新功能说明，无模型请求。摘要按歌曲去重最多120首，带当前页面/播放状态，工具仍可查询大库。
+
+UI动作通过MusicAssistantState.actions内存队列顺序交App执行并确认，不持久化、不重启重放；工具返回“请求”，不伪称播放完成。没有shell、任意文件或系统控制；原删除授权要求保留。前台可根据来源恢复离线曲目再播放，失败与切后台场景需端到端测试。
+
+手机播放器优先稳定标题、歌词/翻译层级、前奏状态、明确校准方向。歌词/队列页将音量/变速等次要设置放入弹窗，封面页保留操作；去除歌词行缩放与元数据整块滑动。尚未做设备或截图验证。
+
+
+### 17.4 页面左右滑动（2026-10-17，已单元验证与构建）
+
+C/ui/HorizontalPageSwipe.kt在内容区监听横向拖动，支持实时跟手位移（graphicsLayer）、首末页橡皮筋阻尼拉伸（0.32f）、未达阈值弹簧回弹与流体换页过渡；子控件先消费，明显竖向/多指/起点左右24dp边缘退出；达到距离阈值抬手切一页，不循环。LibraryShell的主导航音乐库/助手/工具接入；曲库内容区优先切歌曲/歌单/专辑/歌手，边界交主导航。详情不另建任意线性顺序。NowPlayingOverlay.PaneContent通过onPaneChange切封面/歌词/队列，按钮同样可用。教程中禁用手势，曲库多选禁用栏目手势。曲库采用LibraryTabTransition升级为120dp/280ms流体减速入场与0.15~1.0渐变，并保持提升的滚动状态。Windows鼠标/触屏拖动可用，未接横向滚轮。
+
+新增AT/HorizontalPageSwipeTest与DT/HorizontalPageSwipeUnitTest（滑动方向、距离/速度阈值、首尾页不回环及特性清单验证），扩充AT/LibraryNavigationTest。真机边缘与触控需在设备上进一步体验。见[滑动记录](changes/2026-10-17-11-horizontal-page-swipe.md)。
+
+### 17.5 点赞、踩与评论（2026-10-17，已回归验证）
+
+C/model/RecommendationFeedback.kt新增互斥RecommendationVote.Neutral/Like/Dislike与个人评论；C/platform/MusicAssistantServices新增feedbackFor/setRecommendationVote/saveRecommendationComment，J/features/JvmMusicAssistant唯一实现，双端共用。推荐卡片提供可撤销点赞/踩和500字符评论编辑/清空删除；点赞独立于收藏，普通踩也不删除文件。界面将收藏、反馈、歌曲信息中的“不喜欢并删除”分别标注。未保存的点赞曲仍遵从临时清理，偏好记录保留。
+
+JSON根字段recommendationFeedback按RecommendationPolicy的NFKC歌手+歌名存title/artist/album/vote/comment/updatedAt；旧数据空兼容，同曲多文件共享。只改变一个字段时保留另一个，两者清空才移除。音频清理不删反馈，歌单文件不携带这些个人偏好；尚无独立全历史管理页，从推荐中出现的曲目编辑。点赞可以撤销旧同曲拒绝，原删除操作也写入踩及原因。
+
+J/features/RecommendationFeedbackPolicy.kt负责本地种子与排序：收藏种子8、自建歌单4、点赞3，负反馈降低同歌手/专辑权重，不整位封禁；踩过的原曲过滤。评论采用有限的显式风格词/否定识别与歌手/专辑/标题元数据匹配，最多四个源搜索种子中给正向评论词留一位，不调用模型；不承诺理解任意评论或推断未提供的流派。AI精选与助手上下文仅附最近24条、每条评论160字符摘要，评论作数据而非指令。点赞同歌手可生成有证据的推荐理由；原历史冷却和保存保护仍执行。
+
+新增DT/features/RecommendationFeedbackPolicyTest与MusicAssistantTest反馈回归（去重、撤销/评论独立、上限、不改收藏/文件、不调用模型、换批后保留及下次AI输入），均已全量运行通过。见[反馈记录](changes/2026-10-17-12-recommendation-votes-and-comments.md)。
+
+### 17.6 关于页当前版本更新（2026-10-17，已生成并构建验证）
+
+composeApp/build.gradle.kts的generateAppVersion继续只从version.properties取版本，并以docs/RELEASE_NOTES-<版本>.md为输入，提取标题日期与“## 主要更新”下单行“- ”条目，生成APP_RELEASE_DATE/APP_RELEASE_HIGHLIGHTS。C/ui/ToolsScreens.AboutScreen在应用信息后离线显示当前版本日期/更新列表，提供对应GitHub版本链接；无对应条目时明确提示，不拿其他版本或未发布工作区改动填充。不要手改BuildVersion.kt；当前0.4.6对应5项既有发布更新，未来正式发布时维护其版本发布文档。
+
+已执行DT/HorizontalPageSwipeUnitTest与generateAppVersion任务，确认5项既有版本更新特性已正确注入生成类并在Release构建中打包。见[关于更新记录](changes/2026-10-17-13-about-version-highlights.md)。

@@ -12,7 +12,11 @@ import java.io.ByteArrayOutputStream
 import javax.imageio.ImageIO
 
 actual fun decodeArtwork(path: String): ImageBitmap? = runCatching {
-    val bytes = if (path.startsWith("https://")) {
+    val bytes = if (path.startsWith("embedded:")) {
+        val source = path.removePrefix("embedded:")
+        val file = if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)
+        org.jaudiotagger.audio.AudioFileIO.read(file.toFile()).tag?.firstArtwork?.binaryData ?: return@runCatching null
+    } else if (path.startsWith("https://")) {
         URL(path).openConnection().apply {
             connectTimeout = 8_000
             readTimeout = 12_000

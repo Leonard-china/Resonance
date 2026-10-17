@@ -65,6 +65,7 @@ interface PlatformServices {
     suspend fun searchWeatherCities(query: String): List<com.resonance.player.model.WeatherLocation>
     suspend fun fetchWeather(location: com.resonance.player.model.WeatherLocation, previous: com.resonance.player.model.WeatherPalette): com.resonance.player.model.WeatherSnapshot
     suspend fun chooseLyricsFolder(): String?
+    suspend fun chooseMusicSourceFile(): String? = null
     val libraryLocation: String
 
     suspend fun loadDeepSeekConfig(): DeepSeekConfig

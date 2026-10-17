@@ -26,6 +26,7 @@ class MusicFeatureController(val services: PlatformServices, private val scope: 
     var beforeTask: suspend () -> Unit = {}
     var onPlay: (Track) -> Unit = {}
     var onNavigate: (LibraryDestination) -> Unit = {}
+    var onAction: suspend (AssistantAction) -> Unit = {}
     var onToggleBalance: () -> Unit = {}
     val assistant get() = services.musicAssistant
     fun launch(operation: suspend () -> Unit) = scope.launch {

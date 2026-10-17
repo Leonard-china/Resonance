@@ -33,6 +33,9 @@ ZXing 和 jdk.httpserver 随 LAN/二维码功能删除。KGG 实现注释记录 
 | 豆包/火山方舟 | ark.cn-beijing.volces.com/api/v3 | 用户实际模型/接入点支持的文本、工具、图片 |
 | 自定义兼容接口 | 用户指定 HTTPS /chat/completions | 由用户选择服务，需支持相关工具/视觉消息 |
 | 天气/定位 | Open-Meteo 等现有 WeatherClient/平台定位来源 | 城市、粗坐标/IP 信息 |
+| 内置网易云歌源 | music.163.com、*.126.net | 歌曲/歌词公开查询、外链公开播放与下载 |
+| 内置酷我歌源 | search.kuwo.cn、antiserver.kuwo.cn、m.kuwo.cn、*.kuwo.cn | 歌曲/歌词公开查询、MP3音频直链与专辑图 |
+| 内置酷狗歌源 | songsearch.kugou.com、m.kugou.com、imge.kugou.com | 歌曲/歌词公开查询、免费音频直链与专辑图 |
 
 AI 请求发稳定曲库摘要、歌单、部分元数据/消息/拒绝原因，不上传整库音频；OCR 发送所选截图分片，翻译发送歌词。OCR/译文本地缓存；服务商前缀缓存有其有效期，不保证跨日命中。Token 预算是本地预估与计数，不是人民币账单限额。
 
@@ -82,3 +85,17 @@ Android 悬浮权限 SYSTEM_ALERT_WINDOW 由系统设置授予；后台推荐使
 Android 和 Windows 随包内置 PP-OCRv5 mobile 检测/识别模型与字典，ONNX Runtime（Android 1.23.2 / Windows 1.20.0） 在 CPU 推理；两者为 Apache-2.0，模型原始来源、SHA-256、许可和复现脚本见 [模型说明](../composeApp/src/ocrModels/README.md)。本地不加载 Python、不向模型服务上传截图、不调用收费识图 API；设置可手动选择原云端视觉 API。会话按识别任务创建并关闭。
 
 截断名称核对只向 QQ音乐/iTunes/B站发送可见歌名与歌手等文本，用匹配结果补全新导入信息；没有把缺失文字当作 OCR 已识别内容。旧 Key/视觉连接配置保留，识图模式作为独立设置存储。
+
+
+## MusicFree 核心歌源运行时（2026-10-17，待运行验证）
+
+- [MusicFree插件协议](https://musicfree.catcat.work/plugin/protocol.html)与[基础类型](https://musicfree.catcat.work/plugin/basic-type.html)为接口参考。没有内置第三方下载插件或可承诺授权/音质的歌源库，兼容核心方法不等于完整生态兼容。
+- [QuickJS Kotlin](https://github.com/dokar3/quickjs-kt/tree/v1.0.10)依赖 `io.github.dokar3:quickjs-kt:1.0.10`，包装层Apache-2.0，底层QuickJS等原生组件按各自上游许可；发布时核对Android/Windows原生库与随包许可。未向脚本暴露JVM/文件/AI Key/B站Cookie。JS宿主仅受限公网HTTPS、Base64及安全随机数，执行有内存/栈/时间与取消限制。
+- CryptoJS4.2.0，MIT。原始npm包 https://registry.npmjs.org/crypto-js/-/crypto-js-4.2.0.tgz ，未修改的JS与MIT许可置于 `composeApp/src/jvmMain/resources/music-source/`，按需在受限JS上下文加载。JS SHA-256为 `ee02257ffbaf0a9b481c7039b0f3bb20c360c9674fe4be8b38ae709b2ea59bbe`；详见[资源说明](../composeApp/src/jvmMain/resources/music-source/README.md)。axios/fetch/qs为本项目有限兼容实现，未引入对应完整npm运行环境。
+
+歌源网络只允许公网HTTPS443，拒绝本地/内网DNS结果与URL用户信息，接口响应2MB、音频512MiB、封面10MiB上限；请求与重定向遵循SourceNetwork.kt。启用插件可向其配置的公网服务发送用户搜索词及请求头，卸载保留下载音频。无自动登录、Cookie共享或自动绕过收费/访问限制。来源的音质/版本/封面声明未通过母带鉴定；实际文件参数只描述编码。真实插件、双端原生库加载、发布许可检查尚未执行，见[交接](HANDOFF-2026-10-17.md)。
+
+
+### 推荐评价数据（2026-10-17）
+
+个人点赞、踩、500字符评论保存在本机music-assistant JSON。保存反馈不发模型；普通歌源推荐仅将加权歌手/明确风格查询词发送用户启用的歌源。用户使用AI精选或模型助手时，最多最近24条评价摘要（每条评论160字符）可进入所选模型上下文，受原预算限制。没有新增社交评论服务器、账号或第三方服务；关于页更新摘要从构建时对应版本发布文档内置，打开页面不联网。

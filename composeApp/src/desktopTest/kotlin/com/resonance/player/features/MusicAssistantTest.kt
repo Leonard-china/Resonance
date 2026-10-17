@@ -3,6 +3,7 @@ package com.resonance.player.features
 import com.resonance.player.ai.*
 import com.resonance.player.media.*
 import com.resonance.player.model.*
+import com.resonance.player.lyrics.LyricOffsetStore
 import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -68,7 +69,7 @@ class MusicAssistantTest {
         try {
             val library = Library(root); val videos = Videos(); val ai = Transport(); val store = MusicJsonStore(root.resolve("state"))
             val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos, artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null }, lyricSource = { LyricsFetchResult.Unavailable("fixture", false) })
-            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test-key")), recommendationsEnabled = true, screenshotRecognition = ScreenshotRecognition.CloudApi))
+            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test-key")), recommendationsEnabled = true, recommendationMode = com.resonance.player.model.RecommendationMode.Ai, screenshotRecognition = ScreenshotRecognition.CloudApi))
             runtime.settings()
             block(runtime, library, videos, ai, store)
         } finally { Files.walk(root).use { files -> files.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
@@ -331,9 +332,9 @@ class MusicAssistantTest {
             val store = MusicJsonStore(root.resolve("state")); val library = Library(root); val videos = Videos(); val ai = Transport()
             val entered = CompletableDeferred<Unit>(); var block = true
             val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos,
-                artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> if (block) { entered.complete(Unit); awaitCancellation() } else null },
-                lyricSource = { LyricsFetchResult.Unavailable("fixture", false) })
-            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test")), recommendationsEnabled = true, recommendationCount = 1))
+                artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null },
+                lyricSource = { if (block) { entered.complete(Unit); awaitCancellation() } else LyricsFetchResult.Unavailable("fixture", false) })
+            runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test")), recommendationsEnabled = true, recommendationMode = com.resonance.player.model.RecommendationMode.Ai, recommendationCount = 1))
             ai.songs("Interrupted")
             val work = launch { runtime.recommend(true) }
             withTimeout(5000) { entered.await() }
@@ -375,4 +376,108 @@ class MusicAssistantTest {
             assertEquals(session1Id, runtime.state.value.sessions.single().id)
         }
     }
+    @Test fun recentlyRemovedRecommendationIsNotDownloadedAgain() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            ai.songs("Yesterday"); runtime.recommend(true)
+            ai.songs("Today"); runtime.recommend(true)
+            assertTrue(library.songs.values.none { it.title == "Yesterday" })
+            ai.songs("Yesterday", "Fresh"); runtime.recommend(true)
+            assertEquals(listOf("Fresh"), runtime.state.value.recommendations.trackIds.map { library.songs.getValue(it).title })
+        }
+    }
+    @Test fun saveRecommendationToNewPlaylistSurvivesRolloverAndReload() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            ai.songs("Saved"); runtime.recommend(true)
+            val song = library.songs.values.single()
+            runtime.saveToPlaylist(listOf(song.id), newName = "My Music")
+            ai.songs("Fresh"); runtime.recommend(true)
+            assertTrue(Files.isRegularFile(Path.of(song.sourceUri!!)))
+            assertEquals(listOf(song.id), library.lists.first { it.name == "My Music" }.tracks.map(Track::id))
+        }
+    }
+    @Test fun builtInHelpDoesNotSendAnyModelRequest() = runBlocking {
+        fixture { runtime, _, _, ai, _ ->
+            runtime.chat("怎么把每日推荐加入歌单", emptyList())
+            assertTrue(ai.requests.isEmpty())
+            assertTrue(runtime.state.value.messages.last().model!!.contains("内置"))
+            assertTrue(runtime.state.value.actions.any { it.kind == "suggest_page" })
+        }
+    }
+    @Test fun cleanupReleasesOnlyOwnedTemporaryAudioAndCanRestoreIt() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            ai.songs("Temporary"); runtime.recommend(true)
+            val song = library.songs.values.single()
+            val size = Files.size(Path.of(song.sourceUri!!))
+            val report = runtime.cleanupDownloads(listOf(song.id))
+            assertEquals(1, report.deletedFiles)
+            assertEquals(size, report.freedBytes)
+            assertNull(library.songs.getValue(song.id).sourceUri)
+            assertTrue(library.lists.first { it.id == JvmMusicAssistant.DAILY_ID }.tracks.any { it.id == song.id })
+            val restored = runtime.restoreDownload(song.id)
+            assertEquals(song.id, restored.id)
+            assertTrue(Files.isRegularFile(Path.of(restored.sourceUri!!)))
+        }
+    }
+    @Test fun cleanupProtectsSavedAndPlayingAudio() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            ai.songs("Saved", "Playing"); runtime.recommend(true)
+            val saved = library.songs.values.first { it.title == "Saved" }
+            val playing = library.songs.values.first { it.title == "Playing" }
+            runtime.saveToPlaylist(listOf(saved.id), newName = "Keep")
+            library.playing = playing.id
+            assertEquals(0, runtime.cleanupDownloads(listOf(saved.id, playing.id)).deletedFiles)
+            assertTrue(Files.exists(Path.of(saved.sourceUri!!)))
+            assertTrue(Files.exists(Path.of(playing.sourceUri!!)))
+        }
+    }
+    @Test fun recommendationVotesAndCommentsDoNotFavoriteOrDeleteAudioOrCallModel() = runBlocking {
+        fixture { runtime, library, _, ai, store ->
+            ai.songs("Good", "Bad"); runtime.recommend(true)
+            val good = library.songs.values.first { it.title == "Good" }
+            val bad = library.songs.values.first { it.title == "Bad" }
+            val requests = ai.requests.size
+            runtime.setRecommendationVote(good, RecommendationVote.Like)
+            runtime.saveRecommendationComment(good, "喜欢轻快的旋律")
+            runtime.setRecommendationVote(bad, RecommendationVote.Dislike)
+            assertEquals(requests, ai.requests.size)
+            assertFalse(library.songs.getValue(good.id).isFavorite)
+            assertTrue(listOf(good, bad).all { Files.isRegularFile(Path.of(it.sourceUri!!)) })
+            assertEquals(RecommendationVote.Like, runtime.feedbackFor(good.copy(id = "duplicate-file"))?.vote)
+            assertEquals(2, RecommendationFeedbackCodec.read(store.read()).size)
+            runtime.setRecommendationVote(good, RecommendationVote.Neutral)
+            assertEquals("喜欢轻快的旋律", runtime.feedbackFor(good)?.comment)
+            runtime.saveRecommendationComment(good, "")
+            assertNull(runtime.feedbackFor(good))
+        }
+    }
+    @Test fun feedbackSurvivesRolloverCleanupAndIsPassedToNextAiRecommendation() = runBlocking {
+        fixture { runtime, library, _, ai, store ->
+            ai.songs("Yesterday"); runtime.recommend(true)
+            val old = library.songs.values.single()
+            runtime.setRecommendationVote(old, RecommendationVote.Like)
+            runtime.saveRecommendationComment(old, "喜欢轻快，不要太吵的摇滚")
+            ai.songs("Next"); runtime.recommend(true)
+            assertFalse(Files.exists(Path.of(old.sourceUri!!)))
+            runtime.settings()
+            assertEquals(RecommendationVote.Like, runtime.feedbackFor(old)?.vote)
+            assertTrue(ai.requests.last().toString().contains("喜欢轻快"))
+            assertTrue(RecommendationFeedbackCodec.read(store.read()).values.any { it.title == old.title })
+            val next = library.songs.values.single()
+            assertTrue(runtime.state.value.recommendations.reasons.getValue(next.id).contains("点过赞"))
+        }
+    }
+    @Test fun localAudioOutsideManagedRootCannotBecomeCleanupTarget() = runBlocking {
+        fixture { runtime, library, _, _, store ->
+            val outside = Files.createTempFile("resonance-external-audio-", ".mp3")
+            try {
+                val track = Track("external", "External", "Artist", "Album", "3:00", 0, sourceUri = outside.toString())
+                library.songs[track.id] = track
+                store.update { it.put("videoOrigins", JSONObject().put("old-index", track.id)) }
+                assertTrue(runtime.storageReport().entries.none { it.track.id == track.id })
+                assertEquals(0, runtime.cleanupDownloads(listOf(track.id), true).deletedFiles)
+                assertTrue(Files.isRegularFile(outside))
+            } finally { Files.deleteIfExists(outside) }
+        }
+    }
+
 }

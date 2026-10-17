@@ -152,6 +152,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -563,6 +564,7 @@ fun LibraryShell(
 }
 
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
+    LibraryDestination.Sources, LibraryDestination.Storage -> LibraryDestination.Profile
     LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About, LibraryDestination.Tutorial -> LibraryDestination.Profile
     LibraryDestination.Recommendations, LibraryDestination.Discover -> LibraryDestination.Library
     LibraryDestination.Playing -> LibraryDestination.Library
@@ -570,6 +572,8 @@ private fun tabDestinationOf(destination: LibraryDestination): LibraryDestinatio
 }
 
 private val profileSubPages = setOf(
+    LibraryDestination.Sources,
+    LibraryDestination.Storage,
     LibraryDestination.Import,
     LibraryDestination.PlaylistArchive,
     LibraryDestination.Settings,
@@ -881,7 +885,11 @@ private fun DestinationContent(
     val destinationStates = rememberSaveableStateHolder()
     AnimatedContent(
         targetState = destination,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag("main-page-swipe").horizontalPageSwipe(
+            index = mainTabIndexOf(destination), count = destinationItems.size,
+            enabled = destinationItems.any { it.destination == destination } && LocalTutorial.current?.step == null,
+            onSelect = { onDestinationChange(destinationItems[it].destination) },
+        ),
         contentAlignment = Alignment.TopStart,
         transitionSpec = {
             if (reducedMotion) {
@@ -905,7 +913,7 @@ private fun DestinationContent(
                 (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else {
                 // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）：满屏丝滑平移
                 val fromTab = mainTabIndexOf(initialState)
@@ -914,7 +922,7 @@ private fun DestinationContent(
                 (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             }
         },
         label = "destinationContent",
@@ -924,6 +932,8 @@ private fun DestinationContent(
             LibraryDestination.Assistant -> AssistantScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.Tasks -> MusicTasksScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.Recommendations -> RecommendationsScreen(compact) { onDestinationChange(LibraryDestination.Library) }
+            LibraryDestination.Sources -> MusicSourcesScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
+            LibraryDestination.Storage -> MusicStorageScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
             LibraryDestination.AudioHelp -> AudioBalanceHelpScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
             LibraryDestination.Tutorial -> TutorialScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
 
@@ -1394,7 +1404,11 @@ private fun LibraryScreen(
                         onSelect = { tab = it.name },
                         modifier = Modifier.padding(horizontal = pagePadding),
                     )
-                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                    Box(Modifier.fillMaxWidth().weight(1f).testTag("library-page-swipe").horizontalPageSwipe(
+                        index = activeTab.ordinal, count = LibraryTab.entries.size,
+                        enabled = !isMultiSelectMode && tutorial?.step == null,
+                        onSelect = { tab = LibraryTab.entries[it].name },
+                    )) {
                       LibraryTabTransition(activeTab.ordinal) {
                         val currentTab = activeTab
                         when (currentTab) {
@@ -2298,6 +2312,7 @@ private fun TrackRow(
                     Modifier.size(46.dp),
                     8.dp,
                     track.artworkPath,
+                    audioSource = track.sourceUri,
                 )
                 Spacer(Modifier.width(12.dp))
             }
@@ -2595,6 +2610,7 @@ private fun MiniPlayer(
                                 Modifier.size(42.dp),
                                 10.dp,
                                 currentTrack.artworkPath,
+                                audioSource = currentTrack.sourceUri,
                             )
                         }
                         Spacer(Modifier.width(12.dp))
@@ -2699,10 +2715,13 @@ private fun BrandMark(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 12.dp, artworkPath: String? = null) {
+fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 12.dp, artworkPath: String? = null, audioSource: String? = null) {
     val artworkRevision by com.resonance.player.platform.ArtworkMemoryCache.revision.collectAsState()
-    val decoded by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artworkPath, artworkRevision) {
-        value = artworkPath?.let { path -> withContext(Dispatchers.IO) { com.resonance.player.platform.ArtworkMemoryCache.load(path) } }
+    val decoded by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artworkPath, audioSource, artworkRevision) {
+        value = withContext(Dispatchers.IO) {
+            artworkPath?.takeIf(String::isNotBlank)?.let { com.resonance.player.platform.ArtworkMemoryCache.load(it) }
+                ?: audioSource?.takeIf(String::isNotBlank)?.let { com.resonance.player.platform.ArtworkMemoryCache.load("embedded:" + it) }
+        }
     }
     val artwork = decoded
     if (artwork != null) {

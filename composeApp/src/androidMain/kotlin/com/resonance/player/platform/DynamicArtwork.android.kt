@@ -8,7 +8,9 @@ import java.net.URL
 import com.resonance.player.io.readUpTo
 
 actual fun decodeArtwork(path: String): ImageBitmap? = runCatching {
-    val bitmap = if (path.startsWith("content://")) {
+    val bitmap = if (path.startsWith("embedded:")) {
+        embeddedArtwork(Uri.parse(path.removePrefix("embedded:")))
+    } else if (path.startsWith("content://")) {
         runCatching { AndroidArtworkResolver.application.contentResolver.openInputStream(Uri.parse(path))?.use { decodeBounded(it.readUpTo(10_000_001)) } }.getOrNull()
             ?: AndroidArtworkResolver.audioArtwork[path]
                 ?.let(Uri::parse)

@@ -173,6 +173,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.math.sin
 import com.resonance.player.model.APP_VERSION
+import com.resonance.player.model.APP_RELEASE_DATE
+import com.resonance.player.model.APP_RELEASE_HIGHLIGHTS
 import com.resonance.player.model.LibraryDestination
 import com.resonance.player.model.LyricsUiState
 import com.resonance.player.model.PlayerState
@@ -215,6 +217,8 @@ internal fun ProfileScreen(
             onClick = onOpenSync,
         )
         SettingRow(Icons.Default.AutoAwesome, "音乐助手", "聊天管理、歌单截图和每日推荐", { features?.onNavigate?.invoke(LibraryDestination.Assistant) })
+        SettingRow(Icons.Default.LibraryMusic, "歌源", "搜索专辑单曲 · 导入 MusicFree 源", { features?.onNavigate?.invoke(LibraryDestination.Sources) })
+        SettingRow(Icons.Default.FolderOpen, "下载与空间", "管理下载、临时空间和重复文件", { features?.onNavigate?.invoke(LibraryDestination.Storage) })
         SettingRow(
             icon = Icons.Default.Settings,
             title = "设置",
@@ -267,6 +271,21 @@ internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
                 Text("平台：Android / Windows 原生跨平台 (Kotlin Multiplatform + Compose)", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
                 Text("架构模式：Local-First · Zero Cloud Dependency · High Fidelity", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
             }
+        }
+
+        SectionHeader("当前版本更新 · v$APP_VERSION")
+        if (APP_RELEASE_DATE.isNotBlank()) Text("发布日期：" + APP_RELEASE_DATE,
+            style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
+        if (APP_RELEASE_HIGHLIGHTS.isEmpty()) {
+            Text("当前版本暂无内置更新说明。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+        } else APP_RELEASE_HIGHLIGHTS.forEach { highlight ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("•", color = ResonanceColors.Primary)
+                Text(highlight, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.TextPrimary, modifier = Modifier.weight(1f))
+            }
+        }
+        TextButton(onClick = { runCatching { uriHandler.openUri("https://github.com/Leonard-china/Resonance/releases/tag/v$APP_VERSION") } }) {
+            Text("查看此版本完整发布说明")
         }
 
         SectionHeader("官方链接与支持")

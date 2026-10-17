@@ -13,6 +13,15 @@ interface MusicLibraryAccess {
     suspend fun favorite(track: Track, value: Boolean)
     suspend fun importAudio(path: Path, request: VideoImportRequest, cover: Path?): Track
     suspend fun transcode(input: Path, output: Path, request: VideoImportRequest, cover: Path?)
+    suspend fun adoptRestoredAudio(previous: Track, imported: Track): Track {
+        val restored = imported.copy(id = previous.id, isFavorite = previous.isFavorite)
+        update(restored)
+        savePlaylists(playlists().map { playlist ->
+            playlist.copy(tracks = playlist.tracks.map { if (it.id == previous.id) restored else it })
+        })
+        return restored
+    }
+    suspend fun audioInfo(track: Track): AudioFileInfo = AudioFileInfo()
     suspend fun prepareSpeechAudio(track: Track, output: Path) { error("此平台未提供音频识别准备能力") }
     fun playingTrackId(): String? = null
 }

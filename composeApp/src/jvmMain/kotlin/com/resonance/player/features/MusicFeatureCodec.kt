@@ -23,7 +23,12 @@ object MusicFeatureCodec {
             LyricDisplay.entries.firstOrNull { it.name == json.optString("lyricDisplay") } ?: LyricDisplay.Bilingual,
             decrypt(json.optString("bilibiliCookie")), decrypt(json.optString("speechApiKey")),
             json.optString("speechUrl", "wss://dashscope.aliyuncs.com/api-ws/v1/inference"), json.optInt("monthlySpeechSeconds", 3600).coerceIn(60, 360000),
-            ScreenshotRecognition.entries.firstOrNull { it.name == json.optString("screenshotRecognition") } ?: ScreenshotRecognition.LocalOcr)
+            ScreenshotRecognition.entries.firstOrNull { it.name == json.optString("screenshotRecognition") } ?: ScreenshotRecognition.LocalOcr,
+            RecommendationMode.entries.firstOrNull { it.name == json.optString("recommendationMode") } ?: RecommendationMode.Source,
+            json.optInt("recommendationCooldownDays", 7).coerceIn(1, 365),
+            json.optInt("temporaryStorageMb", 512).coerceIn(64, 8192),
+            json.optBoolean("preserveOriginalAudio", true), json.optBoolean("bilibiliFallback", true),
+            json.optString("preferredBilibiliUids").take(500))
     }
     fun encode(s: MusicFeatureSettings, encrypt: (String) -> String = { it }): JSONObject = JSONObject()
         .put("connections", JSONArray(s.connections.map { c -> JSONObject().put("provider", c.provider.name).put("baseUrl", c.baseUrl.trim()).put("model", c.model.trim()).put("key", encrypt(c.apiKey.trim())).put("vision", c.vision) }))
@@ -34,6 +39,9 @@ object MusicFeatureCodec {
         .put("translationLanguage", s.translationLanguage.take(40)).put("lyricDisplay", s.lyricDisplay.name).put("bilibiliCookie", encrypt(s.bilibiliCookie))
         .put("speechApiKey", encrypt(s.speechApiKey)).put("speechUrl", s.speechUrl).put("monthlySpeechSeconds", s.monthlySpeechSeconds)
         .put("screenshotRecognition", s.screenshotRecognition.name)
+        .put("recommendationMode", s.recommendationMode.name).put("recommendationCooldownDays", s.recommendationCooldownDays.coerceIn(1, 365))
+        .put("temporaryStorageMb", s.temporaryStorageMb.coerceIn(64, 8192)).put("preserveOriginalAudio", s.preserveOriginalAudio)
+        .put("bilibiliFallback", s.bilibiliFallback).put("preferredBilibiliUids", s.preferredBilibiliUids.take(500))
     fun track(t: Track): JSONObject = JSONObject().put("id", t.id).put("title", t.title).put("artist", t.artist).put("album", t.album)
         .put("duration", t.durationText).put("seed", t.artworkSeed).put("favorite", t.isFavorite).put("source", t.sourceUri).put("artwork", t.artworkPath).put("mime", t.mimeType)
     fun track(j: JSONObject): Track = Track(j.getString("id"), j.getString("title"), j.optString("artist", "未知歌手"), j.optString("album", "本地音乐"), j.optString("duration", "0:00"), j.optInt("seed"), j.optBoolean("favorite"), j.optString("source").takeIf { it.isNotBlank() && it != "null" }, j.optString("artwork").takeIf { it.isNotBlank() && it != "null" }, j.optString("mime", "audio/mpeg"))

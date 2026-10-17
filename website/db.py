@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS posts (
  id INTEGER PRIMARY KEY, topic_id INTEGER NOT NULL REFERENCES topics(id),
  title TEXT NOT NULL, body TEXT NOT NULL, author TEXT NOT NULL,
  visitor TEXT NOT NULL, is_author INTEGER NOT NULL DEFAULT 0,
- created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, image TEXT);
-CREATE INDEX IF NOT EXISTS post_topics ON posts(topic_id, updated_at DESC);
+ created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, image TEXT,
+ is_pinned INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS replies (
  id INTEGER PRIMARY KEY, post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
  body TEXT NOT NULL, author TEXT NOT NULL, visitor TEXT NOT NULL,
@@ -102,6 +102,17 @@ def initialize(path):
     with connect(path) as db:
         db.execute('PRAGMA journal_mode=WAL')
         db.executescript(SCHEMA)
+        cols = [r['name'] for r in db.execute('PRAGMA table_info(posts)').fetchall()]
+        if 'is_pinned' not in cols:
+            try:
+                db.execute('ALTER TABLE posts ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0')
+            except sqlite3.OperationalError:
+                pass
+        try:
+            db.execute('CREATE INDEX IF NOT EXISTS post_topics ON posts(topic_id, is_pinned DESC, updated_at DESC)')
+            db.execute('CREATE INDEX IF NOT EXISTS post_pinned ON posts(is_pinned DESC, updated_at DESC)')
+        except sqlite3.OperationalError:
+            pass
         for i, (slug, category, name) in enumerate(DEFAULT_TOPICS):
             db.execute('INSERT OR IGNORE INTO topics(slug,category,name,position) VALUES(?,?,?,?)',
                        (slug, category, name, i))

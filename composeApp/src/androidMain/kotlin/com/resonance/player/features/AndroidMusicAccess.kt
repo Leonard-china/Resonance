@@ -97,16 +97,43 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
     override suspend fun importAudio(path: Path, request: VideoImportRequest, cover: Path?): Track = withContext(Dispatchers.IO) {
         Files.createDirectories(musicDirectory)
         val id = Mp3Import.hash(path)
-        val target = musicDirectory.resolve("$id.mp3")
+        val extension = path.fileName.toString().substringAfterLast('.', "mp3")
+        val target = musicDirectory.resolve(id + "." + extension)
         if (!Files.isRegularFile(target)) Files.move(path, target, StandardCopyOption.REPLACE_EXISTING)
         val picture = cover?.takeIf(Files::isRegularFile)?.let { c ->
             val dir = root.resolve("artwork"); Files.createDirectories(dir)
             dir.resolve("$id.cover").also { Files.copy(c, it, StandardCopyOption.REPLACE_EXISTING) }.toString()
         }
         val duration = MediaMetadataRetriever().let { r -> try { r.setDataSource(target.toString()); (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0) / 1000 } finally { r.release() } }
-        val track = Track(id, request.title, request.artist, request.album, "%d:%02d".format(duration / 60, duration % 60), id.hashCode(), sourceUri = target.toUri().toString(), artworkPath = picture)
+        val track = Track(id, request.title, request.artist, request.album, "%d:%02d".format(duration / 60, duration % 60), id.hashCode(), sourceUri = target.toUri().toString(), artworkPath = picture, mimeType = Mp3Import.mime(extension))
         synchronized(lock(context)) { writeManaged(context, (readManaged(context) + track).associateBy(Track::id).values.toList()) }
         track
+    }
+    override suspend fun adoptRestoredAudio(previous: Track, imported: Track): Track = synchronized(lock(context)) {
+        val restored = imported.copy(id = previous.id, isFavorite = previous.isFavorite)
+        writeManaged(context, readManaged(context).filterNot { it.id == imported.id || it.id == previous.id } + restored)
+        savePlaylistsNow(playlistsNow().map { list -> list.copy(tracks = list.tracks.map { if (it.id == previous.id) restored else it }) })
+        restored
+    }
+    override suspend fun audioInfo(track: Track): AudioFileInfo = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: return@withContext AudioFileInfo()
+        val extractor = android.media.MediaExtractor()
+        try {
+            extractor.setDataSource(context, Uri.parse(source), null)
+            val format = (0 until extractor.trackCount).map(extractor::getTrackFormat)
+                .firstOrNull { it.getString(android.media.MediaFormat.KEY_MIME)?.startsWith("audio/") == true }
+                ?: return@withContext AudioFileInfo()
+            fun integer(key: String): Int = if (format.containsKey(key)) format.getInteger(key) else 0
+            var bitrate = integer(android.media.MediaFormat.KEY_BIT_RATE).toLong()
+            if (bitrate <= 0) {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, Uri.parse(source))
+                    bitrate = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_BITRATE)?.toLongOrNull() ?: 0
+                } finally { retriever.release() }
+            }
+            AudioFileInfo(bitrate, integer(android.media.MediaFormat.KEY_SAMPLE_RATE), integer(android.media.MediaFormat.KEY_CHANNEL_COUNT))
+        } catch (_: Exception) { AudioFileInfo() } finally { extractor.release() }
     }
     override suspend fun transcode(input: Path, output: Path, request: VideoImportRequest, cover: Path?) {
         withTimeout(600_000) {
@@ -156,7 +183,7 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
                 val p = "track.$n."; val id = props.getProperty(p + "id") ?: return@mapNotNull null
                 val source = props.getProperty(p + "source") ?: return@mapNotNull null
                 if (source.startsWith("file:") && !Files.isRegularFile(java.nio.file.Paths.get(java.net.URI(source)))) return@mapNotNull null
-                Track(id, props.getProperty(p + "title", "未知歌曲"), props.getProperty(p + "artist", "未知歌手"), props.getProperty(p + "album", "本地音乐"), props.getProperty(p + "duration", "0:00"), props.getProperty(p + "seed", "0").toIntOrNull() ?: 0, props.getProperty(p + "favorite", "false").toBoolean(), source, props.getProperty(p + "artwork")?.takeIf(String::isNotBlank), props.getProperty(p + "mime", "audio/mpeg"))
+                Track(id, props.getProperty(p + "title", "未知歌曲"), props.getProperty(p + "artist", "未知歌手"), props.getProperty(p + "album", "本地音乐"), props.getProperty(p + "duration", "0:00"), props.getProperty(p + "seed", "0").toIntOrNull() ?: 0, props.getProperty(p + "favorite", "false").toBoolean(), source.takeIf(String::isNotBlank), props.getProperty(p + "artwork")?.takeIf(String::isNotBlank), props.getProperty(p + "mime", "audio/mpeg"))
             }
         }
         fun writeManaged(context: Context, tracks: List<Track>) = synchronized(lock(context)) {
@@ -174,7 +201,7 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
                 override suspend fun delete(track: Track) = delete.invoke(track)
             }
             return JvmMusicAssistant(MusicJsonStore(app.filesDir.toPath().resolve("music-assistant")), access.musicDirectory, operations, AndroidCredentialVault::encrypt, AndroidCredentialVault::decrypt,
-                screenshotOcr = androidScreenshotOcr(app))
+                screenshotOcr = androidScreenshotOcr(app), autoInstallBuiltinSources = true)
         }
     }
 }

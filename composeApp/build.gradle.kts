@@ -24,11 +24,25 @@ plugins {
 val generatedVersionDirectory = layout.buildDirectory.dir("generated/version/commonMain")
 val generateAppVersion by tasks.registering {
     inputs.file(rootProject.file("version.properties"))
+    inputs.files(rootProject.fileTree("docs") { include("RELEASE_NOTES-$appVersionName.md") })
     outputs.dir(generatedVersionDirectory)
     doLast {
         val target = generatedVersionDirectory.get().file("com/resonance/player/model/BuildVersion.kt").asFile
         target.parentFile.mkdirs()
-        target.writeText("package com.resonance.player.model\n\nconst val APP_VERSION = \"$appVersionName\"\n")
+        val notesFile = rootProject.file("docs/RELEASE_NOTES-$appVersionName.md")
+        val lines = if (notesFile.isFile) notesFile.readLines(Charsets.UTF_8) else emptyList()
+        val date = Regex("""^# (\d{4}-\d{2}-\d{2})""").find(lines.firstOrNull().orEmpty())?.groupValues?.get(1).orEmpty()
+        val highlights = lines.dropWhile { it.trim() != "## 主要更新" }.drop(1)
+            .takeWhile { !it.trimStart().startsWith("## ") }
+            .filter { it.trimStart().startsWith("- ") }.map { it.trim().removePrefix("- ") }
+        fun literal(value: String): String = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"")
+            .replace("$", "\\$").replace("\r", "\\r").replace("\n", "\\n") + "\""
+        target.writeText(buildString {
+            append("package com.resonance.player.model\n\n")
+            append("const val APP_VERSION = " + literal(appVersionName) + "\n")
+            append("const val APP_RELEASE_DATE = " + literal(date) + "\n")
+            append("val APP_RELEASE_HIGHLIGHTS: List<String> = listOf(" + highlights.joinToString(", ", transform = ::literal) + ")\n")
+        })
     }
 }
 tasks.matching { it.name.startsWith("compile") && it.name.contains("Kotlin") }.configureEach {
@@ -72,6 +86,7 @@ kotlin {
             dependencies {
                 implementation("org.json:json:20250517")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
+                implementation("io.github.dokar3:quickjs-kt:1.0.10")
                 implementation("com.google.zxing:core:3.5.3")
                 compileOnly("com.microsoft.onnxruntime:onnxruntime:1.20.0")
             }
@@ -79,6 +94,7 @@ kotlin {
         val desktopMain by getting {
             dependsOn(jvmMain)
             resources.srcDir("src/ocrModels")
+            resources.srcDir("src/jvmMain/resources")
             dependencies {
                 implementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
                 implementation(compose.desktop.currentOs)
@@ -115,6 +131,7 @@ android {
     compileSdk = 36
     buildToolsVersion = "36.0.0"
     sourceSets.getByName("main").assets.srcDir("src/ocrModels")
+    sourceSets.getByName("main").resources.srcDir("src/jvmMain/resources")
 
     defaultConfig {
         applicationId = "com.resonance.player"

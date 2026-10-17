@@ -119,8 +119,8 @@ class BilibiliClient(private val cookie: () -> String = { "" }) : MusicVideoSour
             val bvid = item.optString("bvid")
             val cover = item.optString("pic").let { if (it.startsWith("//")) "https:$it" else it.replace("http://", "https://") }
             if (score < 20 || !Regex("BV[0-9A-Za-z]{10}").matches(bvid)) null
-            else score to BilibiliVideo(bvid, 0, title, author, cover, 0)
-        }.sortedByDescending { it.first }.take(4).map { it.second }
+            else score to BilibiliVideo(bvid, 0, title, author, cover, 0, uploaderId = item.optLong("mid"))
+        }.sortedByDescending { it.first }.take(20).map { it.second }
     }
 
     override suspend fun download(video: BilibiliVideo, destination: Path, onProgress: (ImportProgress) -> Unit): Path = withContext(Dispatchers.IO) {
@@ -194,18 +194,22 @@ class BilibiliClient(private val cookie: () -> String = { "" }) : MusicVideoSour
         private fun isPageHost(host: String?) = host == "b23.tv" || host == "bilibili.com" || host?.endsWith(".bilibili.com") == true
         private fun isMediaHost(host: String?) = listOf("bilibili.com", "bilivideo.com", "bilivideo.cn", "hdslb.com", "akamaized.net").any { host == it || host?.endsWith(".$it") == true }
         fun candidateScore(song: SongRequest, title: String, uploader: String): Int {
+            if (disallowedVersion(title)) return -100
             fun norm(s: String) = s.lowercase().filter(Char::isLetterOrDigit)
             val text = norm(title); val wanted = norm(song.title); val artist = norm(song.artist)
             if (wanted.isBlank() || !text.contains(wanted)) return -100
             var score = 25
             if (artist.isNotBlank() && (text.contains(artist) || norm(uploader).contains(artist))) score += 20
             else if (artist.isNotBlank()) score -= 15
-            if (listOf("官方", "原版", "Official", "音源", "MV").any { (title + uploader).contains(it, true) }) score += 8
+            if (listOf("官方音源", "录音室", "专辑音轨", "Official Audio", "原版音频").any { title.contains(it, true) }) score += 8
             val requested = "${song.title} ${song.artist}"
             val chineseVariant = listOf("演唱会", "现场", "翻唱", "伴奏", "混剪", "变速", "合集", "串烧").any { title.contains(it, true) && !requested.contains(it, true) }
             val englishVariant = Regex("(?<![a-z])(remix|live|cover)(?![a-z])", RegexOption.IGNORE_CASE).findAll(title).any { !requested.contains(it.value, true) }
             if (chineseVariant || englishVariant) score -= 80
             return score
         }
+        fun disallowedVersion(title: String): Boolean =
+            Regex("(?i)(?<![a-z])(?:m[ /]?v|live|cover|remix|medley|slowed|sped[ -]?up)(?![a-z])|music[ -]?video|official[ -]?video").containsMatchIn(title) ||
+                listOf("演唱会", "现场", "翻唱", "伴奏", "混剪", "变速", "合集", "串烧", "循环版", "循环播放", "剧情版", "剪辑版").any(title::contains)
     }
 }

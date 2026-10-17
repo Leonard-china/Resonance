@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,38 @@ class LibraryNavigationTest {
         ui.onNodeWithText("专辑").performClick()
         ui.onNodeWithText("歌曲").performClick()
         ui.onNodeWithText("Song 030").assertIsDisplayed()
+    }
+    @Test fun librarySwipesSelectTabsBeforeMainNavigationAndRetainListPosition() {
+        show()
+        ui.onNodeWithTag("library-page-swipe").performTouchInput {
+            swipe(Offset(width * 0.2f, height / 2f), Offset(width * 0.8f, height / 2f))
+        }
+        ui.onNodeWithText("Song 000").assertIsDisplayed()
+        ui.onNode(hasScrollToIndexAction()).performScrollToIndex(31)
+        ui.onNodeWithTag("library-page-swipe").performTouchInput {
+            swipe(Offset(width * 0.8f, height / 2f), Offset(width * 0.2f, height / 2f))
+        }
+        ui.onNodeWithText("My playlist").assertIsDisplayed()
+        ui.onNodeWithTag("library-page-swipe").performTouchInput {
+            swipe(Offset(width * 0.2f, height / 2f), Offset(width * 0.8f, height / 2f))
+        }
+        ui.onNodeWithText("Song 030").assertIsDisplayed()
+        ui.runOnIdle { org.junit.Assert.assertEquals(LibraryDestination.Library, destination.value) }
+    }
+    @Test fun libraryBoundarySwipeOpensAssistant() {
+        show()
+        ui.onNodeWithText("歌手").performClick()
+        ui.onNodeWithTag("library-page-swipe").performTouchInput {
+            swipe(Offset(width * 0.8f, height / 2f), Offset(width * 0.2f, height / 2f))
+        }
+        ui.onNodeWithText("发送").assertIsDisplayed()
+    }
+    @Test fun aboutShowsHighlightsForInstalledVersion() {
+        show()
+        ui.onNodeWithText("工具").performClick()
+        ui.onNodeWithText("关于 Resonance").performClick()
+        ui.onNodeWithText("当前版本更新 · v" + APP_VERSION).performScrollTo().assertIsDisplayed()
+        APP_RELEASE_HIGHLIGHTS.firstOrNull()?.let { ui.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
     }
     @Test fun assistantReplacesBottomSearchAndHidesMiniPlayer() {
         show()

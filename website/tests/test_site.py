@@ -175,6 +175,75 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(len(self.query('SELECT * FROM posts')), 0)
         self.assertEqual(len(self.query('SELECT * FROM replies')), 0)
 
+    def test_owner_can_create_topic_and_delete_empty_topic_with_guard(self):
+        self.login()
+        response = self.submit(self.private + '/topic/create', {'name':'听歌打卡','category':'其他','slug':'check-in'})
+        self.assertEqual(response.status_code, 303)
+        topics = self.query("SELECT * FROM topics WHERE slug='check-in'")
+        self.assertEqual(len(topics), 1)
+        self.assertEqual(topics[0]['name'], '听歌打卡')
+        topic_id = topics[0]['id']
+
+        self.submit('/forum/new', {'topic': str(topic_id), 'title':'打卡第一天', 'body':'今天听了周杰伦'})
+        self.assertEqual(len(self.query('SELECT * FROM posts WHERE topic_id=?', (topic_id,))), 1)
+
+        del_resp = self.submit(self.private + f'/topic/{topic_id}/delete')
+        self.assertEqual(del_resp.status_code, 303)
+        self.assertEqual(len(self.query('SELECT * FROM topics WHERE id=?', (topic_id,))), 1)
+
+        post_id = self.query('SELECT id FROM posts WHERE topic_id=?', (topic_id,))[0][0]
+        self.submit(self.private + f'/delete/post/{post_id}')
+        del_empty_resp = self.submit(self.private + f'/topic/{topic_id}/delete')
+        self.assertEqual(del_empty_resp.status_code, 303)
+        self.assertEqual(len(self.query('SELECT * FROM topics WHERE id=?', (topic_id,))), 0)
+
+    def test_owner_quick_delete_post_and_reply_by_query(self):
+        self.login()
+        post_id = self.add_post(body='内容包含广告')
+        self.submit(f'/forum/post/{post_id}', {'body':'违规测试回复'})
+        reply_id = self.query('SELECT id FROM replies WHERE post_id=?', (post_id,))[0][0]
+
+        self.assertEqual(self.submit(self.private + '/delete/reply-by-query', {'query': str(reply_id)}).status_code, 303)
+        self.assertEqual(len(self.query('SELECT * FROM replies WHERE id=?', (reply_id,))), 0)
+
+        self.assertEqual(self.submit(self.private + '/delete/post-by-query', {'query': f'https://leonard.asia/forum/post/{post_id}'}).status_code, 303)
+        self.assertEqual(len(self.query('SELECT * FROM posts WHERE id=?', (post_id,))), 0)
+
+    def test_owner_can_pin_and_unpin_post(self):
+        p1 = self.add_post(body='第一篇普通讨论')
+        time.sleep(1)
+        p2 = self.add_post(body='第二篇后发的讨论')
+        forum_html = self.client.get('/forum').get_data(as_text=True)
+        self.assertLess(forum_html.index('第二篇后发的讨论'), forum_html.index('第一篇普通讨论'))
+
+        self.login()
+        self.assertEqual(self.submit(self.private + f'/pin/post/{p1}').status_code, 303)
+        row = self.query('SELECT is_pinned FROM posts WHERE id=?', (p1,))[0]
+        self.assertEqual(row['is_pinned'], 1)
+
+        forum_html = self.client.get('/forum').get_data(as_text=True)
+        self.assertLess(forum_html.index('第一篇普通讨论'), forum_html.index('第二篇后发的讨论'))
+        self.assertIn('class="badge pinned-post-badge"', forum_html)
+
+        self.assertEqual(self.submit(self.private + f'/pin/post/{p1}').status_code, 303)
+        row = self.query('SELECT is_pinned FROM posts WHERE id=?', (p1,))[0]
+        self.assertEqual(row['is_pinned'], 0)
+
+    def test_owner_dashboard_stats_and_post_search(self):
+        self.login()
+        self.add_post(body='搜索目标专属词汇ResonanceBug')
+        self.add_post(body='完全不相关的帖子内容')
+
+        dash = self.client.get(self.private + '/dashboard').get_data(as_text=True)
+        self.assertIn('搜索目标专属词汇ResonanceBug', dash)
+        self.assertIn('完全不相关的帖子内容', dash)
+        self.assertIn('论坛帖子', dash)
+        self.assertIn('开放话题', dash)
+
+        search_res = self.client.get(self.private + '/dashboard?q=ResonanceBug#moderation').get_data(as_text=True)
+        self.assertIn('搜索目标专属词汇ResonanceBug', search_res)
+        self.assertNotIn('完全不相关的帖子内容', search_res)
+
     def test_password_change_revokes_existing_author_session(self):
         self.login()
         self.assertEqual(self.client.get(self.private + '/dashboard').status_code, 200)
@@ -341,7 +410,11 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, b'MZtest-executable')
         self.assertIn('Resonance-0.4.1.exe', response.headers['Content-Disposition'])
+        self.assertEqual(response.headers['Cache-Control'], 'public, max-age=86400, stale-while-revalidate=3600')
+        self.assertNotIn('Set-Cookie', response.headers)
         response.close()
+        downloads_html = self.client.get('/downloads').get_data(as_text=True)
+        self.assertIn('https://gh-proxy.com/', downloads_html)
         response = self.client.get('/download/windows', headers={'Range':'bytes=0-3'})
         self.assertEqual(response.status_code, 206)
         self.assertEqual(response.data, b'MZte')

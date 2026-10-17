@@ -80,6 +80,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         deleteLocalTrack(track)
     } }
     private var assistantImageResult: ((List<Uri>) -> Unit)? = null
+    override suspend fun chooseMusicSourceFile(): String? {
+        val uri = withContext(Dispatchers.Main.immediate) { pickSyncPackage() } ?: return null
+        return withContext(Dispatchers.IO) {
+            val bytes = activity.contentResolver.openInputStream(uri)?.use { it.readUpTo(2_000_001) } ?: error("无法读取歌源")
+            require(bytes.size <= 2_000_000) { "歌源文件超过 2 MB" }
+            bytes.toString(Charsets.UTF_8)
+        }
+    }
     private val assistantImagePicker = activity.registerForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { result ->
         assistantImageResult?.invoke(result); assistantImageResult = null
     }
@@ -970,6 +978,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                             title = u.title,
                             artist = u.artist,
                             album = u.album,
+                            sourceUri = u.sourceUri,
                             artworkPath = u.artworkPath ?: track.artworkPath,
                             artworkSeed = if (u.artworkPath != null) u.artworkSeed else track.artworkSeed,
                         )

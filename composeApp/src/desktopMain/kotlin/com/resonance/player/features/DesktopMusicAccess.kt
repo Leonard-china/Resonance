@@ -28,12 +28,28 @@ internal class DesktopMusicAccess(private val store: DesktopLibraryStore, privat
     override suspend fun importAudio(path: Path, request: VideoImportRequest, cover: Path?): Track {
         Files.createDirectories(store.managedMusicDirectory)
         val id = Mp3Import.hash(path)
-        val target = store.managedMusicDirectory.resolve("$id.mp3")
+        val extension = path.fileName.toString().substringAfterLast('.', "mp3")
+        val target = store.managedMusicDirectory.resolve(id + "." + extension)
         if (!Files.isRegularFile(target)) Files.move(path, target, StandardCopyOption.REPLACE_EXISTING)
         val track = DesktopMusicScanner(store.artworkDirectory, store.managedMusicDirectory).readAudioTrack(target)
             .copy(title = request.title, artist = request.artist, album = request.album)
         store.merge(listOf(track))
         return track
+    }
+    override suspend fun adoptRestoredAudio(previous: Track, imported: Track): Track {
+        val restored = imported.copy(id = previous.id, isFavorite = previous.isFavorite)
+        store.save(store.load().filterNot { it.id == imported.id || it.id == previous.id } + restored)
+        store.savePlaylists(store.loadPlaylists().map { list -> list.copy(tracks = list.tracks.map { if (it.id == previous.id) restored else it }) })
+        return restored
+    }
+    override suspend fun audioInfo(track: Track): AudioFileInfo = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: return@withContext AudioFileInfo()
+        runCatching {
+            val path = if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)
+            val header = org.jaudiotagger.audio.AudioFileIO.read(path.toFile()).audioHeader
+            AudioFileInfo(header.bitRateAsNumber * 1000, header.sampleRateAsNumber,
+                when { header.channels.contains("stereo", true) || header.channels == "2" -> 2; header.channels.contains("mono", true) || header.channels == "1" -> 1; else -> 0 })
+        }.getOrDefault(AudioFileInfo())
     }
     override suspend fun transcode(input: Path, output: Path, request: VideoImportRequest, cover: Path?) = withContext(Dispatchers.IO) {
         val log = Files.createTempFile("resonance-video-", ".log")

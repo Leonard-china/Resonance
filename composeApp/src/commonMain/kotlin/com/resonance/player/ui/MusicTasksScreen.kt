@@ -30,6 +30,7 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
             Text("任务列表", style = MaterialTheme.typography.headlineMedium)
         }
         TextButton(onClick = { feature.launch { assistant.matchVideoCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("匹配已下载歌曲的专辑封面") }
+        TextButton(onClick = { feature.launch { assistant.matchMissingCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("补齐曲库缺失封面 · 不调用模型") }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (state.tasks.isEmpty()) item { Text("下载、封面匹配和歌词处理的进度会显示在这里。", color = ResonanceColors.Muted) }
             items(state.tasks.asReversed(), key = { it.id }) { task ->
@@ -62,40 +63,143 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
 }
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
     val feature = LocalMusicFeatures.current ?: return
     val assistant = feature.assistant ?: return
     val state by assistant.state.collectAsState()
     val tracks = state.recommendations.trackIds.mapNotNull { id -> feature.library.firstOrNull { it.id == id } }
+    var saving by remember { mutableStateOf(emptyList<Track>()) }
+    var choosePlaylist by remember { mutableStateOf(false) }
+    var createPlaylist by remember { mutableStateOf(false) }
+    var playlistName by remember { mutableStateOf("") }
+    var selecting by remember { mutableStateOf(false) }
+    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var info by remember { mutableStateOf<Track?>(null) }
+    var commenting by remember { mutableStateOf<Track?>(null) }
+    var commentDraft by remember { mutableStateOf("") }
+    val busy = state.task.running
     Column(Modifier.fillMaxSize().padding(if (compact) 16.dp else 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
             Text("每日推荐", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("设置") }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("收藏或加入自建歌单可保留，其他歌曲下次更新时清理。", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
-            TextButton(onClick = { feature.launch { assistant.recommend(true); feature.onReload() } }, enabled = feature.settings.recommendationsEnabled && !state.task.running) { Text("更新推荐") }
+        Text("点赞、踩和评论帮助调整下次推荐；收藏或加入歌单才会保留音频。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+        if (state.recommendations.createdDate.isNotBlank()) Text("上次推荐：" + state.recommendations.createdDate +
+            " · 近 " + feature.settings.recommendationCooldownDays + " 天不重复", style = MaterialTheme.typography.labelMedium)
+        Row {
+            TextButton(onClick = { feature.launch { assistant.recommend(true); feature.onReload() } }, enabled = feature.settings.recommendationsEnabled && !busy) { Text("更新推荐") }
+            TextButton(onClick = { selecting = !selecting; selected = emptySet() }, enabled = !busy && tracks.isNotEmpty()) { Text(if (selecting) "取消选择" else "多选") }
+            TextButton(onClick = {
+                saving = if (selecting) tracks.filter { it.id in selected } else tracks
+                choosePlaylist = saving.isNotEmpty()
+            }, enabled = !busy && tracks.isNotEmpty() && (!selecting || selected.isNotEmpty())) { Text(if (selecting) "加入歌单" else "保存全部") }
         }
         if (!feature.settings.recommendationsEnabled) TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("未开启推荐 · 前往设置") }
-        if (state.task.running) MusicTaskProgress(state.task.progress, assistant::cancel)
+        if (busy) MusicTaskProgress(state.task.progress, assistant::cancel)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (tracks.isEmpty()) item { Text("开启后按计划下载推荐，也可以点击“更新推荐”。", color = ResonanceColors.Muted) }
+            if (tracks.isEmpty()) item { Text("先导入可用歌源，再开启推荐；也可在设置中手动选择 AI 精选。", color = ResonanceColors.Muted) }
             items(tracks, key = Track::id) { track ->
                 Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            AlbumArtwork(track.artworkSeed, Modifier.size(48.dp), artworkPath = track.artworkPath)
-                            Column(Modifier.weight(1f).padding(horizontal = 10.dp)) { Text(track.title); Text(track.artist, style = MaterialTheme.typography.bodySmall) }
-                            IconButton(onClick = { feature.onPlay(track) }) { Icon(Icons.Default.PlayArrow, "播放推荐") }
-                            IconButton(onClick = { feature.favorite(track) }, enabled = !state.task.running) { Icon(if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, "喜欢并收藏") }
-                            IconButton(onClick = { feature.dislike(track) }, enabled = !state.task.running) { Icon(Icons.Default.ThumbDownOffAlt, "不喜欢并删除") }
+                            if (selecting) Checkbox(track.id in selected, { checked -> selected = if (checked) selected + track.id else selected - track.id }, enabled = !busy)
+                            AlbumArtwork(track.artworkSeed, Modifier.size(48.dp), artworkPath = track.artworkPath, audioSource = track.sourceUri)
+                            Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                                Text(track.title, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                Text(track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                            }
+                            IconButton(onClick = {
+                                if (track.sourceUri.isNullOrBlank()) feature.launch { val restored = assistant.restoreDownload(track.id); feature.onReload(); feature.onPlay(restored) }
+                                else feature.onPlay(track)
+                            }, enabled = !busy) { Icon(Icons.Default.PlayArrow, "播放推荐") }
+                            IconButton(onClick = { feature.favorite(track) }, enabled = !busy) { Icon(if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, if (track.isFavorite) "已收藏" else "收藏歌曲") }
                         }
-                        state.recommendations.reasons[track.id]?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted) }
+                        state.origins[track.id]?.let { origin ->
+                            Text(origin.version + " · " + origin.source, style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, maxLines = 2)
+                        }
+                        var expanded by remember(track.id) { mutableStateOf(false) }
+                        state.recommendations.reasons[track.id]?.let { reason ->
+                            Text(reason, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted,
+                                maxLines = if (expanded) Int.MAX_VALUE else 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                        val saved = track.isFavorite || feature.playlists.any { list -> list.id != DAILY_PLAYLIST_ID && list.tracks.any { it.id == track.id } }
+                        val feedback = assistant.feedbackFor(track)
+                        val vote = feedback?.vote ?: RecommendationVote.Neutral
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            TextButton(onClick = { feature.launch {
+                                assistant.setRecommendationVote(track, if (vote == RecommendationVote.Like) RecommendationVote.Neutral else RecommendationVote.Like)
+                            } }, enabled = !busy) {
+                                Icon(Icons.Default.ThumbUp, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(if (vote == RecommendationVote.Like) "已点赞 · 撤销" else "点赞")
+                            }
+                            TextButton(onClick = { feature.launch {
+                                assistant.setRecommendationVote(track, if (vote == RecommendationVote.Dislike) RecommendationVote.Neutral else RecommendationVote.Dislike)
+                            } }, enabled = !busy) {
+                                Icon(Icons.Default.ThumbDown, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(if (vote == RecommendationVote.Dislike) "已踩 · 撤销" else "踩")
+                            }
+                            TextButton(onClick = { commentDraft = feedback?.comment.orEmpty(); commenting = track }, enabled = !busy) {
+                                Icon(Icons.Default.Comment, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(if (feedback?.comment.isNullOrBlank()) "评论" else "编辑评论")
+                            }
+                        }
+                        if (!feedback?.comment.isNullOrBlank()) Text("你的评论：" + feedback.comment,
+                            style = MaterialTheme.typography.bodySmall, maxLines = 3,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        FlowRow {
+                            TextButton(onClick = { saving = listOf(track); choosePlaylist = true }, enabled = !busy) { Text(if (saved) "已保存 · 加入歌单" else "加入歌单") }
+                            TextButton(onClick = { info = track }) { Text("歌曲信息") }
+                            TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "收起理由" else "展开理由") }
+                        }
                     }
                 }
             }
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
         }
+    }
+    commenting?.let { track ->
+        AlertDialog(onDismissRequest = { commenting = null }, title = { Text("评价「" + track.title + "」") }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("写下喜欢的地方或不想再听的特点，例如“喜欢轻快的旋律”“不要太吵的摇滚”。评论保存在本机，用于后续推荐。", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(commentDraft, { commentDraft = it.take(500) }, label = { Text("你的评论") },
+                    supportingText = { Text(commentDraft.length.toString() + "/500 · 留空保存可删除评论") },
+                    minLines = 3, maxLines = 6, modifier = Modifier.fillMaxWidth())
+            }
+        }, confirmButton = { TextButton(onClick = {
+            val comment = commentDraft; commenting = null
+            feature.launch { assistant.saveRecommendationComment(track, comment); feature.message = if (comment.isBlank()) "评论已删除" else "评论已保存，下次推荐会参考" }
+        }, enabled = !busy) { Text("保存") } }, dismissButton = { TextButton(onClick = { commenting = null }) { Text("取消") } })
+    }
+    if (choosePlaylist && saving.isNotEmpty()) BatchAddToPlaylistDialog(
+        playlists = feature.playlists.filterNot { it.id == DAILY_PLAYLIST_ID }, trackCount = saving.size,
+        onDismiss = { choosePlaylist = false; saving = emptyList() },
+        onSelectPlaylist = { id ->
+            val ids = saving.map(Track::id); choosePlaylist = false; saving = emptyList(); selecting = false; selected = emptySet()
+            feature.launch { feature.message = assistant.saveToPlaylist(ids, id); feature.onReload() }
+        },
+        onCreateNewPlaylist = { choosePlaylist = false; createPlaylist = true; playlistName = "" },
+    )
+    if (createPlaylist) AlertDialog(onDismissRequest = { createPlaylist = false }, title = { Text("新建歌单并加入") },
+        text = { OutlinedTextField(playlistName, { playlistName = it.take(80) }, label = { Text("歌单名称") }, singleLine = true) },
+        confirmButton = { TextButton(onClick = {
+            val ids = saving.map(Track::id); val title = playlistName; createPlaylist = false; saving = emptyList(); selecting = false; selected = emptySet()
+            feature.launch { feature.message = assistant.saveToPlaylist(ids, newName = title); feature.onReload() }
+        }, enabled = playlistName.isNotBlank()) { Text("创建并保存") } }, dismissButton = { TextButton(onClick = { createPlaylist = false }) { Text("取消") } })
+    info?.let { track ->
+        AlertDialog(onDismissRequest = { info = null }, title = { Text(track.title) }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TrackSourceDetails(track, state.origins[track.id])
+                Text("不喜欢会删除实际音频并移出所有歌单，包括已保存的歌曲。", style = MaterialTheme.typography.bodySmall)
+            }
+        }, confirmButton = { TextButton(onClick = { info = null; feature.launch { assistant.matchCover(track, true); feature.onReload() } }, enabled = !busy) { Text("重新匹配专辑封面") } },
+            dismissButton = { Row {
+                TextButton(onClick = { info = null; feature.dislike(track) }, enabled = !busy) { Text("不喜欢并删除") }
+                TextButton(onClick = { info = null }) { Text("关闭") }
+            } })
     }
 }

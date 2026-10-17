@@ -45,8 +45,15 @@ data class MusicFeatureSettings(
     val speechUrl: String = "wss://dashscope.aliyuncs.com/api-ws/v1/inference",
     val monthlySpeechSeconds: Int = 3600,
     val screenshotRecognition: ScreenshotRecognition = ScreenshotRecognition.LocalOcr,
+    val recommendationMode: RecommendationMode = RecommendationMode.Source,
+    val recommendationCooldownDays: Int = 7,
+    val temporaryStorageMb: Int = 512,
+    val preserveOriginalAudio: Boolean = true,
+    val bilibiliFallback: Boolean = true,
+    val preferredBilibiliUids: String = "",
 )
 
+enum class RecommendationMode(val label: String) { Source("歌源推荐 · 不调用模型"), Ai("AI 精选") }
 enum class ScreenshotRecognition(val label: String) {
     LocalOcr("本地 OCR"),
     CloudApi("云端 API"),
@@ -73,10 +80,10 @@ data class MusicTaskEntry(
     val progress: ImportProgress = ImportProgress(), val message: String = "", val createdAt: Long = 0,
     val retryable: Boolean = false,
 )
-data class BilibiliVideo(val bvid: String, val cid: Long, val title: String, val uploader: String, val coverUrl: String, val durationSeconds: Int, val page: Int = 1)
-data class VideoImportRequest(val link: String, val title: String, val artist: String, val album: String, val cover: String = "", val playlistId: String? = null)
+data class BilibiliVideo(val bvid: String, val cid: Long, val title: String, val uploader: String, val coverUrl: String, val durationSeconds: Int, val page: Int = 1, val uploaderId: Long = 0)
+data class VideoImportRequest(val link: String, val title: String, val artist: String, val album: String, val cover: String = "", val playlistId: String? = null, val preserveAudio: Boolean = false)
 data class SongRequest(val title: String, val artist: String, val album: String = "", val reason: String = "")
-data class RecommendationBatch(val createdAt: Long = 0, val trackIds: List<String> = emptyList(), val reasons: Map<String, String> = emptyMap())
+data class RecommendationBatch(val createdAt: Long = 0, val trackIds: List<String> = emptyList(), val reasons: Map<String, String> = emptyMap(), val createdDate: String = "")
 data class MusicAssistantState(
     val messages: List<AssistantMessage> = emptyList(),
     val task: MusicTaskStatus = MusicTaskStatus(),
@@ -86,6 +93,10 @@ data class MusicAssistantState(
     val speechSeconds: Int = 0,
     val sessions: List<AssistantSession> = emptyList(),
     val currentSessionId: String = "",
+    val sources: List<MusicSourceInfo> = emptyList(),
+    val origins: Map<String, MediaOrigin> = emptyMap(),
+    val actions: List<AssistantAction> = emptyList(),
+    val recommendationFeedback: Map<String, RecommendationFeedback> = emptyMap(),
 )
 
 const val DAILY_PLAYLIST_ID = "resonance-daily-recommendations"

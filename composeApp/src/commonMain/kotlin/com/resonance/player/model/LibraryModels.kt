@@ -62,6 +62,8 @@ enum class LibraryDestination {
     PlaylistArchive,
     Assistant,
     Tasks,
+    Sources,
+    Storage,
     Recommendations,
     AudioHelp,
     About,

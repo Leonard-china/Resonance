@@ -32,6 +32,15 @@ class LrclibLyricsRepository(
         forceRefresh: Boolean = false,
         customLyricsFolder: String? = null,
         aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
+    ): LyricsFetchResult {
+        val result = fetchOriginal(track, forceRefresh, customLyricsFolder, aiFallback)
+        return if (result is LyricsFetchResult.Found) LyricsFetchResult.Found(LyricOffsetStore.apply(cacheDirectory, track, result.lyrics)) else result
+    }
+    private suspend fun fetchOriginal(
+        track: Track,
+        forceRefresh: Boolean = false,
+        customLyricsFolder: String? = null,
+        aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
     ): LyricsFetchResult = withContext(Dispatchers.IO) {
         if (!forceRefresh) GeneratedLyricsStore.read(cacheDirectory.parent.resolve("music-assistant/generated-lyrics"), track)?.let {
             return@withContext LyricsFetchResult.Found(it)
@@ -385,6 +394,7 @@ class LrclibLyricsRepository(
     }
 
     fun updateOffset(track: Track, offsetMs: Long): Lyrics? {
+        LyricOffsetStore.write(cacheDirectory, track, offsetMs)
         val cached = readCache(track)
         if (cached is LyricsFetchResult.Found) {
             val updated = cached.lyrics.copy(offsetMs = offsetMs)

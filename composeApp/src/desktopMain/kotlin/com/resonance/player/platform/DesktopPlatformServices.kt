@@ -187,6 +187,7 @@ class DesktopPlatformServices : PlatformServices {
             com.resonance.player.features.DesktopMusicAccess(library, { id -> if (playingMusicId == id) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) } }, { playingMusicId }),
             com.resonance.player.features.DesktopCredentialVault::encrypt, com.resonance.player.features.DesktopCredentialVault::decrypt,
             screenshotOcr = com.resonance.player.features.desktopScreenshotOcr(),
+            autoInstallBuiltinSources = true,
         )
     }
     override suspend fun configureBackgroundRecommendations(settings: MusicFeatureSettings) {
@@ -234,6 +235,20 @@ class DesktopPlatformServices : PlatformServices {
     override val activeTrackChanges: Flow<String> = emptyFlow()
 
     override suspend fun loadLibrary(): List<Track> = withContext(Dispatchers.IO) { library.load() }
+    override suspend fun chooseMusicSourceFile(): String? = withContext(Dispatchers.IO) {
+        val selection = AtomicReference<Path?>()
+        SwingUtilities.invokeAndWait {
+            val chooser = JFileChooser().apply {
+                dialogTitle = "导入 MusicFree 歌源"
+                fileFilter = javax.swing.filechooser.FileNameExtensionFilter("JavaScript 歌源", "js")
+            }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) selection.set(chooser.selectedFile.toPath())
+        }
+        selection.get()?.let { path ->
+            require(Files.size(path) <= 2_000_000) { "歌源文件超过 2 MB" }
+            Files.readString(path)
+        }
+    }
 
     override suspend fun loadPlaylists(): List<Playlist> = withContext(Dispatchers.IO) { library.loadPlaylists() }
 
@@ -699,9 +714,10 @@ internal class DesktopLibraryStore(
         return (0 until count).mapNotNull { index ->
             val prefix = "track.$index."
             val source = properties.getProperty(prefix + "source") ?: return@mapNotNull null
-            if (!Files.isRegularFile(Path.of(source))) return@mapNotNull null
+            if (source.isBlank() && properties.getProperty(prefix + "id").isNullOrBlank()) return@mapNotNull null
+            if (source.isNotBlank() && !Files.isRegularFile(Path.of(source))) return@mapNotNull null
             Track(
-                id = if (usesContentIds) {
+                id = if (usesContentIds || source.isBlank()) {
                     properties.getProperty(prefix + "id") ?: sha256File(Path.of(source))
                 } else {
                     sha256File(Path.of(source))
@@ -712,7 +728,7 @@ internal class DesktopLibraryStore(
                 durationText = properties.getProperty(prefix + "duration") ?: "0:00",
                 artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: source.hashCode(),
                 isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
-                sourceUri = source,
+                sourceUri = source.takeIf(String::isNotBlank),
                 artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
                 mimeType = properties.getProperty(prefix + "mime") ?: "audio/mpeg",
             )
@@ -761,6 +777,7 @@ internal class DesktopLibraryStore(
                             title = u.title,
                             artist = u.artist,
                             album = u.album,
+                            sourceUri = u.sourceUri,
                             artworkPath = u.artworkPath ?: track.artworkPath,
                             artworkSeed = if (u.artworkPath != null) u.artworkSeed else track.artworkSeed,
                         )

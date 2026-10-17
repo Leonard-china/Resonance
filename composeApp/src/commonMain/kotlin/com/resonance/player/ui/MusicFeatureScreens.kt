@@ -74,6 +74,8 @@ internal fun MusicFeatureSettingsSection() {
         }
     }
     SectionHeader("AI 音乐助手")
+    SettingRow(Icons.Default.LibraryMusic, "歌源", "导入源 · 搜索专辑单曲 · 音轨与封面来源", { feature.onNavigate(LibraryDestination.Sources) })
+    SettingRow(Icons.Default.FolderOpen, "下载与空间", "临时空间上限 · 释放下载 · 检查重复文件", { feature.onNavigate(LibraryDestination.Storage) })
     SettingRow(Icons.Default.AutoAwesome, "打开音乐助手", "聊天管理、截图导入与每日推荐", { feature.onNavigate(LibraryDestination.Assistant) })
     Text("歌单截图识别", style = MaterialTheme.typography.labelLarge)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,6 +89,15 @@ internal fun MusicFeatureSettingsSection() {
     SectionHeader("每日推荐")
     ToggleSetting("自动推荐并下载", settings.recommendationsEnabled, Modifier.tutorialTarget(TutorialTarget.RecommendationSettings)) { feature.save(settings.copy(recommendationsEnabled = it)) }
     if (settings.recommendationsEnabled) {
+        Column {
+            RecommendationMode.entries.forEach { mode ->
+                FilterChip(settings.recommendationMode == mode, { feature.save(settings.copy(recommendationMode = mode)) }, label = { Text(mode.label) })
+            }
+        }
+        Text("歌源推荐直接查询目录并在本地过滤；AI 精选会调用当前模型。两种方式都排除近期重复和 MV。", style = MaterialTheme.typography.bodySmall)
+        var cooldown by remember(settings.recommendationCooldownDays) { mutableStateOf(settings.recommendationCooldownDays.toString()) }
+        OutlinedTextField(cooldown, { cooldown = it.filter(Char::isDigit).take(3) }, label = { Text("同首歌曲不重复天数（1–365）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        TextButton(onClick = { feature.save(settings.copy(recommendationCooldownDays = cooldown.toIntOrNull()?.coerceIn(1, 365) ?: 7)); feature.message = "推荐冷却期已保存" }) { Text("保存冷却期") }
         ToggleSetting("允许后台定时生成", settings.backgroundRecommendations) { feature.save(settings.copy(backgroundRecommendations = it)) }
         if (!settings.backgroundRecommendations) Text("打开应用时检查是否到期", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         else Text("Windows 在托盘运行；Android 按系统后台调度执行，错过时间后补生成。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
@@ -347,6 +358,9 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
                         )
                     }
                 }
+            }
+            items(state.actions.filter { it.kind.startsWith("suggest_") }, key = AssistantAction::id) { action ->
+                FilledTonalButton(onClick = { feature.launch { feature.onAction(action); assistant.acknowledgeAction(action.id) } }, enabled = !state.task.running) { Text(action.label) }
             }
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
             if (!state.task.running && state.task.message.isNotBlank()) item { Text(state.task.message, style = MaterialTheme.typography.bodySmall) }

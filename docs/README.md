@@ -1,6 +1,6 @@
 # 2026-10-17 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.4.6 / 29**，双端内置本地歌单 OCR、保留 API 切换，并核对截图截断歌名后导入。[本次发布说明](RELEASE_NOTES-0.4.6.md) · [本次发布记录](changes/2026-10-17-03-release-0.4.6.md)。GitHub 发布见 [v0.4.6 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.6)。实际验证与限制见各单项记录。
+当前工作区：**0.4.8 / 31**，滑动换页跟手动画、动效流畅度优化与内置三大免配置歌源正式集成。[本次发布说明](RELEASE_NOTES-0.4.8.md) · [新版详细介绍](Resonance-v0.4.8-新版详细介绍.md) · [本次发布记录](changes/2026-10-17-18-release-0.4.8.md)。GitHub 发布见 [v0.4.8 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.8)。实际验证与限制见各单项记录。
 
 ## 新 AI 从这里开始
 
@@ -17,6 +17,8 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.4.8 发布说明](RELEASE_NOTES-0.4.8.md) | 滑动换页跟手动画、动效流畅度与内置三大免配置歌源双端正式版 |
+| [0.4.7 发布说明](RELEASE_NOTES-0.4.7.md) | 歌源生态、推荐反馈、空间管理与手势切页双端正式版 |
 | [0.4.6 发布说明](RELEASE_NOTES-0.4.6.md) | 本地截图 OCR 与完整歌名导入的双端正式发布 |
 | [0.4.5 发布说明](RELEASE_NOTES-0.4.5.md) | v0.4.5 正式版更新重点、安装包校验与升级指引 |
 | [0.4.4 发布说明](RELEASE_NOTES-0.4.4.md) | 历史 0.4.4 Android/Windows 正式版记录 |
@@ -29,10 +31,28 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-17 | 升版 0.4.8、构建并打包 Android Release APK 与 Windows 安装包 | [具体修改](changes/2026-10-17-18-release-0.4.8.md) |
+| 2026-10-17 | 滑动换页跟手动画、动效流畅度优化与内置三大主流歌源 | [具体修改](changes/2026-10-17-17-interactive-page-swipe-animation-and-builtin-music-sources.md) |
+| 2026-10-17 | 官网下载页集成 123 云盘备用通道与高速镜像分流优化 | [具体修改](changes/2026-10-17-16-integrate-123pan-high-speed-downloads.md) |
+| 2026-10-17 | 升版 0.4.7、构建并打包 Android Release APK 与 Windows 安装包 | [具体修改](changes/2026-10-17-15-release-0.4.7.md) |
+| 2026-10-17 | 全链路功能验证、手势与反馈修复及双端Release构建 | [具体修改](changes/2026-10-17-14-verification-gestures-feedback-and-dual-build.md) |
+| 2026-10-17 | 关于页内置当前版本发布日期与主要更新 | [具体修改](changes/2026-10-17-13-about-version-highlights.md) |
+| 2026-10-17 | 推荐独立点赞、踩和本机评论参与后续选曲 | [具体修改](changes/2026-10-17-12-recommendation-votes-and-comments.md) |
+| 2026-10-17 | 主导航、曲库栏目和播放器内容支持左右滑动 | [具体修改](changes/2026-10-17-11-horizontal-page-swipe.md) |
+| 2026-10-17 | 生产站开启 Cloudflare 边缘页面缓存加速国内直连访问 | [具体修改](changes/2026-10-17-10-cloudflare-edge-cache-for-public-pages.md) |
+| 2026-10-17 | 助手播放导航工具与内置教程帮助 | [具体修改](changes/2026-10-17-09-assistant-tools-local-help.md) |
+| 2026-10-17 | 单曲歌词校准持久化与手机播放器/歌词布局 | [具体修改](changes/2026-10-17-08-lyric-offset-player-layout.md) |
+| 2026-10-17 | 应用下载空间、清理预览与保留歌单释放音频 | [具体修改](changes/2026-10-17-07-managed-download-storage.md) |
+| 2026-10-17 | 推荐歌曲去重、历史冷却与保存到歌单 | [具体修改](changes/2026-10-17-06-recommendation-history-playlists-reasons.md) |
+| 2026-10-17 | MusicFree核心歌源、录音室候选及音频/封面溯源 | [具体修改](changes/2026-10-17-05-music-sources-studio-provenance.md) |
 | 2026-10-17 | 官网发布对应版本更新公告与详细软件介绍 | [具体修改](changes/2026-10-17-04-release-announcement-and-introduction.md) |
 | 2026-10-17 | 发布 v0.4.6 双端安装包并同步 GitHub 和官网 | [具体修改](changes/2026-10-17-03-release-0.4.6.md) |
 | 2026-10-17 | 截断歌名核对完整信息后再下载及写入标签 | [具体修改](changes/2026-10-17-02-complete-truncated-song-titles.md) |
 | 2026-10-17 | 双端内置本地歌单 OCR，保留云端 API 切换并按任务释放模型 | [具体修改](changes/2026-10-17-01-local-screenshot-ocr.md) |
+| 2026-10-16 | 官网引入停留空闲预加载、Speculation Rules 与即时无缝切页 | [具体修改](changes/2026-10-16-29-website-idle-prefetch-and-instant-navigation.md) |
+| 2026-10-16 | 优化官网安装包下载速度、CDN边缘缓存与国内高速镜像 | [具体修改](changes/2026-10-16-28-website-download-speed-and-mirror.md) |
+| 2026-10-16 | 网站新增页面入场与交互动效、滚动驱动与微交互反馈 | [具体修改](changes/2026-10-16-27-website-dynamic-motion-effects.md) |
+| 2026-10-16 | 作者后台新增全站数据看板、话题直接管理、精准删帖与帖子置顶 | [具体修改](changes/2026-10-16-26-owner-dashboard-enhancements.md) |
 | 2026-10-16 | 官网论坛公告更新为播放器详细介绍并于首页增设跳转指引 | [具体修改](changes/2026-10-16-25-website-announcement-software-introduction-and-home-callout.md) |
 | 2026-10-16 | 关于页新增官网/充电/爱发电/GitHub，发布 v0.4.5 并同步双平台 | [具体修改](changes/2026-10-16-24-about-links-sponsor-and-release-0.4.5.md) |
 | 2026-10-16 | 官网下载同步最新双模式教程安装包并更新生产校验和 | [具体修改](changes/2026-10-16-23-website-download-tutorial-release.md) |

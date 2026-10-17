@@ -1,6 +1,6 @@
 # leonard.asia 现网运维
 
-核对日期：2026-10-16。官网：[leonard.asia](https://leonard.asia)，下载：[downloads](https://leonard.asia/downloads)，论坛：[forum](https://leonard.asia/forum)。本文不保存后台私有地址、密码、API Key 或 Cloudflare token。
+核对日期：2026-10-17。官网：[leonard.asia](https://leonard.asia)，下载：[downloads](https://leonard.asia/downloads)，论坛：[forum](https://leonard.asia/forum)。本文不保存后台私有地址、密码、API Key 或 Cloudflare token。
 
 ## 实际部署
 
@@ -33,3 +33,12 @@
 `data/site.sqlite3` 为 WAL 数据库，`data/owner.json` 保存作者散列及入口，`data/secret.key` 用于会话和退订链接；均需私有保存。只更新页面代码时不得覆盖或重建这些文件。邮件队列是否真实投递需要单独验证 SMTP，不能从 worker 进程存在推断发送成功；不向真实订阅者投递测试内容。
 
 本次生产检查记录见 [运维交接](../docs/changes/2026-10-16-20-production-site-handoff.md)。原生播放器的构建和版本不由网站部署自动变更。
+
+## 边缘缓存与国内直连加速（2026-10-17）
+
+- 现网在 Cloudflare 控制台（`Caching → Cache Rules`）配置了 `Cache Public Pages` 规则，表达式 `http.request.uri.path in {"/" "/downloads" "/support"}`，动作 `Eligible for cache` 并设置 Edge TTL 覆盖源站为 2 小时（`Cache-Control: max-age=14400`）。国内访客打开公开页面由离用户最近的 Anycast 节点直接命中返回（`cf-cache-status: HIT`），无需穿透跨洋隧道回源。
+- 论坛（`/forum`）及作者后台保持排除在缓存规则外（`cf-cache-status: DYNAMIC`），保持匿名发帖与 CSRF 实时隔离。
+- 发布新版本播放器或修改公开页面内容后，如需全网立刻同步最新内容，可至 Cloudflare 控制台 `Caching → Configuration → Purge Everything` 清除全部缓存，或按 URL 清除对应路径缓存。见 [边缘缓存优化记录](../docs/changes/2026-10-17-10-cloudflare-edge-cache-for-public-pages.md)。
+- 官网下载页面已配置 123 云盘国内下载直链：主按钮保持为免费免登录的 GitHub 镜像直链（`gh-proxy.com`），辅助链接并列提供【官网直连备用】与【123云盘备用】（Windows 映射 `https://4006883198.share.123pan.cn/123pan/MMXkwh-9CdCd`，Android 映射 `https://4006883198.share.123pan.cn/123pan/MMXkwh-pPBud`）。后续大版本可在 `templates/downloads.html` 更新 `pan_urls`，并通过 `D:\Project\mcServer\deploy_resonance.py` 一键同步至生产容器。见 [123云盘备用通道记录](../docs/changes/2026-10-17-16-integrate-123pan-high-speed-downloads.md)。
+
+

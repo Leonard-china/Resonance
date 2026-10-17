@@ -47,6 +47,7 @@ import com.resonance.player.ui.TutorialDialogs
 import com.resonance.player.tutorial.TutorialCompletion
 import com.resonance.player.platform.FloatingLyricsHost
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import com.resonance.player.playback.PlaybackStateStore
 import com.resonance.player.playback.PlaybackSnapshot
@@ -127,7 +128,7 @@ fun App(services: PlatformServices) {
         features.playlists = playlists
         features.player = player
         features.onNavigate = { destination = it }
-        features.beforeTask = { persistence.run {} }
+        features.beforeTask = { persistence.run {}; services.musicAssistant?.updateUiContext(player, destination) }
         features.onToggleBalance = {
             val enabled = !player.autoLoudnessEnabled
             player = player.copy(autoLoudnessEnabled = enabled)
@@ -440,6 +441,51 @@ fun App(services: PlatformServices) {
             }
         }
         features.onPlay = { track -> startTrack(track, importedTracks) }
+        features.onAction = { action ->
+            when (action.kind) {
+                "navigate", "suggest_page" -> {
+                    destination = LibraryDestination.entries.firstOrNull { it.name == action.target } ?: error("页面已不可用")
+                }
+                "suggest_tutorial" -> {
+                    val chapter = com.resonance.player.tutorial.TutorialCatalog.chapter(action.target) ?: error("教程章节已不可用")
+                    tutorial.start(chapter)
+                }
+                "play" -> {
+                    features.onReload()
+                    val ids = action.target.split(',')
+                    var queue = ids.mapNotNull { id -> features.library.firstOrNull { it.id == id } }
+                    val first = queue.firstOrNull() ?: error("歌曲已不在曲库中")
+                    if (first.sourceUri.isNullOrBlank()) {
+                        val restored = services.musicAssistant?.restoreDownload(first.id) ?: error("无法重新下载")
+                        features.onReload()
+                        queue = queue.map { if (it.id == first.id) restored else it }
+                    }
+                    startTrack(queue.first(), queue)
+                }
+                "pause", "resume" -> {
+                    check(player.currentTrack != null) { "请先选择歌曲" }
+                    val playing = action.kind == "resume"
+                    services.setPlaying(playing); player = player.copy(isPlaying = playing)
+                }
+                "next" -> moveInQueue(direction = 1)
+                "previous" -> moveInQueue(direction = -1)
+                "seek" -> {
+                    val seconds = action.target.toFloatOrNull() ?: error("播放位置无效")
+                    val duration = player.currentTrack?.let { com.resonance.player.model.durationTextToSeconds(it.durationText) } ?: 0
+                    check(duration > 0) { "当前歌曲时长尚不可用" }
+                    val fraction = (seconds / duration).coerceIn(0f, 1f)
+                    services.seekTo(fraction); player = player.copy(progress = fraction, positionMs = (fraction * duration * 1000).toLong())
+                }
+                else -> error("操作不支持")
+            }
+        }
+        val automaticAction = featureTaskState?.actions?.firstOrNull { !it.kind.startsWith("suggest_") }
+        LaunchedEffect(automaticAction?.id) {
+            val action = automaticAction ?: return@LaunchedEffect
+            try { features.onAction(action) }
+            catch (error: Exception) { features.message = "操作未完成：" + error.message }
+            finally { withContext(kotlinx.coroutines.NonCancellable) { services.musicAssistant?.acknowledgeAction(action.id) } }
+        }
         CompositionLocalProvider(LocalMusicFeatures provides features, LocalTutorial provides tutorial) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -521,6 +567,20 @@ fun App(services: PlatformServices) {
                             }
                         },
                         onRequestAiLyrics = { requestAiLyrics() },
+                        onAdjustLyricsOffset = { delta ->
+                            val track = player.currentTrack
+                            val current = (displayLyrics as? LyricsUiState.Ready)?.lyrics
+                            if (track != null && current != null) scope.launch {
+                                try {
+                                    val updated = services.musicAssistant?.saveLyricOffset(track, current, delta)
+                                    if (updated != null && player.currentTrack?.id == track.id) {
+                                        lyricsState = LyricsUiState.Ready(updated)
+                                        features.generatedLyrics = features.generatedLyrics?.copy(offsetMs = updated.offsetMs)
+                                        features.translated = features.translated?.copy(offsetMs = updated.offsetMs)
+                                    }
+                                } catch (error: Exception) { features.message = "歌词校准保存失败：" + error.message }
+                            }
+                        },
                         libraryLocation = services.libraryLocation,
                         onPrevious = { moveInQueue(direction = -1) },
                         onNext = { moveInQueue(direction = 1) },
