@@ -491,10 +491,9 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 - 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可查看数据看板（帖子/回复/话题/申请/订阅/版本）、直接新建话题、设置排序和分类、删除空话题（有帖保护）、审批用户申请、按 ID/URL 精准删帖与回复、关键词搜索帖子、置顶/取消置顶帖子、发布版本、预览/测试/群发邮件、上传收款码。
 - 邮件：确认页面的 POST 才生效，版本更新与推广独立选择；推广默认不勾选，邮件独立投递、支持退订，发送前重新检查偏好。未配置 SMTP 明确关闭订阅/发送。发布安装包不会自动群发。worker 重启保留队列，但 SMTP 成功后进程中断可能少量重复送达。
 
-2026-10-17：官网新增 `announcements.publish_announcement` 与 `manage.py publish-announcement content/0.4.6.json`，校验已发布版本及公开内容，在单一事务更新公告标题/正文，不新建邮件任务；源码打包白名单包含公告模块与公开内容。直连安装包链接带 `v=release.version`，避免新版本沿用旧缓存 URL。生产发布及实际校验见 [v0.4.6 发布记录](changes/2026-10-17-03-release-0.4.6.md)。生产站 Cloudflare Cache Rules 开启公开展示页面（`/`、`/downloads`、`/support`）边缘强缓存（2小时），跳过跨洋隧道直连就近 Anycast 节点（`cf-cache-status: HIT`），动态论坛保持 `no-store`，见 [边缘缓存优化记录](changes/2026-10-17-10-cloudflare-edge-cache-for-public-pages.md)。针对 163MB（APK）和 317MB（EXE）安装包因国际出口限速导致下载与浏览抢占卡顿，下载页集成 123 云盘国内 BGP 直链（Windows 与 Android 分别映射），辅以 GitHub 镜像与官网直连备用，实现国内数十 MB/s 免占用国际带宽下载，见 [123云盘国内高速下载记录](changes/2026-10-17-16-integrate-123pan-high-speed-downloads.md)。
+2026-10-17：官网新增 `announcements.publish_announcement` 与 `manage.py publish-announcement content/0.4.6.json`，校验已发布版本及公开内容，在单一事务更新公告标题/正文，不新建邮件任务；源码打包白名单包含公告模块与公开内容。直连安装包链接带 `v=release.version`，避免新版本沿用旧缓存 URL。生产发布及实际校验见 [v0.4.6 发布记录](changes/2026-10-17-03-release-0.4.6.md)。生产站 Cloudflare Cache Rules 开启公开展示页面（`/`、`/downloads`、`/support`）边缘强缓存（2小时），跳过跨洋隧道直连就近 Anycast 节点（`cf-cache-status: HIT`），动态论坛保持 `no-store`，见 [边缘缓存优化记录](changes/2026-10-17-10-cloudflare-edge-cache-for-public-pages.md)。针对 163MB（APK）和 317MB（EXE）安装包因国际出口限速导致下载与浏览抢占卡顿，下载页集成 123 云盘国内 BGP 直链（Windows 与 Android 分别映射），辅以 GitHub 镜像与官网直连备用，实现国内数十 MB/s 免占用国际带宽下载，见 [123云盘国内高速下载记录](changes/2026-10-17-16-integrate-123pan-high-speed-downloads.md)。生产容器配置 QQ 邮箱 SMTP（465 SSL/TLS）并已完成握手与发信校验，网站论坛区域邮件订阅正式对公网开放（双重确认 double opt-in），见 [SMTP配置与订阅开放记录](changes/2026-10-17-22-configure-production-smtp-and-enable-email-subscription.md)。
 
-
-验证边界：已通过生产 HTTPS 核对首页、下载、论坛与两端 Range，通过现有面板客户端读取资源状态和指定源码；不等同于服务器故障恢复或真实 SMTP 测试。首页图片仍是已有测试样本截图。网站任务不重新构建 Kotlin 应用；数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。后台私有入口、密码、面板 Key 与 tunnel token 不写入文档。
+验证边界：已通过生产 HTTPS 核对首页、下载、论坛、邮件订阅激活状态与两端 Range，通过现有面板客户端读取资源状态和指定源码；不等同于服务器故障恢复。首页图片仍是已有测试样本截图。网站任务不重新构建 Kotlin 应用；数据库备份使用 `manage.py backup`，同时保护密钥和上传目录。后台私有入口、密码、面板 Key 与 tunnel token 不写入文档。
 
 
 <a id="music-source-update"></a>

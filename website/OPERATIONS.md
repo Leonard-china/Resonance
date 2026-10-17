@@ -30,7 +30,7 @@
 
 作者从私有地址登录后，在同一浏览器访问论坛仍保留身份；回复会显示作者与置顶标签。现有改密方式为服务器终端 `website/.venv/bin/python manage.py setup`，需要交互式输入并重启服务；不把真实密码放在控制台命令、exec.log 或 Git 中。当前版本没有网页改密表单。
 
-`data/site.sqlite3` 为 WAL 数据库，`data/owner.json` 保存作者散列及入口，`data/secret.key` 用于会话和退订链接；均需私有保存。只更新页面代码时不得覆盖或重建这些文件。邮件队列是否真实投递需要单独验证 SMTP，不能从 worker 进程存在推断发送成功；不向真实订阅者投递测试内容。
+`data/site.sqlite3` 为 WAL 数据库，`data/owner.json` 保存作者散列及入口，`data/secret.key` 用于会话和退订链接；均需私有保存。只更新页面代码时不得覆盖或重建这些文件。邮件队列是否真实投递需要单独验证 SMTP，不能从 worker 进程存在推断发送成功；不向真实订阅者投递测试内容。现网已于 2026-10-17 正式配置 QQ 邮箱 SMTP（465 端口 SSL/TLS 发信），生产环境已开放双重确认邮件订阅与版本更新/推广邮件投递，见 [SMTP配置与订阅开放记录](../docs/changes/2026-10-17-22-configure-production-smtp-and-enable-email-subscription.md)。
 
 本次生产检查记录见 [运维交接](../docs/changes/2026-10-16-20-production-site-handoff.md)。原生播放器的构建和版本不由网站部署自动变更。
 

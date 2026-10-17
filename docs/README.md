@@ -31,6 +31,7 @@
 ## 变更记录（最新在前）
 
 | 修改日期 | 主要修改 | 详细记录 |
+| 2026-10-17 | 生产环境配置 QQ 邮箱 SMTP 服务并开放网站邮件订阅 | [具体修改](changes/2026-10-17-22-configure-production-smtp-and-enable-email-subscription.md) |
 | 2026-10-17 | 升版 0.4.9、构建并打包 Android Release APK 与 Windows 安装包 | [具体修改](changes/2026-10-17-21-release-0.4.9.md) |
 | 2026-10-17 | 修复打开设置等工具二级页面时顶部黑边闪烁问题 | [具体修改](changes/2026-10-17-20-fix-settings-top-edge-flicker.md) |
 | 2026-10-17 | 修复歌源网络公网协议限制、接口跳转与多候选智能回退机制 | [具体修改](changes/2026-10-17-19-fix-music-source-network-and-fallback.md) |
