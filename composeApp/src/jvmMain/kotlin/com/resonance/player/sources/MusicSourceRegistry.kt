@@ -99,7 +99,8 @@ internal class MusicSourceRegistry(
     }
     suspend fun recommendations(artists: List<String>, limit: Int): List<SourceSong> {
         val candidates = mutableListOf<SourceSong>()
-        for (artist in artists.distinct().take(4)) candidates += search(artist, limit)
+        val queryList = if (artists.isEmpty()) listOf("热歌", "流行", "经典") else artists.distinct().take(4)
+        for (artist in queryList) candidates += search(artist, limit)
         if (candidates.isEmpty()) {
             for (source in list().filter { it.enabled && "getTopLists" in it.capabilities && "getTopListDetail" in it.capabilities }) {
                 val groups = asArray(call(source.id, "getTopLists", JSONArray()))
@@ -134,7 +135,7 @@ internal class MusicSourceRegistry(
         val result = if ("getLyric" in info.capabilities) call(song.sourceId, "getLyric", JSONArray().put(JSONObject(song.raw))) else JSONObject(song.raw)
         val raw = (result as? JSONObject)?.optString("rawLrc")?.takeIf(String::isNotBlank)
         if (raw != null) return raw.take(300_000)
-        val link = (result as? JSONObject)?.optString("lrc")?.takeIf { it.startsWith("https://") } ?: return null
+        val link = (result as? JSONObject)?.optString("lrc")?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
         return network.request(JSONObject().put("url", link)).takeIf { it.optInt("status") == 200 }?.optString("body")
     }
     suspend fun call(id: String, method: String, args: JSONArray): Any? {

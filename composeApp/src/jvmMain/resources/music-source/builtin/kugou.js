@@ -33,9 +33,6 @@ module.exports = {
     if (!audioUrl) {
       throw new Error('此酷狗音频暂无免费直链，请尝试其他歌源');
     }
-    if (audioUrl.startsWith('http://')) {
-      audioUrl = 'https://' + audioUrl.substring(7);
-    }
     return {
       url: audioUrl
     };

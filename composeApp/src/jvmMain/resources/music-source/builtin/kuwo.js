@@ -22,12 +22,13 @@ module.exports = {
         album: item.ALBUM || '',
         albumId: String(item.ALBUMID || ''),
         duration: parseInt(item.DURATION || '0', 10),
-        artwork: artwork
+        artwork: artwork,
+        isTrial: Boolean(item.payInfo && (item.payInfo.listen_fragment === '1' || item.payInfo.listen_fragment === 1))
       };
     });
   },
   getMediaSource: async function(musicItem, quality) {
-    var id = musicItem.id;
+    var id = String(musicItem.id || '').replace('MUSIC_', '');
     var url = 'https://antiserver.kuwo.cn/anti.s?type=convert_url&rid=' + id + '&format=mp3&response=url';
     var res = await axios.get(url, { responseType: 'text' });
     var audioUrl = typeof res.data === 'string' ? res.data.trim() : '';

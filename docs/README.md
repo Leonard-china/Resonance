@@ -17,6 +17,7 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.4.9 发布说明](RELEASE_NOTES-0.4.9.md) | 歌源协议放开、多候选回退、试听防伪与二级页面黑边消除双端正式版 |
 | [0.4.8 发布说明](RELEASE_NOTES-0.4.8.md) | 滑动换页跟手动画、动效流畅度与内置三大免配置歌源双端正式版 |
 | [0.4.7 发布说明](RELEASE_NOTES-0.4.7.md) | 歌源生态、推荐反馈、空间管理与手势切页双端正式版 |
 | [0.4.6 发布说明](RELEASE_NOTES-0.4.6.md) | 本地截图 OCR 与完整歌名导入的双端正式发布 |
@@ -30,7 +31,9 @@
 ## 变更记录（最新在前）
 
 | 修改日期 | 主要修改 | 详细记录 |
-| --- | --- | --- |
+| 2026-10-17 | 升版 0.4.9、构建并打包 Android Release APK 与 Windows 安装包 | [具体修改](changes/2026-10-17-21-release-0.4.9.md) |
+| 2026-10-17 | 修复打开设置等工具二级页面时顶部黑边闪烁问题 | [具体修改](changes/2026-10-17-20-fix-settings-top-edge-flicker.md) |
+| 2026-10-17 | 修复歌源网络公网协议限制、接口跳转与多候选智能回退机制 | [具体修改](changes/2026-10-17-19-fix-music-source-network-and-fallback.md) |
 | 2026-10-17 | 升版 0.4.8、构建并打包 Android Release APK 与 Windows 安装包 | [具体修改](changes/2026-10-17-18-release-0.4.8.md) |
 | 2026-10-17 | 滑动换页跟手动画、动效流畅度优化与内置三大主流歌源 | [具体修改](changes/2026-10-17-17-interactive-page-swipe-animation-and-builtin-music-sources.md) |
 | 2026-10-17 | 官网下载页集成 123 云盘备用通道与高速镜像分流优化 | [具体修改](changes/2026-10-17-16-integrate-123pan-high-speed-downloads.md) |

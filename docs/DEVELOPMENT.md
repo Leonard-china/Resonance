@@ -1,10 +1,10 @@
 # 2026-10-17 — Resonance 详细开发说明：本地截图 OCR、曲库、音乐助手与歌词
 
-源码核对日期：2026-10-17（Asia/Shanghai）；当前版本为 **`0.4.8 / 31`**，双端集成滑动换页跟手动画、动效流畅度优化与内置三大免配置歌源。发布与实际验证见 [v0.4.8 发布说明](RELEASE_NOTES-0.4.8.md)、[新版详细介绍](Resonance-v0.4.8-新版详细介绍.md) 及 [发布记录](changes/2026-10-17-18-release-0.4.8.md)。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-17（Asia/Shanghai）；当前版本为 **`0.4.9 / 32`**，双端集成歌源网络协议放开、多候选智能回退机制、版权试听防伪与二级页面转场黑边消除。发布与实际验证见 [v0.4.9 发布说明](RELEASE_NOTES-0.4.9.md)、[新版详细介绍](Resonance-v0.4.9-新版详细介绍.md) 及 [发布记录](changes/2026-10-17-21-release-0.4.9.md)。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
-工作区新增的手势跟手动画、流体减速曲库过渡、动效裁剪优化及网易云/酷我/酷狗三大内置歌源已完成全量单元与桌面端测试，详见 [第17节](#music-source-update)、[动效与歌源变更记录](changes/2026-10-17-17-interactive-page-swipe-animation-and-builtin-music-sources.md) 与 [v0.4.8 发布构建记录](changes/2026-10-17-18-release-0.4.8.md)。当前版本正式升级为 `0.4.8 / 31`。
+工作区新增的公网 HTTP 歌源放开、跨源多候选智能回退机制、酷我 10 秒试听标记拦截及二级页面转场黑边消除已完成全量单元、Lint 及双端构建验证，详见 [v0.4.9 发布构建记录](changes/2026-10-17-21-release-0.4.9.md)。当前版本正式升级为 `0.4.9 / 32`。
 
 ## 目录
 
@@ -259,7 +259,7 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
-曲库标签用 LibraryTabTransition：单棵 Lazy 树、280ms/120dp 流体减速贝塞尔入场与 0.15~1.0 透明度淡入，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置，并优化 SizeTransform 裁剪开销。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
+曲库标签用 LibraryTabTransition：单棵 Lazy 树、280ms/120dp 流体减速贝塞尔入场与 0.15~1.0 透明度淡入，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置，页面转场统一配置 `SizeTransform(clip = false)` 避免二级页面（如设置）进入/退出时动态边界裁剪产生顶部黑边闪烁；Android 窗口配置 `#111A1D` 背景与完全透明沉浸式系统栏（SystemBarStyle.auto）。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
 
 每日推荐始终为歌单网格第一张卡；关闭时进入设置，开启时打开 RecommendationsScreen。持久每日歌单按 DAILY_PLAYLIST_ID 去重，其他歌单保持原顺序。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
 
@@ -514,9 +514,9 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 | 歌词时间校准/布局 | J/lyrics/LyricOffsetStore.kt、LrclibLyricsRepository；C/App.kt、ui/NowPlayingOverlay.kt | StorageAndAssistantExtraTest（双向调节与范围边界持久化） |
 | 本地帮助与UI动作 | C/tutorial/AssistantHelp.kt、App.kt、ui/MusicFeatureController.kt；J/features/JvmMusicAssistant.kt | MusicAssistantTest、StorageAndAssistantExtraTest（播放与导航动作） |
 
-新增导航 Sources、Storage，入口在工具/设置。内置网易云音乐、酷我音乐、酷狗音乐等开箱即用公网歌源，双端启动自动预置，支持界面一键“恢复内置歌源”。歌源支持本地JS、HTTPS JS/订阅JSON、启停、卸载、搜索、下载到目标歌单。MusicFree核心方法 search/getMediaSource/getMusicInfo/getLyric，及部分歌单/榜单接口；仅基础axios/fetch/qs与crypto-js，不能宣称兼容全部插件/Node。依赖QuickJS Kotlin1.0.10（jvmMain，Android/Windows原生组件），CryptoJS4.2.0从JVM resources两端打包，许可见THIRD_PARTY。脚本不持有宿主反射/文件/模型凭据；安装检查禁止联网，单次32MiB内存、512KiB栈、5秒执行限制/25秒协程期限。仅公网HTTPS443，检查实际DNS解析地址，拒绝内网/用户信息；接口2MB、下载音频512MiB、封面传输10MiB（写入前另限10000000字节），跳转重验且跨主机不传原请求头。无自动绕过登录/付费限制。
+新增导航 Sources、Storage，入口在工具/设置。内置网易云音乐、酷我音乐、酷狗音乐等开箱即用公网歌源，双端启动自动预置，支持界面一键“恢复内置歌源”。歌源支持本地JS、公网JS/订阅JSON、启停、卸载、搜索、下载到目标歌单。MusicFree核心方法 search/getMediaSource/getMusicInfo/getLyric，及部分歌单/榜单接口；仅基础axios/fetch/qs与crypto-js，不能宣称兼容全部插件/Node。依赖QuickJS Kotlin1.0.10（jvmMain，Android/Windows原生组件），CryptoJS4.2.0从JVM resources两端打包，许可见THIRD_PARTY。脚本不持有宿主反射/文件/模型凭据；安装检查禁止联网，单次32MiB内存、512KiB栈、5秒执行限制/25秒协程期限。仅公网HTTP/HTTPS（支持80/443及常用8080/8443端口），检查实际DNS解析地址，拒绝内网/用户信息；接口2MB、下载音频512MiB、封面传输10MiB（写入前另限10000000字节），最多5次安全跳转重验且跨主机不传原请求头。无自动绕过登录/付费限制。
 
-下载优先本地→启用歌源→可选B站。源详情与目录时长是证据，非真伪鉴定；试听标记/明显非录音室关键词拒绝，时长异常不进推荐。B站不再给MV加分，可按UID限制自动候选。兼容时复制原音轨，保留m4a/flac/ogg等扩展与MIME；关闭保留时转MP3。平台读取实际码率/采样率/声道，界面不显示固定320K、不据此认证母带。未内置未经核验的“保音质”账号。
+下载优先本地→启用歌源轮询（试听片段与异常时长自动回退）→可选B站。源详情与目录时长是证据，非真伪鉴定；试听标记/明显非录音室关键词拒绝，时长异常不进推荐并尝试下一源。B站不再给MV加分，可按UID限制自动候选。兼容时复制原音轨，保留m4a/flac/ogg等扩展与MIME；关闭保留时转MP3。平台读取实际码率/采样率/声道，界面不显示固定320K、不据此认证母带。未内置未经核验的“保音质”账号。
 
 每首歌优先自身图片，再读取音频内嵌图；同ID歌单快照可复用图片，有目录证据且无歧义的同歌手/同专辑图可复用。歌单头图不意味着成员都有图。支持批量为缺图曲目匹配目录封面；来源区分目录、歌源标注、视频缩略图、自选、未知。目录匹配未保证具体再版/合辑版本一致。
 

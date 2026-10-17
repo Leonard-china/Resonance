@@ -894,19 +894,19 @@ private fun DestinationContent(
         transitionSpec = {
             if (reducedMotion) {
                 (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
+                    (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState == LibraryDestination.Profile && targetState in profileSubPages) {
                 // 进入工具二级页面：从右侧满屏推入，主页面向左视差退场
                 (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState in profileSubPages && targetState == LibraryDestination.Profile) {
                 // 返回工具主页面：主页面从左侧视差归位，二级页面向右满屏滑出
                 (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
                     fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                 (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = true)
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState in profileSubPages && targetState in profileSubPages) {
                 // 工具二级页面之间切换：满屏丝滑平移
                 val dir = if (subPageIndexOf(targetState) >= subPageIndexOf(initialState)) 1 else -1

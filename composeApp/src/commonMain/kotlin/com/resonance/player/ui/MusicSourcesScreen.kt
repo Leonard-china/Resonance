@@ -33,10 +33,10 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             item {
                 Text("已为您内置网易云音乐、酷我音乐、酷狗音乐等主流公共歌源，开箱即用，无需到处寻找插件。", style = MaterialTheme.typography.bodyMedium)
-                Text("优先从歌曲条目获取音频、封面和歌词，普通搜索不调用聊天模型。支持 MusicFree 核心接口，仅公网 HTTPS。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("优先从歌曲条目获取音频、封面和歌词，普通搜索不调用聊天模型。支持 MusicFree 核心接口，严格隔离内网，仅公网 HTTP/HTTPS。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item {
-                OutlinedTextField(address, { address = it }, label = { Text("歌源 .js 或订阅 JSON 的 HTTPS 地址") },
+                OutlinedTextField(address, { address = it }, label = { Text("歌源 .js 或订阅 JSON 地址") },
                     modifier = Modifier.fillMaxWidth(), maxLines = 2, enabled = !busy)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = { feature.launch {
@@ -46,7 +46,7 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
                     Button(onClick = { feature.launch {
                         val installed = assistant.installSourceUrl(address.trim())
                         feature.message = "已导入 " + installed.size + " 个歌源"
-                    } }, enabled = !busy && address.startsWith("https://")) { Text("从地址导入") }
+                    } }, enabled = !busy && (address.startsWith("https://") || address.startsWith("http://"))) { Text("从地址导入") }
                     OutlinedButton(onClick = { feature.launch {
                         feature.services.chooseMusicSourceFile()?.let { script ->
                             val installed = assistant.installSource(script)

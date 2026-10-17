@@ -526,7 +526,7 @@ class JvmMusicAssistant(
             managedStorage.checkBudget(Files.size(raw) * 2, recommendationAcquiring, config.temporaryStorageMb)
             val originalExtension = if (config.preserveOriginalAudio) Mp3Import.originalExtension(raw) else null
             val extension = originalExtension ?: "mp3"
-            val cover = if (song.artwork.startsWith("https://")) {
+            val cover = if (song.artwork.startsWith("https://") || song.artwork.startsWith("http://")) {
                 val picture = stage.resolve("album.cover")
                 try {
                     sources.network.download(song.artwork, picture, maxBytes = 10L * 1024 * 1024)
@@ -794,13 +794,20 @@ class JvmMusicAssistant(
                 ?: error("截图中的歌名或歌手被截断，未找到可确认的完整名称，请补充：${input.artist} - ${input.title}")
         }
         library.tracks().firstOrNull { !it.sourceUri.isNullOrBlank() && normalize(it.title) == normalize(song.title) && normalize(it.artist) == normalize(song.artist) }?.let { return it }
-        val sourceMatch = if (sources.list().any { it.enabled && "search" in it.capabilities }) {
-            sources.search(song.title + " " + song.artist).firstOrNull {
+        val sourceMatches = if (sources.list().any { it.enabled && "search" in it.capabilities }) {
+            sources.search(song.title + " " + song.artist).filter {
                 RecommendationPolicy.identity(it.title, it.artist) == RecommendationPolicy.identity(song.title, song.artist) &&
                     !BilibiliClient.disallowedVersion(it.title + " " + it.version)
             }
-        } else null
-        if (sourceMatch != null) return importSourceInternal(sourceMatch, null)
+        } else emptyList()
+        for (match in sourceMatches) {
+            try {
+                return importSourceInternal(match, null)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+            }
+        }
         val config = cachedSettings ?: settings()
         check(config.bilibiliFallback) { "歌源没有合格候选，B 站补充来源已关闭" }
         val preferred = config.preferredBilibiliUids.split(',', '，', ' ', '\n').mapNotNull { it.trim().toLongOrNull() }.toSet()
@@ -989,7 +996,14 @@ class JvmMusicAssistant(
                 val sourceSong = sourceCandidates.firstOrNull { RecommendationPolicy.identity(it.title, it.artist) == RecommendationPolicy.identity(song.title, song.artist) }
                 val track = try {
                     recommendationAcquiring = true
-                    if (sourceSong != null) importSourceInternal(sourceSong, null) else obtain(song)
+                    if (sourceSong != null) {
+                        try {
+                            importSourceInternal(sourceSong, null)
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            obtain(song)
+                        }
+                    } else obtain(song)
                 } finally { recommendationAcquiring = false }
                 acquired += track
                 val sourceName = MediaOriginCodec.all(store.read())[track.id]?.source ?: "已核对音源"

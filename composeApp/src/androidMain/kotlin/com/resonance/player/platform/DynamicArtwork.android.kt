@@ -15,7 +15,7 @@ actual fun decodeArtwork(path: String): ImageBitmap? = runCatching {
             ?: AndroidArtworkResolver.audioArtwork[path]
                 ?.let(Uri::parse)
                 ?.let { audioUri -> embeddedArtwork(audioUri) }
-    } else if (path.startsWith("https://")) {
+    } else if (path.startsWith("https://") || path.startsWith("http://")) {
         val connection = URL(path).openConnection().apply {
             connectTimeout = 8_000
             readTimeout = 12_000

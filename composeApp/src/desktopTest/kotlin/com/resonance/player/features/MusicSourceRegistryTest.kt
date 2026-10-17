@@ -82,8 +82,10 @@ class MusicSourceRegistryTest {
         }
     }
     @Test fun publicTransportRejectsLocalAddressesAndCredentialUrls() {
-        listOf("http://example.com", "https://user:password@example.com", "https://localhost/", "file:///tmp/song")
+        listOf("ftp://example.com", "https://user:password@example.com", "https://localhost/", "http://localhost/", "file:///tmp/song", "https://example.com:22")
             .forEach { assertFails { PublicSourceNetwork.publicUrl(it) } }
+        listOf("http://example.com", "https://example.com", "http://m701.music.126.net/song.mp3", "http://kw-bj.kuwo.cn:80/song.mp3")
+            .forEach { assertEquals(it, PublicSourceNetwork.publicUrl(it)) }
         listOf("127.0.0.1", "10.0.0.1", "192.168.1.1", "169.254.169.254", "100.100.100.200", "::1", "fc00::1")
             .forEach { assertFalse(PublicSourceNetwork.publicAddress(InetAddress.getByName(it)), it) }
         assertTrue(PublicSourceNetwork.publicAddress(InetAddress.getByName("1.1.1.1")))
@@ -106,6 +108,14 @@ class MusicSourceRegistryTest {
             val reinstalled = sources.installBuiltinSources()
             assertEquals(3, reinstalled.size)
             assertEquals(3, sources.list().size)
+        }
+    }
+    @Test fun recommendationsWithEmptyArtistsUsesDefaultPopularSeeds() = runBlocking {
+        fixture { sources, _, network ->
+            sources.install(SOURCE)
+            val recommendations = sources.recommendations(emptyList(), 10)
+            assertTrue(recommendations.isNotEmpty())
+            assertTrue(network.requests.any { it.getString("url").contains("%E7%83%AD%E6%AD%8C") })
         }
     }
     companion object {
