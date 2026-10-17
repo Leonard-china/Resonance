@@ -28,6 +28,17 @@ class MusicFeatureController(val services: PlatformServices, private val scope: 
     var onNavigate: (LibraryDestination) -> Unit = {}
     var onAction: suspend (AssistantAction) -> Unit = {}
     var onToggleBalance: () -> Unit = {}
+    var searchQuery by mutableStateOf("")
+    var searchOnline by mutableStateOf(false)
+    var searchFocusRequest by mutableStateOf(0)
+    var instantNavigation by mutableStateOf(false)
+    var onlineResults by mutableStateOf(emptyList<SourceSong>())
+    var onlineResultQuery by mutableStateOf("")
+    var onlineError by mutableStateOf("")
+    var previewId by mutableStateOf<String?>(null)
+    private var previewJob: Job? = null
+    private var previewGeneration = 0
+    var unavailableOrigins by mutableStateOf(emptySet<String>())
     val assistant get() = services.musicAssistant
     fun launch(operation: suspend () -> Unit) = scope.launch {
         try { message = ""; settingsWriter.run {}; beforeTask(); operation() }
@@ -38,6 +49,40 @@ class MusicFeatureController(val services: PlatformServices, private val scope: 
     fun save(value: MusicFeatureSettings) {
         settings = value
         settingsWriter.submitLatest("music.settings") { assistant?.saveSettings(value); services.configureBackgroundRecommendations(value) }
+    }
+    fun searchSources(query: String) = launch {
+        stopPreview()
+        onlineError = ""
+        onlineResults = emptyList()
+        onlineResultQuery = query.trim()
+        try { onlineResults = assistant?.searchSources(onlineResultQuery).orEmpty() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) { onlineError = error.message ?: "在线搜索未完成，请重试" }
+    }
+    fun startPreview(song: SourceSong) {
+        stopPreview()
+        val generation = ++previewGeneration
+        previewId = song.sourceId + ":" + song.id
+        previewJob = launch {
+            try {
+                val path = assistant?.prepareSourcePreview(song) ?: error("试听服务尚未准备好")
+                if (generation != previewGeneration) return@launch
+                services.setPlaying(false)
+                services.previewAudio(path)
+                delay(30_000)
+            } finally {
+                if (generation == previewGeneration) {
+                    services.stopAudioPreview(); previewId = null
+                    withContext(NonCancellable) { assistant?.clearSourcePreview() }
+                }
+            }
+        }
+    }
+    fun stopPreview() {
+        previewGeneration++
+        previewJob?.cancel(); previewJob = null
+        services.stopAudioPreview(); previewId = null
+        scope.launch { assistant?.clearSourcePreview() }
     }
     fun toggleFloatingLyrics() {
         if (!settings.floatingLyrics && !services.canDrawOverlays()) {

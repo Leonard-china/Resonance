@@ -13,6 +13,14 @@ import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.model.*
 
+private fun MusicTaskOutcome.toUserLabel(): String = when (this) {
+    MusicTaskOutcome.Completed -> "已完成"
+    MusicTaskOutcome.Running -> "处理中"
+    MusicTaskOutcome.Cancelled -> "已取消"
+    MusicTaskOutcome.Interrupted -> "被中断"
+    MusicTaskOutcome.Failed -> "未完成"
+}
+
 @Composable
 internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
     val feature = LocalMusicFeatures.current ?: return
@@ -33,10 +41,14 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
         TextButton(onClick = { feature.launch { assistant.matchMissingCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("补齐曲库缺失封面 · 不调用模型") }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (state.tasks.isEmpty()) item { Text("下载、封面匹配和歌词处理的进度会显示在这里。", color = ResonanceColors.Muted) }
-            items(state.tasks.asReversed(), key = { it.id }) { task ->
+            items(groupMusicTasks(state.tasks), key = { it.root.id }) { group ->
+                val task = group.root
+                var expanded by remember(task.id) { mutableStateOf(false) }
                 Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(task.title, style = MaterialTheme.typography.titleMedium)
+                        if (task.progress.total > 0) Text("已处理 ${task.progress.completed} / ${task.progress.total} · ${task.progress.detail}", style = MaterialTheme.typography.bodySmall)
+                        if (group.steps.isNotEmpty()) Text("步骤完成 ${group.steps.count { it.outcome == MusicTaskOutcome.Completed }} · 可重试异常 ${group.failures.size}", style = MaterialTheme.typography.labelMedium)
                         if (task.outcome == MusicTaskOutcome.Running) {
                             MusicTaskProgress(task.progress, assistant::cancel)
                         } else {
@@ -52,6 +64,24 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
                                     if (task.kind == "syncLyrics") paidRetry = task
                                     else feature.launch { assistant.retryTask(task.id); feature.onReload(); feature.reloadGeneratedLyrics() }
                                 }, enabled = !state.task.running) { Text(if (task.kind == "syncLyrics") "重新生成（可能计费）" else "重试此步骤") }
+                            }
+                        }
+                        val freeFailures = group.failures.filterNot { it.kind == "syncLyrics" }
+                        if (freeFailures.isNotEmpty()) TextButton(onClick = { feature.launch {
+                            assistant.retryFailedTasks(freeFailures.map { it.id }); feature.onReload(); feature.reloadGeneratedLyrics()
+                        } }, enabled = !state.task.running) { Text("仅重试失败项（${freeFailures.size} 个步骤）") }
+                        if (group.steps.isNotEmpty()) {
+                            TextButton(onClick = { expanded = !expanded }) { Text(if (expanded) "收起详情" else "查看步骤与失败原因") }
+                            if (expanded) group.steps.forEach { entry ->
+                                HorizontalDivider()
+                                Text(entry.title, style = MaterialTheme.typography.titleSmall)
+                                Text(entry.outcome.toUserLabel() + if (entry.message.isNotBlank()) " · ${entry.message}" else "", style = MaterialTheme.typography.bodySmall)
+                                if (entry in group.failures) {
+                                    TextButton(onClick = {
+                                        if (entry.kind == "syncLyrics") paidRetry = entry
+                                        else feature.launch { assistant.retryTask(entry.id); feature.onReload(); feature.reloadGeneratedLyrics() }
+                                    }, enabled = !state.task.running) { Text(if (entry.kind == "syncLyrics") "重新生成（可能计费）" else "重试此步骤") }
+                                }
                             }
                         }
                     }
@@ -85,6 +115,7 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
             Text("每日推荐", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
             TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("设置") }
         }
+        TextButton(onClick = { feature.onNavigate(LibraryDestination.RecommendationHistory) }) { Text("推荐历史与我的反馈") }
         Text("点赞、踩和评论帮助调整下次推荐；收藏或加入歌单才会保留音频。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         if (state.recommendations.createdDate.isNotBlank()) Text("上次推荐：" + state.recommendations.createdDate +
             " · 近 " + feature.settings.recommendationCooldownDays + " 天不重复", style = MaterialTheme.typography.labelMedium)
@@ -99,7 +130,7 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
         if (!feature.settings.recommendationsEnabled) TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("未开启推荐 · 前往设置") }
         if (busy) MusicTaskProgress(state.task.progress, assistant::cancel)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (tracks.isEmpty()) item { Text("先导入可用歌源，再开启推荐；也可在设置中手动选择 AI 精选。", color = ResonanceColors.Muted) }
+            if (tracks.isEmpty()) item { Text("已内置歌源，开启推荐后点击“更新推荐”即可开始；也可先收藏喜欢的歌，帮助了解你的偏好。", color = ResonanceColors.Muted) }
             items(tracks, key = Track::id) { track ->
                 Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -125,6 +156,7 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
                                 maxLines = if (expanded) Int.MAX_VALUE else 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                         val saved = track.isFavorite || feature.playlists.any { list -> list.id != DAILY_PLAYLIST_ID && list.tracks.any { it.id == track.id } }
+                        Text(if (saved) "已保存 · 换批保留" else "临时推荐 · 收藏或加入歌单后保留", style = MaterialTheme.typography.labelMedium)
                         val feedback = assistant.feedbackFor(track)
                         val vote = feedback?.vote ?: RecommendationVote.Neutral
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

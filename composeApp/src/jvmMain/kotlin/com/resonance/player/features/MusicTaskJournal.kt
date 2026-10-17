@@ -7,13 +7,18 @@ import java.util.UUID
 
 /** Durable stage records, shared by foreground and workers through MusicJsonStore's monitor. */
 internal class MusicTaskJournal(private val store: MusicJsonStore) {
-    fun begin(title: String, kind: String = "", trackId: String = "", payload: JSONObject = JSONObject()): String {
+    fun begin(title: String, kind: String = "", trackId: String = "", payload: JSONObject = JSONObject(), parentId: String = ""): String {
         val id = UUID.randomUUID().toString()
         store.update { root ->
             val previous = root.optJSONArray("tasks") ?: JSONArray()
-            val kept = (0 until previous.length()).map(previous::getJSONObject).takeLast(99)
+            val all = (0 until previous.length()).map(previous::getJSONObject)
+            val ancestors = mutableSetOf<String>()
+            var ancestor = parentId
+            while (ancestor.isNotBlank() && ancestors.add(ancestor)) ancestor = all.firstOrNull { it.optString("id") == ancestor }?.optString("parentId").orEmpty()
+            val pinned = all.filter { it.optString("id") in ancestors }
+            val kept = (pinned + all.filterNot { it.optString("id") in ancestors }.takeLast((99 - pinned.size).coerceAtLeast(0))).sortedBy { it.optLong("createdAt") }
             root.put("tasks", JSONArray(kept + JSONObject().put("id", id).put("title", title).put("kind", kind).put("trackId", trackId)
-                .put("payload", payload).put("outcome", "Running").put("createdAt", System.currentTimeMillis())))
+                .put("payload", payload).put("parentId", parentId).put("outcome", "Running").put("createdAt", System.currentTimeMillis())))
         }
         return id
     }
@@ -43,7 +48,7 @@ internal class MusicTaskJournal(private val store: MusicJsonStore) {
                 MusicTaskOutcome.entries.firstOrNull { it.name == j.optString("outcome") } ?: MusicTaskOutcome.Interrupted,
                 ImportProgress(j.optString("stage", j.getString("title")), j.optString("fileName"), j.optInt("completed"), j.optInt("total"),
                     if (j.has("fraction") && !j.isNull("fraction")) j.optDouble("fraction").toFloat() else null, j.optString("detail")),
-                j.optString("message"), j.optLong("createdAt"), j.optString("kind") in setOf("video", "cover", "lyrics", "syncLyrics"))
+                j.optString("message"), j.optLong("createdAt"), j.optString("kind") in setOf("video", "cover", "lyrics", "syncLyrics", "source", "song"), j.optString("parentId"))
         }.getOrNull()
     } }.orEmpty()
 }

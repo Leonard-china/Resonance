@@ -180,7 +180,30 @@ class DesktopPlatformServices : PlatformServices {
     @Volatile private var playingMusicId: String? = null
     private val assistantScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     private var recommendationJob: kotlinx.coroutines.Job? = null
-    private var recommendationSchedule: Pair<Boolean, Int>? = null
+    private var recommendationSchedule: Triple<Boolean, Int, Boolean>? = null
+    override val supportsKeyboardShortcuts get() = true
+    override suspend fun saveReplacementAudio(track: Track): Unit = withContext(Dispatchers.IO) {
+        check(audioFileAvailable(track)) { "所选音频已不可读取，未替换来源" }
+        library.replaceAudio(track)
+    }
+    override fun formatDateTime(epochMillis: Long): String = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
+    override suspend fun chooseReplacementAudio(track: Track): Track? = withContext(Dispatchers.IO) {
+        val chosen = AtomicReference<java.io.File?>()
+        SwingUtilities.invokeAndWait {
+            val chooser = JFileChooser().apply {
+                dialogTitle = "为「${track.title}」重新定位音频"
+                fileFilter = javax.swing.filechooser.FileNameExtensionFilter("音频文件", "mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape")
+            }
+            if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chosen.set(chooser.selectedFile)
+        }
+        chosen.get()?.let { file ->
+            require(file.isFile) { "请选择可读取的音频文件" }
+            track.copy(sourceUri = file.absolutePath, mimeType = Files.probeContentType(file.toPath()) ?: when (file.extension.lowercase()) {
+                "flac" -> "audio/flac"; "m4a" -> "audio/mp4"; "wav" -> "audio/wav"; "ogg", "opus" -> "audio/ogg"; "aac" -> "audio/aac"; else -> "audio/mpeg"
+            })
+        }
+    }
+    override suspend fun automaticRecommendationAllowed(unmeteredOnly: Boolean) = AutomaticDownloadNetwork.allowed(unmeteredOnly)
     override val musicAssistant by lazy {
         com.resonance.player.features.JvmMusicAssistant(
             com.resonance.player.features.MusicJsonStore(library.appDirectory.resolve("music-assistant")), library.managedMusicDirectory,
@@ -191,14 +214,14 @@ class DesktopPlatformServices : PlatformServices {
         )
     }
     override suspend fun configureBackgroundRecommendations(settings: MusicFeatureSettings) {
-        val schedule = (settings.recommendationsEnabled && settings.backgroundRecommendations) to settings.intervalHours
+        val schedule = Triple(settings.recommendationsEnabled && settings.backgroundRecommendations, settings.intervalHours, settings.recommendationsUnmeteredOnly)
         if (recommendationSchedule == schedule) return
         recommendationSchedule = schedule
         recommendationJob?.cancel()
         if (settings.recommendationsEnabled && settings.backgroundRecommendations) {
             recommendationJob = assistantScope.launch {
                 while (kotlinx.coroutines.currentCoroutineContext().isActive) {
-                    try { musicAssistant.recommend() } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) {}
+                    try { if (automaticRecommendationAllowed(settings.recommendationsUnmeteredOnly)) musicAssistant.recommend() } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) {}
                     kotlinx.coroutines.delay(60_000)
                 }
             }
@@ -217,11 +240,11 @@ class DesktopPlatformServices : PlatformServices {
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
     private val errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
     override val playbackErrors: Flow<String> = errorEvents
-    private val player = DesktopAudioPlayer(
+    private val player: DesktopAudioPlayer = DesktopAudioPlayer(
         onEnded = {
             playingMusicId = null
             isPlayingEvents.tryEmit(false)
-            endedEvents.tryEmit(Unit)
+            if (!sleep.trackEnded()) endedEvents.tryEmit(Unit)
         },
         onProgress = { progressEvents.tryEmit(it) },
         onPlayingChanged = { isPlayingEvents.tryEmit(it) },
@@ -229,6 +252,19 @@ class DesktopPlatformServices : PlatformServices {
     )
 
     override val playbackEnded: Flow<Unit> = endedEvents
+    private val sleep: com.resonance.player.playback.PlaybackSleepTimer = com.resonance.player.playback.PlaybackSleepTimer(assistantScope, onExpire = { player.setPlaying(false); isPlayingEvents.tryEmit(false) })
+    override val sleepTimer get() = sleep.state
+    override fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) = sleep.set(option)
+    private val preview = com.resonance.player.audio.DesktopPcmPlayer({}, {}, {}, { errorEvents.tryEmit("试听失败：$it") })
+    override fun previewAudio(path: String) {
+        preview.close()
+        preview.play(Track("source-preview", "试听", "", "", "0:30", 0, sourceUri = path))
+    }
+    override fun stopAudioPreview() = preview.close()
+    override suspend fun audioFileAvailable(track: Track): Boolean = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: return@withContext false
+        runCatching { Files.isRegularFile(if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)) }.getOrDefault(false)
+    }
     override val playbackPositionMs: Long? get() = player.positionMs
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
@@ -430,12 +466,14 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
+        stopAudioPreview()
         playingMusicId = track.id
         isPlayingEvents.tryEmit(true)
         player.play(track)
     }
 
     override fun setPlaying(isPlaying: Boolean) {
+        if (isPlaying) stopAudioPreview()
         isPlayingEvents.tryEmit(isPlaying)
         player.setPlaying(isPlaying)
     }
@@ -508,6 +546,8 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun close() {
+        sleep.close()
+        stopAudioPreview()
         assistantScope.cancel()
         player.close()
     }
@@ -762,6 +802,13 @@ internal class DesktopLibraryStore(
     fun merge(imported: List<Track>) {
         val merged = (load() + imported).associateBy(Track::id).values.toList()
         save(merged)
+    }
+
+    /** Relinking must reinsert the old identity even when load() excludes its missing file. */
+    @Synchronized
+    fun replaceAudio(track: Track) {
+        save(load().filterNot { it.id == track.id } + track)
+        savePlaylists(loadPlaylists().map { playlist -> playlist.copy(tracks = playlist.tracks.map { if (it.id == track.id) track else it }) })
     }
 
     @Synchronized

@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit
 
 internal class DesktopMusicAccess(private val store: DesktopLibraryStore, private val stopTrack: (String) -> Unit, private val activeTrack: () -> String?) : MusicLibraryAccess {
     override suspend fun tracks() = store.load()
+    override suspend fun automaticDownloadsAllowed(unmeteredOnly: Boolean) = com.resonance.player.platform.AutomaticDownloadNetwork.allowed(unmeteredOnly)
     override suspend fun playlists() = store.loadPlaylists()
     override suspend fun savePlaylists(playlists: List<Playlist>) = store.savePlaylists(playlists)
     override suspend fun update(track: Track) = store.updateTracks(listOf(track))

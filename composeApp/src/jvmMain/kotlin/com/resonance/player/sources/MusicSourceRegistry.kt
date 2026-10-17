@@ -95,7 +95,8 @@ internal class MusicSourceRegistry(
             catch (_: Exception) { failures += source.name }
         }
         if (result.isEmpty() && failures.isNotEmpty()) error("这些歌源查询未完成，请检查插件或网络：" + failures.joinToString("、"))
-        return result.distinctBy { it.sourceId + ":" + it.id }.take(limit)
+        val grouped = result.distinctBy { it.sourceId + ":" + it.id }.groupBy { it.sourceId }.values.toList()
+        return (0 until (grouped.maxOfOrNull { it.size } ?: 0)).flatMap { index -> grouped.mapNotNull { it.getOrNull(index) } }.take(limit)
     }
     suspend fun recommendations(artists: List<String>, limit: Int): List<SourceSong> {
         val candidates = mutableListOf<SourceSong>()

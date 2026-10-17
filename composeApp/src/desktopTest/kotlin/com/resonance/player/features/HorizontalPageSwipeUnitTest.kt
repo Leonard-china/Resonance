@@ -40,10 +40,10 @@ class HorizontalPageSwipeUnitTest {
 
     @Test
     fun appVersionAndHighlightsGeneratedFromReleaseNotes() {
-        assertEquals("0.4.9", APP_VERSION)
+        assertEquals("0.5.0", APP_VERSION)
         assertEquals("2026-10-17", APP_RELEASE_DATE)
-        assertEquals(5, APP_RELEASE_HIGHLIGHTS.size)
-        assertTrue(APP_RELEASE_HIGHLIGHTS[0].contains("歌源网络协议优化"))
-        assertTrue(APP_RELEASE_HIGHLIGHTS.last().contains("沉浸式透明系统栏"))
+        assertEquals(9, APP_RELEASE_HIGHLIGHTS.size)
+        assertTrue(APP_RELEASE_HIGHLIGHTS[0].contains("统一搜索与候选试听"))
+        assertTrue(APP_RELEASE_HIGHLIGHTS.last().contains("视口覆盖与消除黑边"))
     }
 }

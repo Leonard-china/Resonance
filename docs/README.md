@@ -1,6 +1,6 @@
 # 2026-10-17 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.4.8 / 31**，滑动换页跟手动画、动效流畅度优化与内置三大免配置歌源正式集成。[本次发布说明](RELEASE_NOTES-0.4.8.md) · [新版详细介绍](Resonance-v0.4.8-新版详细介绍.md) · [本次发布记录](changes/2026-10-17-18-release-0.4.8.md)。GitHub 发布见 [v0.4.8 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.4.8)。实际验证与限制见各单项记录。
+当前工作区：**0.5.0 / 33**。已发布基线见 [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md) 与 [发布记录](changes/2026-10-17-33-release-0.5.0.md)。本轮新增搜索／试听、截图确认、任务分组、离线恢复、历史反馈、睡眠、键盘与网络策略，并进一步处理顶部黑边；已正式完成双端 Release 构建与官网生产部署。实际验证、限制见 [0.5.0 发布记录](changes/2026-10-17-33-release-0.5.0.md) 与 [Antigravity 交接](HANDOFF-2026-10-17-UX-ANTIGRAVITY.md)。
 
 ## 新 AI 从这里开始
 
@@ -14,9 +14,11 @@
 | [详细开发说明](DEVELOPMENT.md) | 当前模块/状态/存储、两端功能、AI工具、截图、推荐清理、翻译/悬浮、构建/排查 |
 | [AI 协作流程](AI-WORKFLOW.md) | 最小上下文、实施顺序、文档/验证/交接规则 |
 | [变更模板](CHANGE-TEMPLATE.md) | 日期、原因、具体修改、前后/数据、真实验证、限制 |
+| [本轮体验优化与 Antigravity 交接](HANDOFF-2026-10-17-UX-ANTIGRAVITY.md) | 九项独立记录、实际检查结果、真机重点、最终构建与网站部署提示词 |
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md) | 体验优化集大成、统一搜索试听、截图核对、任务重试、离线重定位与原生睡眠双端正式版 |
 | [0.4.9 发布说明](RELEASE_NOTES-0.4.9.md) | 歌源协议放开、多候选回退、试听防伪与二级页面黑边消除双端正式版 |
 | [0.4.8 发布说明](RELEASE_NOTES-0.4.8.md) | 滑动换页跟手动画、动效流畅度与内置三大免配置歌源双端正式版 |
 | [0.4.7 发布说明](RELEASE_NOTES-0.4.7.md) | 歌源生态、推荐反馈、空间管理与手势切页双端正式版 |
@@ -31,6 +33,19 @@
 ## 变更记录（最新在前）
 
 | 修改日期 | 主要修改 | 详细记录 |
+| --- | --- | --- |
+| 2026-10-17 | 恢复页面切换弹性晃动感并彻底根除切页顶边黑闪 | [具体修改](changes/2026-10-17-34-restore-spring-bounce-and-eliminate-top-edge-flicker.md) |
+| 2026-10-17 | 升版 0.5.0、构建签名 Android Release APK 与 Windows 安装包并完成官网生产部署 | [具体修改](changes/2026-10-17-33-release-0.5.0.md) |
+| 2026-10-17 | 修复 AndroidMusicAccess 中 Path.of 引发的 Release Lint NewApi 错误 | [具体修改](changes/2026-10-17-32-fix-android-access-newapi-lint.md) |
+| 2026-10-17 | 进一步覆盖页面切换顶部背景并减少系统栏重设 | [具体修改](changes/2026-10-17-31-stable-page-viewport-and-top-edge.md) |
+| 2026-10-17 | 自动推荐支持不计费网络限制与下次到期提示 | [具体修改](changes/2026-10-17-30-automatic-recommendation-network-and-schedule.md) |
+| 2026-10-17 | 增加 Windows 搜索播放切歌和返回快捷键 | [具体修改](changes/2026-10-17-29-desktop-keyboard-navigation.md) |
+| 2026-10-17 | 接通双端原生睡眠定时与播完当前歌曲停止 | [具体修改](changes/2026-10-17-28-native-player-sleep-timer.md) |
+| 2026-10-17 | 新增推荐历史与个人反馈管理页 | [具体修改](changes/2026-10-17-27-recommendation-history-and-feedback-management.md) |
+| 2026-10-17 | 区分离线音频状态并支持恢复和重新定位 | [具体修改](changes/2026-10-17-26-offline-audio-status-and-relink.md) |
+| 2026-10-17 | 按一次操作汇总任务并批量重试失败媒体步骤 | [具体修改](changes/2026-10-17-25-grouped-tasks-and-failed-stage-retry.md) |
+| 2026-10-17 | 截图歌单先核对勾选和编辑后再导入 | [具体修改](changes/2026-10-17-24-screenshot-playlist-confirmation-preview.md) |
+| 2026-10-17 | 统一本地与在线搜索并增加候选试听和换来源 | [具体修改](changes/2026-10-17-23-unified-search-and-source-preview.md) |
 | 2026-10-17 | 生产环境配置 QQ 邮箱 SMTP 服务并开放网站邮件订阅 | [具体修改](changes/2026-10-17-22-configure-production-smtp-and-enable-email-subscription.md) |
 | 2026-10-17 | 升版 0.4.9、构建并打包 Android Release APK 与 Windows 安装包 | [具体修改](changes/2026-10-17-21-release-0.4.9.md) |
 | 2026-10-17 | 修复打开设置等工具二级页面时顶部黑边闪烁问题 | [具体修改](changes/2026-10-17-20-fix-settings-top-edge-flicker.md) |

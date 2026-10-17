@@ -11,6 +11,8 @@ interface MusicAssistantServices {
     suspend fun completeText(messages: List<AssistantMessage>, maxTokens: Int): String
     suspend fun cachedTranslation(lyrics: Lyrics, language: String): Lyrics?
     suspend fun chat(message: String, images: List<AiImage> = emptyList())
+    suspend fun confirmScreenshotImport(draftId: String, playlists: List<ScreenshotPlaylistDraft>)
+    suspend fun discardScreenshotImport()
     suspend fun inspectVideo(link: String): BilibiliVideo
     suspend fun importVideo(request: VideoImportRequest): Track
     suspend fun translate(track: Track, lyrics: Lyrics, language: String, force: Boolean = false): Lyrics
@@ -23,6 +25,7 @@ interface MusicAssistantServices {
     suspend fun retain(trackId: String)
     suspend fun updateLibrarySnapshot(tracks: List<Track>, playlists: List<Playlist>)
     suspend fun retryTask(id: String)
+    suspend fun retryFailedTasks(ids: List<String>)
     suspend fun matchCover(track: Track, force: Boolean = true): Track
     suspend fun matchVideoCovers()
     suspend fun matchMissingCovers()
@@ -40,6 +43,8 @@ interface MusicAssistantServices {
     suspend fun removeSource(id: String)
     suspend fun searchSources(query: String): List<SourceSong>
     suspend fun importSourceSong(song: SourceSong, playlistId: String? = null): Track
+    suspend fun prepareSourcePreview(song: SourceSong): String
+    suspend fun clearSourcePreview()
     suspend fun storageReport(checkDuplicates: Boolean = false): MusicStorageReport
     suspend fun cleanupDownloads(ids: List<String>, includeSaved: Boolean = false): MusicCleanupReport
     suspend fun restoreDownload(trackId: String): Track

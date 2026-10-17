@@ -21,6 +21,19 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
     private val json = MusicJsonStore(root.resolve("music-assistant"))
     val musicDirectory: Path = (context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir).toPath().resolve("Resonance")
     override suspend fun tracks(): List<Track> = tracksNow()
+    override suspend fun automaticDownloadsAllowed(unmeteredOnly: Boolean): Boolean {
+        val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = manager.activeNetwork ?: return false
+        val caps = manager.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) && (!unmeteredOnly || !manager.isActiveNetworkMetered)
+    }
+    override suspend fun audioAvailable(track: Track): Boolean = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: return@withContext false
+        try {
+            if (source.startsWith("content:")) context.contentResolver.openAssetFileDescriptor(Uri.parse(source), "r")?.use { true } ?: false
+            else java.io.File(if (source.startsWith("file:")) java.net.URI(source).path else source).isFile
+        } catch (_: Exception) { false }
+    }
     private fun tracksNow(): List<Track> = synchronized(lock(context)) {
         val managed = readManaged(context)
         val removed = json.read().optJSONArray("removedIds")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()

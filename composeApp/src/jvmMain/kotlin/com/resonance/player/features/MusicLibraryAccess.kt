@@ -7,8 +7,12 @@ import java.nio.file.Path
 interface MusicLibraryAccess {
     suspend fun tracks(): List<Track>
     suspend fun playlists(): List<Playlist>
+    suspend fun automaticDownloadsAllowed(unmeteredOnly: Boolean): Boolean = true
     suspend fun savePlaylists(playlists: List<Playlist>)
     suspend fun update(track: Track)
+    suspend fun audioAvailable(track: Track): Boolean = track.sourceUri?.let { source ->
+        runCatching { java.nio.file.Files.isRegularFile(if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)) }.getOrDefault(false)
+    } ?: false
     suspend fun delete(track: Track): DeleteTrackReport
     suspend fun favorite(track: Track, value: Boolean)
     suspend fun importAudio(path: Path, request: VideoImportRequest, cover: Path?): Track

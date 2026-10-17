@@ -20,10 +20,6 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
     val assistant = feature.assistant ?: return
     val state by assistant.state.collectAsState()
     var address by remember { mutableStateOf("") }
-    var query by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf(emptyList<SourceSong>()) }
-    var pending by remember { mutableStateOf<SourceSong?>(null) }
-    var selectedPlaylist by remember { mutableStateOf<String?>(null) }
     val busy = state.task.running
     Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 16.dp else 28.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -33,12 +29,15 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             item {
                 Text("已为您内置网易云音乐、酷我音乐、酷狗音乐等主流公共歌源，开箱即用，无需到处寻找插件。", style = MaterialTheme.typography.bodyMedium)
-                Text("优先从歌曲条目获取音频、封面和歌词，普通搜索不调用聊天模型。支持 MusicFree 核心接口，严格隔离内网，仅公网 HTTP/HTTPS。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("搜索歌曲无需配置 AI，也不消耗模型额度。下载、封面和歌词优先使用同一歌曲来源。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            item {
+                Button(onClick = { feature.searchOnline = true; feature.onNavigate(LibraryDestination.Discover) }) { Text("搜索在线歌曲") }
             }
             item {
                 OutlinedTextField(address, { address = it }, label = { Text("歌源 .js 或订阅 JSON 地址") },
                     modifier = Modifier.fillMaxWidth(), maxLines = 2, enabled = !busy)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = { feature.launch {
                         val installed = assistant.restoreBuiltinSources()
                         feature.message = "已恢复并载入 " + installed.size + " 个内置歌源"
@@ -73,27 +72,6 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
             }
             item {
                 HorizontalDivider()
-                OutlinedTextField(query, { query = it }, label = { Text("搜索歌曲或歌手") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                Button(onClick = { feature.launch {
-                    results = assistant.searchSources(query.trim())
-                    feature.message = if (results.isEmpty()) "没有找到可用候选，请检查歌源能力或关键词" else "找到 " + results.size + " 个候选"
-                } }, enabled = !busy && query.isNotBlank() && state.sources.any { it.enabled }) { Text("搜索歌源") }
-            }
-            items(results, key = { it.sourceId + ":" + it.id }) { song ->
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Text(song.title, style = MaterialTheme.typography.titleMedium)
-                        Text(song.artist + " · " + song.album.ifBlank { "专辑未提供" }, style = MaterialTheme.typography.bodyMedium)
-                        val source = state.sources.firstOrNull { it.id == song.sourceId }?.name.orEmpty()
-                        Text(source + " · " + song.version.ifBlank { "专辑单曲候选，版本未核验" } +
-                            if (song.durationSeconds > 0) " · " + song.durationSeconds + " 秒" else "",
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        TextButton(onClick = { selectedPlaylist = null; pending = song }, enabled = !busy) { Text("核对并下载") }
-                    }
-                }
-            }
-            item {
-                HorizontalDivider()
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("保留原音轨格式", modifier = Modifier.weight(1f))
                     Switch(feature.settings.preserveOriginalAudio, { feature.save(feature.settings.copy(preserveOriginalAudio = it)) })
@@ -111,24 +89,6 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
             if (busy) item { MusicTaskProgress(state.task.progress, assistant::cancel) }
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
         }
-    }
-    pending?.let { song ->
-        AlertDialog(onDismissRequest = { pending = null }, title = { Text("下载专辑单曲候选") }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(song.title + "\n" + song.artist + "\n" + song.album.ifBlank { "专辑未提供" })
-                Text("将检查版本关键词与目录时长；无法仅凭插件标注证明母带音质。音频保留在本机，可在“下载与空间”管理。", style = MaterialTheme.typography.bodySmall)
-                Text("目标歌单：" + (feature.playlists.firstOrNull { it.id == selectedPlaylist }?.name ?: "仅下载到曲库"))
-                LazyColumn(Modifier.heightIn(max = 160.dp)) {
-                    item { TextButton(onClick = { selectedPlaylist = null }) { Text("仅下载到曲库") } }
-                    items(feature.playlists.filterNot { it.id == DAILY_PLAYLIST_ID }, key = Playlist::id) { playlist ->
-                        TextButton(onClick = { selectedPlaylist = playlist.id }) { Text(playlist.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                    }
-                }
-            }
-        }, confirmButton = { TextButton(onClick = {
-            val playlist = selectedPlaylist; pending = null
-            feature.launch { assistant.importSourceSong(song, playlist); feature.onReload(); feature.message = "已下载并保存" }
-        }, enabled = !busy) { Text("下载") } }, dismissButton = { TextButton(onClick = { pending = null }) { Text("取消") } })
     }
 }
 

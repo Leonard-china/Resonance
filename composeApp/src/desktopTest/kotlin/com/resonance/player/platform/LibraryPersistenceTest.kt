@@ -6,6 +6,33 @@ import java.util.concurrent.Executors
 import kotlin.test.*
 
 class LibraryPersistenceTest {
+    @Test fun relinkingMissingAudioPreservesIdentityFavoriteAndPlaylistAfterRestart() {
+        val directory = Files.createTempDirectory("resonance-relink-test-").toRealPath()
+        try {
+            val previousFile = directory.resolve("previous.mp3")
+            Files.write(previousFile, byteArrayOf(1, 2, 3))
+            val previous = Track("original-id", "Song", "Artist", "Album", "3:00", 1, isFavorite = true, sourceUri = previousFile.toString())
+            val store = DesktopLibraryStore(directory)
+            store.save(listOf(previous))
+            store.savePlaylists(listOf(com.resonance.player.model.Playlist("mine", "Keep", "", listOf(previous), 0)))
+            Files.delete(previousFile)
+            val replacementFile = directory.resolve("replacement.flac")
+            val bytes = byteArrayOf(4, 5, 6)
+            Files.write(replacementFile, bytes)
+            store.replaceAudio(previous.copy(sourceUri = replacementFile.toString(), mimeType = "audio/flac"))
+            val restarted = DesktopLibraryStore(directory)
+            val restored = restarted.load().single()
+            assertEquals(previous.id, restored.id)
+            assertTrue(restored.isFavorite)
+            assertEquals(replacementFile.toString(), restored.sourceUri)
+            assertEquals("audio/flac", restored.mimeType)
+            assertEquals(restored, restarted.loadPlaylists().single().tracks.single())
+            assertContentEquals(bytes, Files.readAllBytes(replacementFile))
+        } finally {
+            check(directory.fileName.toString().startsWith("resonance-relink-test-"))
+            Files.walk(directory).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
+        }
+    }
     @Test fun concurrentMergesAndFavoritesPreserveEveryTrack() {
         val directory = Files.createTempDirectory("resonance-store-test-")
         val store = DesktopLibraryStore(directory)

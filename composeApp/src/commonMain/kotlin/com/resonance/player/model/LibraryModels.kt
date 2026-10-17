@@ -65,6 +65,7 @@ enum class LibraryDestination {
     Sources,
     Storage,
     Recommendations,
+    RecommendationHistory,
     AudioHelp,
     About,
     Tutorial,
@@ -114,6 +115,8 @@ enum class SleepTimerOption(val label: String, val minutes: Int?) {
     Min60("60 分钟", 60),
     EndOfTrack("播完当前歌曲停止", null),
 }
+
+data class SleepTimerState(val option: SleepTimerOption = SleepTimerOption.Off, val remainingSeconds: Int? = null)
 
 data class CalibrationStatus(
     val isActive: Boolean = false,

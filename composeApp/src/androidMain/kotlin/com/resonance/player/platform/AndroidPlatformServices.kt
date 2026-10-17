@@ -116,9 +116,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             directory.resolve("custom-${java.util.UUID.randomUUID()}.cover").also { Files.write(it, bytes) }.toString()
         }
     }
-    private var recommendationSchedule: Pair<Boolean, Int>? = null
+    private var recommendationSchedule: Triple<Boolean, Int, Boolean>? = null
     override suspend fun configureBackgroundRecommendations(settings: MusicFeatureSettings) {
-        val schedule = (settings.recommendationsEnabled && settings.backgroundRecommendations) to settings.intervalHours
+        val schedule = Triple(settings.recommendationsEnabled && settings.backgroundRecommendations, settings.intervalHours, settings.recommendationsUnmeteredOnly)
         if (recommendationSchedule == schedule) return
         recommendationSchedule = schedule
         com.resonance.player.features.RecommendationWorker.configure(activity, settings)
@@ -245,6 +245,63 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override val playbackEnded: Flow<Unit> = endedEvents
+    override val sleepTimer get() = com.resonance.player.PlaybackService.sleepTimerState
+    override suspend fun saveReplacementAudio(track: Track): Unit = withContext(Dispatchers.IO) {
+        check(audioFileAvailable(track)) { "所选音频已不可读取，未替换来源" }
+        // Unlike metadata-only updateTracks, this also adopts previously external catalog entries.
+        com.resonance.player.features.AndroidMusicAccess(activity).update(track)
+    }
+    override fun formatDateTime(epochMillis: Long): String = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
+    private var replacementResult: ((Uri?) -> Unit)? = null
+    private val replacementPicker = activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> replacementResult?.invoke(uri); replacementResult = null }
+    override suspend fun chooseReplacementAudio(track: Track): Track? {
+        val uri = withContext(Dispatchers.Main.immediate) { suspendCancellableCoroutine<Uri?> { continuation ->
+            replacementResult = { if (continuation.isActive) continuation.resume(it) }
+            continuation.invokeOnCancellation { replacementResult = null }
+            replacementPicker.launch(arrayOf("audio/*"))
+        } } ?: return null
+        runCatching { activity.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val updated = track.copy(sourceUri = uri.toString(), mimeType = activity.contentResolver.getType(uri) ?: track.mimeType)
+        check(audioFileAvailable(updated)) { "无法读取所选音频，请检查文件或授权" }
+        return updated
+    }
+    override fun updateWindowBackground(argb: Int) {
+        activity.window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(argb))
+    }
+    override fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) {
+        withPlayer { controller -> sendAudioCommand(controller, com.resonance.player.AudioSessionCommands.SLEEP_TIMER,
+            android.os.Bundle().apply { putString("option", option.name) }) }
+    }
+    private var previewPlayer: androidx.media3.exoplayer.ExoPlayer? = null
+    override fun previewAudio(path: String) {
+        stopAudioPreview()
+        previewPlayer = androidx.media3.exoplayer.ExoPlayer.Builder(activity).build().apply {
+            setAudioAttributes(androidx.media3.common.AudioAttributes.Builder().setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
+            setHandleAudioBecomingNoisy(true)
+            addListener(object : Player.Listener {
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) { errorEvents.tryEmit("试听失败：" + error.message); stopAudioPreview() }
+                override fun onPlaybackStateChanged(playbackState: Int) { if (playbackState == Player.STATE_ENDED) stopAudioPreview() }
+            })
+            setMediaItem(MediaItem.fromUri(android.net.Uri.fromFile(java.io.File(path))))
+            prepare(); play()
+        }
+    }
+    override fun stopAudioPreview() { previewPlayer?.release(); previewPlayer = null }
+    override suspend fun audioFileAvailable(track: Track): Boolean = withContext(Dispatchers.IO) {
+        val source = track.sourceUri ?: return@withContext false
+        try {
+            if (source.startsWith("content:")) activity.contentResolver.openAssetFileDescriptor(android.net.Uri.parse(source), "r")?.use { true } ?: false
+            else java.io.File(if (source.startsWith("file:")) java.net.URI(source).path else source).isFile
+        } catch (_: Exception) { false }
+    }
+    override suspend fun automaticRecommendationAllowed(unmeteredOnly: Boolean): Boolean {
+        val manager = activity.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) && (!unmeteredOnly || !manager.isActiveNetworkMetered)
+    }
     override val playbackPositionMs: Long? get() = player?.currentPosition?.coerceAtLeast(0L)
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
@@ -263,7 +320,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_ENDED) {
                         isPlayingEvents.tryEmit(false)
-                        endedEvents.tryEmit(Unit)
+                        if (!com.resonance.player.PlaybackService.sleepTimerStoppedAtEnd) endedEvents.tryEmit(Unit)
                     }
                 }
 
@@ -1105,6 +1162,8 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
+        stopAudioPreview()
+        com.resonance.player.PlaybackService.sleepTimerStoppedAtEnd = false
         val uri = track.sourceUri ?: return
         if (Build.VERSION.SDK_INT >= 33 &&
             ActivityCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -1123,6 +1182,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun setPlaying(isPlaying: Boolean) {
+        if (isPlaying) stopAudioPreview()
         withPlayer { if (isPlaying) it.play() else it.pause() }
     }
 
@@ -1199,6 +1259,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun close() {
+        stopAudioPreview()
         cancelVolumeCalibration()
         activity.lifecycle.removeObserver(foregroundObserver)
         pendingLocationPermission?.invoke(false)

@@ -33,6 +33,9 @@ class PlaybackService : MediaSessionService() {
     private var baseMasterVolume = 1f
     private var appliedGainDb = 0f
     private val audioScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val sleep = com.resonance.player.playback.PlaybackSleepTimer(audioScope,
+        onExpire = { mediaSession?.player?.let { player -> player.pause(); (player as? ExoPlayer)?.pauseAtEndOfMediaItems = false } }, nowMs = android.os.SystemClock::elapsedRealtime,
+        mutableState = sleepTimerState)
     private var trackAudioJob: Job? = null
     private val handler = Handler(Looper.getMainLooper())
     private val snapshotTick = object : Runnable {
@@ -53,12 +56,19 @@ class PlaybackService : MediaSessionService() {
             setHandleAudioBecomingNoisy(true)
             addListener(object : Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                        if (sleep.trackEnded()) sleepTimerStoppedAtEnd = true
+                    }
                     activeMusicId = mediaItem?.mediaId
                     mediaItem?.let(::updateTrackAudio)
                     persistPlayback()
                 }
                 override fun onIsPlayingChanged(isPlaying: Boolean) { persistPlayback() }
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM && sleep.trackEnded()) sleepTimerStoppedAtEnd = true
+                }
                 override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED && sleep.trackEnded()) sleepTimerStoppedAtEnd = true
                     if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) activeMusicId = null
                     else activeMusicId = currentMediaItem?.mediaId
                 }
@@ -76,6 +86,13 @@ class PlaybackService : MediaSessionService() {
                 override fun onCustomCommand(session: MediaSession, controller: MediaSession.ControllerInfo,
                     customCommand: SessionCommand, args: Bundle): ListenableFuture<SessionResult> {
                     when (customCommand.customAction) {
+                        AudioSessionCommands.SLEEP_TIMER -> {
+                            val option = com.resonance.player.model.SleepTimerOption.entries.firstOrNull { it.name == args.getString("option") }
+                                ?: return Futures.immediateFuture(SessionResult(androidx.media3.session.SessionError.ERROR_BAD_VALUE))
+                            sleepTimerStoppedAtEnd = false
+                            player.pauseAtEndOfMediaItems = option == com.resonance.player.model.SleepTimerOption.EndOfTrack
+                            sleep.set(option)
+                        }
                         AudioSessionCommands.GAIN -> {
                             if (args.getBoolean("userInitiated", false)) trackAudioJob?.cancel()
                             val gain = args.getFloat("gainDb", 0f)
@@ -147,6 +164,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
     override fun onDestroy() {
+        sleep.close()
         persistPlayback()
         handler.removeCallbacks(snapshotTick)
         overlay?.close()
@@ -158,6 +176,8 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
     companion object {
+        val sleepTimerState = kotlinx.coroutines.flow.MutableStateFlow(com.resonance.player.model.SleepTimerState())
+        @Volatile var sleepTimerStoppedAtEnd: Boolean = false
         @Volatile private var activeService: PlaybackService? = null
         @Volatile var activeMusicId: String? = null
             private set

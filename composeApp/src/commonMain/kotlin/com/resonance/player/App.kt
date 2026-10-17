@@ -23,6 +23,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.*
+import com.resonance.player.model.SleepTimerOption
 import com.resonance.player.data.PreviewLibrary
 import com.resonance.player.design.ResonanceTheme
 import com.resonance.player.design.WeatherAppearanceTheme
@@ -73,6 +78,9 @@ fun App(services: PlatformServices) {
         var importedTracks by remember { mutableStateOf(emptyList<com.resonance.player.model.Track>()) }
         var showCreateDialog by remember { mutableStateOf(false) }
         var trackPendingDeletion by remember { mutableStateOf<Track?>(null) }
+        var trackPendingRestore by remember { mutableStateOf<Track?>(null) }
+        var playRequest by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        var showSleepTimer by remember { mutableStateOf(false) }
         var operationInProgress by remember { mutableStateOf(false) }
         var initialLoadInProgress by remember { mutableStateOf(true) }
         var previewMode by remember { mutableStateOf(false) }
@@ -82,6 +90,8 @@ fun App(services: PlatformServices) {
             importMessage = "音频设置未能完成：${it.message.orEmpty()}"
         } }
         var player by playback.state
+        val sleepTimer by services.sleepTimer.collectAsState()
+        LaunchedEffect(sleepTimer) { player = player.copy(sleepTimerOption = sleepTimer.option, sleepTimerRemainingSeconds = sleepTimer.remainingSeconds) }
         var customQueue by remember { mutableStateOf<List<Track>?>(null) }
         var activePlaylistId by remember { mutableStateOf<String?>(null) }
         val persistence = remember(services) { PersistenceQueue(scope) {
@@ -160,10 +170,10 @@ fun App(services: PlatformServices) {
         }
         LaunchedEffect(importedTracks, playlists) { if (!initialLoadInProgress) services.musicAssistant?.updateLibrarySnapshot(importedTracks, playlists) }
         val foreground by services.foreground.collectAsState()
-        LaunchedEffect(foreground, features.loaded, features.settings.recommendationsEnabled, features.settings.intervalHours, initialLoadInProgress) {
+        LaunchedEffect(foreground, features.loaded, features.settings.recommendationsEnabled, features.settings.intervalHours, features.settings.recommendationsUnmeteredOnly, initialLoadInProgress) {
             if (foreground && features.loaded && !initialLoadInProgress && features.settings.recommendationsEnabled) {
                 while (true) {
-                    try { persistence.run {}; services.musicAssistant?.recommend() }
+                    try { if (services.automaticRecommendationAllowed(features.settings.recommendationsUnmeteredOnly)) { persistence.run {}; services.musicAssistant?.recommend() } }
                     catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                     catch (error: Exception) { features.message = error.message.orEmpty() }
                     delay(60_000)
@@ -326,11 +336,7 @@ fun App(services: PlatformServices) {
             is LyricsFetchResult.Unavailable -> LyricsUiState.Unavailable(result.message, result.retryable)
         }
 
-        fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) {
-            if (track.sourceUri == null) {
-                importMessage = "本机尚未找到「${track.title}」的音频文件；扫描音乐后会自动匹配。"
-                return
-            }
+        fun playAvailableTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) {
             val targetQueue = when {
                 newQueue != null -> newQueue.filter { it.sourceUri != null }.takeIf { it.isNotEmpty() }
                 customQueue?.any { it.id == track.id } == true -> customQueue
@@ -346,6 +352,15 @@ fun App(services: PlatformServices) {
                 persistence.run { services.savePlaybackSnapshot(PlaybackSnapshot(track.id, effectiveQueue.map(Track::id), playlistId = playlistId)) }
             }) {
                 services.play(track, effectiveQueue, shuffle, player.repeatMode)
+            }
+        }
+
+        fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) {
+            playRequest?.cancel()
+            playRequest = scope.launch {
+                if (!services.audioFileAvailable(track)) { trackPendingRestore = track; return@launch }
+                trackPendingRestore = null
+                playAvailableTrack(track, newQueue, shuffle)
             }
         }
 
@@ -479,6 +494,7 @@ fun App(services: PlatformServices) {
                 else -> error("操作不支持")
             }
         }
+
         val automaticAction = featureTaskState?.actions?.firstOrNull { !it.kind.startsWith("suggest_") }
         LaunchedEffect(automaticAction?.id) {
             val action = automaticAction ?: return@LaunchedEffect
@@ -487,9 +503,33 @@ fun App(services: PlatformServices) {
             finally { withContext(kotlinx.coroutines.NonCancellable) { services.musicAssistant?.acknowledgeAction(action.id) } }
         }
         CompositionLocalProvider(LocalMusicFeatures provides features, LocalTutorial provides tutorial) {
+        val keyboardFocus = remember { FocusRequester() }
+        val pressedShortcuts = remember { mutableSetOf<Key>() }
+        LaunchedEffect(services) { if (services.supportsKeyboardShortcuts) keyboardFocus.requestFocus() }
+        LaunchedEffect(foreground) { pressedShortcuts.clear() }
+        LaunchedEffect(features.instantNavigation) { if (features.instantNavigation) { delay(400); features.instantNavigation = false } }
         Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background,
+            modifier = Modifier.fillMaxSize().focusRequester(keyboardFocus)
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyUp) pressedShortcuts.remove(event.key)
+                    if (!services.supportsKeyboardShortcuts || event.type != KeyEventType.KeyDown) false
+                    else when {
+                        event.isCtrlPressed && event.key == Key.F -> { features.instantNavigation = true; destination = LibraryDestination.Discover; features.searchFocusRequest++; true }
+                        else -> false
+                    }
+                }.onKeyEvent { event ->
+                    if (!services.supportsKeyboardShortcuts || event.type != KeyEventType.KeyDown) false
+                    else when {
+                        event.isCtrlPressed && event.key == Key.DirectionRight -> { moveInQueue(1); true }
+                        event.isCtrlPressed && event.key == Key.DirectionLeft -> { moveInQueue(-1); true }
+                        event.key == Key.Escape -> { features.instantNavigation = true; com.resonance.player.platform.KeyboardBackNavigation.handle() }
+                        event.key == Key.Spacebar && !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed && !event.isShiftPressed && player.currentTrack != null -> {
+                            if (pressedShortcuts.add(event.key)) { val playing = !player.isPlaying; services.setPlaying(playing); player = player.copy(isPlaying = playing) }; true
+                        }
+                        else -> false
+                    }
+                }.focusable(),
+            color = com.resonance.player.design.ResonanceColors.Canvas,
             contentColor = MaterialTheme.colorScheme.onBackground,
         ) {
             Box(
@@ -620,6 +660,7 @@ fun App(services: PlatformServices) {
                             persistence.submit { trackId?.let { services.saveTrackGain(it, gain) } }
                         },
                         onToggleFloatingLyrics = features::toggleFloatingLyrics,
+                        onOpenSleepTimer = { showSleepTimer = true },
                         floatingLyricsEnabled = features.settings.floatingLyrics,
                         onEditTrack = { track, title, artist, album, embed -> features.launch { services.editTrackMetadata(track, title, artist, album); features.onReload() } },
                         onToggleAutoLoudness = {
@@ -896,6 +937,47 @@ fun App(services: PlatformServices) {
         FloatingLyricsHost(player, displayLyrics, features.settings, features::save,
             onTogglePlay = { services.setPlaying(!player.isPlaying) }, onPrevious = { moveInQueue(-1) }, onNext = { moveInQueue(1) })
         MusicFeatureDialogs()
+        if (showSleepTimer) com.resonance.player.ui.SleepTimerDialog(sleepTimer.option, sleepTimer.remainingSeconds,
+            onDismiss = { showSleepTimer = false }, onSelectOption = { option ->
+                if (player.currentTrack != null || option == SleepTimerOption.Off) services.setSleepTimer(option)
+                else features.message = "请先选择歌曲，再设置睡眠定时"
+            })
+        trackPendingRestore?.let { track ->
+            val sourceState = featureTaskState
+            val canRestore = sourceState?.origins?.containsKey(track.id) == true
+            val explanation = when {
+                track.id in features.unavailableOrigins -> "原来源暂时不可用，可以换来源查找，或重新定位本地文件。"
+                sourceState?.releasedDownloadIds?.contains(track.id) == true -> "这首歌已释放本地下载，歌曲信息、收藏和歌单仍然保留。"
+                track.sourceUri != null -> "原音频文件无法读取，可能已移动、删除或授权失效。"
+                else -> "这首歌还没有匹配到本机音频。"
+            }
+            androidx.compose.material3.AlertDialog(onDismissRequest = { trackPendingRestore = null }, title = { androidx.compose.material3.Text(track.title) }, text = {
+                androidx.compose.foundation.layout.Column {
+                    androidx.compose.material3.Text(explanation)
+                    if (features.message.isNotBlank()) androidx.compose.material3.Text(features.message, color = MaterialTheme.colorScheme.error)
+                    androidx.compose.material3.Text("重新定位会保留收藏和歌单，不修改所选音频文件。", style = MaterialTheme.typography.bodySmall)
+                    androidx.compose.material3.TextButton(onClick = { features.launch {
+                        val replacement = services.chooseReplacementAudio(track) ?: return@launch
+                        services.saveReplacementAudio(replacement)
+                        features.onReload(); features.unavailableOrigins = features.unavailableOrigins - track.id
+                        trackPendingRestore = null; startTrack(replacement)
+                    } }, enabled = featureTaskState?.task?.running != true) { androidx.compose.material3.Text("重新定位本地文件") }
+                    androidx.compose.material3.TextButton(onClick = {
+                        features.searchQuery = track.title + " " + track.artist; features.searchOnline = true
+                        trackPendingRestore = null; destination = LibraryDestination.Discover
+                    }) { androidx.compose.material3.Text("换来源查找") }
+                }
+            }, confirmButton = {
+                if (canRestore) androidx.compose.material3.TextButton(onClick = { features.launch {
+                    try {
+                        val restored = services.musicAssistant?.restoreDownload(track.id) ?: error("下载服务不可用")
+                        features.onReload(); features.unavailableOrigins = features.unavailableOrigins - track.id
+                        trackPendingRestore = null; startTrack(restored)
+                    } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+                    catch (error: Exception) { features.unavailableOrigins = features.unavailableOrigins + track.id; features.message = "恢复下载未完成：" + error.message }
+                } }, enabled = featureTaskState?.task?.running != true) { androidx.compose.material3.Text("重新下载并播放") }
+            }, dismissButton = { androidx.compose.material3.TextButton(onClick = { trackPendingRestore = null }) { androidx.compose.material3.Text("关闭") } })
+        }
         }
     }
 }

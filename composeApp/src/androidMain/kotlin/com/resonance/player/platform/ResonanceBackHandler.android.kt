@@ -5,5 +5,5 @@ import androidx.compose.runtime.Composable
 
 @Composable
 actual fun ResonanceBackHandler(enabled: Boolean, onBack: () -> Unit) {
-    BackHandler(enabled = enabled, onBack = onBack)
+    BackHandler(enabled = enabled && LocalBackHandlerActive.current, onBack = onBack)
 }

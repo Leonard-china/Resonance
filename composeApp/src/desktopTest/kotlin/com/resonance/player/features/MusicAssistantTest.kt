@@ -18,6 +18,8 @@ class MusicAssistantTest {
         val deleted = mutableListOf<String>()
         var playing: String? = null
         var speechPreparations = 0
+        var networkAllowed = true
+        override suspend fun automaticDownloadsAllowed(unmeteredOnly: Boolean) = networkAllowed
         override suspend fun tracks() = songs.values.toList()
         override suspend fun playlists() = lists
         override suspend fun savePlaylists(playlists: List<Playlist>) { lists = playlists }
@@ -156,7 +158,14 @@ class MusicAssistantTest {
         fixture { runtime, library, videos, ai, _ ->
             ai.content("{\"playlists\":[{\"name\":\"My screenshot\",\"tracks\":[{\"title\":\"Song\",\"artist\":\"Artist\"}]}]}")
             val image = AiImage(byteArrayOf(1, 2, 3))
-            runtime.chat("导入歌单", listOf(image)); runtime.chat("导入歌单", listOf(image))
+            runtime.chat("导入歌单", listOf(image))
+            assertEquals(0, videos.downloads)
+            assertTrue(library.lists.isEmpty())
+            val firstDraft = runtime.state.value.screenshotDraft!!
+            runtime.confirmScreenshotImport(firstDraft.id, firstDraft.playlists)
+            runtime.chat("导入歌单", listOf(image))
+            val secondDraft = runtime.state.value.screenshotDraft!!
+            runtime.confirmScreenshotImport(secondDraft.id, secondDraft.playlists)
             assertEquals(1, ai.requests.size)
             assertEquals(1, videos.downloads)
             assertEquals(1, library.lists.single().tracks.size)
@@ -235,7 +244,14 @@ class MusicAssistantTest {
                 songMetadata = com.resonance.player.media.SongMetadataLookup { listOf(SongRequest("Long Song Full Title (feat. Guest)", "Artist", "Album")) })
             runtime.saveSettings(MusicFeatureSettings())
             val image = AiImage(byteArrayOf(1, 2, 3))
-            runtime.chat("导入", listOf(image)); runtime.chat("导入", listOf(image))
+            runtime.chat("导入", listOf(image))
+            assertEquals(0, videos.downloads)
+            assertTrue(library.lists.isEmpty())
+            val firstDraft = runtime.state.value.screenshotDraft!!
+            runtime.confirmScreenshotImport(firstDraft.id, firstDraft.playlists)
+            runtime.chat("导入", listOf(image))
+            val secondDraft = runtime.state.value.screenshotDraft!!
+            runtime.confirmScreenshotImport(secondDraft.id, secondDraft.playlists)
             assertEquals(1, reads)
             assertTrue(ai.requests.isEmpty())
             assertEquals(1, videos.downloads)
@@ -274,7 +290,7 @@ class MusicAssistantTest {
             assertTrue(failed.retryable)
             assertTrue(Files.exists(Path.of(track.sourceUri!!)))
             available = true
-            runtime.retryTask(failed.id)
+            runtime.retryFailedTasks(listOf(failed.id))
             assertEquals(1, videos.downloads)
             assertEquals(cover.toString(), library.songs[track.id]?.artworkPath)
             assertEquals("Real Album", library.songs[track.id]?.album)
@@ -450,6 +466,86 @@ class MusicAssistantTest {
             assertNull(runtime.feedbackFor(good))
         }
     }
+    @Test fun screenshotSelectionCanBeEditedAndDiscardedWithoutDownloading() = runBlocking {
+        fixture { runtime, library, videos, ai, _ ->
+            ai.content("""{"playlists":[{"name":"Draft","tracks":[{"title":"Wrong","artist":"Artist"},{"title":"Skip","artist":"Artist"}]}]}""")
+            runtime.chat("识别", listOf(AiImage(byteArrayOf(9))))
+            val draft = runtime.state.value.screenshotDraft!!
+            assertTrue(library.songs.isEmpty())
+            assertFailsWith<IllegalArgumentException> { runtime.confirmScreenshotImport("expired", draft.playlists) }
+            assertEquals(0, videos.downloads)
+            runtime.confirmScreenshotImport(draft.id, listOf(ScreenshotPlaylistDraft("Edited", listOf(SongRequest("Correct", "Artist")))))
+            assertEquals(listOf("Correct"), library.songs.values.map { it.title })
+            assertEquals("Edited", library.lists.single().name)
+            assertNull(runtime.state.value.screenshotDraft)
+            assertFailsWith<IllegalArgumentException> { runtime.confirmScreenshotImport(draft.id, draft.playlists) }
+            assertEquals(1, videos.downloads)
+            runtime.chat("识别", listOf(AiImage(byteArrayOf(9))))
+            runtime.discardScreenshotImport()
+            assertNull(runtime.state.value.screenshotDraft)
+            assertEquals(1, videos.downloads)
+            assertTrue(runtime.state.value.tasks.any { it.parentId.isNotBlank() && it.kind == "song" })
+        }
+    }
+    @Test fun automaticRecommendationWaitsForNetworkButManualRequestCanProceed() = runBlocking {
+        fixture { runtime, library, videos, ai, _ ->
+            runtime.saveSettings(runtime.settings().copy(recommendationsUnmeteredOnly = true))
+            library.networkAllowed = false
+            runtime.recommend()
+            assertTrue(ai.requests.isEmpty())
+            assertEquals(0, videos.downloads)
+            ai.songs("Manual")
+            runtime.recommend(true)
+            assertEquals(1, videos.downloads)
+            assertEquals("Manual", runtime.state.value.recommendationHistory.single().title)
+        }
+    }
+    @Test fun networkSettingRoundTripsAndLegacySettingsKeepPreviousBehavior() {
+        assertFalse(MusicFeatureCodec.settings(JSONObject()).recommendationsUnmeteredOnly)
+        val settings = MusicFeatureSettings(recommendationsUnmeteredOnly = true)
+        assertTrue(MusicFeatureCodec.settings(MusicFeatureCodec.encode(settings)).recommendationsUnmeteredOnly)
+    }
+    @Test fun sourcePreviewUsesBoundedTemporaryFileWithoutImportingOrCallingAi() = runBlocking {
+        fixture { runtime, library, _, ai, store ->
+            var downloads = 0
+            var allowedBytes = 0L
+            val network = object : com.resonance.player.sources.SourceNetwork {
+                override suspend fun request(options: JSONObject) = error("unexpected network request")
+                override suspend fun download(url: String, target: Path, headers: JSONObject, maxBytes: Long): Long {
+                    downloads++; allowedBytes = maxBytes
+                    Files.write(target, "ID3-preview".toByteArray()); return Files.size(target)
+                }
+            }
+            runtime.sources = com.resonance.player.sources.MusicSourceRegistry(store, network)
+            runtime.installSource("""module.exports={platform:'Preview',search:async()=>[{id:'one',title:'Song',artist:'Artist'}],getMediaSource:async()=>({url:'https://audio.example.test/song.mp3'})};""")
+            val song = runtime.searchSources("Song").single()
+            val preview = Path.of(runtime.prepareSourcePreview(song))
+            assertEquals(64L * 1024 * 1024, allowedBytes)
+            assertTrue(Files.isRegularFile(preview))
+            assertTrue(library.songs.isEmpty())
+            assertTrue(ai.requests.isEmpty())
+            runtime.clearSourcePreview()
+            assertFalse(Files.exists(preview))
+            val trial = song.copy(raw = JSONObject(song.raw).put("isTrial", true).toString())
+            assertFailsWith<IllegalArgumentException> { runtime.prepareSourcePreview(trial) }
+            assertEquals(1, downloads)
+        }
+    }
+    @Test fun batchRetryNeverRunsPaidLyricsAndUndoClearsOldRejection() = runBlocking {
+        fixture { runtime, _, _, ai, store ->
+            val journal = MusicTaskJournal(store)
+            val paid = journal.begin("Paid", "syncLyrics")
+            journal.update(paid, outcome = MusicTaskOutcome.Failed)
+            assertFailsWith<IllegalArgumentException> { runtime.retryFailedTasks(listOf(paid)) }
+            assertTrue(ai.requests.isEmpty())
+            val track = Track("feedback-only", "Song", "Artist", "", "0:00", 0)
+            val originalKey = JvmMusicAssistant.songKey(track.title, track.artist)
+            store.update { it.put("dislikes", JSONObject().put(originalKey, JSONObject())) }
+            runtime.setRecommendationVote(track, RecommendationVote.Dislike)
+            runtime.setRecommendationVote(track, RecommendationVote.Neutral)
+            assertFalse(store.read().getJSONObject("dislikes").has(originalKey))
+        }
+    }
     @Test fun feedbackSurvivesRolloverCleanupAndIsPassedToNextAiRecommendation() = runBlocking {
         fixture { runtime, library, _, ai, store ->
             ai.songs("Yesterday"); runtime.recommend(true)
@@ -462,6 +558,7 @@ class MusicAssistantTest {
             assertEquals(RecommendationVote.Like, runtime.feedbackFor(old)?.vote)
             assertTrue(ai.requests.last().toString().contains("喜欢轻快"))
             assertTrue(RecommendationFeedbackCodec.read(store.read()).values.any { it.title == old.title })
+            assertTrue(runtime.state.value.recommendationHistory.any { it.title == old.title })
             val next = library.songs.values.single()
             assertTrue(runtime.state.value.recommendations.reasons.getValue(next.id).contains("点过赞"))
         }

@@ -29,7 +29,7 @@ class RecommendationWorker(context: Context, parameters: WorkerParameters) : Cor
             val manager = WorkManager.getInstance(context)
             if (!settings.recommendationsEnabled || !settings.backgroundRecommendations) { manager.cancelUniqueWork("resonance-recommendations"); return }
             val request = PeriodicWorkRequestBuilder<RecommendationWorker>(settings.intervalHours.toLong(), TimeUnit.HOURS)
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).setRequiresStorageNotLow(true).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(if (settings.recommendationsUnmeteredOnly) NetworkType.UNMETERED else NetworkType.CONNECTED).setRequiresStorageNotLow(true).build())
                 .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES).build()
             manager.enqueueUniquePeriodicWork("resonance-recommendations", ExistingPeriodicWorkPolicy.UPDATE, request)
         }

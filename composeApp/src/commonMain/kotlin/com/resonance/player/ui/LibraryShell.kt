@@ -1,5 +1,10 @@
 package com.resonance.player.ui
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.input.ImeAction
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -293,6 +298,7 @@ fun LibraryShell(
     operationInProgress: Boolean,
 ) {
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(destination) { if (destination != LibraryDestination.Playing) showNowPlaying = false }
     var mountPlayer by remember { mutableStateOf(false) }
     var trackPendingEdit by remember { mutableStateOf<Track?>(null) }
     val tutorial = LocalTutorial.current
@@ -327,6 +333,7 @@ fun LibraryShell(
     } else if (destination != LibraryDestination.Library) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Library) }
     }
+    ResonanceBackHandler(enabled = showNowPlaying) { showNowPlaying = false }
 
     val glassState = rememberHazeState()
     CompositionLocalProvider(LocalGlassState provides glassState) {
@@ -566,7 +573,7 @@ fun LibraryShell(
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
     LibraryDestination.Sources, LibraryDestination.Storage -> LibraryDestination.Profile
     LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About, LibraryDestination.Tutorial -> LibraryDestination.Profile
-    LibraryDestination.Recommendations, LibraryDestination.Discover -> LibraryDestination.Library
+    LibraryDestination.Recommendations, LibraryDestination.RecommendationHistory, LibraryDestination.Discover -> LibraryDestination.Library
     LibraryDestination.Playing -> LibraryDestination.Library
     else -> destination
 }
@@ -883,6 +890,8 @@ private fun DestinationContent(
 ) {
     val reducedMotion = LocalReducedMotion.current
     val destinationStates = rememberSaveableStateHolder()
+    val immediateNavigation = LocalMusicFeatures.current?.instantNavigation == true
+    Box(Modifier.fillMaxSize().background(ResonanceColors.Canvas)) {
     AnimatedContent(
         targetState = destination,
         modifier = Modifier.fillMaxSize().testTag("main-page-swipe").horizontalPageSwipe(
@@ -892,46 +901,43 @@ private fun DestinationContent(
         ),
         contentAlignment = Alignment.TopStart,
         transitionSpec = {
-            if (reducedMotion) {
+            if (immediateNavigation) {
+                (androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None) using SizeTransform(clip = false)
+            } else if (reducedMotion) {
                 (fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
                     (fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
             } else if (initialState == LibraryDestination.Profile && targetState in profileSubPages) {
-                // 进入工具二级页面：从右侧满屏推入，主页面向左视差退场
-                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
-                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                // 进入工具二级页面：从右侧满屏推入，主页面向左视差退场；保持不透明以杜绝离屏透明度图层导致的顶边黑闪
+                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it }) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 }) using SizeTransform(clip = false)
             } else if (initialState in profileSubPages && targetState == LibraryDestination.Profile) {
                 // 返回工具主页面：主页面从左侧视差归位，二级页面向右满屏滑出
-                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 } +
-                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                (slideInHorizontally(ResonanceMotionTokens.DetailSlideSpec) { -it / 3 }) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.DetailSlideSpec) { it }) using SizeTransform(clip = false)
             } else if (initialState in profileSubPages && targetState in profileSubPages) {
                 // 工具二级页面之间切换：满屏丝滑平移
                 val dir = if (subPageIndexOf(targetState) >= subPageIndexOf(initialState)) 1 else -1
-                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
-                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir }) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir }) using SizeTransform(clip = false)
             } else {
-                // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）：满屏丝滑平移
+                // 同级主导航切换（音乐库 ⟷ 搜索 ⟷ 工具）：满屏丝滑平移，保留 SizeTransform 弹性呼吸晃动感
                 val fromTab = mainTabIndexOf(initialState)
                 val toTab = mainTabIndexOf(targetState)
                 val dir = if (toTab >= fromTab) 1 else -1
-                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
-                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using SizeTransform(clip = false)
+                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir }) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir }) using SizeTransform(clip = false)
             }
         },
         label = "destinationContent",
     ) { activeDestination ->
+        Box(Modifier.fillMaxSize().background(ResonanceColors.Canvas)) {
         destinationStates.SaveableStateProvider(activeDestination.name) {
+        CompositionLocalProvider(com.resonance.player.platform.LocalBackHandlerActive provides (activeDestination == destination)) {
         when (activeDestination) {
             LibraryDestination.Assistant -> AssistantScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.Tasks -> MusicTasksScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.Recommendations -> RecommendationsScreen(compact) { onDestinationChange(LibraryDestination.Library) }
+            LibraryDestination.RecommendationHistory -> RecommendationHistoryScreen(compact) { onDestinationChange(LibraryDestination.Recommendations) }
             LibraryDestination.Sources -> MusicSourcesScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
             LibraryDestination.Storage -> MusicStorageScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
             LibraryDestination.AudioHelp -> AudioBalanceHelpScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
@@ -1022,6 +1028,9 @@ private fun DestinationContent(
                 onSaveCustomLyricsFolder = onSaveCustomLyricsFolder,
             )
         }
+    }
+    }
+    }
     }
     }
 }
@@ -1397,6 +1406,9 @@ private fun LibraryScreen(
                     onToggleTrackSelect = ::toggleTrackSelect,
                     pagePadding = pagePadding,
                 )
+            } else if (libraryTracks.isEmpty() && !previewMode) {
+                EmptyLibrary(onCreatePlaylist = onCreatePlaylist, onImport = { onImport(false) }, message = null,
+                    onSearch = onOpenSearch)
             } else {
                 Column(Modifier.fillMaxSize()) {
                     LibraryTabRow(
@@ -1992,7 +2004,8 @@ private fun LibraryLoading() {
 }
 
 @Composable
-private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, message: String?) {
+private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, message: String?, onSearch: () -> Unit) {
+    val feature = LocalMusicFeatures.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -2025,11 +2038,16 @@ private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, mes
         Text("从第一首歌开始", style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.TextPrimary)
         Spacer(Modifier.height(8.dp))
         Text(
-            "扫描本机音乐，或新建一个歌单。原文件不会被覆盖，转换后的 MP3 将收进你的音乐库。",
+            "搜索想听的歌曲，或导入本机已有音乐。内置歌源可直接使用，无需配置 AI。",
             style = MaterialTheme.typography.bodyMedium,
             color = ResonanceColors.Muted,
         )
         Spacer(Modifier.height(24.dp))
+        Button(onClick = {
+            feature?.searchOnline = true
+            onSearch()
+        }, modifier = Modifier.fillMaxWidth()) { Text("搜索在线歌曲") }
+        Spacer(Modifier.height(10.dp))
         Button(
             onClick = onImport,
             shape = ResonanceShapes.Button,
@@ -2076,7 +2094,13 @@ private fun DiscoverScreen(
     onBatchAddToPlaylist: (List<Track>, String) -> Unit,
     onCreatePlaylist: () -> Unit,
 ) {
-    var query by rememberSaveable { mutableStateOf("") }
+    val feature = LocalMusicFeatures.current
+    var localQuery by rememberSaveable { mutableStateOf("") }
+    val query = feature?.searchQuery ?: localQuery
+    fun updateQuery(value: String) { if (feature != null) feature.searchQuery = value else localQuery = value }
+    val focusRequester = remember { FocusRequester() }
+    val online = feature?.searchOnline == true
+    LaunchedEffect(feature?.searchFocusRequest) { focusRequester.requestFocus() }
     var selecting by rememberSaveable { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     var showDelete by remember { mutableStateOf(false) }
@@ -2098,25 +2122,27 @@ private fun DiscoverScreen(
             color = ResonanceColors.TextPrimary,
             modifier = Modifier.weight(1f).padding(start = pagePadding, top = 14.dp, bottom = 10.dp),
         )
-        IconButton(onClick = { selecting = !selecting; selectedIds = emptySet() }) {
+        if (!online) IconButton(onClick = { selecting = !selecting; selectedIds = emptySet() }) {
             Icon(if (selecting) Icons.Default.Close else Icons.Default.Checklist,
                 contentDescription = if (selecting) "退出搜索多选" else "多选搜索结果", tint = ResonanceColors.Muted)
         }
         }
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it },
-            modifier = Modifier.fillMaxWidth().padding(horizontal = pagePadding),
+            onValueChange = ::updateQuery,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = pagePadding).focusRequester(focusRequester),
             placeholder = { Text("搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.Dim) },
             trailingIcon = if (query.isNotEmpty()) {
                 {
-                    IconButton(onClick = { query = "" }) {
+                    IconButton(onClick = { updateQuery("") }) {
                         Icon(Icons.Default.Close, contentDescription = "清空", tint = ResonanceColors.Muted)
                     }
                 }
             } else null,
             singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { if (online && query.isNotBlank()) feature?.searchSources(query) }),
             shape = RoundedCornerShape(10.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = ResonanceColors.Primary,
@@ -2126,6 +2152,13 @@ private fun DiscoverScreen(
                 cursorColor = ResonanceColors.Primary,
             ),
         )
+        if (feature != null) Row(Modifier.padding(horizontal = pagePadding), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(!online, { feature.searchOnline = false; selecting = false }, label = { Text("本地") })
+            FilterChip(online, { feature.searchOnline = true; selecting = false }, label = { Text("在线") })
+        }
+        if (online) {
+            OnlineSongSearch(query, Modifier.fillMaxWidth().weight(1f).padding(horizontal = pagePadding))
+        } else {
         if (selecting) MultiSelectToolbar(
             selectedCount = selectedTracks.size, currentViewTracks = results, selectedTrackIds = selectedIds,
             onSelectAll = { selectedIds = selectedIds + results.map(Track::id) },
@@ -2161,6 +2194,7 @@ private fun DiscoverScreen(
                 onToggleTrackSelect = ::toggle,
                 contentPadding = PaddingValues(horizontal = pagePadding, vertical = 10.dp),
             )
+        }
         }
     }
     if (showDelete && selectedTracks.isNotEmpty()) BatchDeleteTracksDialog(selectedTracks.size,
@@ -2222,7 +2256,19 @@ private fun TrackRow(
     onToggleMultiSelect: () -> Unit = {},
     onEditTrack: ((Track) -> Unit)? = null,
 ) {
-    val available = track.sourceUri != null
+    val feature = LocalMusicFeatures.current
+    val featureState = feature?.assistant?.state?.collectAsState()?.value
+    val foreground = feature?.services?.foreground?.collectAsState()?.value
+    val readable by produceState(track.sourceUri != null, track.sourceUri, foreground) {
+        value = feature?.services?.audioFileAvailable(track) ?: (track.sourceUri != null)
+    }
+    val available = track.sourceUri != null && readable
+    val unavailableLabel = when {
+        feature?.unavailableOrigins?.contains(track.id) == true -> "来源不可用"
+        featureState?.releasedDownloadIds?.contains(track.id) == true -> "已释放下载"
+        track.sourceUri != null -> "文件不可用"
+        else -> "尚未匹配"
+    }
     var menuExpanded by remember(track.id) { mutableStateOf(false) }
     val dividerIndent = if (isMultiSelectMode) 44.dp else if (index != null) 34.dp else 58.dp
     val rowInteraction = remember { MutableInteractionSource() }
@@ -2268,7 +2314,7 @@ private fun TrackRow(
                     },
                 )
                 .heightIn(min = 72.dp)
-                .semantics { this.selected = selected; stateDescription = if (selected) "当前曲目" else if (!available) "音频待匹配" else "可播放" }
+                .semantics { this.selected = selected; stateDescription = if (!available) unavailableLabel else if (selected) "当前曲目" else "可播放" }
                 .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -2340,7 +2386,7 @@ private fun TrackRow(
                     if (!available) {
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "待匹配",
+                            unavailableLabel,
                             style = MaterialTheme.typography.labelSmall,
                             color = ResonanceColors.Dim,
                             modifier = Modifier

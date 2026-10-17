@@ -23,6 +23,10 @@ class MainActivity : ComponentActivity() {
                 android.graphics.Color.TRANSPARENT,
             ),
         )
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
         // ActivityResult launchers must be registered before this Activity reaches STARTED.
         // Creating the services lazily inside Compose can happen after RESUMED and crashes
         // on every Android version with a strict ActivityResultRegistry lifecycle check.

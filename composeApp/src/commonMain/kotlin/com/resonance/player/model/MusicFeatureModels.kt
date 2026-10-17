@@ -51,6 +51,7 @@ data class MusicFeatureSettings(
     val preserveOriginalAudio: Boolean = true,
     val bilibiliFallback: Boolean = true,
     val preferredBilibiliUids: String = "",
+    val recommendationsUnmeteredOnly: Boolean = false,
 )
 
 enum class RecommendationMode(val label: String) { Source("歌源推荐 · 不调用模型"), Ai("AI 精选") }
@@ -79,7 +80,10 @@ data class MusicTaskEntry(
     val outcome: MusicTaskOutcome = MusicTaskOutcome.Running,
     val progress: ImportProgress = ImportProgress(), val message: String = "", val createdAt: Long = 0,
     val retryable: Boolean = false,
+    val parentId: String = "",
 )
+data class ScreenshotPlaylistDraft(val name: String, val tracks: List<SongRequest>)
+data class ScreenshotImportDraft(val id: String, val playlists: List<ScreenshotPlaylistDraft>, val recognition: String)
 data class BilibiliVideo(val bvid: String, val cid: Long, val title: String, val uploader: String, val coverUrl: String, val durationSeconds: Int, val page: Int = 1, val uploaderId: Long = 0)
 data class VideoImportRequest(val link: String, val title: String, val artist: String, val album: String, val cover: String = "", val playlistId: String? = null, val preserveAudio: Boolean = false)
 data class SongRequest(val title: String, val artist: String, val album: String = "", val reason: String = "")
@@ -97,7 +101,11 @@ data class MusicAssistantState(
     val origins: Map<String, MediaOrigin> = emptyMap(),
     val actions: List<AssistantAction> = emptyList(),
     val recommendationFeedback: Map<String, RecommendationFeedback> = emptyMap(),
+    val screenshotDraft: ScreenshotImportDraft? = null,
+    val recommendationHistory: List<RecommendationHistoryItem> = emptyList(),
+    val releasedDownloadIds: Set<String> = emptySet(),
 )
+data class RecommendationHistoryItem(val title: String, val artist: String, val album: String = "", val recommendedAt: Long = 0)
 
 const val DAILY_PLAYLIST_ID = "resonance-daily-recommendations"
 

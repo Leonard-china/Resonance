@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
@@ -23,7 +25,8 @@ class LibraryNavigationTest {
     @get:Rule val ui = createComposeRule()
     private val songs = (0..299).map { Track("$it", "Song %03d".format(it), "Artist", "Album", "3:00", it, sourceUri = "fixture://$it") }
     private val destination = mutableStateOf(LibraryDestination.Library)
-    private fun show(enabled: Boolean = false, reduced: Boolean = true) {
+    private var canvas = Color.Black
+    private fun show(enabled: Boolean = false, reduced: Boolean = true, mode: ThemeMode = ThemeMode.Light) {
         val state = MutableStateFlow(MusicAssistantState())
         val assistant = Proxy.newProxyInstance(MusicAssistantServices::class.java.classLoader, arrayOf(MusicAssistantServices::class.java)) { _, method, _ ->
             when (method.name) { "getState" -> state; else -> null }
@@ -31,7 +34,9 @@ class LibraryNavigationTest {
         val platform = Proxy.newProxyInstance(PlatformServices::class.java.classLoader, arrayOf(PlatformServices::class.java)) { _, method, _ ->
             when (method.name) {
                 "getMusicAssistant" -> assistant
-                "getSupportsWebLogin", "getSupportsKgg" -> false
+                "getSupportsWebLogin", "getSupportsKgg", "getSupportsKeyboardShortcuts" -> false
+                "getForeground" -> MutableStateFlow(true)
+                "audioFileAvailable" -> true
                 else -> null
             }
         } as PlatformServices
@@ -39,7 +44,8 @@ class LibraryNavigationTest {
             val scope = rememberCoroutineScope()
             val feature = remember { MusicFeatureController(platform, scope).apply { settings = MusicFeatureSettings(recommendationsEnabled = enabled); library = songs } }
             feature.onNavigate = { destination.value = it }
-            ResonanceTheme(ThemeMode.Light, reducedMotion = reduced) {
+            ResonanceTheme(mode, reducedMotion = reduced) {
+                canvas = com.resonance.player.design.ResonanceColors.Canvas
                 CompositionLocalProvider(LocalMusicFeatures provides feature) {
                     Box(Modifier.width(400.dp).fillMaxHeight()) {
                         LibraryShell(destination.value, { destination.value = it },
@@ -55,6 +61,27 @@ class LibraryNavigationTest {
             }
         }
     }
+    private fun assertTopEdgeRemainsPainted(mode: ThemeMode) {
+        ui.mainClock.autoAdvance = false
+        show(reduced = false, mode = mode)
+        ui.mainClock.advanceTimeBy(400)
+        listOf(LibraryDestination.Profile, LibraryDestination.Settings, LibraryDestination.Profile,
+            LibraryDestination.Settings, LibraryDestination.Library).forEach { page ->
+            ui.runOnIdle { destination.value = page }
+            repeat(6) {
+                ui.mainClock.advanceTimeBy(16)
+                val pixels = ui.onNodeWithTag("main-page-swipe").captureToImage().toPixelMap()
+                listOf(0.1f, 0.5f, 0.9f).forEach { x ->
+                    val actual = pixels[(pixels.width * x).toInt(), 1]
+                    org.junit.Assert.assertEquals(canvas.red, actual.red, 0.035f)
+                    org.junit.Assert.assertEquals(canvas.green, actual.green, 0.035f)
+                    org.junit.Assert.assertEquals(canvas.blue, actual.blue, 0.035f)
+                }
+            }
+        }
+    }
+    @Test fun rapidPageChangesKeepTopEdgeCoveredInLightMode() = assertTopEdgeRemainsPainted(ThemeMode.Light)
+    @Test fun rapidPageChangesKeepTopEdgeCoveredInDarkMode() = assertTopEdgeRemainsPainted(ThemeMode.Dark)
     @Test fun enteringSongsDoesNotJumpToPlayingTrackAndTabScrollPositionIsRetained() {
         show()
         ui.onNodeWithText("歌曲").performClick()

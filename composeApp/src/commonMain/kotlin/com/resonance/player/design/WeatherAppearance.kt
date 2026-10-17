@@ -1,4 +1,5 @@
 package com.resonance.player.design
+import androidx.compose.ui.graphics.toArgb
 
 import androidx.compose.runtime.*
 import com.resonance.player.model.*
@@ -110,7 +111,9 @@ fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode, con
     ) {
         ResonanceTheme(themeMode, palette, reduced) {
             val dark = ResonanceColors.isDark
-            SideEffect { services.updateSystemBars(dark) }
+            val canvas = ResonanceColors.Canvas.toArgb()
+            SideEffect { services.updateSystemBars(dark); services.updateWindowBackground(canvas) }
+            LaunchedEffect(dark, canvas) { services.updateSystemBars(dark); services.updateWindowBackground(canvas) }
             content()
         }
     }

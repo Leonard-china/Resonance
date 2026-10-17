@@ -9,7 +9,8 @@ import androidx.media3.session.MediaSession
 object AudioSessionCommands {
     const val GAIN = "SET_AUDIO_GAIN"
     const val VOLUME = "SET_MASTER_VOLUME"
+    const val SLEEP_TIMER = "SET_SLEEP_TIMER"
     fun command(action: String) = SessionCommand(action, Bundle.EMPTY)
     fun available(): SessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
-        .add(command(GAIN)).add(command(VOLUME)).build()
+        .add(command(GAIN)).add(command(VOLUME)).add(command(SLEEP_TIMER)).build()
 }

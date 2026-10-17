@@ -555,7 +555,11 @@ private fun NowPlayingTopBar(
                         DropdownMenuItem(text = { Text("生成同步歌词") }, onClick = { menuExpanded = false; feature.showGenerateLyrics = true })
                     }
                     if (onOpenSleepTimer != null) DropdownMenuItem(
-                        text = { Text("睡眠定时器") },
+                        text = { Text(when {
+                            playerState.sleepTimerOption == com.resonance.player.model.SleepTimerOption.EndOfTrack -> "睡眠定时 · 播完本首停止"
+                            playerState.sleepTimerRemainingSeconds != null -> "睡眠定时 · 剩余 ${playerState.sleepTimerRemainingSeconds / 60}:${(playerState.sleepTimerRemainingSeconds % 60).toString().padStart(2, '0')}"
+                            else -> "睡眠定时器"
+                        }) },
                         onClick = { menuExpanded = false; onOpenSleepTimer() },
                     )
                     if (onToggleFloatingLyrics != null) DropdownMenuItem(

@@ -63,6 +63,15 @@ class MusicSourceRegistryTest {
             listOf("java", "process", "packages").forEach { assertEquals("undefined", result.getString(it)) }
         }
     }
+    @Test fun searchLimitLeavesRoomForAlternativeSources() = runBlocking {
+        fixture { sources, _, _ ->
+            repeat(3) { n -> sources.install("""module.exports={platform:'source-$n',search:async()=>Array.from({length:50},(_,i)=>({id:String(i),title:'Song',artist:'Artist'}))};""") }
+            val result = sources.search("Song", limit = 6)
+            assertEquals(6, result.size)
+            assertEquals(3, result.map { it.sourceId }.distinct().size)
+            assertTrue(result.groupBy { it.sourceId }.values.all { it.size == 2 })
+        }
+    }
     @Test fun invalidReplacementAndUnsupportedDependencyKeepInstalledSource() = runBlocking {
         fixture { sources, _, _ ->
             val original = sources.install(SOURCE)

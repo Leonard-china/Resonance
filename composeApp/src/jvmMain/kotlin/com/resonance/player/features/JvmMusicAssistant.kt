@@ -60,9 +60,11 @@ class JvmMusicAssistant(
     private val bili = videoSource ?: BilibiliClient { cachedSettings?.bilibiliCookie.orEmpty() }
 
     private val journal = MusicTaskJournal(store)
-    private val activeTasks = ArrayDeque<String>()
+    private data class ActiveStep(val id: String, val rootId: String)
+    private val activeStep = ThreadLocal<ActiveStep?>()
     private var lastPersistedStage = ""
     private var recommendationAcquiring = false
+    private var automaticRecommendation = false
     private val lyricsRepository = LrclibLyricsRepository(store.directory.parent.resolve("lyrics-cache"))
     internal var sources = MusicSourceRegistry(store)
 
@@ -89,6 +91,7 @@ class JvmMusicAssistant(
     override suspend fun saveSettings(settings: MusicFeatureSettings) = withContext(Dispatchers.IO) {
         store.update { it.put("settings", MusicFeatureCodec.encode(settings, encrypt)) }
         cachedSettings = settings
+        restoreState()
     }
     private fun restoreState() {
         val root = store.read()
@@ -151,10 +154,16 @@ class JvmMusicAssistant(
             sources = sources.list(), origins = MediaOriginCodec.all(root),
             actions = mutableState.value.actions,
             recommendationFeedback = RecommendationFeedbackCodec.read(root),
+            releasedDownloadIds = root.optJSONObject("ownedAudio")?.let { owned -> owned.keys().asSequence().filter { owned.optJSONObject(it)?.optBoolean("evicted") == true }.toSet() }.orEmpty(),
+            recommendationHistory = root.optJSONObject("recommendationHistoryDetails")?.let { details ->
+                details.keys().asSequence().mapNotNull { id -> details.optJSONObject(id)?.let {
+                    RecommendationHistoryItem(it.optString("title"), it.optString("artist"), it.optString("album"), it.optLong("at"))
+                } }.filter { it.title.isNotBlank() && it.artist.isNotBlank() }.sortedByDescending { it.recommendedAt }.toList()
+            }.orEmpty(),
         )
     }
     private fun status(progress: ImportProgress) {
-        val active = activeTasks.lastOrNull()
+        val active = activeStep.get()?.id
         mutableState.value = mutableState.value.copy(task = MusicTaskStatus(true, progress), tasks = mutableState.value.tasks.map {
             if (it.id == active) it.copy(progress = progress) else it
         })
@@ -163,22 +172,25 @@ class JvmMusicAssistant(
         }
     }
     private suspend fun <T> step(title: String, kind: String = "", trackId: String = "", payload: JSONObject = JSONObject(), block: suspend () -> T): T {
-        val id = journal.begin(title, kind, trackId, payload)
-        activeTasks.addLast(id); restoreState(); status(ImportProgress(title))
-        try {
-            val result = block()
-            journal.update(id, outcome = MusicTaskOutcome.Completed, message = "处理完成")
-            return result
-        } catch (timeout: TimeoutCancellationException) {
-            journal.update(id, outcome = MusicTaskOutcome.Failed, message = "此步骤处理超时，可稍后重试")
-            throw IllegalStateException("此步骤处理超时，可稍后重试", timeout)
-        } catch (cancelled: CancellationException) {
-            journal.update(id, outcome = MusicTaskOutcome.Cancelled, message = "已取消；已入库音频保留")
-            throw cancelled
-        } catch (error: Exception) {
-            journal.update(id, outcome = MusicTaskOutcome.Failed, message = error.message ?: "处理失败")
-            throw error
-        } finally { activeTasks.removeLast(); restoreState() }
+        val parent = activeStep.get()
+        val id = journal.begin(title, kind, trackId, payload, parent?.id.orEmpty())
+        return withContext(activeStep.asContextElement(ActiveStep(id, parent?.rootId ?: id))) {
+            restoreState(); status(ImportProgress(title))
+            try {
+                val result = block()
+                journal.update(id, outcome = MusicTaskOutcome.Completed, message = "处理完成")
+                result
+            } catch (timeout: TimeoutCancellationException) {
+                journal.update(id, outcome = MusicTaskOutcome.Failed, message = "此步骤处理超时，可稍后重试")
+                throw IllegalStateException("此步骤处理超时，可稍后重试", timeout)
+            } catch (cancelled: CancellationException) {
+                journal.update(id, outcome = MusicTaskOutcome.Cancelled, message = "已取消；已入库音频保留")
+                throw cancelled
+            } catch (error: Exception) {
+                journal.update(id, outcome = MusicTaskOutcome.Failed, message = error.message ?: "处理失败")
+                throw error
+            } finally { restoreState() }
+        }
     }
     private fun message(role: String, text: String, model: String? = null) {
         val now = System.currentTimeMillis()
@@ -426,6 +438,22 @@ class JvmMusicAssistant(
     override suspend fun importSourceSong(song: SourceSong, playlistId: String?): Track = task("下载歌源歌曲") {
         importSourceInternal(song, playlistId)
     }
+    override suspend fun prepareSourcePreview(song: SourceSong): String = task("准备试听") {
+        require(!BilibiliClient.disallowedVersion(song.title + " " + song.version)) { "此候选版本需要先核对" }
+        val details = sources.details(song)
+        val metadata = JSONObject(details.raw)
+        require(!metadata.optBoolean("isTrial") && !metadata.optBoolean("isPreview")) { "此来源只有试听片段，请换一个来源" }
+        val media = sources.media(details)
+        val file = store.directory.resolve("source-preview.audio")
+        try {
+            status(ImportProgress("准备试听音频", song.title, detail = "仅临时准备，不加入曲库；最多试听 30 秒"))
+            sources.network.download(media.getString("url"), file, media.optJSONObject("headers") ?: JSONObject(), 64L * 1024 * 1024)
+            file.toString()
+        } catch (error: Exception) { Files.deleteIfExists(file); throw error }
+    }
+    override suspend fun clearSourcePreview(): Unit = withContext(Dispatchers.IO) {
+        mutex.withLock { Files.deleteIfExists(store.directory.resolve("source-preview.audio")); Unit }
+    }
     override suspend fun storageReport(checkDuplicates: Boolean): MusicStorageReport = withContext(Dispatchers.IO) {
         mutex.withLock { managedStorage.report(checkDuplicates) }
     }
@@ -480,7 +508,7 @@ class JvmMusicAssistant(
             val feedback = RecommendationFeedback(track.title, track.artist, track.album,
                 vote ?: old?.vote ?: RecommendationVote.Neutral, comment?.trim()?.take(500) ?: old?.comment.orEmpty(), System.currentTimeMillis())
             RecommendationFeedbackCodec.write(root, feedback)
-            if (vote == RecommendationVote.Like) root.optJSONObject("dislikes")?.remove(songKey(track.title, track.artist))
+            if (vote != null && vote != RecommendationVote.Dislike) root.optJSONObject("dislikes")?.remove(songKey(track.title, track.artist))
         }
     }
     override suspend fun setRecommendationVote(track: Track, vote: RecommendationVote) = task("记录推荐态度") {
@@ -505,12 +533,17 @@ class JvmMusicAssistant(
         store.update { root -> root.put("mediaOrigins", (root.optJSONObject("mediaOrigins") ?: JSONObject()).put(track.id, MediaOriginCodec.encode(measured))) }
         restoreState()
     }
-    private suspend fun importSourceInternal(input: SourceSong, playlistId: String?): Track {
+    private suspend fun importSourceInternal(input: SourceSong, playlistId: String?): Track = step("下载 · ${input.artist} - ${input.title}", "source",
+        payload = JSONObject().put("sourceId", input.sourceId).put("song", JSONObject(input.raw)).put("playlistId", playlistId)) {
+        importSourceAudio(input, playlistId)
+    }
+    private suspend fun importSourceAudio(input: SourceSong, playlistId: String?): Track {
+        checkAutomaticDownloadNetwork()
         require(!BilibiliClient.disallowedVersion(input.title + " " + input.version)) { "自动下载已排除 MV、现场、翻唱及剪辑版本" }
         val originKey = input.sourceId + ":" + input.id
         val knownId = store.read().optJSONObject("sourceOrigins")?.optString(originKey)
         val old = library.tracks().firstOrNull { it.id == knownId }
-        if (old != null && !old.sourceUri.isNullOrBlank()) { addToPlaylist(playlistId, listOf(old)); return old }
+        if (old != null && library.audioAvailable(old)) { addToPlaylist(playlistId, listOf(old)); return old }
         val song = sources.details(input)
         require(!BilibiliClient.disallowedVersion(song.title + " " + song.version)) { "歌源详情显示为非录音室候选，已停止" }
         require(!JSONObject(song.raw).optBoolean("isPreview") && !JSONObject(song.raw).optBoolean("isTrial")) { "歌源只提供试听片段" }
@@ -584,12 +617,13 @@ class JvmMusicAssistant(
         downloadAudio(request)
     }
     private suspend fun downloadAudio(request: VideoImportRequest): Track {
+        checkAutomaticDownloadNetwork()
         require(request.title.isNotBlank() && request.artist.isNotBlank()) { "请填写歌名和歌手" }
         val video = bili.inspect(request.link)
         val origin = video.bvid + ":" + video.cid
         val knownId = store.read().optJSONObject("videoOrigins")?.optString(origin)
         val previous = library.tracks().firstOrNull { it.id == knownId }
-        previous?.takeIf { !it.sourceUri.isNullOrBlank() }?.let { existing ->
+        previous?.takeIf { library.audioAvailable(it) }?.let { existing ->
             val corrected = existing.copy(
                 title = if (SongIdentityResolver.truncated(existing.title) && !SongIdentityResolver.truncated(request.title)) request.title else existing.title,
                 artist = if (SongIdentityResolver.truncated(existing.artist) && !SongIdentityResolver.truncated(request.artist)) request.artist else existing.artist)
@@ -650,11 +684,45 @@ class JvmMusicAssistant(
         } finally { Files.walk(stage).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
     }
     private fun videoPayload(r: VideoImportRequest) = JSONObject().put("link", r.link).put("title", r.title).put("artist", r.artist).put("album", r.album).put("cover", r.cover).put("playlistId", r.playlistId)
-    override suspend fun retryTask(id: String) = task("重试任务") {
+    override suspend fun retryTask(id: String) = task("重试任务") { retryRecordedTask(id) }
+    override suspend fun retryFailedTasks(ids: List<String>) = task("仅重试失败步骤") {
+        require(ids.size in 1..100) { "一次可重试 1–100 个步骤" }
+        val failures = mutableListOf<String>()
+        // A failed song can also contain a failed source/video child. Retry its outermost request once.
+        val selected = ids.distinct().map { journal.record(it) ?: error("任务记录已过期") }
+        require(selected.all { it.optString("kind") != "syncLyrics" && it.optString("outcome") in setOf("Failed", "Cancelled", "Interrupted") }) { "仅可批量重试未完成的免费媒体步骤；收费歌词需单独确认" }
+        val selectedIds = selected.map { it.getString("id") }.toSet()
+        for (record in selected) {
+            require(record.optString("kind") != "syncLyrics") { "收费歌词请单独确认后重试" }
+            var parent = record.optString("parentId")
+            val visited = mutableSetOf<String>()
+            var redundant = false
+            while (parent.isNotBlank() && visited.add(parent)) {
+                if (parent in selectedIds) { redundant = true; break }
+                parent = journal.record(parent)?.optString("parentId").orEmpty()
+            }
+            if (redundant) continue
+            currentCoroutineContext().ensureActive()
+            try { retryRecordedTask(record.getString("id")) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (error: Exception) { failures += error.message.orEmpty() }
+        }
+        check(failures.isEmpty()) { "部分步骤仍未完成：" + failures.joinToString("；").take(1200) }
+    }
+    private suspend fun retryRecordedTask(id: String) {
         val record = journal.record(id) ?: error("任务记录已过期")
         require(record.optString("outcome") != "Completed") { "此任务已完成" }
         val track = library.tracks().firstOrNull { it.id == record.optString("trackId") }
         when (record.optString("kind")) {
+            "source" -> {
+                val payload = record.getJSONObject("payload")
+                val song = MusicSourceRegistry.parseSong(payload.getString("sourceId"), payload.getJSONObject("song")) ?: error("来源信息无效")
+                importSourceInternal(song, payload.optString("playlistId").takeUnless { it.isBlank() || it == "null" })
+            }
+            "song" -> {
+                val p = record.getJSONObject("payload")
+                addToPlaylist(p.optString("playlistId").takeUnless { it.isBlank() || it == "null" }, listOf(obtain(SongRequest(p.getString("title"), p.getString("artist"), p.optString("album")))))
+            }
             "video" -> {
                 val r = record.getJSONObject("payload")
                 download(VideoImportRequest(r.getString("link"), r.getString("title"), r.getString("artist"), r.getString("album"), r.optString("cover"), r.optString("playlistId").takeUnless { it.isBlank() || it == "null" }))
@@ -793,7 +861,9 @@ class JvmMusicAssistant(
                 }
                 ?: error("截图中的歌名或歌手被截断，未找到可确认的完整名称，请补充：${input.artist} - ${input.title}")
         }
-        library.tracks().firstOrNull { !it.sourceUri.isNullOrBlank() && normalize(it.title) == normalize(song.title) && normalize(it.artist) == normalize(song.artist) }?.let { return it }
+        for (track in library.tracks().filter { normalize(it.title) == normalize(song.title) && normalize(it.artist) == normalize(song.artist) }) {
+            if (library.audioAvailable(track)) return track
+        }
         val sourceMatches = if (sources.list().any { it.enabled && "search" in it.capabilities }) {
             sources.search(song.title + " " + song.artist).filter {
                 RecommendationPolicy.identity(it.title, it.artist) == RecommendationPolicy.identity(song.title, song.artist) &&
@@ -894,24 +964,58 @@ class JvmMusicAssistant(
         }
         val lists = data.getJSONArray("playlists")
         require(lists.length() in 1..20) { "没有识别出有效歌单" }
-        var added = 0; val errors = mutableListOf<String>()
-        for (i in 0 until lists.length()) {
+        val drafts = (0 until lists.length()).map { i ->
             val list = lists.getJSONObject(i)
-            val songs = songs(list.getJSONArray("tracks")).distinctBy { normalize(it.title + "|" + it.artist) }
+            val songs = songs(list.getJSONArray("tracks")).distinctBy { RecommendationPolicy.identity(it.title, it.artist) }
             require(songs.size <= 300) { "单个歌单超过 300 首，请分批导入" }
             val name = list.optString("name", "截图歌单").ifBlank { "截图歌单" }.take(80)
+            ScreenshotPlaylistDraft(name, songs)
+        }
+        val recognition = if (local) "本地 OCR · PP-OCRv5" else "${config.visionProvider.label} (${connection?.model.orEmpty()})"
+        mutableState.value = mutableState.value.copy(screenshotDraft = ScreenshotImportDraft(java.util.UUID.randomUUID().toString(), drafts, recognition))
+        message("assistant", "识别出 ${drafts.sumOf { it.tracks.size }} 首歌曲，请核对列表、修改不准确的名称并选择要导入的歌曲。确认前不会创建歌单或下载音频。", model = recognition)
+    }
+
+    override suspend fun discardScreenshotImport(): Unit = withContext(Dispatchers.IO) {
+        mutex.withLock { mutableState.value = mutableState.value.copy(screenshotDraft = null) }
+    }
+
+    override suspend fun confirmScreenshotImport(draftId: String, playlists: List<ScreenshotPlaylistDraft>) = task("导入已核对的截图歌单") {
+        val draft = state.value.screenshotDraft
+        require(draft?.id == draftId) { "识别结果已过期，请重新选择截图" }
+        require(playlists.size in 1..20 && playlists.all { it.tracks.size in 1..300 }) { "请选择有效歌曲，每个歌单最多 300 首" }
+        require(playlists.all { it.name.isNotBlank() && it.name.length <= 80 && it.tracks.all { song -> song.title.isNotBlank() && song.artist.isNotBlank() && song.title.length <= 180 && song.artist.length <= 180 && song.album.length <= 180 } }) { "请补全歌单名、歌名和歌手，并检查文字长度" }
+        // Consume once before performing side effects. Interrupted imports use durable per-song retries.
+        mutableState.value = mutableState.value.copy(screenshotDraft = null)
+        var added = 0
+        var processed = 0
+        val uniqueLists = playlists.map { list -> list.copy(tracks = list.tracks.distinctBy { RecommendationPolicy.identity(it.title, it.artist) }) }
+        val total = uniqueLists.sumOf { it.tracks.size }
+        val errors = mutableListOf<String>()
+        val rootId = activeStep.get()?.rootId ?: error("任务上下文已丢失")
+        for (list in uniqueLists) {
+            val name = list.name.trim()
             val id = "playlist-ocr-${MusicJsonStore.hash(name).take(16)}"
             if (library.playlists().none { it.id == id }) library.savePlaylists(library.playlists() + Playlist(id, name, "截图导入", emptyList(), id.hashCode()))
-            songs.forEachIndexed { index, song ->
+            list.tracks.distinctBy { RecommendationPolicy.identity(it.title, it.artist) }.forEach { song ->
                 currentCoroutineContext().ensureActive()
-                status(ImportProgress("导入截图歌单", "${song.artist} - ${song.title}", index, songs.size, index.toFloat() / songs.size.coerceAtLeast(1)))
-                try { addToPlaylist(id, listOf(obtain(song))); added++ }
+                status(ImportProgress("导入截图歌单", "${song.artist} - ${song.title}", processed, total, processed.toFloat() / total))
+                try {
+                    step("歌曲 · ${song.artist} - ${song.title}", "song", payload = JSONObject().put("title", song.title).put("artist", song.artist).put("album", song.album).put("playlistId", id)) {
+                        addToPlaylist(id, listOf(obtain(song)))
+                    }
+                    added++
+                }
                 catch (cancelled: CancellationException) { throw cancelled }
                 catch (error: Exception) { errors += "${song.title}：${error.message}" }
+                processed++
+                journal.update(rootId, progress = ImportProgress("导入截图歌单", completed = processed, total = total, fraction = processed.toFloat() / total,
+                    detail = "成功 $added 首 · 未完成 ${errors.size} 首"))
             }
         }
+        journal.update(rootId, message = "成功 $added 首 · 未完成 ${errors.size} 首")
         message("assistant", "截图歌单处理完成，已匹配或下载 $added 首。" + if (errors.isEmpty()) "" else "\n未完成 ${errors.size} 首：\n${errors.take(30).joinToString("\n")}",
-            model = if (local) "本地 OCR · PP-OCRv5" else "${config.visionProvider.label} (${connection?.model.orEmpty()})")
+            model = draft.recognition)
     }
 
     override suspend fun translate(track: Track, lyrics: Lyrics, language: String, force: Boolean): Lyrics = task("翻译歌词") {
@@ -937,8 +1041,17 @@ class JvmMusicAssistant(
     override suspend fun recommend(force: Boolean) {
         val config = settings()
         if (!config.recommendationsEnabled) return
+        if (!force && !library.automaticDownloadsAllowed(config.recommendationsUnmeteredOnly)) return
         if (!force && (state.value.task.running || System.currentTimeMillis() - state.value.recommendations.createdAt < config.intervalHours * 3_600_000L)) return
-        task("生成每日推荐") { recommendInternal(force) }
+        task("生成每日推荐") {
+            automaticRecommendation = !force
+            try { recommendInternal(force) } finally { automaticRecommendation = false }
+        }
+    }
+    private suspend fun checkAutomaticDownloadNetwork() {
+        if (recommendationAcquiring && automaticRecommendation) check(library.automaticDownloadsAllowed((cachedSettings ?: settings()).recommendationsUnmeteredOnly)) {
+            "自动推荐正在等待符合设置的网络；已完成歌曲保留"
+        }
     }
     private suspend fun recommendInternal(force: Boolean) {
         val config = cachedSettings ?: settings()
@@ -1034,6 +1147,11 @@ class JvmMusicAssistant(
             acquired.forEach { durableHistory.put(RecommendationPolicy.identity(it.title, it.artist), now) }
             durableHistory.keys().asSequence().toList().filter { key -> now - durableHistory.optLong(key) > 365L * 86_400_000 }.forEach(durableHistory::remove)
             state.put("recommendationHistory", durableHistory)
+            val historyDetails = state.optJSONObject("recommendationHistoryDetails") ?: JSONObject()
+            acquired.forEach { track -> historyDetails.put(RecommendationPolicy.identity(track.title, track.artist),
+                JSONObject().put("title", track.title).put("artist", track.artist).put("album", track.album).put("at", now)) }
+            historyDetails.keys().asSequence().toList().filter { key -> now - (historyDetails.optJSONObject(key)?.optLong("at") ?: 0) > 365L * 86_400_000 }.forEach(historyDetails::remove)
+            state.put("recommendationHistoryDetails", historyDetails)
             state.put("recommendations", JSONObject().put("createdAt", now).put("trackIds", JSONArray(batchTracks.map(Track::id))).put("reasons", JSONObject(reasons)))
             state.remove("recommendationPending")
         }

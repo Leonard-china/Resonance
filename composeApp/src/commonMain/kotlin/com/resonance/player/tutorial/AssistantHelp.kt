@@ -7,7 +7,14 @@ data class AssistantHelpEntry(val title: String, val body: String, val page: Lib
 /** The same shipped tutorial content powers help and guided UI; no invented controls or network. */
 object AssistantHelp {
     private val extra = listOf(
-        AssistantHelpEntry("导入歌源", "工具 → 歌源，可选择 MusicFree .js 文件或填写 HTTPS 地址。导入后可搜索、核对并下载；插件能力和依赖不兼容会显示实际错误。", LibraryDestination.Sources),
+        AssistantHelpEntry("导入歌源", "已内置歌源，无需另行导入即可搜索。设置 → 歌源，可启停、恢复内置源，或导入 MusicFree .js 文件及公网 HTTP/HTTPS 地址。搜索歌曲在曲库右上角 → 在线。", LibraryDestination.Sources),
+        AssistantHelpEntry("搜索在线歌曲与试听", "曲库右上角搜索，可切换本地和在线并保留关键词。在线搜索无需 AI；试听先临时下载最多 64 MB，最多播放 30 秒并暂停当前播放。离开页面后停止，不加入曲库；核对后下载，可选择目标歌单或换来源。", LibraryDestination.Discover),
+        AssistantHelpEntry("截图歌单核对", "音乐助手选择歌单截图并发送，默认本地 OCR，不上传图片。识别后先核对可编辑歌名、歌手、专辑和勾选项，确认后才创建歌单、匹配本地或下载。取消不下载。", LibraryDestination.Assistant),
+        AssistantHelpEntry("任务分组与失败重试", "任务页按一次操作分组，展开查看歌曲、下载、封面和歌词步骤。可仅重试失败项；同步歌词可能收费，需单独确认。已完成音频保留，不重放聊天或删除。", LibraryDestination.Tasks),
+        AssistantHelpEntry("推荐历史与反馈", "每日推荐 → 推荐历史与我的反馈，可筛选点赞、踩或评论，撤销态度、修改评论或重新查找。反馈不随音频清理；历史详情从本次更新后开始积累。", LibraryDestination.RecommendationHistory),
+        AssistantHelpEntry("睡眠定时", "完整播放器右上角播放选项 → 睡眠定时器，选择 15、30、45、60 分钟或播完当前歌曲停止；可在同一入口查看剩余时间和取消。Android 后台播放服务、Windows 托盘运行时继续计时，完全退出后不恢复定时。", LibraryDestination.Playing),
+        AssistantHelpEntry("Windows 键盘快捷键", "Ctrl+F 打开并聚焦搜索；空格播放或暂停；Ctrl+方向键切歌；Esc 关闭播放器、退出多选或返回。输入框优先处理文字和光标移动。", LibraryDestination.Library),
+        AssistantHelpEntry("推荐网络和下次检查", "设置 → 每日推荐，可仅在不计费网络自动下载，并查看预计到期或等待网络状态。Android 受系统后台调度影响，Windows 需托盘运行。手动更新推荐会立即联网。", LibraryDestination.Settings),
         AssistantHelpEntry("下载与手机空间", "工具 → 下载与空间，查看已登记下载和临时上限。释放本地下载保留歌曲信息、收藏和歌单，重新下载依赖原歌源。不会自动清理手机其他目录。", LibraryDestination.Storage),
         AssistantHelpEntry("每日推荐加入歌单与保留", "每日推荐 → 加入歌单，选择自建歌单或新建并加入；支持多选和保存全部。收藏或加入自建歌单后，更新推荐时保留。", LibraryDestination.Recommendations),
         AssistantHelpEntry("推荐重复与理由", "设置 → 每日推荐，设置不重复天数。普通歌源推荐不调用聊天模型，推荐理由引用实际保存歌曲，临时推荐不作为已保存偏好。", LibraryDestination.Settings),
@@ -21,7 +28,7 @@ object AssistantHelp {
             LibraryDestination.Tutorial, chapter.id)
     }
     fun search(query: String): List<AssistantHelpEntry> {
-        val terms = listOf("歌源", "空间", "下载", "推荐", "歌单", "歌词", "封面", "版本", "收藏", "导入", "教程", "悬浮", "翻译", "音量")
+        val terms = listOf("歌源", "空间", "下载", "推荐", "歌单", "歌词", "封面", "版本", "收藏", "导入", "教程", "悬浮", "翻译", "音量", "搜索", "截图", "任务", "睡眠", "键盘", "快捷键", "网络", "反馈", "历史")
             .filter(query::contains)
         return entries.map { entry -> entry to terms.count { (entry.title + entry.body).contains(it) } }
             .filter { it.second > 0 }.sortedByDescending { it.second }.map { it.first }.take(3)

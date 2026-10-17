@@ -73,7 +73,7 @@ internal fun MusicFeatureSettingsSection() {
             FilterChip(settings.lyricDisplay == mode, { feature.save(settings.copy(lyricDisplay = mode)) }, label = { Text(label) })
         }
     }
-    SectionHeader("AI 音乐助手")
+    SectionHeader("音乐来源与助手")
     SettingRow(Icons.Default.LibraryMusic, "歌源", "导入源 · 搜索专辑单曲 · 音轨与封面来源", { feature.onNavigate(LibraryDestination.Sources) })
     SettingRow(Icons.Default.FolderOpen, "下载与空间", "临时空间上限 · 释放下载 · 检查重复文件", { feature.onNavigate(LibraryDestination.Storage) })
     SettingRow(Icons.Default.AutoAwesome, "打开音乐助手", "聊天管理、截图导入与每日推荐", { feature.onNavigate(LibraryDestination.Assistant) })
@@ -99,6 +99,9 @@ internal fun MusicFeatureSettingsSection() {
         OutlinedTextField(cooldown, { cooldown = it.filter(Char::isDigit).take(3) }, label = { Text("同首歌曲不重复天数（1–365）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         TextButton(onClick = { feature.save(settings.copy(recommendationCooldownDays = cooldown.toIntOrNull()?.coerceIn(1, 365) ?: 7)); feature.message = "推荐冷却期已保存" }) { Text("保存冷却期") }
         ToggleSetting("允许后台定时生成", settings.backgroundRecommendations) { feature.save(settings.copy(backgroundRecommendations = it)) }
+        ToggleSetting("仅在不计费网络自动下载", settings.recommendationsUnmeteredOnly) { feature.save(settings.copy(recommendationsUnmeteredOnly = it)) }
+        Text("Android 按系统 Wi-Fi／流量计费状态判断；Windows 按系统连接计费状态判断。手动更新推荐会立即联网。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+        RecommendationScheduleStatus(feature)
         if (!settings.backgroundRecommendations) Text("打开应用时检查是否到期", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         else Text("Windows 在托盘运行；Android 按系统后台调度执行，错过时间后补生成。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         var hours by remember(settings.intervalHours) { mutableStateOf(settings.intervalHours.toString()) }
@@ -108,6 +111,10 @@ internal fun MusicFeatureSettingsSection() {
             OutlinedTextField(count, { count = it.filter(Char::isDigit).take(2) }, label = { Text("每次首数（1–30）") }, modifier = Modifier.weight(1f), singleLine = true)
         }
         TextButton(onClick = { feature.save(settings.copy(intervalHours = hours.toIntOrNull()?.coerceIn(1, 168) ?: 24, recommendationCount = count.toIntOrNull()?.coerceIn(1, 30) ?: 5)); feature.message = "推荐计划已保存" }) { Text("保存推荐计划") }
+    }
+    if (feature.services.supportsKeyboardShortcuts) {
+        SectionHeader("键盘操作")
+        Text("Ctrl+F 搜索 · 空格播放／暂停 · Ctrl+←／→ 切歌 · Esc 返回。输入文字时保留空格输入。", style = MaterialTheme.typography.bodySmall)
     }
     var limit by remember(settings.monthlyTokenLimit) { mutableStateOf(settings.monthlyTokenLimit.toString()) }
     OutlinedTextField(limit, { limit = it.filter(Char::isDigit).take(9) }, label = { Text("每月 AI Token 上限") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
@@ -462,6 +469,8 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
 @Composable
 internal fun MusicFeatureDialogs() {
     val feature = LocalMusicFeatures.current ?: return
+    val assistantState = feature.assistant?.state?.collectAsState()?.value
+    assistantState?.screenshotDraft?.let { ScreenshotImportDialog(it) }
     if (feature.showVideoImport) VideoImportDialog(feature)
     if (feature.showOverlayPermissionPrompt) {
         AlertDialog(

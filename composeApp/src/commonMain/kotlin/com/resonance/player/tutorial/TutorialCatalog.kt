@@ -57,12 +57,12 @@ object TutorialCatalog {
         ), listOf("正在播放", "歌曲 · 歌手", "播放 / 暂停", "封面     歌词     队列")),
         QuickLesson("让助手帮你整理", "用聊天管理歌单，也可以发送歌单截图，查找并导入音乐。", listOf(
             "设置 → 配置模型与 API Key：填写自己的连接并测试。",
-            "文本管理需要支持工具调用；截图识别需要支持图片的模型。",
+            "文本管理需要支持工具调用；截图默认本地 OCR，云端识图才需要图片模型。",
             "调用由所选服务商计费；本地听歌可以直接使用。",
         ), listOf("音乐助手", "新对话     历史", "帮我整理一份通勤歌单", "歌单截图     发送")),
         QuickLesson("按自己的节奏探索", "每日推荐、桌面歌词和歌单文件迁移，都可以以后慢慢体验。", listOf(
             "推荐歌曲收藏或加入自建歌单后，可避免下批自动清理。",
-            "推荐页“不喜欢”会删除实际音频；普通删除歌曲也可能删除原文件。",
+            "推荐页的“踩”只改偏好；歌曲信息中的“不喜欢并删除”与普通删除会影响真实音频。",
             "教程始终保留在设置中，可以查说明，也可以跟着操作。",
         ), listOf("使用教程", "快速了解", "跟着操作 · 按章学习", "随时退出，保存进度")),
     )
@@ -94,11 +94,11 @@ object TutorialCatalog {
             step("configure", "配置自己的模型", "模型设置已展开。选择服务商，填写下方的 HTTPS 地址、模型名称与 API Key，保存并选择“用于音乐管理”。文本模型需支持工具调用。已有可用配置时自动继续；本地播放无需配置 AI。", TutorialTarget.AiConfig, LibraryDestination.Settings, TutorialCompletion.AiConfigured),
             step("test", "测试连接", "“测试连接”会向服务商发送请求，可能产生用量。可主动测试并查看结果，也可点“已了解”继续。不要把 API Key 发到聊天或公开截图中。", TutorialTarget.AiTest, LibraryDestination.Settings),
             step("chat", "发起一次对话", "输入自己的需求再点击“发送”，例如“列出我的歌单”。请求会发送相关曲库摘要和当前会话上下文，由所选服务商计费。教程不会替你发送；不想调用时可跳过。", TutorialTarget.AssistantSend, LibraryDestination.Assistant, TutorialCompletion.ChatSent),
-            step("screenshot", "从歌单截图开始", "“歌单截图”可选择长截图，图片会发给配置的视觉模型识别。发送后会查找、下载并整理歌曲，请核对自己的需求。历史会话独立；切换或新建会话本身不消耗 Token。", TutorialTarget.Screenshot, LibraryDestination.Assistant),
+            step("screenshot", "从歌单截图开始", "“歌单截图”可选择长截图，默认本地 OCR，不上传图片；云端模式才发送给视觉模型。识别后先勾选、编辑并核对，确认后才匹配本地或下载。历史会话独立；切换或新建会话本身不消耗 Token。", TutorialTarget.Screenshot, LibraryDestination.Assistant),
         )),
         TutorialChapter("recommendations", "每日推荐", "按需开启，了解保留与清理", listOf(
             step("retention", "先了解歌曲的保留规则", "推荐会自动下载歌曲。下一批成功后，未收藏且不在自建歌单的旧推荐会被物理删除；当前播放曲目延后清理。收藏或加入自建歌单可保留，取消保护后仍可能被清理。", TutorialTarget.RecommendationSettings, LibraryDestination.Settings),
-            step("enable", "按需要开启推荐", "开启“自动推荐并下载”，设置数量和间隔。后台运行可选；Android 由系统调度，Windows 需保持托盘运行。生成会调用配置的模型并联网下载；不需要时可跳过。", TutorialTarget.RecommendationSettings, LibraryDestination.Settings, TutorialCompletion.RecommendationsEnabled),
+            step("enable", "按需要开启推荐", "开启“自动推荐并下载”，设置数量和间隔，可仅在不计费网络自动下载。后台运行可选；Android 由系统调度，Windows 需保持托盘运行。普通歌源推荐无需模型；AI 精选才调用模型，均需联网下载。", TutorialTarget.RecommendationSettings, LibraryDestination.Settings, TutorialCompletion.RecommendationsEnabled),
             step("open", "找到每日推荐", "歌单页第一张卡片始终是每日推荐。已开启时点击进入推荐页面；未开启时会前往设置。", TutorialTarget.DailyCard, LibraryDestination.Library, TutorialCompletion.DailyOpened, tab = "Playlists"),
             step("dislike", "谨慎使用“不喜欢”", "推荐页的“不喜欢”会立即取消收藏、移出所有歌单并删除实际音频，即使此前保存过。可填写原因影响后续推荐。本步仅讲解，不要求尝试删除。", TutorialTarget.DailyCard, LibraryDestination.Library, tab = "Playlists"),
         )),
@@ -111,7 +111,7 @@ object TutorialCatalog {
         TutorialChapter("archive", "歌单迁移与排错", "导出、导入与失败重试", listOf(
             step("export", "导出歌单文件", "点击“导出歌单”，选择歌单或整个曲库。生成的 .resonance 文件含可读取的音频、封面和歌单关系，是明文 ZIP，请按音乐文件保管。不会包含 API Key 和 Cookie。本步可只了解入口。", TutorialTarget.ExportArchive, LibraryDestination.PlaylistArchive),
             step("import", "在另一台设备导入", "把 .resonance 文件传到另一台设备，选择“导入歌单”。校验通过后合并到本机。重复导入可能替换受控目录中的同名目标，无需为了练习重复导入。", TutorialTarget.ImportArchive, LibraryDestination.PlaylistArchive),
-            step("retry", "从失败步骤继续", "任务页保留最近的处理步骤。网络失败时查看具体错误再重试；已入库音频会保留，应用中断后可手动继续。B 站官方验证、失效目录授权和模型连接问题需先处理原因。", TutorialTarget.Tasks, LibraryDestination.Library),
+            step("retry", "从失败步骤继续", "任务页按一次操作分组，展开查看具体步骤；可仅重试失败项，收费歌词单独确认。已入库音频会保留，应用中断后可手动继续。B 站官方验证、失效目录授权和模型连接问题需先处理原因。", TutorialTarget.Tasks, LibraryDestination.Library),
         )),
     )
 

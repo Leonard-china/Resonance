@@ -27,6 +27,16 @@ interface PlatformServices {
     fun canDrawOverlays(): Boolean = true
     fun requestOverlayPermission(): Boolean = false
     val playbackErrors: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
+    val supportsKeyboardShortcuts: Boolean get() = false
+    suspend fun automaticRecommendationAllowed(unmeteredOnly: Boolean): Boolean = true
+    val sleepTimer: StateFlow<com.resonance.player.model.SleepTimerState> get() = MutableStateFlow(com.resonance.player.model.SleepTimerState())
+    fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) {}
+    fun previewAudio(path: String) {}
+    fun stopAudioPreview() {}
+    suspend fun audioFileAvailable(track: Track): Boolean = track.sourceUri != null
+    suspend fun chooseReplacementAudio(track: Track): Track? = null
+    suspend fun saveReplacementAudio(track: Track) { updateTracks(listOf(track)) }
+    fun formatDateTime(epochMillis: Long): String = epochMillis.toString()
     suspend fun loadPlaybackSnapshot(): com.resonance.player.playback.PlaybackSnapshot? = null
     suspend fun savePlaybackSnapshot(snapshot: com.resonance.player.playback.PlaybackSnapshot) {}
     suspend fun resumePlayback(queue: List<Track>): com.resonance.player.playback.PlaybackResume? =
@@ -56,6 +66,7 @@ interface PlatformServices {
     val foreground: kotlinx.coroutines.flow.StateFlow<Boolean>
     val systemReduceMotion: Boolean get() = false
     fun updateSystemBars(isDark: Boolean) {}
+    fun updateWindowBackground(argb: Int) {}
     fun currentTimeMillis(): Long
     suspend fun loadAppearance(): com.resonance.player.model.AppearancePreferences
     suspend fun saveAppearance(preferences: com.resonance.player.model.AppearancePreferences)
