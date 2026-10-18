@@ -114,12 +114,20 @@ class BilibiliClient(private val cookie: () -> String = { "" }) : MusicVideoSour
         return (0 until results.length()).mapNotNull { i ->
             val item = results.optJSONObject(i) ?: return@mapNotNull null
             val title = item.optString("title").replace(Regex("<[^>]*>"), "").replace("&amp;", "&")
+            val durationText = item.optString("duration", "")
+            val durationSeconds = if (durationText.contains(":")) {
+                val parts = durationText.split(":")
+                if (parts.size == 2) (parts[0].toIntOrNull() ?: 0) * 60 + (parts[1].toIntOrNull() ?: 0)
+                else if (parts.size == 3) (parts[0].toIntOrNull() ?: 0) * 3600 + (parts[1].toIntOrNull() ?: 0) * 60 + (parts[2].toIntOrNull() ?: 0)
+                else 0
+            } else item.optInt("duration", 0)
+            if (durationSeconds in 1..59) return@mapNotNull null
             val author = item.optString("author")
             val score = candidateScore(song, title, author)
             val bvid = item.optString("bvid")
             val cover = item.optString("pic").let { if (it.startsWith("//")) "https:$it" else it.replace("http://", "https://") }
             if (score < 20 || !Regex("BV[0-9A-Za-z]{10}").matches(bvid)) null
-            else score to BilibiliVideo(bvid, 0, title, author, cover, 0, uploaderId = item.optLong("mid"))
+            else score to BilibiliVideo(bvid, 0, title, author, cover, durationSeconds, uploaderId = item.optLong("mid"))
         }.sortedByDescending { it.first }.take(20).map { it.second }
     }
 

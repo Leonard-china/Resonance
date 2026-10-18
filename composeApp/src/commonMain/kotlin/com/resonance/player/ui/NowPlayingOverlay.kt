@@ -19,6 +19,8 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -800,17 +802,31 @@ private fun HeroSyncedLyricsPreview(
                         label = "heroSyncedLyricsScroll",
                         modifier = Modifier.fillMaxWidth().clipToBounds(),
                     ) { targetIdx ->
-                        val prevLine = if (targetIdx > 0) lyrics.lines.getOrNull(targetIdx - 1)?.text else null
-                        val currentLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx)?.text else "前奏 · 等待人声"
-                        val nextLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx + 1)?.text else lyrics.lines.firstOrNull()?.text
+                        val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
+                        val prevLine = if (targetIdx > 0) lyrics.lines.getOrNull(targetIdx - 1) else null
+                        val currentLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx) else null
+                        val nextLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx + 1) else lyrics.lines.firstOrNull()
+
+                        fun linePrimaryText(line: LyricLine?): String? = when {
+                            line == null -> null
+                            display == com.resonance.player.model.LyricDisplay.Translation -> line.translation?.takeIf(String::isNotBlank) ?: line.text
+                            else -> line.text
+                        }
+
+                        fun lineTranslationText(line: LyricLine?): String? = when {
+                            line == null -> null
+                            display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank() -> line.translation
+                            else -> null
+                        }
 
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            if (prevLine != null) {
+                            val prevText = linePrimaryText(prevLine)
+                            if (prevText != null) {
                                 Text(
-                                    prevLine,
+                                    prevText,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = ResonanceColors.Dim,
                                     maxLines = 1,
@@ -819,19 +835,35 @@ private fun HeroSyncedLyricsPreview(
                                 )
                                 Spacer(Modifier.height(1.dp))
                             }
+                            val currentPrimary = if (targetIdx >= 0) (linePrimaryText(currentLine) ?: "…") else "前奏 · 等待人声"
                             Text(
-                                currentLine ?: "…",
+                                currentPrimary,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = ResonanceColors.Primary,
-                                maxLines = 1,
+                                maxLines = 2,
+                                softWrap = true,
                                 overflow = TextOverflow.Ellipsis,
                                 textAlign = TextAlign.Center,
                             )
-                            if (nextLine != null) {
+                            val currentTrans = lineTranslationText(currentLine)
+                            if (currentTrans != null) {
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    currentTrans,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = ResonanceColors.Primary.copy(alpha = 0.85f),
+                                    maxLines = 2,
+                                    softWrap = true,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                            val nextText = linePrimaryText(nextLine)
+                            if (nextText != null) {
                                 Spacer(Modifier.height(1.dp))
                                 Text(
-                                    nextLine,
+                                    nextText,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = ResonanceColors.Dim,
                                     maxLines = 1,
@@ -842,12 +874,18 @@ private fun HeroSyncedLyricsPreview(
                         }
                     }
                 } else {
-                    val firstLine = "纯文本歌词 · 点击浏览或生成同步歌词"
+                    val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
+                    val firstLineText = lyrics.lines.firstOrNull()?.let { line ->
+                        if (display == com.resonance.player.model.LyricDisplay.Translation) line.translation?.takeIf(String::isNotBlank) ?: line.text
+                        else line.text
+                    }
+                    val notice = firstLineText ?: "纯文本歌词 · 点击浏览或生成同步歌词"
                     Text(
-                        firstLine,
+                        notice,
                         style = MaterialTheme.typography.bodyMedium,
                         color = ResonanceColors.TextPrimary,
-                        maxLines = 1,
+                        maxLines = 2,
+                        softWrap = true,
                         overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.Center,
                     )
@@ -1337,25 +1375,36 @@ private fun LyricsContent(
         }
     }
 
+    val density = LocalDensity.current
+    val approxItemHeight = with(density) { 52.dp.roundToPx() }
+
     LaunchedEffect(activeIndex) {
         if (activeIndex >= 0) {
             val mark = lastUserDragMark
             val allowAutoScroll = !isDragged && (mark == null || mark.elapsedNow().inWholeMilliseconds >= 3000L)
             if (allowAutoScroll) {
-                if (reducedMotion) {
-                    listState.scrollToItem(activeIndex)
-                } else {
-                    val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == activeIndex }
-                    if (itemInfo != null) {
-                        val viewportHeight = listState.layoutInfo.viewportSize.height
-                        val targetOffset = (viewportHeight - itemInfo.size) / 2
-                        val diff = itemInfo.offset - targetOffset
+                val viewportHeight = listState.layoutInfo.viewportSize.height
+                val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == activeIndex }
+                if (itemInfo != null) {
+                    val targetOffset = (viewportHeight - itemInfo.size) / 2
+                    val diff = itemInfo.offset - targetOffset
+                    if (reducedMotion) {
+                        listState.scrollBy(diff.toFloat())
+                    } else {
                         listState.animateScrollBy(
                             diff.toFloat(),
-                            animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing)
+                            animationSpec = tween(durationMillis = 550, easing = FastOutSlowInEasing)
                         )
-                    } else {
-                        listState.animateScrollToItem(activeIndex)
+                    }
+                } else {
+                    listState.scrollToItem(activeIndex)
+                    val itemNow = listState.layoutInfo.visibleItemsInfo.find { it.index == activeIndex }
+                    val currentOffset = itemNow?.offset ?: 0
+                    val currentSize = itemNow?.size ?: approxItemHeight
+                    val realTarget = (viewportHeight - currentSize) / 2
+                    val diff = currentOffset - realTarget
+                    if (diff != 0) {
+                        listState.scrollBy(diff.toFloat())
                     }
                 }
             }

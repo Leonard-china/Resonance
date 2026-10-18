@@ -29,13 +29,26 @@ class HorizontalPageSwipeUnitTest {
 
     @Test
     fun swipePageTargetRejectsSubThresholdOrZeroThreshold() {
-        // Distance below threshold
+        // Distance below threshold without velocity
         assertNull(swipePageTarget(index = 0, count = 3, distance = -30f, threshold = 50f))
         assertNull(swipePageTarget(index = 1, count = 3, distance = 30f, threshold = 50f))
 
         // Threshold zero or negative
         assertNull(swipePageTarget(index = 0, count = 3, distance = -100f, threshold = 0f))
         assertNull(swipePageTarget(index = 0, count = 3, distance = -100f, threshold = -10f))
+    }
+
+    @Test
+    fun swipePageTargetSupportsFlingVelocityWhenDistanceIsSubThreshold() {
+        // Distance is sub-threshold (-20f < 50f), but fling velocity exceeds threshold with matching direction
+        assertEquals(1, swipePageTarget(index = 0, count = 3, distance = -20f, threshold = 50f, velocity = -600f, velocityThreshold = 400f))
+        assertEquals(0, swipePageTarget(index = 1, count = 3, distance = 20f, threshold = 50f, velocity = 600f, velocityThreshold = 400f))
+
+        // Opposing velocity does not satisfy fling
+        assertNull(swipePageTarget(index = 0, count = 3, distance = -20f, threshold = 50f, velocity = 600f, velocityThreshold = 400f))
+
+        // Insufficient velocity does not satisfy fling
+        assertNull(swipePageTarget(index = 0, count = 3, distance = -20f, threshold = 50f, velocity = -200f, velocityThreshold = 400f))
     }
 
     @Test

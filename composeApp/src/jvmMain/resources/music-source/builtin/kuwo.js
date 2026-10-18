@@ -15,6 +15,10 @@ module.exports = {
       if (!artwork && item.web_albumpic_short) {
         artwork = 'https://img4.kuwo.cn/star/albumcover/1080/' + item.web_albumpic_short;
       }
+      var isTrial = Boolean(item.payInfo && (
+        item.payInfo.listen_fragment === '1' || item.payInfo.listen_fragment === 1 ||
+        item.payInfo.cannotDownload === '1' || item.payInfo.feeType === '1'
+      ));
       return {
         id: String(id),
         title: item.SONGNAME || item.NAME || '',
@@ -23,12 +27,16 @@ module.exports = {
         albumId: String(item.ALBUMID || ''),
         duration: parseInt(item.DURATION || '0', 10),
         artwork: artwork,
-        isTrial: Boolean(item.payInfo && (item.payInfo.listen_fragment === '1' || item.payInfo.listen_fragment === 1))
+        isTrial: isTrial,
+        isPreview: isTrial
       };
     });
   },
-  getMediaSource: async function(musicItem, quality) {
-    var id = String(musicItem.id || '').replace('MUSIC_', '');
+    getMediaSource: async function(musicItem, quality) {
+      if (musicItem.isTrial || musicItem.isPreview) {
+        throw new Error('此酷我歌曲为试听片段，未提供完整免费音频');
+      }
+      var id = String(musicItem.id || '').replace('MUSIC_', '');
     var url = 'https://antiserver.kuwo.cn/anti.s?type=convert_url&rid=' + id + '&format=mp3&response=url';
     var res = await axios.get(url, { responseType: 'text' });
     var audioUrl = typeof res.data === 'string' ? res.data.trim() : '';

@@ -34,6 +34,8 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-18 | 官网下线 123 云盘备用下载通道并同步更新最新公告 | [具体修改](changes/2026-10-18-02-remove-123pan-and-update-announcement.md) |
+| 2026-10-18 | 优化滑动手势门槛、详情页歌词换行与译文、高亮居中跟随及每日推荐完整性保护 | [具体修改](changes/2026-10-18-01-page-swipe-lyrics-display-and-recommendation-integrity.md) |
 | 2026-10-17 | 恢复页面切换弹性晃动感并彻底根除切页顶边黑闪 | [具体修改](changes/2026-10-17-34-restore-spring-bounce-and-eliminate-top-edge-flicker.md) |
 | 2026-10-17 | 升版 0.5.0、构建签名 Android Release APK 与 Windows 安装包并完成官网生产部署 | [具体修改](changes/2026-10-17-33-release-0.5.0.md) |
 | 2026-10-17 | 修复 AndroidMusicAccess 中 Path.of 引发的 Release Lint NewApi 错误 | [具体修改](changes/2026-10-17-32-fix-android-access-newapi-lint.md) |

@@ -15,24 +15,36 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.LocalReducedMotion
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
-internal fun swipePageTarget(index: Int, count: Int, distance: Float, threshold: Float): Int? {
-    if (abs(distance) < threshold || threshold <= 0f) return null
+internal fun swipePageTarget(
+    index: Int,
+    count: Int,
+    distance: Float,
+    threshold: Float,
+    velocity: Float = 0f,
+    velocityThreshold: Float = Float.MAX_VALUE,
+): Int? {
+    if (threshold <= 0f) return null
+    val distanceSatisfied = abs(distance) >= threshold
+    val velocitySatisfied = velocityThreshold > 0f && abs(velocity) >= velocityThreshold && (velocity * distance > 0)
+    if (!distanceSatisfied && !velocitySatisfied) return null
     return (index + if (distance < 0) 1 else -1).takeIf { it in 0 until count }
 }
 
 /**
- * 具有即时跟手视觉反馈与自然物理回弹的屏幕横向滑动手势：
+ * 具有即时跟手视觉反馈、快速扫拂（fling）识别与自然物理回弹的屏幕横向滑动手势：
  * 1. 拖动过程中内容实时随手指平移（graphicsLayer 高性能硬件变换）；
- * 2. 首末边界施加阻尼橡皮筋拉伸；
- * 3. 抬手达到阈值时顺畅触发目标页面切换；
- * 4. 未达阈值时采用柔和物理弹簧平滑回弹归位；
- * 5. 严格保留系统返回边距（24dp）及竖向滚动不抢占机制。
+ * 2. 灵敏且自然的滑动门槛（约 12% 屏宽或轻扫速度），无需费力滑很远；
+ * 3. 接入 VelocityTracker，支持快速轻扫（flick/fling）即时换页；
+ * 4. 首末边界施加阻尼橡皮筋拉伸；
+ * 5. 未达翻页意图时采用柔和物理弹簧平滑回弹归位；
+ * 6. 严格保留系统返回边距（20dp）及竖向滚动不抢占机制。
  */
 internal fun Modifier.horizontalPageSwipe(
     index: Int,
@@ -45,21 +57,24 @@ internal fun Modifier.horizontalPageSwipe(
     val reducedMotion = LocalReducedMotion.current
     val scope = rememberCoroutineScope()
     val dragOffset = remember { Animatable(0f) }
-    val edge = with(LocalDensity.current) { 24.dp.toPx() }
-    val minimum = with(LocalDensity.current) { 48.dp.toPx() }
+    val edge = with(LocalDensity.current) { 20.dp.toPx() }
+    val minimum = with(LocalDensity.current) { 28.dp.toPx() }
+    val flingVelocity = with(LocalDensity.current) { 450.dp.toPx() }
 
     if (!enabled) this else this
         .graphicsLayer {
             translationX = if (reducedMotion) 0f else dragOffset.value
         }
-        .pointerInput(count, edge, minimum) {
+        .pointerInput(count, edge, minimum, flingVelocity) {
             awaitEachGesture {
                 val down = awaitFirstDown(requireUnconsumed = false)
                 if (down.position.x < edge || down.position.x > size.width - edge) return@awaitEachGesture
                 var distance = Offset.Zero
                 var claimed = false
                 val startIndex = currentIndex
-                val threshold = maxOf(minimum, minOf(size.width * 0.18f, minimum * 2))
+                val threshold = maxOf(minimum, minOf(size.width * 0.12f, minimum * 2f))
+                val velocityTracker = VelocityTracker()
+                velocityTracker.addPosition(down.uptimeMillis, down.position)
                 while (true) {
                     val event = awaitPointerEvent()
                     if (event.changes.count { it.pressed } > 1) {
@@ -75,11 +90,20 @@ internal fun Modifier.horizontalPageSwipe(
                         scope.launch { dragOffset.animateTo(0f, spring(dampingRatio = 0.82f, stiffness = Spring.StiffnessMediumLow)) }
                         break
                     }
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
                     distance += change.positionChange()
                     if (!change.pressed) {
                         if (claimed) {
                             change.consume()
-                            val target = swipePageTarget(startIndex, count, distance.x, threshold)
+                            val velocityX = velocityTracker.calculateVelocity().x
+                            val target = swipePageTarget(
+                                index = startIndex,
+                                count = count,
+                                distance = distance.x,
+                                threshold = threshold,
+                                velocity = velocityX,
+                                velocityThreshold = flingVelocity,
+                            )
                             if (target != null) {
                                 scope.launch { dragOffset.snapTo(0f) }
                                 select(target)

@@ -575,9 +575,17 @@ class JvmMusicAssistant(
             if (old != null) track = library.adoptRestoredAudio(old, track)
             val expected = song.durationSeconds
             val actual = durationTextToSeconds(track.durationText)
+            val isShortTitle = listOf("intro", "outro", "skit", "prelude", "interlude", "前奏", "尾奏", "序曲", "间奏", "伴奏", "铃声")
+                .any { song.title.contains(it, ignoreCase = true) }
+            if (actual in 1..59 && !isShortTitle) {
+                recordOrigin(track, MediaOrigin(sourceName, song.sourceId, song.id, song.album, song.albumId,
+                    evidence = "音频实际仅 $actual 秒，疑为试听片段", format = extension, preserved = originalExtension != null, importedAt = System.currentTimeMillis()))
+                if (recommendationAcquiring) recordPendingRecommendation(track.id)
+                error("下载音频仅 $actual 秒，判定为残缺试听片段，未加入推荐")
+            }
             if (expected > 0 && actual > 0 && kotlin.math.abs(expected - actual) > maxOf(8, expected / 25)) {
                 recordOrigin(track, MediaOrigin(sourceName, song.sourceId, song.id, song.album, song.albumId,
-                    evidence = "下载时长与目录不符，需人工核对", format = extension, preserved = originalExtension != null, importedAt = System.currentTimeMillis()))
+                    evidence = "下载时长与目录不符（预期 ${expected}s，实际 ${actual}s），需人工核对", format = extension, preserved = originalExtension != null, importedAt = System.currentTimeMillis()))
                 if (recommendationAcquiring) recordPendingRecommendation(track.id)
                 error("下载时长与专辑目录不符，未加入推荐；请在下载与空间中检查")
             }
@@ -655,6 +663,12 @@ class JvmMusicAssistant(
             require(Files.isRegularFile(encoded) && Files.size(encoded) > 0) { "音频处理没有生成文件" }
             var track = library.importAudio(encoded, effective, cover)
             if (previous != null) track = library.adoptRestoredAudio(previous, track)
+            val actualDuration = durationTextToSeconds(track.durationText)
+            val isShortTitle = listOf("intro", "outro", "skit", "prelude", "interlude", "前奏", "尾奏", "序曲", "间奏", "伴奏", "铃声")
+                .any { request.title.contains(it, ignoreCase = true) }
+            if (recommendationAcquiring && actualDuration in 1..59 && !isShortTitle) {
+                error("推荐音频时长仅 $actualDuration 秒，疑为剪辑片段，已排除")
+            }
             store.update { root -> root.put("videoOrigins", (root.optJSONObject("videoOrigins") ?: JSONObject()).put(origin, track.id)) }
             recordOrigin(track, MediaOrigin("B 站 · " + video.uploader, "bilibili", request.link, effective.album,
                 version = if (BilibiliClient.disallowedVersion(video.title)) "手动视频导入 · 需核对版本" else "录音室候选（未核验）",

@@ -16,6 +16,8 @@ module.exports = {
       if (artwork && artwork.startsWith('http://')) {
         artwork = 'https://' + artwork.substring(7);
       }
+      var fee = item.fee;
+      var isTrial = Boolean(fee === 1 || fee === 4);
       return {
         id: String(item.id),
         title: item.name || '',
@@ -23,11 +25,16 @@ module.exports = {
         album: album,
         albumId: item.album ? String(item.album.id) : '',
         duration: Math.round((item.duration || 0) / 1000),
-        artwork: artwork ? artwork + '?param=500y500' : ''
+        artwork: artwork ? artwork + '?param=500y500' : '',
+        isTrial: isTrial,
+        isPreview: isTrial
       };
     });
   },
   getMediaSource: async function(musicItem, quality) {
+    if (musicItem.isTrial || musicItem.isPreview) {
+      throw new Error('此网易云歌曲为 VIP/付费试听片段，未提供完整免费音频');
+    }
     var id = musicItem.id;
     return {
       url: 'https://music.163.com/song/media/outer/url?id=' + id + '.mp3'
