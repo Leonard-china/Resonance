@@ -1,6 +1,6 @@
-# 2026-10-17 — Resonance 文档入口与开发变更索引
+# 2026-10-26 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.5.0 / 33**。已发布基线见 [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md) 与 [发布记录](changes/2026-10-17-33-release-0.5.0.md)。本轮新增搜索／试听、截图确认、任务分组、离线恢复、历史反馈、睡眠、键盘与网络策略，并进一步处理顶部黑边；已正式完成双端 Release 构建与官网生产部署。实际验证、限制见 [0.5.0 发布记录](changes/2026-10-17-33-release-0.5.0.md) 与 [Antigravity 交接](HANDOFF-2026-10-17-UX-ANTIGRAVITY.md)。
+当前工作区：**0.6.0 / 34**。已发布基线见 [0.6.0 发布说明](RELEASE_NOTES-0.6.0.md) 与 [0.6.0 变更记录](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md)。本轮新增自然语言语义找歌、曲库智能管家（标签清洗与去重）、实时伴奏消除（K歌模式）、本地音频特征提取（BPM/能量）、六维音乐品味画像与精美分享海报；已完成双端 Release 构建与签名验证。历史 0.5.0 基线见 [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md)。
 
 ## 新 AI 从这里开始
 
@@ -18,6 +18,7 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.6.0 发布说明](RELEASE_NOTES-0.6.0.md) | AI 语义搜歌、曲库智能管家、实时伴奏模式、音频特征与品味画像双端正式版 |
 | [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md) | 体验优化集大成、统一搜索试听、截图核对、任务重试、离线重定位与原生睡眠双端正式版 |
 | [0.4.9 发布说明](RELEASE_NOTES-0.4.9.md) | 歌源协议放开、多候选回退、试听防伪与二级页面黑边消除双端正式版 |
 | [0.4.8 发布说明](RELEASE_NOTES-0.4.8.md) | 滑动换页跟手动画、动效流畅度与内置三大免配置歌源双端正式版 |
@@ -34,6 +35,7 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-26 | 引入自然语言语义找歌、曲库智能管家、实时伴奏消除、音频特征分析与音乐品味画像 | [具体修改](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md) |
 | 2026-10-18 | 官网下线 123 云盘备用下载通道并同步更新最新公告 | [具体修改](changes/2026-10-18-02-remove-123pan-and-update-announcement.md) |
 | 2026-10-18 | 优化滑动手势门槛、详情页歌词换行与译文、高亮居中跟随及每日推荐完整性保护 | [具体修改](changes/2026-10-18-01-page-swipe-lyrics-display-and-recommendation-integrity.md) |
 | 2026-10-17 | 恢复页面切换弹性晃动感并彻底根除切页顶边黑闪 | [具体修改](changes/2026-10-17-34-restore-spring-bounce-and-eliminate-top-edge-flicker.md) |

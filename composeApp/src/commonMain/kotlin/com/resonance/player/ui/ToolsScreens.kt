@@ -45,6 +45,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
@@ -217,6 +218,8 @@ internal fun ProfileScreen(
             onClick = onOpenSync,
         )
         SettingRow(Icons.Default.AutoAwesome, "音乐助手", "聊天管理、歌单截图和每日推荐", { features?.onNavigate?.invoke(LibraryDestination.Assistant) })
+        SettingRow(Icons.Default.CleaningServices, "曲库智能管家", "智能洗歌、标签清洗与版本去重", { features?.onNavigate?.invoke(LibraryDestination.SmartManager) })
+        SettingRow(Icons.Default.AutoAwesome, "音乐品味画像", "六维品味雷达图与听歌性格分析", { features?.onNavigate?.invoke(LibraryDestination.TasteRadar) })
         SettingRow(Icons.Default.LibraryMusic, "歌源", "搜索专辑单曲 · 导入 MusicFree 源", { features?.onNavigate?.invoke(LibraryDestination.Sources) })
         SettingRow(Icons.Default.FolderOpen, "下载与空间", "管理下载、临时空间和重复文件", { features?.onNavigate?.invoke(LibraryDestination.Storage) })
         SettingRow(

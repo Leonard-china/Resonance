@@ -31,6 +31,8 @@ interface PlatformServices {
     suspend fun automaticRecommendationAllowed(unmeteredOnly: Boolean): Boolean = true
     val sleepTimer: StateFlow<com.resonance.player.model.SleepTimerState> get() = MutableStateFlow(com.resonance.player.model.SleepTimerState())
     fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) {}
+    fun setVocalSuppression(enabled: Boolean) {}
+    val isVocalSuppressionEnabled: StateFlow<Boolean> get() = MutableStateFlow(false)
     fun previewAudio(path: String) {}
     fun stopAudioPreview() {}
     suspend fun audioFileAvailable(track: Track): Boolean = track.sourceUri != null

@@ -552,6 +552,8 @@ private fun NowPlayingTopBar(
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                     DropdownMenuItem(text = { Text("播放设置 · 音量与速度") }, onClick = { menuExpanded = false; onOpenPlaybackSettings() })
                     LocalMusicFeatures.current?.let { feature ->
+                        val vocalEnabled by feature.services.isVocalSuppressionEnabled.collectAsState()
+                        DropdownMenuItem(text = { Text(if (vocalEnabled) "伴奏模式 · 已开启" else "伴奏模式 (人声消除)") }, onClick = { menuExpanded = false; feature.services.setVocalSuppression(!vocalEnabled) })
                         DropdownMenuItem(text = { Text("匹配专辑封面") }, onClick = { menuExpanded = false; feature.launch { feature.assistant?.matchCover(track); feature.onReload() } })
                         DropdownMenuItem(text = { Text("自定义封面") }, onClick = { menuExpanded = false; feature.launch { feature.services.chooseCoverImage()?.let { feature.assistant?.setCover(track, it); feature.onReload() } } })
                         DropdownMenuItem(text = { Text("生成同步歌词") }, onClick = { menuExpanded = false; feature.showGenerateLyrics = true })

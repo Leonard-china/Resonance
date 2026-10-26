@@ -66,6 +66,8 @@ enum class LibraryDestination {
     Storage,
     Recommendations,
     RecommendationHistory,
+    SmartManager,
+    TasteRadar,
     AudioHelp,
     About,
     Tutorial,

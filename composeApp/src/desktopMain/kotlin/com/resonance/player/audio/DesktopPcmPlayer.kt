@@ -32,6 +32,7 @@ class DesktopPcmPlayer(
     @Volatile private var volume = 1.0
     @Volatile private var gain = 1.0
     @Volatile private var speed = 1.0
+    @Volatile private var vocalSuppression = 0.0
     private val pauseMonitor = java.lang.Object()
 
     @Synchronized
@@ -78,7 +79,7 @@ class DesktopPcmPlayer(
                     if (read < 0) break
                     val size = retained + read
                     val frames = size - size % 4
-                    processor.process(buffer, frames, volume * gain)
+                    processor.process(buffer, frames, volume * gain, vocalSuppression)
                     var written = 0
                     while (written < frames && active(target)) written += line.write(buffer, written, frames - written)
                     retained = size - frames
@@ -115,6 +116,7 @@ class DesktopPcmPlayer(
         onPlayingChanged(playing && session != null)
     }
     fun setVolume(value: Float) { volume = value.toDouble().coerceIn(0.0, 1.0) }
+    fun setVocalSuppression(enabled: Boolean) { vocalSuppression = if (enabled) 1.0 else 0.0 }
     fun setTrackGain(db: Float) { gain = Math.pow(10.0, db.toDouble().coerceIn(-60.0, 18.0) / 20.0) }
     @Synchronized fun setPlaybackSpeed(value: Float) {
         val current = session

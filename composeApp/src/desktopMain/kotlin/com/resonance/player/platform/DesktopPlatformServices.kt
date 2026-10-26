@@ -56,6 +56,12 @@ class DesktopPlatformServices : PlatformServices {
         player.play(track, autoPlay = false, initialProgress = progress)
     }
     override val foreground = MutableStateFlow(true)
+    private val _vocalSuppressionState = MutableStateFlow(false)
+    override val isVocalSuppressionEnabled: StateFlow<Boolean> = _vocalSuppressionState
+    override fun setVocalSuppression(enabled: Boolean) {
+        _vocalSuppressionState.value = enabled
+        player.setVocalSuppression(enabled)
+    }
     override val systemReduceMotion: Boolean get() = java.awt.Toolkit.getDefaultToolkit()
         .getDesktopProperty("win.clientAreaAnimation") == false
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
@@ -1082,6 +1088,7 @@ private class DesktopAudioPlayer(
     fun setVolume(volume: Float) = backend.setVolume(volume)
     fun setTrackGain(gainDb: Float) = backend.setTrackGain(gainDb)
     fun setPlaybackSpeed(speed: Float) = backend.setPlaybackSpeed(speed)
+    fun setVocalSuppression(enabled: Boolean) = backend.setVocalSuppression(enabled)
     fun seekTo(fraction: Float) = backend.seekTo(fraction)
     fun close() = backend.close()
 }

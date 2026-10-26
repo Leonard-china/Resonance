@@ -1,4 +1,5 @@
 package com.resonance.player.ui
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -571,7 +572,7 @@ fun LibraryShell(
 }
 
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
-    LibraryDestination.Sources, LibraryDestination.Storage -> LibraryDestination.Profile
+    LibraryDestination.Sources, LibraryDestination.Storage, LibraryDestination.SmartManager, LibraryDestination.TasteRadar -> LibraryDestination.Profile
     LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About, LibraryDestination.Tutorial -> LibraryDestination.Profile
     LibraryDestination.Recommendations, LibraryDestination.RecommendationHistory, LibraryDestination.Discover -> LibraryDestination.Library
     LibraryDestination.Playing -> LibraryDestination.Library
@@ -581,6 +582,8 @@ private fun tabDestinationOf(destination: LibraryDestination): LibraryDestinatio
 private val profileSubPages = setOf(
     LibraryDestination.Sources,
     LibraryDestination.Storage,
+    LibraryDestination.SmartManager,
+    LibraryDestination.TasteRadar,
     LibraryDestination.Import,
     LibraryDestination.PlaylistArchive,
     LibraryDestination.Settings,
@@ -891,6 +894,9 @@ private fun DestinationContent(
     val reducedMotion = LocalReducedMotion.current
     val destinationStates = rememberSaveableStateHolder()
     val immediateNavigation = LocalMusicFeatures.current?.instantNavigation == true
+    val coroutineScope = rememberCoroutineScope()
+    val features = LocalMusicFeatures.current
+    var activeShareCard by remember { mutableStateOf<ShareCardContent?>(null) }
     Box(Modifier.fillMaxSize().background(ResonanceColors.Canvas)) {
     AnimatedContent(
         targetState = destination,
@@ -940,6 +946,37 @@ private fun DestinationContent(
             LibraryDestination.RecommendationHistory -> RecommendationHistoryScreen(compact) { onDestinationChange(LibraryDestination.Recommendations) }
             LibraryDestination.Sources -> MusicSourcesScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
             LibraryDestination.Storage -> MusicStorageScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
+            LibraryDestination.SmartManager -> SmartManagerScreen(
+                tracks = libraryTracks,
+                onBack = { onDestinationChange(LibraryDestination.Profile) },
+                onApplyTagClean = { drafts ->
+                    val updated = drafts.mapNotNull { d ->
+                        libraryTracks.find { it.id == d.trackId }?.copy(
+                            title = d.suggestedTitle,
+                            artist = d.suggestedArtist,
+                            album = d.suggestedAlbum,
+                        )
+                    }
+                    if (updated.isNotEmpty()) {
+                        coroutineScope.launch {
+                            features?.services?.updateTracks(updated)
+                            features?.onReload?.invoke()
+                        }
+                    }
+                },
+                onCleanDuplicates = { tracksToClean ->
+                    for (t in tracksToClean) onDeleteLocalTrack(t)
+                },
+                compact = compact,
+            )
+            LibraryDestination.TasteRadar -> TasteRadarScreen(
+                tracks = libraryTracks,
+                onBack = { onDestinationChange(LibraryDestination.Profile) },
+                onOpenShareCard = { persona ->
+                    activeShareCard = ShareCardContent.PersonaCard(persona)
+                },
+                compact = compact,
+            )
             LibraryDestination.AudioHelp -> AudioBalanceHelpScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
             LibraryDestination.Tutorial -> TutorialScreen(compact) { onDestinationChange(LibraryDestination.Settings) }
 
@@ -1032,6 +1069,9 @@ private fun DestinationContent(
     }
     }
     }
+        activeShareCard?.let { content ->
+            ShareCardDialog(content = content, onDismiss = { activeShareCard = null })
+        }
     }
 }
 
@@ -2105,6 +2145,7 @@ private fun DiscoverScreen(
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     var showDelete by remember { mutableStateOf(false) }
     var showAdd by remember { mutableStateOf(false) }
+    var isSemanticSearch by rememberSaveable { mutableStateOf(false) }
     val pagePadding = if (compact) 16.dp else 32.dp
     val allKnownTracks = remember(libraryTracks, playlists) {
         (libraryTracks + playlists.flatMap(Playlist::tracks)).distinctBy(Track::id)
@@ -2131,8 +2172,8 @@ private fun DiscoverScreen(
             value = query,
             onValueChange = ::updateQuery,
             modifier = Modifier.fillMaxWidth().padding(horizontal = pagePadding).focusRequester(focusRequester),
-            placeholder = { Text("搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = ResonanceColors.Dim) },
+            placeholder = { Text(if (isSemanticSearch) "输入一句话意图找歌（如：雨天听的慢歌、140 BPM 燃歌）" else "搜索歌名、歌手或专辑", color = ResonanceColors.Dim) },
+            leadingIcon = { Icon(if (isSemanticSearch) Icons.Default.AutoAwesome else Icons.Default.Search, contentDescription = null, tint = if (isSemanticSearch) ResonanceColors.Primary else ResonanceColors.Dim) },
             trailingIcon = if (query.isNotEmpty()) {
                 {
                     IconButton(onClick = { updateQuery("") }) {
@@ -2153,10 +2194,18 @@ private fun DiscoverScreen(
             ),
         )
         if (feature != null) Row(Modifier.padding(horizontal = pagePadding), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(!online, { feature.searchOnline = false; selecting = false }, label = { Text("本地") })
-            FilterChip(online, { feature.searchOnline = true; selecting = false }, label = { Text("在线") })
+            FilterChip(!online && !isSemanticSearch, { isSemanticSearch = false; feature.searchOnline = false; selecting = false }, label = { Text("本地") })
+            FilterChip(online && !isSemanticSearch, { isSemanticSearch = false; feature.searchOnline = true; selecting = false }, label = { Text("在线") })
+            FilterChip(isSemanticSearch, { isSemanticSearch = true; feature.searchOnline = false; selecting = false }, label = { Text("AI 语义") })
         }
-        if (online) {
+        if (isSemanticSearch) {
+            SemanticSongSearch(
+                query = query,
+                libraryTracks = allKnownTracks,
+                onTrackSelected = { onTrackSelected(it, null) },
+                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = pagePadding),
+            )
+        } else if (online) {
             OnlineSongSearch(query, Modifier.fillMaxWidth().weight(1f).padding(horizontal = pagePadding))
         } else {
         if (selecting) MultiSelectToolbar(

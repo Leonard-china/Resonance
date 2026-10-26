@@ -177,10 +177,18 @@ class PlaybackService : MediaSessionService() {
     }
     companion object {
         val sleepTimerState = kotlinx.coroutines.flow.MutableStateFlow(com.resonance.player.model.SleepTimerState())
+        val vocalSuppressionState = kotlinx.coroutines.flow.MutableStateFlow(false)
         @Volatile var sleepTimerStoppedAtEnd: Boolean = false
         @Volatile private var activeService: PlaybackService? = null
         @Volatile var activeMusicId: String? = null
             private set
+        fun setVocalSuppression(enabled: Boolean) {
+            vocalSuppressionState.value = enabled
+            val service = activeService ?: return
+            service.handler.post {
+                service.preamp.setVocalSuppression(enabled)
+            }
+        }
         fun stopTrack(id: String) {
             val service = activeService ?: return
             service.handler.post {

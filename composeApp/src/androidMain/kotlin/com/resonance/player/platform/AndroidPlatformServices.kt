@@ -246,6 +246,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
     override val playbackEnded: Flow<Unit> = endedEvents
     override val sleepTimer get() = com.resonance.player.PlaybackService.sleepTimerState
+    override val isVocalSuppressionEnabled get() = com.resonance.player.PlaybackService.vocalSuppressionState
+    override fun setVocalSuppression(enabled: Boolean) {
+        com.resonance.player.PlaybackService.setVocalSuppression(enabled)
+    }
     override suspend fun saveReplacementAudio(track: Track): Unit = withContext(Dispatchers.IO) {
         check(audioFileAvailable(track)) { "所选音频已不可读取，未替换来源" }
         // Unlike metadata-only updateTracks, this also adopts previously external catalog entries.

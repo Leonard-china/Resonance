@@ -34,6 +34,26 @@ class PcmGainProcessorTest {
         PcmGainProcessor(initialGain = 0.0).process(bytes, bytes.size, 0.0)
         assertTrue(bytes.all { it == 0.toByte() })
     }
+    @Test fun vocalSuppressionSuppressesCenterChannelWhileRetainingStereo() {
+        // Create pure center audio (L == R == 10000)
+        val centerBytes = ByteArray(40).also { bytes ->
+            for (i in 0 until 10) {
+                val offsetL = i * 4
+                val offsetR = offsetL + 2
+                // L
+                bytes[offsetL] = (10000 and 0xff).toByte()
+                bytes[offsetL + 1] = ((10000 shr 8) and 0xff).toByte()
+                // R
+                bytes[offsetR] = (10000 and 0xff).toByte()
+                bytes[offsetR + 1] = ((10000 shr 8) and 0xff).toByte()
+            }
+        }
+        val processor = PcmGainProcessor(initialGain = 1.0, initialVocalSuppression = 1.0)
+        processor.process(centerBytes, centerBytes.size, 1.0, vocalSuppression = 1.0)
+        val suppressedVal = read(centerBytes, 0)
+        // Mid center channel should be significantly reduced compared to original 10000
+        assertTrue(abs(suppressedVal) < 2000, "Expected center channel to be suppressed, but got $suppressedVal")
+    }
     @Test fun playbackTempoRemainsWithinFfmpegFilterRange() {
         assertEquals("atempo=0.5,atempo=0.5", DesktopPcmPlayer.tempoFilter(0.25))
         assertEquals("atempo=2.0,atempo=1.5", DesktopPcmPlayer.tempoFilter(3.0))
