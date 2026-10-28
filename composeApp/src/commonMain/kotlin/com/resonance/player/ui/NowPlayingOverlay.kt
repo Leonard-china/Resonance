@@ -80,6 +80,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Favorite
@@ -121,11 +122,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -233,6 +237,10 @@ internal fun NowPlayingOverlay(
     onRequestAiLyrics: () -> Unit = onRefreshLyrics,
     onDeleteLocalTrack: ((Track) -> Unit)? = null,
     onAudioEffectPresetChange: (com.resonance.player.model.AudioEffectPreset) -> Unit = {},
+    onPlayNext: ((Track) -> Unit)? = null,
+    onRemoveFromQueue: ((Track) -> Unit)? = null,
+    onClearQueue: (() -> Unit)? = null,
+    onMoveInQueueOrder: ((Int, Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val track = playerState.currentTrack ?: return
@@ -312,7 +320,9 @@ internal fun NowPlayingOverlay(
                                         onSeek, onTrackSelected, onRefreshLyrics, onRequestAiLyrics,
                                         onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
                                         onAdjustOffset = onAdjustLyricsOffset, onEmbedLyrics = onEmbedLyrics,
-                                        onDismiss = onDismiss, showArtwork = false, modifier = Modifier.weight(1f))
+                                        onDismiss = onDismiss, showArtwork = false, modifier = Modifier.weight(1f),
+                                        onPlayNext = onPlayNext, onRemoveFromQueue = onRemoveFromQueue,
+                                        onClearQueue = onClearQueue, onMoveInQueueOrder = onMoveInQueueOrder)
                                 }
                             }
                         }
@@ -330,7 +340,9 @@ internal fun NowPlayingOverlay(
                                     onSeek, onTrackSelected, onRefreshLyrics, onRequestAiLyrics,
                                     onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
                                     onAdjustOffset = onAdjustLyricsOffset, onEmbedLyrics = onEmbedLyrics,
-                                    onDismiss = onDismiss, modifier = Modifier.weight(1f))
+                                    onDismiss = onDismiss, modifier = Modifier.weight(1f),
+                                    onPlayNext = onPlayNext, onRemoveFromQueue = onRemoveFromQueue,
+                                    onClearQueue = onClearQueue, onMoveInQueueOrder = onMoveInQueueOrder)
                                 TrackIdentity(track, compact = true, singleLine = true)
                             }
                             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
@@ -356,6 +368,10 @@ internal fun NowPlayingOverlay(
                             onEmbedLyrics = onEmbedLyrics,
                             onDismiss = onDismiss,
                             modifier = Modifier.weight(1f),
+                            onPlayNext = onPlayNext,
+                            onRemoveFromQueue = onRemoveFromQueue,
+                            onClearQueue = onClearQueue,
+                            onMoveInQueueOrder = onMoveInQueueOrder,
                         )
                         Spacer(Modifier.height(8.dp))
                         TrackIdentity(track, compact = short || pane != PlayerPane.Cover)
@@ -615,6 +631,10 @@ private fun PaneContent(
     onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
+    onPlayNext: ((Track) -> Unit)? = null,
+    onRemoveFromQueue: ((Track) -> Unit)? = null,
+    onClearQueue: (() -> Unit)? = null,
+    onMoveInQueueOrder: ((Int, Int) -> Unit)? = null,
 ) {
     val reducedMotion = LocalReducedMotion.current
     val keyboardNavigation = LocalInputModeManager.current.inputMode == InputMode.Keyboard
@@ -673,7 +693,15 @@ private fun PaneContent(
                 onAdjustOffset = onAdjustOffset,
                 onEmbedLyrics = onEmbedLyrics,
             )
-            PlayerPane.Queue -> QueuePane(queue, track.id, onTrackSelected)
+            PlayerPane.Queue -> QueuePane(
+                queue = queue,
+                currentTrackId = track.id,
+                onTrackSelected = onTrackSelected,
+                onPlayNext = onPlayNext,
+                onRemoveFromQueue = onRemoveFromQueue,
+                onClearQueue = onClearQueue,
+                onMoveInQueueOrder = onMoveInQueueOrder,
+            )
         }
     }
 }
@@ -1337,6 +1365,37 @@ private fun LyricsContent(
                     )
                 }
             }
+
+            val mark = lastUserDragMark
+            val isPaused = mark != null && mark.elapsedNow().inWholeMilliseconds < 3500L
+            if (isPaused && activeIndex >= 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 16.dp)
+                        .clip(CircleShape)
+                        .background(ResonanceColors.Primary)
+                        .clickable { lastUserDragMark = null }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "回到当前播放",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -1377,7 +1436,12 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
             color = color,
         )
         if (display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank()) {
-            Text(line.translation, style = MaterialTheme.typography.bodySmall, color = color.copy(alpha = 0.8f), modifier = Modifier.padding(top = 4.dp))
+            Text(
+                line.translation,
+                style = if (stage) MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 26.sp) else MaterialTheme.typography.bodySmall,
+                color = color.copy(alpha = if (active) 0.85f else 0.55f),
+                modifier = Modifier.padding(top = 4.dp),
+            )
         }
         }
     }
@@ -1388,84 +1452,216 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun QueuePane(queue: List<Track>, currentTrackId: String, onTrackSelected: (Track) -> Unit) {
+private fun QueuePane(
+    queue: List<Track>,
+    currentTrackId: String,
+    onTrackSelected: (Track) -> Unit,
+    onPlayNext: ((Track) -> Unit)? = null,
+    onRemoveFromQueue: ((Track) -> Unit)? = null,
+    onClearQueue: (() -> Unit)? = null,
+    onMoveInQueueOrder: ((Int, Int) -> Unit)? = null,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(ResonanceColors.CanvasElevated)
-            .padding(8.dp)
+            .padding(10.dp)
     ) {
         if (queue.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("播放队列为空", color = ResonanceColors.Dim, style = MaterialTheme.typography.bodyMedium)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.QueueMusic,
+                        contentDescription = null,
+                        tint = ResonanceColors.Dimmer,
+                        modifier = Modifier.size(44.dp),
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text("播放队列为空", color = ResonanceColors.TextPrimary, style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.height(4.dp))
+                    Text("在曲库中选择歌曲或点击「下一首播放」即可加入队列", color = ResonanceColors.Dim, style = MaterialTheme.typography.bodySmall)
+                }
             }
             return@Box
         }
         val reducedMotion = LocalReducedMotion.current
         val queueListState = rememberLazyListState()
+        val scope = rememberCoroutineScope()
+        val currentIndex = remember(queue, currentTrackId) {
+            queue.indexOfFirst { it.id == currentTrackId }
+        }
+
         LaunchedEffect(currentTrackId) {
-            val idx = queue.indexOfFirst { it.id == currentTrackId }
-            if (idx >= 0) {
-                val isVisible = queueListState.layoutInfo.visibleItemsInfo.any { it.index == idx }
+            if (currentIndex >= 0) {
+                val isVisible = queueListState.layoutInfo.visibleItemsInfo.any { it.index == currentIndex }
                 if (!isVisible) {
-                    if (reducedMotion) queueListState.scrollToItem(idx) else queueListState.animateScrollToItem(idx)
+                    if (reducedMotion) queueListState.scrollToItem(currentIndex) else queueListState.animateScrollToItem(currentIndex)
                 }
             }
         }
-        LazyColumn(
-            state = queueListState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 4.dp),
-        ) {
-            itemsIndexed(queue, key = { index, item -> "queue-${item.id}-$index" }, contentType = { _, _ -> "queue-track" }) { _, item ->
-                val current = item.id == currentTrackId
-                val interactionSource = remember { MutableInteractionSource() }
-                val itemBg by animateColorAsState(
-                    targetValue = if (current) ResonanceColors.PrimarySoft else Color.Transparent,
-                    animationSpec = tween(motionDuration(160)),
-                    label = "queueItemBg",
+
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "播放队列 · ${queue.size} 首歌曲",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = ResonanceColors.TextPrimary,
+                    fontWeight = FontWeight.SemiBold,
                 )
-                val itemBorder by animateColorAsState(
-                    targetValue = if (current) ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f) else Color.Transparent,
-                    animationSpec = tween(motionDuration(160)),
-                    label = "queueItemBorder",
-                )
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(itemBg)
-                        .border(1.dp, itemBorder, RoundedCornerShape(12.dp))
-                                .clickable(interactionSource = interactionSource, indication = null) { onTrackSelected(item) }
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    AlbumArtwork(item.artworkSeed, Modifier.size(42.dp), 8.dp, item.artworkPath, item.sourceUri)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            item.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            color = if (current) ResonanceColors.Primary else ResonanceColors.TextPrimary,
-                            fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            item.artist.ifBlank { "未知艺术家" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = ResonanceColors.Dim,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                Spacer(Modifier.weight(1f))
+                if (currentIndex >= 0) {
+                    IconButton(
+                        onClick = {
+                            scope.launch {
+                                if (reducedMotion) queueListState.scrollToItem(currentIndex)
+                                else queueListState.animateScrollToItem(currentIndex)
+                            }
+                        },
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.GraphicEq,
+                            contentDescription = "定位当前歌曲",
+                            tint = ResonanceColors.Primary,
+                            modifier = Modifier.size(18.dp),
                         )
                     }
-                    if (current) {
-                        NowPlayingIndicator(isPlaying = true)
+                    Spacer(Modifier.width(4.dp))
+                }
+                if (queue.size > 1 && onClearQueue != null) {
+                    IconButton(
+                        onClick = onClearQueue,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.DeleteOutline,
+                            contentDescription = "清空其他歌曲",
+                            tint = ResonanceColors.Dim,
+                            modifier = Modifier.size(18.dp),
+                        )
                     }
                 }
-                Spacer(Modifier.height(2.dp))
+            }
+
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+            Spacer(Modifier.height(4.dp))
+
+            LazyColumn(
+                state = queueListState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(vertical = 4.dp),
+            ) {
+                itemsIndexed(queue, key = { index, item -> "queue-${item.id}-$index" }, contentType = { _, _ -> "queue-track" }) { index, item ->
+                    val current = item.id == currentTrackId
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val itemBg by animateColorAsState(
+                        targetValue = if (current) ResonanceColors.PrimarySoft else Color.Transparent,
+                        animationSpec = tween(motionDuration(160)),
+                        label = "queueItemBg",
+                    )
+                    val itemBorder by animateColorAsState(
+                        targetValue = if (current) ResonanceColors.GlassBorderGlow.copy(alpha = 0.45f) else Color.Transparent,
+                        animationSpec = tween(motionDuration(160)),
+                        label = "queueItemBorder",
+                    )
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(itemBg)
+                            .border(1.dp, itemBorder, RoundedCornerShape(12.dp))
+                            .clickable(interactionSource = interactionSource, indication = null) { onTrackSelected(item) }
+                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        AlbumArtwork(item.artworkSeed, Modifier.size(40.dp), 8.dp, item.artworkPath, item.sourceUri)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                item.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = if (current) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+                                fontWeight = if (current) FontWeight.SemiBold else FontWeight.Normal,
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                item.artist.ifBlank { "未知艺术家" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = ResonanceColors.Dim,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        if (current) {
+                            NowPlayingIndicator(isPlaying = true)
+                            Spacer(Modifier.width(6.dp))
+                        } else {
+                            if (onPlayNext != null) {
+                                IconButton(
+                                    onClick = { onPlayNext(item) },
+                                    modifier = Modifier.size(28.dp),
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.QueueMusic,
+                                        contentDescription = "置顶为下一首",
+                                        tint = ResonanceColors.Dim,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
+                            }
+                            if (onRemoveFromQueue != null) {
+                                IconButton(
+                                    onClick = { onRemoveFromQueue(item) },
+                                    modifier = Modifier.size(28.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "从队列移除",
+                                        tint = ResonanceColors.Dimmer,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
+                            }
+                        }
+                        if (onMoveInQueueOrder != null && queue.size > 1) {
+                            Column {
+                                if (index > 0) {
+                                    IconButton(
+                                        onClick = { onMoveInQueueOrder(index, index - 1) },
+                                        modifier = Modifier.size(18.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "上移",
+                                            tint = ResonanceColors.Dimmer,
+                                            modifier = Modifier.size(14.dp).graphicsLayer { rotationZ = 180f },
+                                        )
+                                    }
+                                }
+                                if (index < queue.lastIndex) {
+                                    IconButton(
+                                        onClick = { onMoveInQueueOrder(index, index + 1) },
+                                        modifier = Modifier.size(18.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Default.KeyboardArrowDown,
+                                            contentDescription = "下移",
+                                            tint = ResonanceColors.Dimmer,
+                                            modifier = Modifier.size(14.dp),
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                }
             }
         }
     }

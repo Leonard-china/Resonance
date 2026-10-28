@@ -1,8 +1,10 @@
 package com.resonance.player.ui
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
@@ -68,6 +70,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,6 +81,7 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BrightnessAuto
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Close
@@ -306,6 +310,10 @@ fun LibraryShell(
     floatingLyricsEnabled: Boolean = false,
     onEditTrack: (track: Track, newTitle: String, newArtist: String, newAlbum: String, embedLyrics: Boolean) -> Unit = { _, _, _, _, _ -> },
     onAudioEffectPresetChange: (com.resonance.player.model.AudioEffectPreset) -> Unit = {},
+    onPlayNext: (Track) -> Unit = {},
+    onRemoveFromQueue: (Track) -> Unit = {},
+    onClearQueue: () -> Unit = {},
+    onMoveInQueueOrder: (Int, Int) -> Unit = { _, _ -> },
     message: String?,
     operationInProgress: Boolean,
 ) {
@@ -401,6 +409,7 @@ fun LibraryShell(
                 onBatchAddToPlaylist = onBatchAddToPlaylist,
                 message = message,
                 operationInProgress = operationInProgress,
+                onPlayNext = onPlayNext,
             )
         }
 
@@ -562,6 +571,10 @@ fun LibraryShell(
                         onDeleteLocalTrack(track)
                     },
                     onAudioEffectPresetChange = onAudioEffectPresetChange,
+                    onPlayNext = onPlayNext,
+                    onRemoveFromQueue = onRemoveFromQueue,
+                    onClearQueue = onClearQueue,
+                    onMoveInQueueOrder = onMoveInQueueOrder,
                 )
             }
         }
@@ -770,6 +783,7 @@ private fun DestinationContent(
     onBatchAddToPlaylist: (List<Track>, String) -> Unit = { _, _ -> },
     message: String?,
     operationInProgress: Boolean,
+    onPlayNext: (Track) -> Unit = {},
 ) {
     val reducedMotion = LocalReducedMotion.current
     val destinationStates = rememberSaveableStateHolder()
@@ -886,6 +900,7 @@ private fun DestinationContent(
                 onBatchAddToPlaylist = onBatchAddToPlaylist,
                 message = message,
                 operationInProgress = operationInProgress,
+                onPlayNext = onPlayNext,
             )
             LibraryDestination.Discover -> DiscoverScreen(
                 libraryTracks = libraryTracks,
@@ -901,6 +916,7 @@ private fun DestinationContent(
                 onBatchDelete = onBatchDelete,
                 onBatchAddToPlaylist = onBatchAddToPlaylist,
                 onCreatePlaylist = onCreatePlaylist,
+                onPlayNext = onPlayNext,
             )
             LibraryDestination.Playing -> PlayingPlaceholderScreen(
                 onOpenLibrary = { onDestinationChange(LibraryDestination.Library) },
@@ -1099,6 +1115,7 @@ private fun LibraryScreen(
     onBatchAddToPlaylist: (List<Track>, String) -> Unit = { _, _ -> },
     message: String?,
     operationInProgress: Boolean,
+    onPlayNext: (Track) -> Unit = {},
 ) {
 
     var tab by rememberSaveable { mutableStateOf(LibraryTab.Playlists.name) }
@@ -1352,6 +1369,7 @@ private fun LibraryScreen(
                     selectedTrackIds = selectedTrackIds,
                     onToggleTrackSelect = ::toggleTrackSelect,
                     pagePadding = pagePadding,
+                    onPlayNext = onPlayNext,
                 )
             } else if (libraryTracks.isEmpty() && !previewMode) {
                 EmptyLibrary(onCreatePlaylist = onCreatePlaylist, onImport = { onImport(false) }, message = null,
@@ -1386,6 +1404,7 @@ private fun LibraryScreen(
                                 selectedTrackIds = selectedTrackIds,
                                 onToggleTrackSelect = ::toggleTrackSelect,
                                 contentPadding = PaddingValues(start = pagePadding, end = pagePadding, bottom = 24.dp),
+                                onPlayNext = onPlayNext,
                             )
                             LibraryTab.Playlists -> PlaylistListTab(
                                 state = playlistsScroll,
@@ -1499,8 +1518,18 @@ private fun TrackListTab(
     selectedTrackIds: Set<String> = emptySet(),
     onToggleTrackSelect: (String) -> Unit = {},
     contentPadding: PaddingValues,
+    onPlayNext: ((Track) -> Unit)? = null,
 ) {
-    val firstPlayableId = remember(tracks) { tracks.firstOrNull { it.sourceUri != null }?.id }
+    var sortOption by rememberSaveable { mutableStateOf(TrackSortOption.Default) }
+    var filterOption by rememberSaveable { mutableStateOf(TrackFilterOption.All) }
+    var filterQuery by rememberSaveable { mutableStateOf("") }
+    var sortMenuExpanded by remember { mutableStateOf(false) }
+
+    val filteredTracks = remember(tracks, sortOption, filterOption, filterQuery) {
+        com.resonance.player.model.filterAndSortTracks(tracks, sortOption, filterOption, filterQuery)
+    }
+
+    val firstPlayableId = remember(filteredTracks) { filteredTracks.firstOrNull { it.sourceUri != null }?.id }
     LazyColumn(state = trackListState, contentPadding = contentPadding, modifier = Modifier.fillMaxSize()) {
         item {
             Row(
@@ -1533,12 +1562,169 @@ private fun TrackListTab(
             }
             HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
         }
-        itemsIndexed(tracks, key = { index, track -> "tracks-${track.id}-$index" }) { _, track ->
+
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(ResonanceColors.CanvasElevated)
+                        .border(1.dp, ResonanceColors.GlassBorderGlow.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = ResonanceColors.Dim,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    BasicTextField(
+                        value = filterQuery,
+                        onValueChange = { filterQuery = it },
+                        modifier = Modifier.weight(1f),
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = ResonanceColors.TextPrimary),
+                        singleLine = true,
+                        cursorBrush = SolidColor(ResonanceColors.Primary),
+                        decorationBox = { innerTextField ->
+                            if (filterQuery.isEmpty()) {
+                                Text(
+                                    "在曲库中快速筛选…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = ResonanceColors.Dimmer,
+                                )
+                            }
+                            innerTextField()
+                        },
+                    )
+                    if (filterQuery.isNotEmpty()) {
+                        IconButton(
+                            onClick = { filterQuery = "" },
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "清空",
+                                tint = ResonanceColors.Dim,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (sortOption != TrackSortOption.Default) ResonanceColors.PrimarySoft else ResonanceColors.Soft)
+                                .clickable { sortMenuExpanded = true }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Sort,
+                                contentDescription = null,
+                                tint = if (sortOption != TrackSortOption.Default) ResonanceColors.Primary else ResonanceColors.Dim,
+                                modifier = Modifier.size(15.dp),
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                sortOption.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (sortOption != TrackSortOption.Default) ResonanceColors.Primary else ResonanceColors.TextPrimary,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false },
+                        ) {
+                            TrackSortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.label) },
+                                    leadingIcon = if (option == sortOption) {
+                                        { Icon(Icons.Default.Check, null, tint = ResonanceColors.Primary) }
+                                    } else null,
+                                    onClick = {
+                                        sortOption = option
+                                        sortMenuExpanded = false
+                                    },
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        listOf(
+                            TrackFilterOption.All,
+                            TrackFilterOption.Lossless,
+                            TrackFilterOption.MissingCover,
+                            TrackFilterOption.MissingMetadata,
+                        ).forEach { opt ->
+                            val isSelected = filterOption == opt
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) ResonanceColors.PrimarySoft else ResonanceColors.Soft)
+                                    .clickable { filterOption = opt }
+                                    .padding(horizontal = 9.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    opt.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) ResonanceColors.Primary else ResonanceColors.Dim,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+        }
+
+        if (filteredTracks.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        if (filterQuery.isNotEmpty()) "没有找到匹配的歌曲" else "当前筛选条件下没有歌曲",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = ResonanceColors.Dim,
+                    )
+                }
+            }
+        }
+
+        itemsIndexed(filteredTracks, key = { index, track -> "tracks-${track.id}-$index" }) { _, track ->
             TrackRow(
                 track = track,
                 selected = playerState.currentTrack?.id == track.id,
                 isPlaying = playerState.currentTrack?.id == track.id && playerState.isPlaying,
-                onClick = { onTrackSelected(track, tracks) },
+                onClick = { onTrackSelected(track, filteredTracks) },
                 userPlaylists = userPlaylists,
                 onPlaylistMembershipChange = onPlaylistMembershipChange,
                 onDeleteLocalTrack = onDeleteLocalTrack,
@@ -1546,6 +1732,7 @@ private fun TrackListTab(
                 isMultiSelectMode = isMultiSelectMode,
                 isMultiSelected = selectedTrackIds.contains(track.id),
                 onToggleMultiSelect = { onToggleTrackSelect(track.id) },
+                onPlayNext = onPlayNext,
                 modifier = (if (LocalReducedMotion.current) Modifier else Modifier.animateItem())
                     .then(if (track.id == firstPlayableId) Modifier.tutorialTarget(TutorialTarget.TrackList) else Modifier),
             )
@@ -1685,6 +1872,7 @@ private fun LibraryDetailView(
     selectedTrackIds: Set<String> = emptySet(),
     onToggleTrackSelect: (String) -> Unit = {},
     pagePadding: Dp,
+    onPlayNext: ((Track) -> Unit)? = null,
 ) {
     val title: String
     val subtitle: String
@@ -1833,6 +2021,7 @@ private fun LibraryDetailView(
                 isMultiSelectMode = isMultiSelectMode,
                 isMultiSelected = selectedTrackIds.contains(track.id),
                 onToggleMultiSelect = { onToggleTrackSelect(track.id) },
+                onPlayNext = onPlayNext,
                 modifier = if (LocalReducedMotion.current) Modifier else Modifier.animateItem(),
             )
         }
@@ -1853,6 +2042,7 @@ private fun SearchResultList(
     selectedTrackIds: Set<String> = emptySet(),
     onToggleTrackSelect: (String) -> Unit = {},
     contentPadding: PaddingValues,
+    onPlayNext: ((Track) -> Unit)? = null,
 ) {
     val trimmed = query.trim()
     val results = localSearchResults(query, tracks)
@@ -1883,6 +2073,7 @@ private fun SearchResultList(
                 isMultiSelectMode = isMultiSelectMode,
                 isMultiSelected = selectedTrackIds.contains(track.id),
                 onToggleMultiSelect = { onToggleTrackSelect(track.id) },
+                onPlayNext = onPlayNext,
                 modifier = if (LocalReducedMotion.current) Modifier else Modifier.animateItem(),
             )
         }
@@ -1970,6 +2161,7 @@ private fun DiscoverScreen(
     onBatchDelete: (List<Track>) -> Unit,
     onBatchAddToPlaylist: (List<Track>, String) -> Unit,
     onCreatePlaylist: () -> Unit,
+    onPlayNext: (Track) -> Unit = {},
 ) {
     val feature = LocalMusicFeatures.current
     var localQuery by rememberSaveable { mutableStateOf("") }
@@ -2079,6 +2271,7 @@ private fun DiscoverScreen(
                 selectedTrackIds = selectedIds,
                 onToggleTrackSelect = ::toggle,
                 contentPadding = PaddingValues(horizontal = pagePadding, vertical = 10.dp),
+                onPlayNext = onPlayNext,
             )
         }
         }
@@ -2141,6 +2334,7 @@ private fun TrackRow(
     isMultiSelected: Boolean = false,
     onToggleMultiSelect: () -> Unit = {},
     onEditTrack: ((Track) -> Unit)? = null,
+    onPlayNext: ((Track) -> Unit)? = null,
 ) {
     val feature = LocalMusicFeatures.current
     val featureState = feature?.assistant?.state?.collectAsState()?.value
@@ -2310,6 +2504,22 @@ private fun TrackRow(
                                 menuExpanded = false
                             },
                         )
+                        if (onPlayNext != null && available && !track.sourceUri.isNullOrBlank()) {
+                            DropdownMenuItem(
+                                text = { Text("下一首播放") },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.QueueMusic,
+                                        contentDescription = null,
+                                        tint = ResonanceColors.TextPrimary,
+                                    )
+                                },
+                                onClick = {
+                                    onPlayNext(track)
+                                    menuExpanded = false
+                                },
+                            )
+                        }
                         if (onEditTrack != null) {
                             DropdownMenuItem(
                                 text = { Text("编辑歌曲信息") },

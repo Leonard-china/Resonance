@@ -421,6 +421,45 @@ fun App(services: PlatformServices) {
             startTrack(target, playbackQueue)
         }
 
+        fun playNext(track: Track) {
+            if (track.sourceUri == null) return
+            if (player.currentTrack?.id == track.id) {
+                features.message = "「${track.title}」正在播放中"
+                return
+            }
+            customQueue = com.resonance.player.model.buildPlayNextQueue(playbackQueue, player.currentTrack, track)
+            features.message = "已将「${track.title}」设为下一首播放"
+        }
+
+        fun removeFromQueue(track: Track) {
+            val current = player.currentTrack
+            val newQueue = com.resonance.player.model.buildRemoveFromQueue(playbackQueue, track)
+            if (current?.id == track.id) {
+                if (newQueue.isNotEmpty()) {
+                    moveInQueue(1)
+                } else {
+                    services.setPlaying(false)
+                    player = player.copy(isPlaying = false, currentTrack = null)
+                }
+            }
+            customQueue = newQueue
+        }
+
+        fun clearQueue() {
+            val current = player.currentTrack
+            if (current != null) {
+                customQueue = listOf(current)
+            } else {
+                services.setPlaying(false)
+                player = player.copy(isPlaying = false, currentTrack = null)
+                customQueue = emptyList()
+            }
+        }
+
+        fun moveTrackInQueue(fromIndex: Int, toIndex: Int) {
+            customQueue = com.resonance.player.model.buildReorderedQueue(playbackQueue, fromIndex, toIndex)
+        }
+
         LaunchedEffect(services, playbackQueue, player.currentTrack, player.repeatMode, player.shuffleEnabled) {
             services.playbackEnded.collect { moveInQueue(direction = 1, automatic = true) }
         }
@@ -714,6 +753,10 @@ fun App(services: PlatformServices) {
                             player = player.copy(audioEffectPreset = preset)
                             persistence.submitLatest("audio.effect_preset") { services.saveAudioEffectPreset(preset) }
                         },
+                        onPlayNext = ::playNext,
+                        onRemoveFromQueue = ::removeFromQueue,
+                        onClearQueue = ::clearQueue,
+                        onMoveInQueueOrder = ::moveTrackInQueue,
                         onToggleFloatingLyrics = features::toggleFloatingLyrics,
                         onOpenSleepTimer = { showSleepTimer = true },
                         floatingLyricsEnabled = features.settings.floatingLyrics,

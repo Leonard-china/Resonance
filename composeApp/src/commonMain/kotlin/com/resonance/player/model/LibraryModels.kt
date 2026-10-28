@@ -212,3 +212,58 @@ data class BatchEnrichReport(
     val message: String,
 )
 
+fun filterAndSortTracks(
+    tracks: List<Track>,
+    sortOption: TrackSortOption = TrackSortOption.Default,
+    filterOption: TrackFilterOption = TrackFilterOption.All,
+    filterQuery: String = "",
+): List<Track> {
+    var result = tracks
+    if (filterQuery.isNotBlank()) {
+        val q = filterQuery.trim().lowercase()
+        result = result.filter {
+            it.title.lowercase().contains(q) ||
+            it.artist.lowercase().contains(q) ||
+            it.album.lowercase().contains(q)
+        }
+    }
+    result = when (filterOption) {
+        TrackFilterOption.All -> result
+        TrackFilterOption.Lossless -> result.filter { it.mimeType.contains("flac", ignoreCase = true) || it.title.endsWith(".flac", ignoreCase = true) }
+        TrackFilterOption.HighQuality -> result.filter { !it.mimeType.contains("flac", ignoreCase = true) && !it.title.endsWith(".flac", ignoreCase = true) }
+        TrackFilterOption.MissingCover -> result.filter { it.isMissingCover }
+        TrackFilterOption.MissingLyrics -> result
+        TrackFilterOption.MissingMetadata -> result.filter { it.isMissingArtist || it.isMissingAlbum }
+    }
+    return when (sortOption) {
+        TrackSortOption.Default -> result
+        TrackSortOption.Title -> result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+        TrackSortOption.Artist -> result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.artist.ifBlank { "zzz" } })
+        TrackSortOption.Album -> result.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.album.ifBlank { "zzz" } })
+        TrackSortOption.DurationAsc -> result.sortedBy { durationTextToSeconds(it.durationText) }
+        TrackSortOption.DurationDesc -> result.sortedByDescending { durationTextToSeconds(it.durationText) }
+    }
+}
+
+fun buildPlayNextQueue(currentQueue: List<Track>, currentTrack: Track?, nextTrack: Track): List<Track> {
+    if (nextTrack.sourceUri == null) return currentQueue
+    if (currentTrack?.id == nextTrack.id) return currentQueue
+    val list = currentQueue.filterNot { it.id == nextTrack.id }.toMutableList()
+    val currentIndex = currentTrack?.let { curr -> list.indexOfFirst { it.id == curr.id } } ?: -1
+    val insertIndex = if (currentIndex >= 0) currentIndex + 1 else 0
+    list.add(insertIndex.coerceIn(0, list.size), nextTrack)
+    return list
+}
+
+fun buildRemoveFromQueue(currentQueue: List<Track>, trackToRemove: Track): List<Track> {
+    return currentQueue.filterNot { it.id == trackToRemove.id }
+}
+
+fun buildReorderedQueue(currentQueue: List<Track>, fromIndex: Int, toIndex: Int): List<Track> {
+    if (fromIndex !in currentQueue.indices || toIndex !in currentQueue.indices) return currentQueue
+    val list = currentQueue.toMutableList()
+    val item = list.removeAt(fromIndex)
+    list.add(toIndex, item)
+    return list
+}
+

@@ -20,6 +20,7 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.6.5 发布说明](RELEASE_NOTES-0.6.5.md) | 全新播放队列深度管理、下一首播放置顶、曲库即时排序筛选与双语歌词舞台双端正式版 |
 | [0.6.4 发布说明](RELEASE_NOTES-0.6.4.md) | Mineradio 沉浸音乐舞台、端到端加密双人一起听与自适应封面氛围双端正式版 |
 | [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md) | 听歌时长统计、跨平台音效调校、取消Token限制与每日推荐未听保护双端正式版 |
 | [0.6.2 发布说明](RELEASE_NOTES-0.6.2.md) | 全面温润质感打磨、标志性波浪进度条与沉浸动效双端正式版 |
@@ -41,6 +42,7 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-29 | 播放队列深度管理、下一首播放插队、曲库多维排序筛选与歌词舞台交互打磨并发布 v0.6.5 | [具体修改](changes/2026-10-29-01-queue-play-next-library-sorting-and-lyrics-polish.md) |
 | 2026-10-28 | 构建并发布 Resonance v0.6.4 正式版至 GitHub 与官网 | [具体修改](changes/2026-10-28-08-release-0.6.4.md) |
 | 2026-10-28 | 引入双人加密一起听并极简交互体验，支持剪贴板智能识别与自然语言邀请提取 | [具体修改](changes/2026-10-28-07-encrypted-listen-together-and-simplified-interaction.md) |
 | 2026-10-28 | 手机重连后安装回弹版，完成 37 次设备回归及首次/预热导航窗口诊断 | [具体修改](changes/2026-10-28-06-device-motion-diagnostics-and-regression.md) |

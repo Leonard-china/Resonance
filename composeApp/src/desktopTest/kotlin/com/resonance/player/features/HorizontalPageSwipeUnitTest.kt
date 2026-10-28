@@ -53,10 +53,10 @@ class HorizontalPageSwipeUnitTest {
 
     @Test
     fun appVersionAndHighlightsGeneratedFromReleaseNotes() {
-        assertEquals("0.6.4", APP_VERSION)
-        assertEquals("2026-10-28", APP_RELEASE_DATE)
+        assertEquals("0.6.5", APP_VERSION)
+        assertEquals("2026-10-29", APP_RELEASE_DATE)
         assertEquals(5, APP_RELEASE_HIGHLIGHTS.size)
-        assertTrue(APP_RELEASE_HIGHLIGHTS[0].contains("Mineradio"))
-        assertTrue(APP_RELEASE_HIGHLIGHTS.last().contains("Android 16"))
+        assertTrue(APP_RELEASE_HIGHLIGHTS[0].contains("播放队列"))
+        assertTrue(APP_RELEASE_HIGHLIGHTS.last().contains("Android"))
     }
 }
