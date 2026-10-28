@@ -1,8 +1,10 @@
 # 2026-10-28 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.6.3 / 37**。已发布基线见 [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md) 与 [0.6.3 变更记录](changes/2026-10-28-02-release-0.6.3.md)。本轮发布听歌时长与完播统计、7大跨平台专业音效预设、全面取消Token使用量与预算限制、每日推荐未听保护及取消助手16轮步骤限制双端正式版；历史 0.6.2 基线见 [0.6.2 发布说明](RELEASE_NOTES-0.6.2.md)。
+当前工作区：**0.6.4 / 38**。已发布基线见 [0.6.4 发布说明](RELEASE_NOTES-0.6.4.md) 与 [0.6.4 变更记录](changes/2026-10-28-08-release-0.6.4.md)。本轮发布 Mineradio 沉浸音乐舞台、端到端加密双人一起听与自适应封面氛围双端正式版；历史 0.6.3 基线见 [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md)。
 
 ## 新 AI 从这里开始
+
+当前工作区已完成双端 0.6.4 正式版构建并发布，涵盖 Mineradio 风格原生音乐舞台 UI、Android 16 布局修正、封面取色氛围与跳跃回弹、双人加密直连一起听与极简剪贴板交互。版本号更新为 `0.6.4 / 38`。
 
 1. 读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 协作流程](AI-WORKFLOW.md)。
 2. 根据 [开发说明的任务定位表](DEVELOPMENT.md#gaps) 找相关章节、实现、测试。
@@ -18,6 +20,7 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.6.4 发布说明](RELEASE_NOTES-0.6.4.md) | Mineradio 沉浸音乐舞台、端到端加密双人一起听与自适应封面氛围双端正式版 |
 | [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md) | 听歌时长统计、跨平台音效调校、取消Token限制与每日推荐未听保护双端正式版 |
 | [0.6.2 发布说明](RELEASE_NOTES-0.6.2.md) | 全面温润质感打磨、标志性波浪进度条与沉浸动效双端正式版 |
 | [0.6.1 发布说明](RELEASE_NOTES-0.6.1.md) | 画廊展台立体原生 UI、轻量动效与全域交互打磨双端正式版 |
@@ -38,6 +41,12 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-28 | 构建并发布 Resonance v0.6.4 正式版至 GitHub 与官网 | [具体修改](changes/2026-10-28-08-release-0.6.4.md) |
+| 2026-10-28 | 引入双人加密一起听并极简交互体验，支持剪贴板智能识别与自然语言邀请提取 | [具体修改](changes/2026-10-28-07-encrypted-listen-together-and-simplified-interaction.md) |
+| 2026-10-28 | 手机重连后安装回弹版，完成 37 次设备回归及首次/预热导航窗口诊断 | [具体修改](changes/2026-10-28-06-device-motion-diagnostics-and-regression.md) |
+| 2026-10-28 | 封面取色氛围、流动波浪、跳跃回弹切换，完善空曲库与助手欢迎界面 | [具体修改](changes/2026-10-28-05-album-atmosphere-and-spring-motion-refinement.md) |
+| 2026-10-28 | Android 16 真机调试音乐舞台，修正手机封面空间、助手标题与设备回归断言 | [具体修改](changes/2026-10-28-04-android16-device-ui-validation.md) |
+| 2026-10-28 | 参考 Mineradio 重塑原生音乐舞台、大字歌词、悬浮控制台与歌单推荐主卡 | [具体修改](changes/2026-10-28-03-mineradio-inspired-native-music-stage.md) |
 | 2026-10-28 | 构建并发布 Resonance v0.6.3 正式版至 GitHub 与官网 | [具体修改](changes/2026-10-28-02-release-0.6.3.md) |
 | 2026-10-28 | 取消 AI Token 使用量与预算限制、每日推荐未听歌曲到期保留不换、取消助手 16 轮工具步骤限制 | [具体修改](changes/2026-10-28-01-remove-token-limits-retain-unlistened-recommendations-and-remove-16-step-limit.md) |
 | 2026-10-27 | 新增听歌时长统计与歌曲详情页跨平台音效预设切换 | [具体修改](changes/2026-10-27-08-listening-duration-and-audio-effects.md) |

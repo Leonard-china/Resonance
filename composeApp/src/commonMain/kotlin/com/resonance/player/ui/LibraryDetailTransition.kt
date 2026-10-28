@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import com.resonance.player.design.LocalReducedMotion
@@ -27,13 +29,16 @@ internal fun <T> LibraryDetailTransition(
     content: @Composable (T?) -> Unit,
 ) {
     val reducedMotion = LocalReducedMotion.current
+    val keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard
     val transition = updateTransition(detail, label = "libraryDetail")
     val moving = transition.isRunning || transition.currentState != transition.targetState
     transition.AnimatedContent(
         modifier = modifier.clipToBounds(),
         transitionSpec = {
             val returning = targetState == null && initialState != null
-            val transform = if (reducedMotion) {
+            val transform = if (keyboard) {
+                androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+            } else if (reducedMotion) {
                 // Sequential fades keep both sets of text from being visible together.
                 fadeIn(tween(120, delayMillis = 80)) togetherWith fadeOut(tween(80))
             } else if (returning) {

@@ -68,6 +68,9 @@ import com.resonance.player.design.LocalReducedMotion
 import com.resonance.player.design.ResonanceMotionTokens
 import com.resonance.player.design.motionDuration
 import com.resonance.player.design.galleryShadow
+import com.resonance.player.design.rememberPlaybackVisualPhase
+import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * 微拟物拟态调色板（严格参考高精度设计规范图）：
@@ -136,18 +139,19 @@ fun SoftHeroPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifi
     val scale by animateFloatAsState(if (pressed && !reduced) 0.98f else 1f,
         tween(motionDuration(ResonanceMotionTokens.PressDuration), easing = ResonanceMotionTokens.ExitEasing), label = "playPress")
     val outline = ResonanceColors.Primary
+    val face = ResonanceColors.TextPrimary
+    val glyph = ResonanceColors.Canvas
     Box(modifier.size(size.coerceAtLeast(48.dp)).semantics { contentDescription = if (isPlaying) "暂停" else "播放" }
         .clickable(interactionSource = interaction, indication = ripple(), role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center) {
         Box(Modifier.size(size).galleryShadow(CircleShape, depth = 6.dp).graphicsLayer {
             scaleX = scale; scaleY = scale
             translationY = ((1f - scale) / 0.02f) * 1.5.dp.toPx()
-        }.clip(CircleShape).background(Brush.linearGradient(listOf(
-            SoftNeumorphicTokens.HeroGradientStart, SoftNeumorphicTokens.HeroGradientMiddle, SoftNeumorphicTokens.HeroGradientEnd)))
+        }.clip(CircleShape).background(face)
             .border(if (focused) 3.dp else 0.dp, if (focused) outline else Color.Transparent, CircleShape),
             contentAlignment = Alignment.Center) {
             Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null,
-                tint = Color.White, modifier = Modifier.size(if (size >= 60.dp) 34.dp else 25.dp))
+                tint = glyph, modifier = Modifier.size(if (size >= 60.dp) 34.dp else 25.dp))
         }
     }
 }
@@ -244,6 +248,7 @@ private fun WavySlider(
     label: String,
     modifier: Modifier = Modifier,
     onPreview: (Float?) -> Unit = {},
+    isPlaying: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -255,6 +260,9 @@ private fun WavySlider(
     var preview by remember { mutableFloatStateOf(value) }
     val displayValue = (if (editing) preview else value).coerceIn(0f, 1f)
     val density = LocalDensity.current
+    val phase = rememberPlaybackVisualPhase(isPlaying, 3_600)
+    val activePath = remember { Path() }
+    val inactivePath = remember { Path() }
 
     Slider(
         value = displayValue,
@@ -285,10 +293,10 @@ private fun WavySlider(
             }
         },
         track = { sliderState ->
-            val strokeActivePx = 3.2f * density.density
-            val strokeInactivePx = 2.4f * density.density
-            val amplitudePx = 3.0f * density.density
-            val wavelengthPx = 28.0f * density.density
+            val strokeActivePx = 2.4f * density.density
+            val strokeInactivePx = 1.4f * density.density
+            val amplitudePx = 2.2f * density.density
+            val wavelengthPx = 34.0f * density.density
             val stepPx = 3.0f * density.density
 
             Canvas(Modifier.fillMaxWidth().height(24.dp)) {
@@ -298,15 +306,21 @@ private fun WavySlider(
 
                 val currentX = (sliderState.value * width).coerceIn(0f, width)
                 val twoPi = (2.0 * PI).toFloat()
+                val offset = phase.value
+                fun waveY(x: Float): Float {
+                    val nearThumb = min(1f, abs(x - currentX) / (wavelengthPx * .35f))
+                    val nearEdge = min(1f, x / 10.dp.toPx()) * min(1f, (width - x) / 10.dp.toPx())
+                    return centerY + amplitudePx * nearThumb * nearEdge * sin((x / wavelengthPx) * twoPi - offset)
+                }
 
                 // Active wavy segment (played)
                 if (currentX > 0f) {
-                    val pathActive = Path()
+                    val pathActive = activePath.apply { reset() }
                     pathActive.moveTo(0f, centerY)
                     var x = 0f
                     while (x < currentX) {
                         x = (x + stepPx).coerceAtMost(currentX)
-                        val y = centerY + amplitudePx * sin((x / wavelengthPx) * twoPi)
+                        val y = waveY(x)
                         pathActive.lineTo(x, y)
                     }
                     drawPath(
@@ -318,13 +332,13 @@ private fun WavySlider(
 
                 // Inactive wavy segment (unplayed)
                 if (currentX < width) {
-                    val pathInactive = Path()
-                    val startY = centerY + amplitudePx * sin((currentX / wavelengthPx) * twoPi)
+                    val pathInactive = inactivePath.apply { reset() }
+                    val startY = waveY(currentX)
                     pathInactive.moveTo(currentX, startY)
                     var x = currentX
                     while (x < width) {
                         x = (x + stepPx).coerceAtMost(width)
-                        val y = centerY + amplitudePx * sin((x / wavelengthPx) * twoPi)
+                        val y = waveY(x)
                         pathInactive.lineTo(x, y)
                     }
                     drawPath(
@@ -340,10 +354,10 @@ private fun WavySlider(
 
 @Composable
 fun SoftRefinedPlaybackScrubber(progress: Float, durationText: String, onSeek: (Float) -> Unit,
-    formatPosition: (String, Float) -> String, modifier: Modifier = Modifier) {
+    formatPosition: (String, Float) -> String, modifier: Modifier = Modifier, isPlaying: Boolean = false) {
     var preview by remember { mutableStateOf<Float?>(null) }
     Column(modifier.fillMaxWidth()) {
-        WavySlider(progress, onSeek, "播放进度", onPreview = { preview = it })
+        WavySlider(progress, onSeek, "播放进度", onPreview = { preview = it }, isPlaying = isPlaying)
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             val timeStyle = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
             Text(formatPosition(durationText, (preview ?: progress).coerceIn(0f, 1f)), style = timeStyle, color = ResonanceColors.Muted)

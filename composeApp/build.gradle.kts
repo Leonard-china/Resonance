@@ -85,6 +85,8 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation("org.json:json:20250517")
+                // Certificate construction only; transport uses the platform TLS implementation.
+                implementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("io.github.dokar3:quickjs-kt:1.0.10")
                 implementation("com.google.zxing:core:3.5.3")

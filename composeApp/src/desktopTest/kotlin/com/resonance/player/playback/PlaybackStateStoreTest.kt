@@ -12,6 +12,19 @@ import kotlin.test.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PlaybackStateStoreTest {
+    @Test fun clearingTemporaryPlaybackCancelsAStartThatFinishesAfterLeavingTheRoom() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 1000
+        val store = PlaybackStateStore(backend.services, this)
+        var started = false
+        store.activate(track("together:session:audio"), null, analyzeLoudness = false) { started = true }
+        runCurrent()
+        store.clearCurrentTrack()
+        advanceUntilIdle()
+        assertFalse(started)
+        assertNull(store.state.value.currentTrack)
+        assertFalse(store.state.value.isPlaying)
+    }
     private fun track(id: String) = Track(id, id, "artist", "album", "3:00", 0, sourceUri = "$id.mp3")
     private class Backend(private val scope: CoroutineScope) {
         val volumes = mutableListOf<Float>()

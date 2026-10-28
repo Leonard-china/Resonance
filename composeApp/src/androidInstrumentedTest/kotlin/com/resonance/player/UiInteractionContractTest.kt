@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -19,6 +20,16 @@ import org.junit.Test
 
 class UiInteractionContractTest {
     @get:Rule val ui = createComposeRule()
+
+    @Test fun albumAtmosphereCanReadNativeArtworkPixels() {
+        val bitmap = android.graphics.Bitmap.createBitmap(32, 32, android.graphics.Bitmap.Config.ARGB_8888)
+        try {
+            bitmap.eraseColor(android.graphics.Color.rgb(210, 60, 40))
+            val palette = com.resonance.player.design.atmosphereFromBitmap(
+                bitmap.asImageBitmap(), com.resonance.player.design.albumAtmosphere(7))
+            assertTrue(palette.glow.red > palette.glow.green * 1.5f)
+        } finally { bitmap.recycle() }
+    }
 
     @Test fun tabsExposeSelectionAndKeepTouchTargetsInReducedMotion() {
         ui.setContent {

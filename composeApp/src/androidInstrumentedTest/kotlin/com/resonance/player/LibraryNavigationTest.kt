@@ -26,10 +26,11 @@ class LibraryNavigationTest {
     private val songs = (0..299).map { Track("$it", "Song %03d".format(it), "Artist", "Album", "3:00", it, sourceUri = "fixture://$it") }
     private val destination = mutableStateOf(LibraryDestination.Library)
     private var canvas = Color.Black
+    private var chatCalls = 0
     private fun show(enabled: Boolean = false, reduced: Boolean = true, mode: ThemeMode = ThemeMode.Light) {
         val state = MutableStateFlow(MusicAssistantState())
         val assistant = Proxy.newProxyInstance(MusicAssistantServices::class.java.classLoader, arrayOf(MusicAssistantServices::class.java)) { _, method, _ ->
-            when (method.name) { "getState" -> state; else -> null }
+            when (method.name) { "getState" -> state; "chat" -> { chatCalls++; null }; else -> null }
         } as MusicAssistantServices
         val platform = Proxy.newProxyInstance(PlatformServices::class.java.classLoader, arrayOf(PlatformServices::class.java)) { _, method, _ ->
             when (method.name) {
@@ -120,7 +121,7 @@ class LibraryNavigationTest {
     @Test fun aboutShowsHighlightsForInstalledVersion() {
         show()
         ui.onNodeWithText("工具").performClick()
-        ui.onNodeWithText("关于 Resonance").performClick()
+        ui.onNodeWithText("关于 Resonance").performScrollTo().performClick()
         ui.onNodeWithText("当前版本更新 · v" + APP_VERSION).performScrollTo().assertIsDisplayed()
         APP_RELEASE_HIGHLIGHTS.firstOrNull()?.let { ui.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
     }
@@ -132,12 +133,31 @@ class LibraryNavigationTest {
         ui.onNodeWithContentDescription("打开正在播放详情与歌词").assertDoesNotExist()
         ui.onNodeWithText("发送").assertIsDisplayed()
     }
+    @Test fun assistantHeaderKeepsTitleOnOneLineAndActionsVisible() {
+        show()
+        ui.onNodeWithText("音乐助手").performClick()
+        ui.onNodeWithTag("assistant-title").assertIsDisplayed()
+            .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.GetTextLayoutResult) { action ->
+                val results = mutableListOf<androidx.compose.ui.text.TextLayoutResult>()
+                org.junit.Assert.assertTrue(action(results))
+                org.junit.Assert.assertEquals(1, results.single().lineCount)
+            }
+        for (label in listOf("新对话", "历史", "任务", "设置")) ui.onNodeWithText(label).assertIsDisplayed()
+    }
+    @Test fun assistantExampleFillsDraftWithoutSendingRequest() {
+        show()
+        ui.onNodeWithText("音乐助手").performClick()
+        val prompt = "找一些适合夜晚散步的歌"
+        ui.onNodeWithText(prompt).performClick()
+        ui.onNodeWithTag("assistant-input").assertTextContains(prompt)
+        ui.runOnIdle { org.junit.Assert.assertEquals(0, chatCalls) }
+    }
     @Test fun disabledRecommendationCardAppearsBeforeUserPlaylistsAndOpensSettings() {
         show()
         val daily = ui.onNodeWithText("每日推荐").fetchSemanticsNode().positionInRoot.y
         val custom = ui.onNodeWithText("My playlist").fetchSemanticsNode().positionInRoot.y
         org.junit.Assert.assertTrue(daily <= custom)
-        ui.onNodeWithText("未开启推荐 · 点击设置").performClick()
+        ui.onNodeWithContentDescription("每日推荐未开启，打开推荐设置").performClick()
         ui.onNodeWithText("自动推荐并下载").assertExists()
     }
     @Test fun enabledRecommendationCardOpensItsOwnPlaylistPage() {

@@ -15,6 +15,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface PlatformServices {
+    val listenTogether: ListenTogetherService? get() = null
+    fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
+        restorePausedPlayback(track, listOf(track), progress, false, RepeatMode.Off)
+        setPlaybackSpeed(speed)
+        setPlaying(playing)
+    }
     val supportsKgg: Boolean get() = false
     val supportsWebLogin: Boolean get() = false
     val musicAssistant: MusicAssistantServices? get() = null

@@ -89,23 +89,23 @@ private fun colors(dark: Boolean, palette: WeatherPalette): ResonanceColorTokens
     val primary = Color(if (dark) { if (blue) 0xFFA9C5FF else 0xFF8CD0BC } else { if (blue) 0xFF315FD0 else 0xFF2F7467 })
     return ResonanceColorTokens(
         isDark = dark,
-        Canvas = Color(if (dark) 0xFF111A1D else if (blue) 0xFFF2F5F8 else 0xFFF3F4F2),
-        CanvasElevated = Color(if (dark) 0xFF273236 else 0xFFFCFDFC),
-        Raised = Color(if (dark) 0xFF273236 else 0xFFFCFDFC),
-        Soft = Color(if (dark) 0xFF26363C else if (blue) 0xFFE6EDF8 else 0xFFE5EFE9),
-        SurfaceSubtle = Color(if (dark) 0xFF26363C else 0xFFE8EEEB),
-        Glass = Color(if (dark) 0xDE1C292E else 0xDEFFFFFF),
-        GlassLight = Color(if (dark) 0xE626353A else 0xE6FFFFFF),
-        GlassUltra = Color(if (dark) 0xF226353A else 0xF2FFFFFF),
+        Canvas = Color(if (dark) 0xFF0B0E14 else 0xFFF2F4F7),
+        CanvasElevated = Color(if (dark) 0xFF181E28 else 0xFFFCFDFE),
+        Raised = Color(if (dark) 0xFF202733 else 0xFFFCFDFE),
+        Soft = Color(if (dark) 0xFF202733 else 0xFFE6EBF0),
+        SurfaceSubtle = Color(if (dark) 0xFF202733 else 0xFFE8ECF1),
+        Glass = Color(if (dark) 0xDE141A24 else 0xDEFFFFFF),
+        GlassLight = Color(if (dark) 0xE61C2430 else 0xE6FFFFFF),
+        GlassUltra = Color(if (dark) 0xF21C2430 else 0xF2FFFFFF),
         GlassBorder = Color(if (dark) 0x32FFFFFF else 0xCFFFFFFF),
         GlassBorderSubtle = Color(if (dark) 0x1CFFFFFF else 0x18243C33),
         GlassBorderGlow = primary.copy(alpha = 0.30f),
         Divider = Color(if (dark) 0x24FFFFFF else 0x18243C33),
         DividerStrong = Color(if (dark) 0x40FFFFFF else 0x30243C33),
-        TextPrimary = Color(if (dark) 0xFFF1F7F5 else if (blue) 0xFF172B3A else 0xFF1C302B),
-        Muted = Color(if (dark) 0xFFB6C7C3 else 0xFF50645D),
-        Dim = Color(if (dark) 0xFFACBCB7 else 0xFF596D66),
-        Dimmer = Color(if (dark) 0xFF92A7A0 else 0xFF596D66),
+        TextPrimary = Color(if (dark) 0xFFF1F4F8 else 0xFF202B39),
+        Muted = Color(if (dark) 0xFFB9C3D1 else 0xFF536171),
+        Dim = Color(if (dark) 0xFFA9B5C5 else 0xFF596778),
+        Dimmer = Color(if (dark) 0xFF9AA9BC else 0xFF596778),
         Primary = primary, PrimaryGlow = primary, PrimarySoft = primary.copy(alpha = if (dark) 0.16f else 0.10f),
         Positive = Color(if (dark) 0xFF8CD0BC else 0xFF2F7467),
         PositiveGlow = primary, PositiveSoft = primary.copy(alpha = 0.12f),
@@ -139,29 +139,25 @@ object ResonanceMotionTokens {
     const val TabDuration = 220
     const val ReducedDuration = 90
     val PlayerSpec: FiniteAnimationSpec<Float> = tween(280, easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f))
-    // 页面横向滑动的流畅规范：280ms ease-out，丝滑优美，位移明确连贯
-    val PageSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
-        durationMillis = 280,
-        easing = ExitEasing,
+    // A softer spring keeps the small overshoot without the abrupt medium-stiffness launch.
+    val PageSlideSpec: FiniteAnimationSpec<IntOffset> = spring(
+        dampingRatio = Spring.DampingRatioLowBouncy,
+        stiffness = Spring.StiffnessMediumLow,
     )
 
-    // Push/pop stays responsive and settles without overshoot.
-    val DetailSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
-        durationMillis = 280,
-        easing = CubicBezierEasing(0.23f, 1.0f, 0.32f, 1.0f),
+    val DetailSlideSpec: FiniteAnimationSpec<IntOffset> = spring(
+        dampingRatio = Spring.DampingRatioLowBouncy,
+        stiffness = Spring.StiffnessMediumLow,
     )
 
-    // 页面横向滑动的弹簧规范：阻尼比 1.0f 确保无余震回弹，stiffness 300f 提供极佳的响应速度与如丝顺滑
-    val PageSlideSpring: FiniteAnimationSpec<IntOffset> = spring(
-        stiffness = 300f,
-        dampingRatio = 1.0f,
+    val SelectionBounceSpec: FiniteAnimationSpec<Float> = spring(
+        dampingRatio = Spring.DampingRatioLowBouncy,
+        stiffness = Spring.StiffnessLow,
     )
 
-    // 层级钻取（Push-Pop）的弹簧规范：略微柔和（260f）
-    val DetailSlideSpring: FiniteAnimationSpec<IntOffset> = spring(
-        stiffness = 260f,
-        dampingRatio = 1.0f,
-    )
+    val PageSlideSpring: FiniteAnimationSpec<IntOffset> = PageSlideSpec
+
+    val DetailSlideSpring: FiniteAnimationSpec<IntOffset> = DetailSlideSpec
 
     // 伴随滑动的柔和渐变：入场 280ms / 退场 180ms，杜绝提前消隐导致的黑色虚空割裂
     val PageFadeInSpec: FiniteAnimationSpec<Float> = tween(

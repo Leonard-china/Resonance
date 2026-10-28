@@ -164,6 +164,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -176,6 +179,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.GenerativeAlbumSleeve
+import com.resonance.player.design.MusicStageBackdrop
+import com.resonance.player.design.musicSleevePerspective
 import com.resonance.player.design.LocalReducedMotion
 import com.resonance.player.design.LocalAppForeground
 import com.resonance.player.design.LocalAppearance
@@ -334,7 +340,7 @@ fun LibraryShell(
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Settings) }
     } else if (destination == LibraryDestination.AudioHelp) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Settings) }
-    } else if (destination in listOf(LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.About)) {
+    } else if (destination in listOf(LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.About, LibraryDestination.Together)) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Profile) }
     } else if (destination != LibraryDestination.Library) {
         ResonanceBackHandler(enabled = true) { onDestinationChange(LibraryDestination.Library) }
@@ -578,7 +584,7 @@ fun LibraryShell(
 }
 
 private fun tabDestinationOf(destination: LibraryDestination): LibraryDestination = when (destination) {
-    LibraryDestination.Sources, LibraryDestination.Storage, LibraryDestination.SmartManager, LibraryDestination.TasteRadar -> LibraryDestination.Profile
+    LibraryDestination.Sources, LibraryDestination.Storage, LibraryDestination.SmartManager, LibraryDestination.TasteRadar, LibraryDestination.Together -> LibraryDestination.Profile
     LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.Settings, LibraryDestination.Tasks, LibraryDestination.AudioHelp, LibraryDestination.About, LibraryDestination.Tutorial -> LibraryDestination.Profile
     LibraryDestination.Recommendations, LibraryDestination.RecommendationHistory, LibraryDestination.Discover -> LibraryDestination.Library
     LibraryDestination.Playing -> LibraryDestination.Library
@@ -586,6 +592,7 @@ private fun tabDestinationOf(destination: LibraryDestination): LibraryDestinatio
 }
 
 private val profileSubPages = setOf(
+    LibraryDestination.Together,
     LibraryDestination.Sources,
     LibraryDestination.Storage,
     LibraryDestination.SmartManager,
@@ -665,9 +672,9 @@ private fun DesktopSidebar(
     val activeTab = tabDestinationOf(destination)
     Column(
         modifier = Modifier
-            .width(236.dp)
+            .width(212.dp)
             .fillMaxHeight()
-            .background(ResonanceColors.CanvasElevated)
+            .background(ResonanceColors.Canvas)
             .border(Dp.Hairline, ResonanceColors.Divider)
             .padding(horizontal = 14.dp, vertical = 20.dp),
     ) {
@@ -716,7 +723,7 @@ private fun SidebarDestination(item: DestinationItem, selected: Boolean, onClick
         selected = selected, onClick = onClick,
         shape = RoundedCornerShape(14.dp),
         colors = androidx.compose.material3.NavigationDrawerItemDefaults.colors(
-            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedContainerColor = ResonanceColors.PrimarySoft,
             unselectedContainerColor = Color.Transparent,
             selectedTextColor = MaterialTheme.colorScheme.onPrimaryContainer,
             selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -766,7 +773,8 @@ private fun DestinationContent(
 ) {
     val reducedMotion = LocalReducedMotion.current
     val destinationStates = rememberSaveableStateHolder()
-    val immediateNavigation = LocalMusicFeatures.current?.instantNavigation == true
+    val immediateNavigation = LocalMusicFeatures.current?.instantNavigation == true ||
+        androidx.compose.ui.platform.LocalInputModeManager.current.inputMode == androidx.compose.ui.input.InputMode.Keyboard
     val coroutineScope = rememberCoroutineScope()
     val features = LocalMusicFeatures.current
     var activeShareCard by remember { mutableStateOf<ShareCardContent?>(null) }
@@ -904,6 +912,7 @@ private fun DestinationContent(
                 onOpenSettings = { onDestinationChange(LibraryDestination.Settings) },
                 onOpenAbout = { onDestinationChange(LibraryDestination.About) },
             )
+            LibraryDestination.Together -> TogetherScreen(compact) { onDestinationChange(LibraryDestination.Profile) }
             LibraryDestination.About -> AboutScreen(
                 compact = compact,
                 onBack = { onDestinationChange(LibraryDestination.Profile) },
@@ -1892,76 +1901,56 @@ private fun LibraryLoading() {
 }
 
 @Composable
-private fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, message: String?, onSearch: () -> Unit) {
+internal fun EmptyLibrary(onCreatePlaylist: () -> Unit, onImport: () -> Unit, message: String?, onSearch: () -> Unit) {
     val feature = LocalMusicFeatures.current
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-    Column(
-        modifier = Modifier.widthIn(max = 520.dp)
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp, vertical = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        if (message != null) {
-            Surface(color = ResonanceColors.PrimarySoft, shape = RoundedCornerShape(10.dp)) {
-                Text(
-                    message,
-                    color = ResonanceColors.Primary,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
-                )
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        MusicStageBackdrop(7, false, Modifier.matchParentSize())
+        val largeText = LocalDensity.current.fontScale > 1.2f
+        val showSleeves = maxHeight >= 440.dp
+        val sleeveSize = if (largeText || maxHeight < 600.dp) 120.dp else 208.dp
+        Column(Modifier.widthIn(max = 520.dp).fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            if (message != null) {
+                Surface(color = ResonanceColors.PrimarySoft, shape = RoundedCornerShape(12.dp)) {
+                    Text(message, color = ResonanceColors.Primary, style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(12.dp))
+                }
+                Spacer(Modifier.height(16.dp))
             }
-            Spacer(Modifier.height(20.dp))
-        }
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(ResonanceColors.PrimarySoft),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Default.MusicNote, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(34.dp))
-        }
-        Spacer(Modifier.height(20.dp))
-        Text("从第一首歌开始", style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.TextPrimary)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            "搜索想听的歌曲，或导入本机已有音乐。内置歌源可直接使用，无需配置 AI。",
-            style = MaterialTheme.typography.bodyMedium,
-            color = ResonanceColors.Muted,
-        )
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = {
-            feature?.searchOnline = true
-            onSearch()
-        }, modifier = Modifier.fillMaxWidth()) { Text("搜索在线歌曲") }
-        Spacer(Modifier.height(10.dp))
-        androidx.compose.material3.OutlinedButton(
-            onClick = onImport,
-            shape = ResonanceShapes.Button,
-            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("扫描或导入音乐", style = MaterialTheme.typography.labelLarge)
-        }
-        Spacer(Modifier.height(10.dp))
-        TextButton(
-            onClick = onCreatePlaylist,
-            shape = ResonanceShapes.Button,
-            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp),
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text("新建空歌单", style = MaterialTheme.typography.labelLarge)
+            if (showSleeves) {
+                Box(Modifier.size(sleeveSize).padding(12.dp), contentAlignment = Alignment.Center) {
+                    AlbumArtwork(2, Modifier.fillMaxSize().graphicsLayer { rotationZ = -12f; translationX = -16.dp.toPx() }, 10.dp)
+                    AlbumArtwork(1, Modifier.fillMaxSize().graphicsLayer { rotationZ = 10f; translationX = 14.dp.toPx() }, 10.dp)
+                    AlbumArtwork(7, Modifier.fillMaxSize().galleryShadow(RoundedCornerShape(10.dp), 16.dp).musicSleevePerspective(), 10.dp)
+                }
+                Spacer(Modifier.height(28.dp))
+            }
+            Text("你的音乐，从这里开始", style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.SemiBold, color = ResonanceColors.TextPrimary, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(10.dp))
+            Text("搜一首想听的歌，或导入本机收藏。", style = MaterialTheme.typography.bodyMedium,
+                color = ResonanceColors.Muted, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(24.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = { feature?.searchOnline = true; onSearch() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(16.dp)) {
+                    if (!largeText) { Icon(Icons.Default.Search, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)) }
+                    Text("搜索歌曲", maxLines = 1)
+                }
+                OutlinedButton(onClick = onImport, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(16.dp)) {
+                    if (!largeText) { Icon(Icons.Default.FolderOpen, null, Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)) }
+                    Text("导入音乐", maxLines = 1)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            TextButton(onClick = onCreatePlaylist, modifier = Modifier.heightIn(min = 48.dp)) {
+                Icon(Icons.Default.Add, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("新建歌单")
+            }
         }
     }
 }
-}
-
 // ---------------------------------------------------------------------------
 // 发现（全局搜索）
 // ---------------------------------------------------------------------------
@@ -2443,7 +2432,7 @@ private fun MiniPlayer(
                 spotColor = if (ResonanceColors.isDark) Color.Black.copy(alpha = 0.5f) else Color(0xFF29342F).copy(alpha = 0.12f),
             )
             .clip(RoundedCornerShape(miniCorner))
-            .background(ResonanceColors.CanvasElevated)
+            .background(Brush.verticalGradient(listOf(ResonanceColors.Raised, ResonanceColors.CanvasElevated)))
             .border(1.dp, ResonanceColors.Divider.copy(alpha = if (ResonanceColors.isDark) 0.35f else 0.6f), RoundedCornerShape(miniCorner)),
     ) {
         Column(Modifier.fillMaxWidth().padding(bottom = 2.dp)) {
@@ -2630,39 +2619,7 @@ fun AlbumArtwork(seed: Int, modifier: Modifier = Modifier, cornerRadius: Dp = 12
         )
         return
     }
-    val palettes = listOf(
-        listOf(Color(0xFFA3C6BA), Color(0xFF5D887B), Color(0xFF25463E)),
-        listOf(Color(0xFF5FD19B), Color(0xFF1C4D4A), Color(0xFF101821)),
-        listOf(Color(0xFFAAC3E7), Color(0xFF5F83B4), Color(0xFF293E5B)),
-        listOf(Color(0xFFBDC9D3), Color(0xFF718997), Color(0xFF293D47)),
-    )
-    val palette = palettes[((seed % palettes.size) + palettes.size) % palettes.size]
-    Canvas(
-        modifier = modifier
-            .clip(RoundedCornerShape(cornerRadius))
-            .background(Brush.linearGradient(palette)),
-    ) {
-        val unit = size.minDimension
-        rotate(seed * 7f) {
-            drawCircle(
-                color = Color.White.copy(alpha = 0.10f),
-                radius = unit * 0.34f,
-                center = Offset(size.width * 0.78f, size.height * 0.28f),
-            )
-            drawCircle(
-                color = Color.Black.copy(alpha = 0.16f),
-                radius = unit * 0.44f,
-                center = Offset(size.width * 0.18f, size.height * 0.86f),
-            )
-            val path = Path().apply {
-                moveTo(size.width * 0.08f, size.height * 0.58f)
-                lineTo(size.width * 0.88f, size.height * 0.20f)
-                lineTo(size.width * 0.74f, size.height * 0.88f)
-                close()
-            }
-            drawPath(path, color = Color.White.copy(alpha = 0.07f))
-        }
-    }
+    GenerativeAlbumSleeve(seed, modifier, cornerRadius)
 }
 
 @Composable

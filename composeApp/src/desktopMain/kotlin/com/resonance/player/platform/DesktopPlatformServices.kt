@@ -40,6 +40,22 @@ import com.resonance.player.weather.AppearanceStorage
 import com.resonance.player.weather.WeatherClient
 
 class DesktopPlatformServices : PlatformServices {
+    override val listenTogether by lazy {
+        com.resonance.player.together.JvmListenTogetherService(library.appDirectory.resolve("cache/together-audio"), { track ->
+            val source = requireNotNull(track.sourceUri)
+            require(!source.contains("://") || source.startsWith("file:")) { "一起听仅共享本机音频" }
+            val path = if (source.startsWith("file:")) java.nio.file.Paths.get(java.net.URI(source)) else java.nio.file.Paths.get(source)
+            Files.newInputStream(path)
+        }, onGuestStopped = { setPlaying(false) })
+    }
+
+    override fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
+        stopAudioPreview()
+        playingMusicId = track.id
+        player.setPlaybackSpeed(speed)
+        player.play(track, autoPlay = playing, initialProgress = progress.coerceIn(0f, 1f))
+        isPlayingEvents.tryEmit(playing)
+    }
     override val supportsKgg = true
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     override val importProgress = MutableStateFlow<ImportProgress?>(null)
@@ -581,6 +597,7 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun close() {
+        listenTogether.close()
         sleep.close()
         stopAudioPreview()
         assistantScope.cancel()

@@ -57,9 +57,13 @@ class AndroidLyricsOverlay(private val context: Context, private val player: Pla
         cachedTrack = track
         if (loadedId != track.id) {
             loadedId = track.id; loadedLyrics = LyricsUiState.Loading; loadJob?.cancel()
+            if (track.id.startsWith("together:")) {
+                loadedLyrics = LyricsUiState.Unavailable("一起听当前仅同步音频与播放进度", false)
+            } else {
             loadJob = scope.launch {
                 val result = repository.fetch(track)
                 if (loadedId == track.id) loadedLyrics = when (result) { is LyricsFetchResult.Found -> LyricsUiState.Ready(result.lyrics); is LyricsFetchResult.Unavailable -> LyricsUiState.Unavailable(result.message, result.retryable) }
+            }
             }
         }
         var lyrics = if (frame.player.currentTrack?.id == track.id && frame.lyrics is LyricsUiState.Ready) frame.lyrics else loadedLyrics

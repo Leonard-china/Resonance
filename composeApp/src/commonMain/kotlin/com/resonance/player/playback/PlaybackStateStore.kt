@@ -28,7 +28,7 @@ class PlaybackStateStore(
     private var expectedNativeTrack: String? = null
 
     fun activate(track: Track, playlistId: String?, resetGain: Boolean = true, expectNativeTrack: Boolean = false,
-        prepare: suspend () -> Unit = {}, onReady: () -> Unit = {}) {
+        prepare: suspend () -> Unit = {}, analyzeLoudness: Boolean = true, onReady: () -> Unit = {}) {
         if (closed) return
         if (expectNativeTrack) expectedNativeTrack = track.id
         else if (expectedNativeTrack != track.id) expectedNativeTrack = null
@@ -64,7 +64,7 @@ class PlaybackStateStore(
                 onReady()
                 started = true
                 pendingStart = null
-                if (calibrated == null && automatic && cached == null) {
+                if (analyzeLoudness && !track.id.startsWith("together:") && calibrated == null && automatic && cached == null) {
                     val analyzed = services.analyzeAndCacheLoudnessGain(track)
                     coroutineContext.ensureActive()
                     if (request == generation && gainVersion == gainRevision) applyGain(analyzed, false)
@@ -82,6 +82,17 @@ class PlaybackStateStore(
                 }
             }
         }
+    }
+
+    /** Cancels pending starts before releasing a temporary peer-owned playback item. */
+    fun clearCurrentTrack() {
+        ++generation
+        audioJob?.cancel()
+        audioJob = null
+        pendingStart = null
+        expectedNativeTrack = null
+        services.setPlaying(false)
+        state.value = state.value.copy(currentTrack = null, progress = 0f, positionMs = null, isPlaying = false)
     }
 
     private fun applyGain(gain: Float, calibrated: Boolean) {

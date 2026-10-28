@@ -70,6 +70,29 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
+    override val listenTogether by lazy {
+        com.resonance.player.together.JvmListenTogetherService(activity.cacheDir.toPath().resolve("together-audio"), { track ->
+            val source = requireNotNull(track.sourceUri)
+            when {
+                source.startsWith("content://") -> activity.contentResolver.openInputStream(Uri.parse(source)) ?: error("无法读取音频")
+                source.startsWith("file:") -> Files.newInputStream(java.nio.file.Paths.get(java.net.URI(source)))
+                !source.contains("://") -> Files.newInputStream(java.nio.file.Paths.get(source))
+                else -> error("一起听仅共享本机可读取的音频")
+            }
+        }, onGuestStopped = { setPlaying(false) })
+    }
+
+    override fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
+        stopAudioPreview()
+        withPlayer { activePlayer ->
+            val position = (com.resonance.player.model.durationTextToSeconds(track.durationText) * 1000L * progress.coerceIn(0f, 1f)).toLong()
+            activePlayer.setMediaItems(listOf(mediaItemFor(track)), 0, position)
+            applyPlaybackMode(activePlayer, false, RepeatMode.Off)
+            activePlayer.setPlaybackSpeed(speed)
+            activePlayer.playWhenReady = playing
+            activePlayer.prepare()
+        }
+    }
     override val supportsWebLogin: Boolean get() = true
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     private var conversionSession: Long? = null
@@ -356,6 +379,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     isPlayingEvents.tryEmit(isPlaying)
+                }
+
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    if (!playWhenReady && reason in setOf(Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS,
+                            Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) && listenTogether.state.value.isGuest) {
+                        // A remote heartbeat must never undo a call interruption or unplugged headphones.
+                        listenTogether.leave()
+                    }
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -1289,6 +1320,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun close() {
+        listenTogether.close()
         stopAudioPreview()
         cancelVolumeCalibration()
         activity.lifecycle.removeObserver(foregroundObserver)

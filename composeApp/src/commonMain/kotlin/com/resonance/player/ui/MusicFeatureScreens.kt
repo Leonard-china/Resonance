@@ -2,6 +2,8 @@ package com.resonance.player.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -16,6 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.Color
+import com.resonance.player.design.GenerativeAlbumSleeve
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
@@ -283,6 +288,34 @@ internal fun AudioBalanceHelpScreen(compact: Boolean, onBack: () -> Unit) {
 }
 
 @Composable
+private fun AssistantWelcome(onPrompt: (String) -> Unit) {
+    Column(Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            GenerativeAlbumSleeve(0, Modifier.size(52.dp), 16.dp)
+            Column {
+                Text("今天想听点什么？", style = MaterialTheme.typography.headlineSmall,
+                    color = ResonanceColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+                Text("点击示例会填入输入框", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        listOf("找一些适合夜晚散步的歌", "看看我的音乐品味", "如何导入歌单截图？").forEachIndexed { index, prompt ->
+            Surface(onClick = { onPrompt(prompt) }, color = ResonanceColors.CanvasElevated,
+                shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, ResonanceColors.Divider)) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(when (index) { 0 -> Icons.Default.NightsStay; 1 -> Icons.Default.FavoriteBorder; else -> Icons.Default.PhotoLibrary },
+                        null, tint = ResonanceColors.Primary, modifier = Modifier.size(22.dp))
+                    Text(prompt, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ChevronRight, null, tint = ResonanceColors.Muted, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
 internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
     val feature = LocalMusicFeatures.current ?: return
     val assistant = feature.assistant ?: return
@@ -291,6 +324,8 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
     var input by rememberSaveable { mutableStateOf("") }
     var images by remember { mutableStateOf(emptyList<AiImage>()) }
     var showSessionsDialog by remember { mutableStateOf(false) }
+    val inputInteraction = remember { MutableInteractionSource() }
+    val inputFocused by inputInteraction.collectIsFocusedAsState()
 
     val activeConnection = feature.settings.connections.firstOrNull { it.provider == feature.settings.assistantProvider }
     val activeModelName = activeConnection?.model?.ifBlank { null } ?: "默认模型"
@@ -309,8 +344,9 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
         }
     }
 
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(
-        Modifier.fillMaxSize().padding(
+        Modifier.widthIn(max = 960.dp).fillMaxSize().padding(
             start = if (compact) 16.dp else 28.dp,
             end = if (compact) 16.dp else 28.dp,
             top = if (compact) 12.dp else 24.dp,
@@ -318,12 +354,7 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
         ),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
-            Column(modifier = Modifier.weight(1f)) {
-                Text("音乐助手", style = MaterialTheme.typography.titleLarge)
-                Text("$activeProviderName · $activeModelName", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
+        val headerActions: @Composable () -> Unit = {
             TextButton(onClick = { feature.launch { assistant.createSession() } }) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(2.dp))
@@ -337,9 +368,23 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             TextButton(onClick = { feature.onNavigate(LibraryDestination.Tasks) }) { Text("任务") }
             TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("设置") }
         }
-        Text("本月输入 ${state.usage.inputTokens} · 缓存命中 ${state.usage.cachedTokens} · 输出 ${state.usage.outputTokens} · 语音 ${state.speechSeconds} 秒", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
+            Column(modifier = Modifier.weight(1f)) {
+                Text("音乐助手", style = MaterialTheme.typography.titleLarge, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("assistant-title"))
+                Text("$activeProviderName · $activeModelName", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (!compact) headerActions()
+        }
+        if (compact) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) { headerActions() }
+        }
         if (state.task.running) MusicTaskProgress(state.task.progress, assistant::cancel)
-        LazyColumn(Modifier.weight(1f), state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (state.messages.isEmpty() && !state.task.running) item(key = "assistant-welcome") {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AssistantWelcome { input = it } }
+            }
             items(state.messages.withIndex().toList(), key = { "chat-${it.index}" }) { (_, item) ->
                 Surface(
                     color = if (item.role == "user") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
@@ -375,11 +420,26 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             Text("已选择 ${images.size} 个截图片段 · ${feature.settings.screenshotRecognition.label}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { images = emptyList() }) { Text("移除图片") }
         }
-        OutlinedTextField(input, { input = it }, placeholder = { Text("例如：把截图中的歌单整理到我的曲库") }, modifier = Modifier.fillMaxWidth(), maxLines = 4)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.tutorialTarget(TutorialTarget.AssistantSend)) {
-            OutlinedButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } }, enabled = !state.task.running, modifier = Modifier.tutorialTarget(TutorialTarget.Screenshot)) { Text("歌单截图") }
-            Button(onClick = { val text = input; val attachments = images; input = ""; images = emptyList(); feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) } }, enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty())) { Text("发送") }
+        Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = ResonanceColors.CanvasElevated,
+            border = BorderStroke(if (inputFocused) 1.5.dp else 1.dp, if (inputFocused) ResonanceColors.Primary else ResonanceColors.Divider)) {
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                TextField(input, { input = it }, placeholder = { Text("想听什么，或想整理什么？") },
+                    modifier = Modifier.fillMaxWidth().testTag("assistant-input"), maxLines = 4, interactionSource = inputInteraction,
+                    colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
+                Row(Modifier.fillMaxWidth().tutorialTarget(TutorialTarget.AssistantSend),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } }, enabled = !state.task.running,
+                        modifier = Modifier.tutorialTarget(TutorialTarget.Screenshot)) {
+                        Icon(Icons.Default.AddPhotoAlternate, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("歌单截图")
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Button(onClick = { val text = input; val attachments = images; input = ""; images = emptyList(); feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) } },
+                        enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty()), modifier = Modifier.heightIn(min = 48.dp)) { Text("发送") }
+                }
+            }
         }
+    }
     }
 
     if (showSessionsDialog) {

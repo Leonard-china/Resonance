@@ -18,6 +18,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.graphicsLayer
+import com.resonance.player.design.MusicStageBackdrop
+import com.resonance.player.design.musicSleevePerspective
+import com.resonance.player.design.musicDock
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.GalleryArtworkMount
 import com.resonance.player.design.GalleryTokens
@@ -46,20 +51,33 @@ internal fun PlaylistListTab(
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        item(key = "pinned-daily", contentType = "playlist") {
-            Column(Modifier.tutorialTarget(TutorialTarget.DailyCard).clickable(role = Role.Button) {
+        item(key = "pinned-daily", contentType = "featured", span = { GridItemSpan(maxLineSpan) }) {
+            Box(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp).musicDock()
+                .tutorialTarget(TutorialTarget.DailyCard).clickable(role = Role.Button) {
                 feature?.onNavigate(if (enabled) com.resonance.player.model.LibraryDestination.Recommendations else com.resonance.player.model.LibraryDestination.Settings)
                 if (enabled) tutorial?.event(TutorialCompletion.DailyOpened)
             }.semantics(mergeDescendants = true) { contentDescription = if (enabled) "打开每日推荐" else "每日推荐未开启，打开推荐设置" }) {
-                GalleryArtworkMount(Modifier.fillMaxWidth()) {
-                    AlbumArtwork(daily?.artworkSeed ?: 7, Modifier.fillMaxSize(), GalleryTokens.ArtworkCorner, daily?.tracks?.firstNotNullOfOrNull(Track::artworkPath))
-                    Surface(Modifier.align(Alignment.BottomStart).padding(10.dp), color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
-                        Text("置顶", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
+                MusicStageBackdrop(daily?.artworkSeed ?: 7, false, Modifier.matchParentSize())
+                Row(Modifier.fillMaxWidth().heightIn(min = 196.dp).padding(24.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("每日推荐", style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                        Text(if (enabled) "${daily?.tracks?.size ?: 0} 首 · 按你的口味更新" else "开启推荐，发现下一首喜欢的歌",
+                            style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+                        Text(if (enabled) "打开今日歌单  ›" else "设置每日推荐  ›",
+                            style = MaterialTheme.typography.labelLarge, color = ResonanceColors.Primary)
+                    }
+                    if (LocalDensity.current.fontScale <= 1.2f) {
+                        Box(Modifier.size(112.dp)) {
+                            Box(Modifier.fillMaxSize().graphicsLayer { rotationZ = 10f; translationX = 8.dp.toPx() }
+                                .clip(RoundedCornerShape(10.dp)).background(ResonanceColors.Soft))
+                            AlbumArtwork(daily?.artworkSeed ?: 7,
+                                Modifier.fillMaxSize().musicSleevePerspective(), 10.dp,
+                                daily?.tracks?.firstNotNullOfOrNull(Track::artworkPath))
+                        }
                     }
                 }
-                Text("每日推荐", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp))
-                Text(if (!enabled) "未开启推荐 · 点击设置" else "${daily?.tracks?.size ?: 0} 首 · 按你的口味更新", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted,
-                    modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 8.dp))
             }
         }
         if (playlists.isEmpty()) item(key = "empty", contentType = "empty", span = { GridItemSpan(maxLineSpan) }) {
@@ -72,7 +90,7 @@ internal fun PlaylistListTab(
         items(playlists.filterNot { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }, key = { it.id }, contentType = { "playlist" }) { playlist ->
             Column(Modifier.clickable(role = Role.Button) { onOpenPlaylist(playlist) }
                 .semantics(mergeDescendants = true) { contentDescription = "打开歌单 ${playlist.name}，${playlist.tracks.size} 首歌曲" }) {
-                GalleryArtworkMount(Modifier.fillMaxWidth()) {
+                GalleryArtworkMount(Modifier.fillMaxWidth().musicSleevePerspective()) {
                     AlbumArtwork(playlist.artworkSeed, Modifier.fillMaxSize(), GalleryTokens.ArtworkCorner,
                         playlist.tracks.firstNotNullOfOrNull(Track::artworkPath))
                 }

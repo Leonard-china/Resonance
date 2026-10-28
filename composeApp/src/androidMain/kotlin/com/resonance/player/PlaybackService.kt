@@ -121,6 +121,7 @@ class PlaybackService : MediaSessionService() {
         val prefs = getSharedPreferences("resonance_ui_state", MODE_PRIVATE)
         val id = item.mediaId
         baseMasterVolume = prefs.getFloat("vol.global", 1f)
+        if (id.startsWith("together:")) { appliedGainDb = 0f; applyAudioGain(player, 0f); return }
         val analyzer = AndroidLoudnessAnalyzer(this)
         val calibrated = false
         val automatic = prefs.getBoolean("gain.auto_enabled", true)
@@ -144,6 +145,7 @@ class PlaybackService : MediaSessionService() {
     private fun persistPlayback() {
         val player = mediaSession?.player ?: return
         val id = player.currentMediaItem?.mediaId ?: return
+        if (id.startsWith("together:")) return
         val prefs = getSharedPreferences("resonance_ui_state", MODE_PRIVATE)
         val previous = PlaybackSnapshotCodec.decode(prefs.getString("playback.snapshot", null))
         val progress = if (player.duration > 0) (player.currentPosition.toFloat() / player.duration).coerceIn(0f, 1f) else 0f

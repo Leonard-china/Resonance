@@ -33,6 +33,7 @@ internal fun ResonanceSelectionTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
+    contained: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -41,15 +42,15 @@ internal fun ResonanceSelectionTab(
         if (focused || hovered) ResonanceColors.Soft else Color.Transparent,
         tween(motionDuration(ResonanceMotionTokens.StateDuration)), label = "selectionBackground",
     )
-    val foreground = if (selected) ResonanceColors.Primary else ResonanceColors.Muted
+    val foreground = if (selected) { if (contained) ResonanceColors.TextPrimary else ResonanceColors.Primary } else ResonanceColors.Muted
     val indicator = ResonanceColors.Primary
-    val shape = RoundedCornerShape(6.dp)
+    val shape = RoundedCornerShape(if (contained) 16.dp else 6.dp)
     Row(
         modifier.clip(shape).background(background)
             .border(1.5.dp, if (focused) ResonanceColors.Primary else Color.Transparent, shape)
             .drawWithContent {
                 drawContent()
-                if (selected) {
+                if (selected && !contained) {
                     val lineWidth = minOf((size.width - 32.dp.toPx()).coerceAtLeast(0f), 48.dp.toPx())
                     drawLine(indicator, Offset((size.width - lineWidth) / 2, size.height - 3.dp.toPx()),
                         Offset((size.width + lineWidth) / 2, size.height - 3.dp.toPx()),
@@ -57,7 +58,7 @@ internal fun ResonanceSelectionTab(
                 }
             }
             .selectable(selected, onClick = onClick, role = Role.Tab, interactionSource = interaction, indication = ripple())
-            .heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 10.dp),
+            .heightIn(min = 48.dp).padding(horizontal = if (contained) 8.dp else 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -66,6 +67,6 @@ internal fun ResonanceSelectionTab(
             Spacer(Modifier.width(6.dp))
         }
         Text(label, style = MaterialTheme.typography.labelLarge, color = foreground,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium, maxLines = 1)
     }
 }

@@ -1,8 +1,10 @@
-# 2026-10-27 — Resonance 详细开发说明：听歌时长统计、跨平台音效调校与全域温润雅致质感
+# 2026-10-28 — Resonance 详细开发说明：原生音乐舞台、听歌统计与跨平台音效
 
-源码核对日期：2026-10-28（Asia/Shanghai）；当前工作区为 **`0.6.3 / 37`**，新增自然语言语义搜歌、本地曲库智能管家、实时伴奏消除（K歌模式）、本地音频特征提取（BPM/能量）、六维音乐品味雷达与精美歌单分享海报；验证见 [0.6.0 变更记录](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md) 与 [v0.6.0 发布说明](RELEASE_NOTES-0.6.0.md)。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-28（Asia/Shanghai）；当前工作区为 **`0.6.4 / 38`**，新增自然语言语义搜歌、本地曲库智能管家、实时伴奏消除（K歌模式）、本地音频特征提取（BPM/能量）、六维音乐品味雷达与精美歌单分享海报；验证见 [0.6.0 变更记录](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md) 与 [v0.6.0 发布说明](RELEASE_NOTES-0.6.0.md)。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
+
+2026-10-28 工作区含尚未发布的 Mineradio 方向原生音乐舞台 UI，版本号未递增。界面起始改动见 [舞台 UI 记录](changes/2026-10-28-03-mineradio-inspired-native-music-stage.md)，手机封面/助手布局修正见 [Android 16 真机调试记录](changes/2026-10-28-04-android16-device-ui-validation.md)。[封面氛围与回弹记录](changes/2026-10-28-05-album-atmosphere-and-spring-motion-refinement.md) 对应新 Debug APK、14 项桌面测试及原生动效预览；[重连后的最新真机记录](changes/2026-10-28-06-device-motion-diagnostics-and-regression.md) 已完成该包安装、37 次回归及六段配对诊断。Debug 数据未证明性能提升，不能作为正式版满帧验收；后续改包需另行验证。
 
 0.5.0 已发布基线完成过全量单元、Lint 及双端构建，详见 [发布记录](changes/2026-10-17-33-release-0.5.0.md)。当前版本由 version.properties 决定。
 
@@ -269,15 +271,15 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
-UI 与动效核对日期：2026-10-27。曲库标签使用 LibraryTabTransition：单棵 Lazy 树、220ms/32dp 减速入场；减少动态效果时立即切换并停止该过渡。列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲；DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置。主页面转场在固定、不透明的 Canvas 视口内执行，各页面也绘制 Canvas；常规导航保留既有 `SizeTransform(clip = false)` 弹性，滑动时间统一为 280ms，键盘即时导航与减少动效使用 `using null`。此前本节“全部禁用尺寸插值”的描述已与 2026-10-17 的恢复弹性记录不符，本次按实现校正。窗口背景随主题同步、系统栏仅在主题变化时更新；Android 维持 `#111A1D` 窗口背景与透明系统栏，国产 ROM 的实际边缘表现仍需设备验证。详情仍由 LibraryDetailTransition 处理。完整播放器保持单一 Animatable / 固定尺寸 graphicsLayer 的 280ms drawer 过渡，减少动效时为 120ms 淡入淡出；播放器分栏、封面和迷你播放器切歌另外遵循减少动效偏好。
+UI 与动效核对日期：2026-10-28。曲库标签使用 LibraryTabTransition：单棵 Lazy 树、32dp 定向入场，复用 `SelectionBounceSpec` 弹簧并附带最大约 6dp 的轻微跃起；透明度限制在 0.15～1，避免弹簧超调越界。减少动态效果或键盘输入时立即切换。列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲；DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置。主页面转场在固定、不透明的 Canvas 视口内执行，各页面也绘制 Canvas；常规导航保留既有 `SizeTransform(clip = false)`，页面和详情横移改用共享 `PageSlideSpec` / `DetailSlideSpec`（`Spring.DampingRatioLowBouncy`、`Spring.StiffnessMedium`），恢复可见的越过与回弹；键盘快捷导航即时切换，减少动效使用短淡入淡出，两者均 `using null`。窗口背景随主题同步、系统栏仅在主题变化时更新；Android 维持 `#0B0E14` 窗口背景与透明系统栏。详情仍由 LibraryDetailTransition 处理，键盘输入时不播放详情过渡。完整播放器保持单一 Animatable / 固定尺寸 graphicsLayer 的 280ms drawer 过渡，减少动效时为 120ms 淡入淡出；播放器分栏、封面和迷你播放器切歌另外遵循减少动效偏好。
 
-ResonanceTheme 保留青绿 / 冰蓝主色、原生 Sans Serif 字阶和语义颜色；2026-10-27 按用户选定的 18 号画廊展台方向将浅色背景改为淡灰白墙面，深色台面通过明度区分层级。`GallerySurfaces.kt` 集中管理 2dp 封面圆角、9dp 展架、实体台面倒角及右下定向投影；播放键、迷你播放器、助手输入台和工具图标沿用同一材质。阴影使用现有 Compose `dropShadow`，台面绘制通过 `drawWithCache` 缓存；不逐帧改变阴影半径。默认内容色和主题首帧可读性保留，天气配色仍可短暂插值。曲库与播放器的 ResonanceSelectionTab 改为短下划线与文字强调，保留选中语义、48dp 高度和键盘焦点。窄屏曲库保留搜索、任务及更多菜单；新建歌单、多选和预览清理放在更多菜单，教程仍直接呈现新建按钮。空曲库仍区分搜索、导入、新建的操作层级。
+2026-10-28 UI 核对：参考用户指定的 Mineradio 音乐空间方向，`ResonanceTheme.colors` 使用墨蓝黑画布 `#0B0E14`、冷灰分层表面与高对比浅色适配，保留青绿 / 冰蓝强调色及原生 Sans Serif。`MusicStage.kt` 集中实现光场、64 个确定性环境粒子、静态封面透视和悬浮播放台；没有移植参考的 JS/CSS 或图片资源。`AlbumVisuals.kt` 从既有 ArtworkMemoryCache 加载封面，后台采样 8×8 网格、忽略透明/近黑/低饱和像素，生成左右双色氛围，切歌以 220ms 过渡；无可用颜色时使用确定性种子配色。缺失封面使用原生太阳/等高线插画 `GenerativeAlbumSleeve`。粒子和播放波浪共用 `rememberPlaybackVisualPhase`，只在绘制阶段读取相位，播放且前台且未减少动效时运动，暂停/后台/减少动效会取消动画并保留相位；不是音频频谱。`GallerySurfaces.kt` 当前管理 14dp 卡片圆角与缓存投影，无实体木架；播放器主封面为 10dp 圆角、静态 Y -5° / Z -1.2° 透视。播放主键为主题反差的单色盘面。曲库保留短下划线标签；播放器分栏使用图标和分段底座，选中底块按共享弹簧移动，键盘/减少动效即时定位。两者保留选中语义、48dp 高度及键盘焦点。窄屏曲库保留搜索、任务、更多菜单及教程新建按钮。空曲库使用封面叠层插画和“搜索歌曲 / 导入音乐 / 新建歌单”三级入口，短横屏隐藏插画以保证操作可达。
 
-SoftNeumorphicButtons 保留青绿主播放键与线性轨道，次要按钮取消独立圆盘并落在实体播放台上。按压采用 120ms / 0.98 反馈，主播放键轻降 1.5dp；减少动效或键盘输入时不缩放或位移。主封面与展架独立，换曲只过渡画面，不再随暂停缩小。歌曲信息入口为「播放选项 → 歌曲与来源」。手机窗口低于 560dp，或字号大于 1.2 且高度不足 840dp 时使用紧凑布局；隐藏的内联音量区通过「播放设置 · 音量与速度」可达。播放进度与音量改用 Material Slider 的原生输入及语义，细轨道与小手柄独立于至少 48dp 的交互高度；手柄的测量容器也保持 48dp，避免只把外层布局撑高却留下细小的语义区域。拖动保留本地预览与实时回调，音量、倍速与平衡在窄窗口或大字号下分行；不增加波浪轨道或音频处理。正在播放指示器只在绘制阶段读相位；FluidAmbientCanvas 缓存三个光场画刷，逐帧只更新位置，暂停、后台、减少动效与播放器过渡的既有停动条件保留。品味雷达使用 280ms 过渡并在绘制阶段读动画值，减少动效时直接显示结果。
+`NowPlayingOverlay` 在宽屏（>=720dp 或宽高比 >1.35）且非紧凑高度时使用左侧封面/歌曲信息、右侧大字歌词或队列、底部最多 820dp 悬浮控制台；封面页的当前歌词最大 36sp，歌词列表使用 24sp 舞台字阶，译文独立显示。手机继续纵向布局，正常字号时封面预览当前歌词为 22sp / 30sp 行高，邻行减弱；大字号紧凑布局隐藏邻行。短横屏保留紧凑分栏；窗口低于 560dp，或字号大于 1.2 且高度不足 840dp 时优先让主控制可达。歌曲信息入口为「播放选项 → 歌曲与来源」，所有布局的音量/变速/音效/音量平衡统一通过「播放选项 → 播放设置 · 音量与速度」可达。主播放键仍使用 120ms / 0.98 按压反馈，减少动效或键盘输入时不缩放/位移。Material Slider 保留至少 48dp 交互与手柄测量容器；播放进度波浪现在以 3600ms 相位缓慢流动，在手柄和两端收束为中心线，复用 Path 并只在绘制时更新。音量保持线性，拖动保留预览与真实回调，不修改音频处理。品味雷达仍使用 280ms 绘制阶段过渡，减少动效直接显示结果。
 
-工具/设置公共行使用小台面图标，保留焦点/悬停背景与可换行说明。助手阅读区最大宽度为 960dp，顶部操作可换行，消息按发送方区分位置，输入与发送操作放在同一台面；空会话提示仍只填写草稿，不自动发送请求。桌面原生渲染与交互回归见 `DT/ui/UiVisualContractTest`，覆盖深浅主题、两种配色、主题切换首帧、原生滑块语义回调与触控尺寸，以及手机/宽屏/横屏/150% 字号截图；当前截图位于忽略的 `composeApp/build/ui-gallery/screenshots/`；新增小屏大字号主控件边界、歌曲信息和播放设置菜单可达性检查。Android 对应 `UiInteractionContractTest` 已新增，当前验证状态见[画廊 UI 记录](changes/2026-10-27-04-gallery-ledges-native-ui.md)，桌面渲染不等同于 Android 真机验证。
+工具/设置公共行使用小台面图标，保留焦点/悬停背景与可换行说明。助手紧凑窗口将标题与操作分为两行，操作使用 FlowRow 随宽度换行；标题限定单行，模型信息可省略。空会话改为封面标识、三张示例卡和“今天想听点什么？”欢迎页，输入台合并为独立圆角表面；隐藏原 Token 用量横条，不改变内部统计。示例只填写草稿，不自动发送请求，消息和发送操作沿用原回调。桌面原生渲染与交互回归见 `DT/ui/UiVisualContractTest`：14 项包含封面取色、空曲库大字号操作、波浪停动与 seek 回调、主题对比、播放器布局以及截图/动效产物生成；60 张截图和 360 帧离屏动效不代表设备帧率。最新包真机 25 项核心回归及四组共 12 次播放器执行均通过，28 张新版内容截图在忽略的 `build/stage-refinement-2026-10-28/device-stage/`，见[最新真机记录](changes/2026-10-28-06-device-motion-diagnostics-and-regression.md)。`MusicStageFrameMetricsTest` 使用真实窗口帧指标，约 8 秒 player/navigation 场景，`metricsWarmup=true` 可先走一次导航再采集。两包三场景各一段，输出 JSON/CSV；按每帧 DEADLINE 判断超时，metrics 回调丢弃不等于掉帧。Debug 总耗时未显示新版更快，首次及预热路径仍有尖峰，需非 Debug 与调用栈证据继续定位。
 
-每日推荐始终为歌单网格第一张卡；关闭时进入设置，开启时打开 RecommendationsScreen。持久每日歌单按 DAILY_PLAYLIST_ID 去重，其他歌单保持原顺序。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
+每日推荐始终为歌单网格首个跨列主卡，保留教程锚点；关闭时进入设置，开启时打开 RecommendationsScreen。大字号时主卡隐藏装饰封面，为文字留出空间。普通歌单保留原顺序、虚拟化与打开回调，封面增加静态透视。持久每日歌单按 DAILY_PLAYLIST_ID 去重。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
 
 专辑封面：AlbumCoverRepository 优先QQ音乐目录并回退MetadataEnricher的iTunes/酷狗公开目录源，严格验证歌名/歌手，再按专辑缓存；新 B 站音频自动匹配，未命中保留视频图。播放菜单单首强制匹配/自定义；任务页按 videoOrigins 批量处理既有下载，customCovers 标记保护手选封面。库覆盖值用于显示，既有音频不会因此重编码。
 
@@ -462,7 +464,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | 音量、快速切歌竞争 | PlaybackStateStore、PlaybackService、平台响度 | PlaybackStateStoreTest、AudioSessionIntegrationTest |
 | 转换慢/取消 | ImportControl、Scanner/scanDocumentTree、两端 FFmpeg | DesktopManagedMp3ConverterTest，源文件/staging/阶段 |
 | 列表封面 | DynamicArtwork、audioArtwork、ArtworkMemoryCache、SyncArtwork | MusicFeaturesIntegrationTest、CatalogArtworkRematchTest |
-| 切标签/播放器掉帧 | LibraryShell、LibraryTabTransition、LibraryDetailTransition、FluidAmbientCanvas | LibraryNavigationTest / LibraryDetailTransitionTest，实际真机帧率另测 |
+| 切标签/播放器掉帧 | LibraryShell、NowPlayingOverlay、MusicStage、AlbumVisuals、LibraryTabTransition、LibraryDetailTransition、FluidAmbientCanvas | UiVisualContractTest / LibraryNavigationTest / LibraryDetailTransitionTest；MusicStageFrameMetricsTest 支持 player/navigation 和 metricsWarmup 诊断，已取得两包配对样本，尚无 Release 性能结论 |
 | 首次教程/学习进度/操作定位 | TutorialCatalog、TutorialController、TutorialScreens、TutorialProgressCodec、App | TutorialProgressTest / TutorialNavigationTest；首次跳过、跨启动继续、透空点击与滚动目标 |
 | 包格式/FLAC | PlainSyncPackage、平台导入 | PlainSyncPackageTest、PlaylistArchiveFormatTest |
 | B 站412/匹配错误 | BilibiliClient.json/inspect/search/candidateScore | 官方验证/网络/Cookie，MusicAssistantTest |
@@ -572,7 +574,7 @@ UI动作通过MusicAssistantState.actions内存队列顺序交App执行并确认
 
 ### 17.4 页面左右滑动（2026-10-17，已单元验证与构建）
 
-C/ui/HorizontalPageSwipe.kt在内容区监听横向拖动，支持实时跟手位移（graphicsLayer）、首末页橡皮筋阻尼拉伸（0.32f）、未达阈值弹簧回弹与流体换页过渡；子控件先消费，明显竖向/多指/起点左右24dp边缘退出；达到距离阈值抬手切一页，不循环。LibraryShell的主导航音乐库/助手/工具接入；曲库内容区优先切歌曲/歌单/专辑/歌手，边界交主导航。详情不另建任意线性顺序。NowPlayingOverlay.PaneContent通过onPaneChange切封面/歌词/队列，按钮同样可用。教程中禁用手势，曲库多选禁用栏目手势。曲库采用LibraryTabTransition升级为120dp/280ms流体减速入场与0.15~1.0渐变，并保持提升的滚动状态。Windows鼠标/触屏拖动可用，未接横向滚轮。
+C/ui/HorizontalPageSwipe.kt在内容区监听横向拖动，支持实时跟手位移（graphicsLayer）、首末页橡皮筋阻尼拉伸（0.32f）、未达阈值弹簧回弹与流体换页过渡；子控件先消费，明显竖向/多指/起点左右24dp边缘退出；达到距离阈值抬手切一页，不循环。LibraryShell的主导航音乐库/助手/工具接入；曲库内容区优先切歌曲/歌单/专辑/歌手，边界交主导航。详情不另建任意线性顺序。NowPlayingOverlay.PaneContent通过onPaneChange切封面/歌词/队列，按钮同样可用。教程中禁用手势，曲库多选禁用栏目手势。曲库LibraryTabTransition现为32dp弹簧入场和轻微跃起，透明度限制0.15～1.0，并保持提升的滚动状态；最新参数见第11节。Windows鼠标/触屏拖动可用，未接横向滚轮。
 
 新增AT/HorizontalPageSwipeTest与DT/HorizontalPageSwipeUnitTest（滑动方向、距离/速度阈值、首尾页不回环及特性清单验证），扩充AT/LibraryNavigationTest。真机边缘与触控需在设备上进一步体验。见[滑动记录](changes/2026-10-17-11-horizontal-page-swipe.md)。
 
