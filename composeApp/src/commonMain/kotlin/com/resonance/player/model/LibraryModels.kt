@@ -144,6 +144,7 @@ data class PlayerState(
     val autoLoudnessEnabled: Boolean = true,
     val calibrationStatus: CalibrationStatus = CalibrationStatus(),
     val isCurrentTrackCalibrated: Boolean = false,
+    val audioEffectPreset: AudioEffectPreset = AudioEffectPreset.Off,
 )
 
 data class LyricLine(

@@ -19,6 +19,10 @@ internal class DesktopMusicAccess(private val store: DesktopLibraryStore, privat
     override suspend fun update(track: Track) = store.updateTracks(listOf(track))
     override suspend fun favorite(track: Track, value: Boolean) = store.setFavorite(track.id, value)
     override fun playingTrackId(): String? = activeTrack()
+    override fun hasListened(trackId: String): Boolean {
+        val stats = com.resonance.player.playback.ListeningStatsStore(store.appDirectory).getTrackStats(trackId)
+        return stats != null && (stats.totalSeconds > 0 || stats.playCount > 0)
+    }
     override suspend fun delete(track: Track): DeleteTrackReport {
         stopTrack(track.id)
         val source = track.sourceUri?.let { if (it.startsWith("file:")) Path.of(java.net.URI(it)) else Path.of(it) }

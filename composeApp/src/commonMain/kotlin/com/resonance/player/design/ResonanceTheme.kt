@@ -6,6 +6,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.animation.animateColorAsState
 import com.resonance.player.model.WeatherPalette
@@ -20,12 +22,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -35,6 +39,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -44,7 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.resonance.player.model.ThemeMode
 
 /**
- * Native sage / ice-blue surfaces, legible text and restrained frosted glass.
+ * Native gallery surfaces with sage / ice-blue accents and legible text.
  */
 data class ResonanceColorTokens(
     val isDark: Boolean,
@@ -84,9 +89,9 @@ private fun colors(dark: Boolean, palette: WeatherPalette): ResonanceColorTokens
     val primary = Color(if (dark) { if (blue) 0xFFA9C5FF else 0xFF8CD0BC } else { if (blue) 0xFF315FD0 else 0xFF2F7467 })
     return ResonanceColorTokens(
         isDark = dark,
-        Canvas = Color(if (dark) 0xFF111A1D else if (blue) 0xFFF3F7FB else 0xFFF1F6F3),
-        CanvasElevated = Color(if (dark) 0xFF182327 else 0xFFFCFDFC),
-        Raised = Color(if (dark) 0xFF1E2B30 else 0xFFFCFDFC),
+        Canvas = Color(if (dark) 0xFF111A1D else if (blue) 0xFFF2F5F8 else 0xFFF3F4F2),
+        CanvasElevated = Color(if (dark) 0xFF273236 else 0xFFFCFDFC),
+        Raised = Color(if (dark) 0xFF273236 else 0xFFFCFDFC),
         Soft = Color(if (dark) 0xFF26363C else if (blue) 0xFFE6EDF8 else 0xFFE5EFE9),
         SurfaceSubtle = Color(if (dark) 0xFF26363C else 0xFFE8EEEB),
         Glass = Color(if (dark) 0xDE1C292E else 0xDEFFFFFF),
@@ -124,16 +129,20 @@ fun motionDuration(duration: Int): Int = if (LocalReducedMotion.current) 0 else 
 
 /**
  * 界面切换规范动效：
- * 采用原生顶级工业质感（fluid cubic-bezier / smooth deceleration），
- * 杜绝僵硬突兀的瞬时跳变，赋予画面丝滑连贯的空间位置感。
+ * Central timing for navigation, selection and press feedback.
+ * Existing size springs remain available for the main destination transition.
  */
 object ResonanceMotionTokens {
     val ExitEasing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
+    const val PressDuration = 120
+    const val StateDuration = 160
+    const val TabDuration = 220
+    const val ReducedDuration = 90
     val PlayerSpec: FiniteAnimationSpec<Float> = tween(280, easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f))
-    // 页面横向滑动的流畅规范：320ms fluid cubic-bezier (0.2, 0.0, 0.0, 1.0)，丝滑优美，位移明确连贯
+    // 页面横向滑动的流畅规范：280ms ease-out，丝滑优美，位移明确连贯
     val PageSlideSpec: FiniteAnimationSpec<IntOffset> = tween(
-        durationMillis = 320,
-        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+        durationMillis = 280,
+        easing = ExitEasing,
     )
 
     // Push/pop stays responsive and settles without overshoot.
@@ -154,15 +163,15 @@ object ResonanceMotionTokens {
         dampingRatio = 1.0f,
     )
 
-    // 伴随滑动的柔和渐变：与位移动效严格同步（340ms），杜绝提前消隐导致的黑色虚空割裂
+    // 伴随滑动的柔和渐变：入场 280ms / 退场 180ms，杜绝提前消隐导致的黑色虚空割裂
     val PageFadeInSpec: FiniteAnimationSpec<Float> = tween(
-        durationMillis = 340,
-        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+        durationMillis = 280,
+        easing = ExitEasing,
     )
 
     val PageFadeOutSpec: FiniteAnimationSpec<Float> = tween(
-        durationMillis = 340,
-        easing = CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+        durationMillis = 180,
+        easing = ExitEasing,
     )
 }
 
@@ -202,14 +211,14 @@ object ResonanceColors {
     val Shadow: Color @Composable @ReadOnlyComposable get() = LocalResonanceColors.current.Shadow
 }
 
-/** 统一圆角尺度 —— 优雅水润大圆角。 */
+/** Gallery mounts are nearly square; interactive controls retain gentler corners. */
 object ResonanceShapes {
-    val Button = RoundedCornerShape(14.dp)
-    val ArtworkSmall = RoundedCornerShape(10.dp)
-    val Artwork = RoundedCornerShape(16.dp)
-    val ArtworkLarge = RoundedCornerShape(24.dp)
-    val Panel = RoundedCornerShape(18.dp)
-    val Card = RoundedCornerShape(20.dp)
+    val Button = RoundedCornerShape(8.dp)
+    val ArtworkSmall = RoundedCornerShape(2.dp)
+    val Artwork = RoundedCornerShape(2.dp)
+    val ArtworkLarge = RoundedCornerShape(2.dp)
+    val Panel = RoundedCornerShape(8.dp)
+    val Card = RoundedCornerShape(8.dp)
     val Capsule = RoundedCornerShape(999.dp)
 }
 
@@ -223,16 +232,17 @@ object ResonanceSpacing {
     val Xxl = 28.dp
 }
 
-/** 果冻级按压弹性物理反馈：触感灵动水润。 */
+/** Brief press feedback; keyboard navigation and reduced motion stay still. */
 fun Modifier.resonancePressable(
     interactionSource: MutableInteractionSource,
     pressedScale: Float = 0.97f,
     restingScale: Float = 1f,
 ): Modifier = composed {
     val pressed by interactionSource.collectIsPressedAsState()
+    val keyboard = LocalInputModeManager.current.inputMode == InputMode.Keyboard
     val scale by animateFloatAsState(
-        targetValue = if (LocalReducedMotion.current) 1f else if (pressed) pressedScale.coerceIn(0.80f, 1f) else restingScale,
-        animationSpec = resonanceSpring(),
+        targetValue = if (LocalReducedMotion.current || keyboard) 1f else if (pressed) pressedScale.coerceIn(0.80f, 1f) else restingScale,
+        animationSpec = tween(motionDuration(ResonanceMotionTokens.PressDuration), easing = ResonanceMotionTokens.ExitEasing),
         label = "resonancePressScale",
     )
     this.graphicsLayer {
@@ -252,9 +262,9 @@ fun Modifier.resonanceGlass(
     shape: Shape = ResonanceShapes.Panel,
     backgroundColor: Color = ResonanceColors.Glass,
     backgroundGradient: List<Color>? = null,
-    borderColors: List<Color> = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+    borderColors: List<Color> = listOf(ResonanceColors.GlassBorderSubtle, ResonanceColors.GlassBorderSubtle),
     borderWidth: Dp = 1.dp,
-    shadowElevation: Dp = 5.dp,
+    shadowElevation: Dp = 2.dp,
     shadowColor: Color = ResonanceColors.Shadow.copy(alpha = if (ResonanceColors.isDark) 0.35f else 0.08f),
 ): Modifier {
     val glassState = LocalGlassState.current
@@ -303,6 +313,8 @@ fun Modifier.resonanceGlass(
 }
 
 private val resonanceTypography = Typography(
+    displayMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold,
+        fontSize = 30.sp, lineHeight = 38.sp, letterSpacing = (-0.4).sp),
     displayLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
@@ -320,15 +332,17 @@ private val resonanceTypography = Typography(
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 24.sp,
-        lineHeight = 30.sp,
+        fontSize = 28.sp,
+        lineHeight = 36.sp,
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 26.sp,
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
     ),
+    headlineSmall = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp, lineHeight = 28.sp),
     titleLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.SemiBold,
@@ -402,16 +416,19 @@ fun ResonanceTheme(
     }
 
     val target = colors(isDark, palette)
-    val accent by animateColorAsState(target.Primary, tween(if (reducedMotion) 0 else 260), label = "weatherAccent")
-    val canvas by animateColorAsState(target.Canvas, tween(if (reducedMotion) 0 else 260), label = "weatherCanvas")
-    val colorTokens = target.copy(Primary = accent, PrimaryGlow = accent,
-        PrimarySoft = accent.copy(alpha = if (isDark) 0.16f else 0.10f), Canvas = canvas)
+    // Theme mode changes atomically; only weather palette changes interpolate.
+    val colorTokens = key(isDark) {
+        val accent by animateColorAsState(target.Primary, tween(if (reducedMotion) 0 else 260), label = "weatherAccent")
+        val canvas by animateColorAsState(target.Canvas, tween(if (reducedMotion) 0 else 260), label = "weatherCanvas")
+        target.copy(Primary = accent, PrimaryGlow = accent,
+            PrimarySoft = accent.copy(alpha = if (isDark) 0.16f else 0.10f), Canvas = canvas)
+    }
 
     val colorScheme: ColorScheme = if (isDark) {
         darkColorScheme(
             primary = colorTokens.Primary,
             onPrimary = colorTokens.Canvas,
-            primaryContainer = colorTokens.PrimarySoft,
+            primaryContainer = colorTokens.PrimarySoft.compositeOver(colorTokens.CanvasElevated),
             onPrimaryContainer = colorTokens.TextPrimary,
             secondary = colorTokens.Positive,
             onSecondary = if (isDark) colorTokens.Canvas else Color.White,
@@ -433,16 +450,18 @@ fun ResonanceTheme(
             onSurface = colorTokens.TextPrimary,
             surfaceVariant = colorTokens.Soft,
             onSurfaceVariant = colorTokens.Muted,
-            outline = colorTokens.Divider,
-            outlineVariant = colorTokens.DividerStrong,
+            outline = colorTokens.Dimmer,
+            outlineVariant = colorTokens.Divider,
+            inverseSurface = LightResonanceColors.CanvasElevated,
+            inverseOnSurface = LightResonanceColors.TextPrimary,
             error = Color(0xFFFFB4AB),
         )
     } else {
         lightColorScheme(
             primary = colorTokens.Primary,
             onPrimary = Color.White,
-            primaryContainer = colorTokens.PrimarySoft,
-            onPrimaryContainer = colorTokens.Primary,
+            primaryContainer = colorTokens.PrimarySoft.compositeOver(colorTokens.CanvasElevated),
+            onPrimaryContainer = colorTokens.TextPrimary,
             secondary = colorTokens.Positive,
             onSecondary = if (isDark) colorTokens.Canvas else Color.White,
             secondaryContainer = colorTokens.Soft,
@@ -463,16 +482,22 @@ fun ResonanceTheme(
             onSurface = colorTokens.TextPrimary,
             surfaceVariant = colorTokens.Soft,
             onSurfaceVariant = colorTokens.Muted,
-            outline = colorTokens.Divider,
-            outlineVariant = colorTokens.DividerStrong,
+            outline = colorTokens.Dimmer,
+            outlineVariant = colorTokens.Divider,
             error = Color(0xFFBA1A1A),
         )
     }
 
-    CompositionLocalProvider(LocalResonanceColors provides colorTokens) {
+    CompositionLocalProvider(
+        LocalResonanceColors provides colorTokens,
+        LocalReducedMotion provides reducedMotion,
+        androidx.compose.material3.LocalContentColor provides colorTokens.TextPrimary,
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = resonanceTypography,
+            shapes = Shapes(extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp),
+                medium = RoundedCornerShape(16.dp), large = RoundedCornerShape(24.dp), extraLarge = RoundedCornerShape(28.dp)),
             content = content,
         )
     }

@@ -116,9 +116,8 @@ internal fun MusicFeatureSettingsSection() {
         SectionHeader("键盘操作")
         Text("Ctrl+F 搜索 · 空格播放／暂停 · Ctrl+←／→ 切歌 · Esc 返回。输入文字时保留空格输入。", style = MaterialTheme.typography.bodySmall)
     }
-    var limit by remember(settings.monthlyTokenLimit) { mutableStateOf(settings.monthlyTokenLimit.toString()) }
-    OutlinedTextField(limit, { limit = it.filter(Char::isDigit).take(9) }, label = { Text("每月 AI Token 上限") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-    TextButton(onClick = { feature.save(settings.copy(monthlyTokenLimit = limit.toLongOrNull()?.coerceIn(10_000, 100_000_000) ?: 1_000_000)); feature.message = "预算上限已保存" }) { Text("保存预算") }
+    SectionHeader("AI Token 使用")
+    Text("已取消所有 Token 使用量限制，请求不设上限（仅在助手底部统计当月消耗）。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
     SectionHeader("同步歌词生成")
     Text("根据实际音频识别人声并生成时间轴。使用阿里云百炼 Paraformer，独立按音频时长计费，不计入聊天 Token。仅点击生成时上传音频，结果保存在本机。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted, modifier = Modifier.tutorialTarget(TutorialTarget.SpeechSettings))
     var speechKey by remember(settings.speechApiKey) { mutableStateOf(settings.speechApiKey) }

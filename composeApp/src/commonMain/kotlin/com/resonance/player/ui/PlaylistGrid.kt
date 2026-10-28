@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.GalleryArtworkMount
+import com.resonance.player.design.GalleryTokens
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.Track
 import com.resonance.player.tutorial.TutorialTarget
@@ -38,54 +40,58 @@ internal fun PlaylistListTab(
     val daily = playlists.firstOrNull { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }
     LazyVerticalGrid(
         state = state,
-        columns = GridCells.Adaptive(144.dp),
+        columns = GridCells.Adaptive(152.dp),
         contentPadding = contentPadding,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp),
         modifier = Modifier.fillMaxSize(),
     ) {
-        item(key = "pinned-daily") {
-            Column(Modifier.tutorialTarget(TutorialTarget.DailyCard).clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) {
+        item(key = "pinned-daily", contentType = "playlist") {
+            Column(Modifier.tutorialTarget(TutorialTarget.DailyCard).clickable(role = Role.Button) {
                 feature?.onNavigate(if (enabled) com.resonance.player.model.LibraryDestination.Recommendations else com.resonance.player.model.LibraryDestination.Settings)
                 if (enabled) tutorial?.event(TutorialCompletion.DailyOpened)
             }.semantics(mergeDescendants = true) { contentDescription = if (enabled) "打开每日推荐" else "每日推荐未开启，打开推荐设置" }) {
-                Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp)).background(ResonanceColors.PrimarySoft), contentAlignment = Alignment.Center) {
-                    AlbumArtwork(daily?.artworkSeed ?: 7, Modifier.fillMaxSize(), 16.dp, daily?.tracks?.firstNotNullOfOrNull(Track::artworkPath))
+                GalleryArtworkMount(Modifier.fillMaxWidth()) {
+                    AlbumArtwork(daily?.artworkSeed ?: 7, Modifier.fillMaxSize(), GalleryTokens.ArtworkCorner, daily?.tracks?.firstNotNullOfOrNull(Track::artworkPath))
                     Surface(Modifier.align(Alignment.BottomStart).padding(10.dp), color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.small) {
                         Text("置顶", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                Text("每日推荐", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp))
-                Text(if (!enabled) "未开启推荐 · 点击设置" else "${daily?.tracks?.size ?: 0} 首 · 按你的口味更新", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+                Text("每日推荐", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp))
+                Text(if (!enabled) "未开启推荐 · 点击设置" else "${daily?.tracks?.size ?: 0} 首 · 按你的口味更新", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted,
+                    modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 8.dp))
             }
         }
-        if (playlists.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+        if (playlists.isEmpty()) item(key = "empty", contentType = "empty", span = { GridItemSpan(maxLineSpan) }) {
             Column(Modifier.padding(vertical = 24.dp)) {
                 Text("为喜欢的音乐建一个歌单", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.TextPrimary)
                 Spacer(Modifier.height(6.dp))
                 Text("新建歌单，或在工具中导入已有歌单。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
             }
         }
-        items(playlists.filterNot { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }, key = { it.id }) { playlist ->
-            Column(Modifier.clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button) { onOpenPlaylist(playlist) }
+        items(playlists.filterNot { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }, key = { it.id }, contentType = { "playlist" }) { playlist ->
+            Column(Modifier.clickable(role = Role.Button) { onOpenPlaylist(playlist) }
                 .semantics(mergeDescendants = true) { contentDescription = "打开歌单 ${playlist.name}，${playlist.tracks.size} 首歌曲" }) {
-                AlbumArtwork(playlist.artworkSeed, Modifier.fillMaxWidth().aspectRatio(1f), 16.dp,
-                    playlist.tracks.firstNotNullOfOrNull(Track::artworkPath))
+                GalleryArtworkMount(Modifier.fillMaxWidth()) {
+                    AlbumArtwork(playlist.artworkSeed, Modifier.fillMaxSize(), GalleryTokens.ArtworkCorner,
+                        playlist.tracks.firstNotNullOfOrNull(Track::artworkPath))
+                }
                 Text(playlist.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold,
                     color = ResonanceColors.TextPrimary, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 10.dp))
+                    modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp))
                 Text("${playlist.tracks.size} 首歌曲", style = MaterialTheme.typography.bodySmall,
-                    color = ResonanceColors.Muted, modifier = Modifier.padding(top = 2.dp, bottom = 4.dp))
+                    color = ResonanceColors.Muted, modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp, bottom = 8.dp))
             }
         }
-        item {
-            Column(Modifier.clip(RoundedCornerShape(16.dp)).clickable(role = Role.Button, onClick = onCreatePlaylist)) {
-                Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(16.dp))
-                    .background(ResonanceColors.PrimarySoft), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(36.dp))
+        item(key = "create-playlist", contentType = "create") {
+            Column(Modifier.clickable(role = Role.Button, onClick = onCreatePlaylist)) {
+                GalleryArtworkMount(Modifier.fillMaxWidth()) {
+                    Box(Modifier.fillMaxSize().background(ResonanceColors.PrimarySoft), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Add, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(36.dp))
+                    }
                 }
                 Text("新建歌单", style = MaterialTheme.typography.titleMedium, color = ResonanceColors.Primary,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+                    modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 2.dp, bottom = 4.dp))
             }
         }
     }

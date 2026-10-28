@@ -33,6 +33,15 @@ interface PlatformServices {
     fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) {}
     fun setVocalSuppression(enabled: Boolean) {}
     val isVocalSuppressionEnabled: StateFlow<Boolean> get() = MutableStateFlow(false)
+    fun setAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {
+        setVocalSuppression(preset == com.resonance.player.model.AudioEffectPreset.Karaoke)
+    }
+    val currentAudioEffectPreset: StateFlow<com.resonance.player.model.AudioEffectPreset> get() = MutableStateFlow(com.resonance.player.model.AudioEffectPreset.Off)
+    suspend fun loadAudioEffectPreset(): com.resonance.player.model.AudioEffectPreset = com.resonance.player.model.AudioEffectPreset.Off
+    suspend fun saveAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {}
+    fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean = false) {}
+    fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? = null
+    fun getAllListeningStats(): com.resonance.player.model.AllListeningStats = com.resonance.player.model.AllListeningStats()
     fun previewAudio(path: String) {}
     fun stopAudioPreview() {}
     suspend fun audioFileAvailable(track: Track): Boolean = track.sourceUri != null

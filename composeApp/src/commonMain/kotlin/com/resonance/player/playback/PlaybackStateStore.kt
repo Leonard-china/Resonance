@@ -101,6 +101,11 @@ class PlaybackStateStore(
         state.value = state.value.copy(trackGainDb = gain, isCurrentTrackCalibrated = calibrated)
     }
 
+    fun setAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {
+        services.setAudioEffectPreset(preset)
+        state.value = state.value.copy(audioEffectPreset = preset)
+    }
+
     fun refreshAudio(playlistId: String?) {
         val current = state.value
         current.currentTrack?.let {

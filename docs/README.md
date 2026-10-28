@@ -1,6 +1,6 @@
-# 2026-10-26 — Resonance 文档入口与开发变更索引
+# 2026-10-28 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.6.0 / 34**。已发布基线见 [0.6.0 发布说明](RELEASE_NOTES-0.6.0.md) 与 [0.6.0 变更记录](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md)。本轮新增自然语言语义找歌、曲库智能管家（标签清洗与去重）、实时伴奏消除（K歌模式）、本地音频特征提取（BPM/能量）、六维音乐品味画像与精美分享海报；已完成双端 Release 构建与签名验证。历史 0.5.0 基线见 [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md)。
+当前工作区：**0.6.3 / 37**。已发布基线见 [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md) 与 [0.6.3 变更记录](changes/2026-10-28-02-release-0.6.3.md)。本轮发布听歌时长与完播统计、7大跨平台专业音效预设、全面取消Token使用量与预算限制、每日推荐未听保护及取消助手16轮步骤限制双端正式版；历史 0.6.2 基线见 [0.6.2 发布说明](RELEASE_NOTES-0.6.2.md)。
 
 ## 新 AI 从这里开始
 
@@ -18,6 +18,9 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md) | 听歌时长统计、跨平台音效调校、取消Token限制与每日推荐未听保护双端正式版 |
+| [0.6.2 发布说明](RELEASE_NOTES-0.6.2.md) | 全面温润质感打磨、标志性波浪进度条与沉浸动效双端正式版 |
+| [0.6.1 发布说明](RELEASE_NOTES-0.6.1.md) | 画廊展台立体原生 UI、轻量动效与全域交互打磨双端正式版 |
 | [0.6.0 发布说明](RELEASE_NOTES-0.6.0.md) | AI 语义搜歌、曲库智能管家、实时伴奏模式、音频特征与品味画像双端正式版 |
 | [0.5.0 发布说明](RELEASE_NOTES-0.5.0.md) | 体验优化集大成、统一搜索试听、截图核对、任务重试、离线重定位与原生睡眠双端正式版 |
 | [0.4.9 发布说明](RELEASE_NOTES-0.4.9.md) | 歌源协议放开、多候选回退、试听防伪与二级页面黑边消除双端正式版 |
@@ -35,6 +38,19 @@
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-10-28 | 构建并发布 Resonance v0.6.3 正式版至 GitHub 与官网 | [具体修改](changes/2026-10-28-02-release-0.6.3.md) |
+| 2026-10-28 | 取消 AI Token 使用量与预算限制、每日推荐未听歌曲到期保留不换、取消助手 16 轮工具步骤限制 | [具体修改](changes/2026-10-28-01-remove-token-limits-retain-unlistened-recommendations-and-remove-16-step-limit.md) |
+| 2026-10-27 | 新增听歌时长统计与歌曲详情页跨平台音效预设切换 | [具体修改](changes/2026-10-27-08-listening-duration-and-audio-effects.md) |
+| 2026-10-27 | 安装 Media3 1.10.1 音频控制与播放统计两项 GitHub Skills 并规划听歌时长及音效切换 | [具体修改](changes/2026-10-27-07-install-media3-audio-and-telemetry-skills.md) |
+| 2026-10-27 | 全面温润质感打磨、标志性波浪进度条与沉浸动效并发布 v0.6.2 | [具体修改](changes/2026-10-27-06-pervasive-ui-refinement-and-release-0.6.2.md) |
+| 2026-10-27 | 升版 0.6.1、构建签名 Android Release APK 与 Windows 安装包并完成发布说明 | [具体修改](changes/2026-10-27-05-release-0.6.1.md) |
+| 2026-10-27 | 落实选定的 18 号画廊展台方案：封面展架、定向投影、实体播放台和原生 UI 回归 | [具体修改](changes/2026-10-27-04-gallery-ledges-native-ui.md) |
+| 2026-10-27 | 提供 20 张青绿立体 UI 概念预览，比较浮层、玻璃、陶瓷、金属和凹凸材质；尚未应用到原生代码 | [具体修改](changes/2026-10-27-03-dimensional-ui-concept-previews.md) |
+| 2026-10-27 | 保留青绿与封面氛围，统一原生 UI 层级、导航与播放控件，完善减少动效及原生渲染回归 | [具体修改](changes/2026-10-27-02-native-ui-and-motion-polish.md) |
+| 2026-10-27 | 在当前项目安装 Material Design 3 UI 设计技能，记录固定来源提交与内容校验值 | [具体修改](changes/2026-10-27-01-install-material-design-3-ui-skill.md) |
+| 2026-10-26 | 回退全屏播放页波浪进度条与 UI 重构改动，完整恢复至 v0.6.0 稳定基线 | [具体修改](changes/2026-10-26-04-revert-wavy-progress-and-now-playing-refactor.md) |
+| 2026-10-26 | （已回退）全屏播放页温润雅致重构、标志性双谐波波浪进度条与独立音乐美学质感升级 | [具体修改](changes/2026-10-26-03-wavy-progress-and-now-playing-refactor.md) |
+| 2026-10-26 | 为 Android 听歌软件安装并配置 Google Android Skills 原生技能集与 Anthropic Frontend Design | [具体修改](changes/2026-10-26-02-install-android-and-frontend-design-skills.md) |
 | 2026-10-26 | 引入自然语言语义找歌、曲库智能管家、实时伴奏消除、音频特征分析与音乐品味画像 | [具体修改](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md) |
 | 2026-10-18 | 官网下线 123 云盘备用下载通道并同步更新最新公告 | [具体修改](changes/2026-10-18-02-remove-123pan-and-update-announcement.md) |
 | 2026-10-18 | 优化滑动手势门槛、详情页歌词换行与译文、高亮居中跟随及每日推荐完整性保护 | [具体修改](changes/2026-10-18-01-page-swipe-lyrics-display-and-recommendation-integrity.md) |

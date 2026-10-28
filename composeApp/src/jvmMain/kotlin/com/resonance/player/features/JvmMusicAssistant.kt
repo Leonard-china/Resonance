@@ -384,23 +384,13 @@ class JvmMusicAssistant(
     override suspend fun createBilibiliQrSession(): BiliQrSession? = biliLogin.createQrSession()
     override suspend fun pollBilibiliQrStatus(qrcodeKey: String): BiliQrPollResult = biliLogin.pollQrStatus(qrcodeKey)
 
-    private suspend fun ask(messages: JSONArray, vision: Boolean = false, tools: JSONArray? = null, maxTokens: Int = 3000, overrideConnection: AiConnection? = null): JSONObject = requestMutex.withLock {
+    private suspend fun ask(messages: JSONArray, vision: Boolean = false, tools: JSONArray? = null, maxTokens: Int = 8192, overrideConnection: AiConnection? = null): JSONObject = requestMutex.withLock {
         val config = cachedSettings ?: settings()
         val provider = if (vision) config.visionProvider else config.assistantProvider
         val connection = overrideConnection ?: config.connections.firstOrNull { it.provider == provider && it.configured } ?: error("请先配置${if (vision) "图片识别" else "音乐助手"}模型与 API Key")
         require(connection.configured) { "请填写 HTTPS 接口、模型名称和 API Key" }
         require(!vision || connection.vision) { "所选图片模型未启用视觉能力" }
         val usageKey = "usage.${YearMonth.now()}"
-        val usage = store.read().optJSONObject(usageKey) ?: JSONObject()
-        val used = usage.optLong("input") + usage.optLong("output")
-        val estimatedInput = (0 until messages.length()).sumOf { i ->
-            val content = messages.getJSONObject(i).opt("content")
-            if (content is JSONArray) (0 until content.length()).sumOf { n ->
-                val part = content.optJSONObject(n)
-                if (part?.optString("type") == "image_url") 6000L else (part?.optString("text").orEmpty().length + 1L) / 2
-            } else (content?.toString().orEmpty().length + 1L) / 2
-        } + (tools?.toString()?.length ?: 0) / 2
-        check(used + estimatedInput + maxTokens < config.monthlyTokenLimit) { "本次请求预计超过本月 AI Token 预算；可在设置调整上限" }
         val reply = client.complete(connection, messages, tools, maxTokens)
         store.update { root ->
             val u = root.optJSONObject(usageKey) ?: JSONObject()
@@ -929,8 +919,7 @@ class JvmMusicAssistant(
                 state.value.messages.takeLast(16).forEach { messages.put(JSONObject().put("role", it.role).put("content", it.content)) }
                 val canDelete = allowsAudioDeletion(message)
                 var finished = false
-                repeat(16) {
-                    if (finished) return@repeat
+                while (!finished) {
                     currentCoroutineContext().ensureActive()
                     val answer = ask(messages, tools = tools())
                     messages.put(answer)
@@ -949,7 +938,6 @@ class JvmMusicAssistant(
                         }
                     }
                 }
-                if (!finished) this@JvmMusicAssistant.message("assistant", "本次已达到 16 轮操作上限。已完成的操作已保存，可以继续发送指令。", model = activeModelTag)
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) { this@JvmMusicAssistant.message("assistant", "处理未完成：${error.message}", model = activeModelTag); throw error }
@@ -1057,9 +1045,31 @@ class JvmMusicAssistant(
         if (!config.recommendationsEnabled) return
         if (!force && !library.automaticDownloadsAllowed(config.recommendationsUnmeteredOnly)) return
         if (!force && (state.value.task.running || System.currentTimeMillis() - state.value.recommendations.createdAt < config.intervalHours * 3_600_000L)) return
+        if (!force && hasUnlistenedRecommendations()) return
         task("生成每日推荐") {
             automaticRecommendation = !force
             try { recommendInternal(force) } finally { automaticRecommendation = false }
+        }
+    }
+    private fun hasListened(trackId: String): Boolean {
+        if (library.hasListened(trackId)) return true
+        if (library.playingTrackId() == trackId) return true
+        val statsStore = com.resonance.player.playback.ListeningStatsStore(store.directory.parent)
+        val stats = statsStore.getTrackStats(trackId)
+        return stats != null && (stats.totalSeconds > 0 || stats.playCount > 0)
+    }
+    private suspend fun hasUnlistenedRecommendations(): Boolean {
+        val previous = state.value.recommendations
+        if (previous.trackIds.isEmpty()) return false
+        val allTracks = library.tracks().associateBy(Track::id)
+        val dailyTracks = previous.trackIds.mapNotNull { allTracks[it] }
+        if (dailyTracks.isEmpty()) return false
+        val root = store.read()
+        val feedback = RecommendationFeedbackCodec.read(root)
+        return dailyTracks.any { track ->
+            val identity = RecommendationPolicy.identity(track.title, track.artist)
+            val hasFeedback = feedback[identity]?.let { it.vote != RecommendationVote.Neutral || it.comment.isNotBlank() } ?: false
+            !hasListened(track.id) && !hasFeedback
         }
     }
     private suspend fun checkAutomaticDownloadNetwork() {
@@ -1073,6 +1083,7 @@ class JvmMusicAssistant(
         val previous = state.value.recommendations
         val now = System.currentTimeMillis()
         if (!force && now - previous.createdAt < config.intervalHours * 3_600_000L) return
+        if (!force && hasUnlistenedRecommendations()) return
         val all = library.tracks()
         val lists = library.playlists()
         val personalIds = lists.filterNot { it.id == DAILY_ID }.flatMap { it.tracks }.map(Track::id).toSet()

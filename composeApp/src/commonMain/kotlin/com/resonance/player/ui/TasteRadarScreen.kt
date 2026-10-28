@@ -17,6 +17,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -118,6 +120,35 @@ fun TasteRadarScreen(
                     }
 
                     Spacer(Modifier.height(16.dp))
+
+                    val feature = LocalMusicFeatures.current
+                    val stats = remember { feature?.services?.getAllListeningStats() }
+                    if (stats != null && stats.totalSeconds > 0) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(ResonanceColors.CanvasElevated.copy(alpha = 0.6f))
+                                .border(1.dp, ResonanceColors.Divider.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Column {
+                                Text("🎧 累计听歌时长", fontSize = 12.sp, color = ResonanceColors.Muted)
+                                Text(stats.formattedTotalDuration, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.Primary)
+                            }
+                            val dateKey = remember { java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date()) }
+                            val todaySecs = stats.getTodaySeconds(dateKey)
+                            if (todaySecs > 0) {
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("今日收听", fontSize = 12.sp, color = ResonanceColors.Muted)
+                                    Text(stats.getTodayFormatted(dateKey), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(14.dp))
+                    }
                     Text(
                         persona.summary,
                         fontSize = 14.sp,
@@ -223,12 +254,12 @@ fun TasteRadarChart(
     gridColor: Color = ResonanceColors.Divider,
 ) {
     val labels = listOf("流行敏锐", "复古情怀", "小众探索", "情绪共鸣", "节奏活力", "流派多样")
-    val a1 by animateFloatAsState(targetValue = dimensions.popVibrancy / 100f, animationSpec = tween(durationMillis = 800))
-    val a2 by animateFloatAsState(targetValue = dimensions.retroNostalgia / 100f, animationSpec = tween(durationMillis = 800))
-    val a3 by animateFloatAsState(targetValue = dimensions.indieExploration / 100f, animationSpec = tween(durationMillis = 800))
-    val a4 by animateFloatAsState(targetValue = dimensions.emotionalResonance / 100f, animationSpec = tween(durationMillis = 800))
-    val a5 by animateFloatAsState(targetValue = dimensions.rhythmicEnergy / 100f, animationSpec = tween(durationMillis = 800))
-    val a6 by animateFloatAsState(targetValue = dimensions.genreDiversity / 100f, animationSpec = tween(durationMillis = 800))
+    val a1 = animateFloatAsState(targetValue = dimensions.popVibrancy / 100f, animationSpec = tween(durationMillis = com.resonance.player.design.motionDuration(280)))
+    val a2 = animateFloatAsState(targetValue = dimensions.retroNostalgia / 100f, animationSpec = tween(durationMillis = com.resonance.player.design.motionDuration(280)))
+    val a3 = animateFloatAsState(targetValue = dimensions.indieExploration / 100f, animationSpec = tween(durationMillis = com.resonance.player.design.motionDuration(280)))
+    val a4 = animateFloatAsState(targetValue = dimensions.emotionalResonance / 100f, animationSpec = tween(durationMillis = com.resonance.player.design.motionDuration(280)))
+    val a5 = animateFloatAsState(targetValue = dimensions.rhythmicEnergy / 100f, animationSpec = tween(durationMillis = com.resonance.player.design.motionDuration(280)))
+    val a6 = animateFloatAsState(targetValue = dimensions.genreDiversity / 100f, animationSpec = tween(durationMillis = com.resonance.player.design.motionDuration(280)))
     val animatedValues = listOf(a1, a2, a3, a4, a5, a6)
     val pointBgColor = ResonanceColors.Raised
 
@@ -266,7 +297,7 @@ fun TasteRadarChart(
         val polyPath = Path()
         for (i in 0 until numSides) {
             val angle = startAngle + i * angleStep
-            val r = radius * animatedValues[i]
+            val r = radius * animatedValues[i].value
             val x = centerX + r * cos(angle)
             val y = centerY + r * sin(angle)
             if (i == 0) polyPath.moveTo(x, y) else polyPath.lineTo(x, y)
@@ -279,7 +310,7 @@ fun TasteRadarChart(
         // 4. Draw points
         for (i in 0 until numSides) {
             val angle = startAngle + i * angleStep
-            val r = radius * animatedValues[i]
+            val r = radius * animatedValues[i].value
             val x = centerX + r * cos(angle)
             val y = centerY + r * sin(angle)
             drawCircle(pointBgColor, radius = 5.dp.toPx(), center = Offset(x, y))

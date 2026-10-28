@@ -88,6 +88,10 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
         writeManaged(context, readManaged(context).map { if (it.id == track.id) it.copy(isFavorite = value) else it })
     }
     override fun playingTrackId(): String? = com.resonance.player.PlaybackService.activeMusicId
+    override fun hasListened(trackId: String): Boolean {
+        val stats = com.resonance.player.playback.ListeningStatsStore(root).getTrackStats(trackId)
+        return stats != null && (stats.totalSeconds > 0 || stats.playCount > 0)
+    }
     override suspend fun delete(track: Track): DeleteTrackReport {
         com.resonance.player.PlaybackService.stopTrack(track.id)
         val deleted = withContext(Dispatchers.IO) {

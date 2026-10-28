@@ -28,4 +28,5 @@ interface MusicLibraryAccess {
     suspend fun audioInfo(track: Track): AudioFileInfo = AudioFileInfo()
     suspend fun prepareSpeechAudio(track: Track, output: Path) { error("此平台未提供音频识别准备能力") }
     fun playingTrackId(): String? = null
+    fun hasListened(trackId: String): Boolean = false
 }

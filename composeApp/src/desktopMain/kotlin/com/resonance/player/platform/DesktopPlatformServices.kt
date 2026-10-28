@@ -62,6 +62,35 @@ class DesktopPlatformServices : PlatformServices {
         _vocalSuppressionState.value = enabled
         player.setVocalSuppression(enabled)
     }
+    private val listeningStatsStore by lazy { com.resonance.player.playback.ListeningStatsStore(library.appDirectory) }
+    private val _audioEffectPresetState = MutableStateFlow(com.resonance.player.model.AudioEffectPreset.Off)
+    override val currentAudioEffectPreset: StateFlow<com.resonance.player.model.AudioEffectPreset> = _audioEffectPresetState
+
+    override fun setAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {
+        _audioEffectPresetState.value = preset
+        _vocalSuppressionState.value = (preset == com.resonance.player.model.AudioEffectPreset.Karaoke)
+        player.setPreset(preset)
+    }
+
+    override suspend fun loadAudioEffectPreset(): com.resonance.player.model.AudioEffectPreset = withContext(Dispatchers.IO) {
+        com.resonance.player.model.AudioEffectPreset.fromId(library.readUiValue("audio.effect_preset"))
+    }
+
+    override suspend fun saveAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset): Unit = withContext(Dispatchers.IO) {
+        library.writeUiValue("audio.effect_preset", preset.id)
+    }
+
+    override fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean) {
+        listeningStatsStore.recordPlayback(trackId, deltaSeconds, isCompleted)
+    }
+
+    override fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? {
+        return listeningStatsStore.getTrackStats(trackId)
+    }
+
+    override fun getAllListeningStats(): com.resonance.player.model.AllListeningStats {
+        return listeningStatsStore.getAllStats()
+    }
     override val systemReduceMotion: Boolean get() = java.awt.Toolkit.getDefaultToolkit()
         .getDesktopProperty("win.clientAreaAnimation") == false
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
@@ -1089,6 +1118,7 @@ private class DesktopAudioPlayer(
     fun setTrackGain(gainDb: Float) = backend.setTrackGain(gainDb)
     fun setPlaybackSpeed(speed: Float) = backend.setPlaybackSpeed(speed)
     fun setVocalSuppression(enabled: Boolean) = backend.setVocalSuppression(enabled)
+    fun setPreset(preset: com.resonance.player.model.AudioEffectPreset) = backend.setPreset(preset)
     fun seekTo(fraction: Float) = backend.seekTo(fraction)
     fun close() = backend.close()
 }

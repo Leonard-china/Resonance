@@ -1,5 +1,6 @@
 package com.resonance.player.audio
 
+import com.resonance.player.model.AudioEffectPreset
 import kotlin.math.abs
 import kotlin.test.*
 
@@ -57,5 +58,36 @@ class PcmGainProcessorTest {
     @Test fun playbackTempoRemainsWithinFfmpegFilterRange() {
         assertEquals("atempo=0.5,atempo=0.5", DesktopPcmPlayer.tempoFilter(0.25))
         assertEquals("atempo=2.0,atempo=1.5", DesktopPcmPlayer.tempoFilter(3.0))
+    }
+
+    @Test fun allAudioEffectPresetsProcessPcmSafely() {
+        for (preset in AudioEffectPreset.entries) {
+            val bytes = samples(100, 8000)
+            val processor = PcmGainProcessor(initialGain = 1.0, initialPreset = preset)
+            processor.process(bytes, bytes.size, 1.0, preset = preset)
+            val output = read(bytes, 20)
+            assertTrue(output != 0, "Preset $preset should produce non-zero output")
+            assertTrue(abs(output) <= 32767, "Preset $preset output should not exceed 16-bit range")
+        }
+    }
+
+    @Test fun surroundPresetWidensStereoSpread() {
+        // Create stereo with L != R (L = 6000, R = 2000)
+        val bytes = ByteArray(80).also { b ->
+            for (i in 0 until 20) {
+                val offsetL = i * 4
+                val offsetR = offsetL + 2
+                b[offsetL] = (6000 and 0xff).toByte()
+                b[offsetL + 1] = ((6000 shr 8) and 0xff).toByte()
+                b[offsetR] = (2000 and 0xff).toByte()
+                b[offsetR + 1] = ((2000 shr 8) and 0xff).toByte()
+            }
+        }
+        val processor = PcmGainProcessor(initialGain = 1.0, initialPreset = AudioEffectPreset.Surround)
+        processor.process(bytes, bytes.size, 1.0, preset = AudioEffectPreset.Surround)
+        val outL = read(bytes, 40)
+        val outR = read(bytes, 42)
+        // Stereo difference (outL - outR) should be amplified compared to original (6000 - 2000 = 4000)
+        assertTrue(abs(outL - outR) > 4000, "Surround effect should widen stereo difference, got ${outL - outR}")
     }
 }

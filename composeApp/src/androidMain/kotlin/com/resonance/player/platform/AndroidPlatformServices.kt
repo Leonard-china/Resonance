@@ -250,6 +250,32 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override fun setVocalSuppression(enabled: Boolean) {
         com.resonance.player.PlaybackService.setVocalSuppression(enabled)
     }
+    private val listeningStatsStore by lazy { com.resonance.player.playback.ListeningStatsStore(activity.filesDir.toPath()) }
+    override val currentAudioEffectPreset get() = com.resonance.player.PlaybackService.audioEffectPresetState
+
+    override fun setAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {
+        com.resonance.player.PlaybackService.setAudioEffectPreset(preset)
+    }
+
+    override suspend fun loadAudioEffectPreset(): com.resonance.player.model.AudioEffectPreset = withContext(Dispatchers.IO) {
+        com.resonance.player.model.AudioEffectPreset.fromId(activity.getSharedPreferences("ui_state", android.content.Context.MODE_PRIVATE).getString("audio.effect_preset", null))
+    }
+
+    override suspend fun saveAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset): Unit = withContext(Dispatchers.IO) {
+        activity.getSharedPreferences("ui_state", android.content.Context.MODE_PRIVATE).edit().putString("audio.effect_preset", preset.id).apply()
+    }
+
+    override fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean) {
+        listeningStatsStore.recordPlayback(trackId, deltaSeconds, isCompleted)
+    }
+
+    override fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? {
+        return listeningStatsStore.getTrackStats(trackId)
+    }
+
+    override fun getAllListeningStats(): com.resonance.player.model.AllListeningStats {
+        return listeningStatsStore.getAllStats()
+    }
     override suspend fun saveReplacementAudio(track: Track): Unit = withContext(Dispatchers.IO) {
         check(audioFileAvailable(track)) { "所选音频已不可读取，未替换来源" }
         // Unlike metadata-only updateTracks, this also adopts previously external catalog entries.

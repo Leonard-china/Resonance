@@ -288,6 +288,9 @@ fun App(services: PlatformServices) {
                         }
                     }
                 }
+                val initialPreset = services.loadAudioEffectPreset()
+                playback.setAudioEffectPreset(initialPreset)
+                player = player.copy(audioEffectPreset = initialPreset)
                 persistence.submit { services.savePlaylists(loadedPlaylists) }
                 services.saveLastSelectedPlaylistId(selectedPlaylistId)
             } catch (error: Throwable) {
@@ -412,6 +415,23 @@ fun App(services: PlatformServices) {
         }
         LaunchedEffect(services) {
             services.playbackErrors.collect { importMessage = "播放失败：$it"; playback.playbackFailed() }
+        }
+        LaunchedEffect(services) {
+            services.currentAudioEffectPreset.collect { preset -> player = player.copy(audioEffectPreset = preset) }
+        }
+        LaunchedEffect(player.isPlaying, player.currentTrack?.id) {
+            val trackId = player.currentTrack?.id ?: return@LaunchedEffect
+            if (!player.isPlaying) return@LaunchedEffect
+            var completedRecorded = false
+            while (true) {
+                delay(1000L)
+                if (player.isPlaying && player.currentTrack?.id == trackId) {
+                    val isNearEnd = player.progress >= 0.95f
+                    val markComplete = isNearEnd && !completedRecorded
+                    if (markComplete) completedRecorded = true
+                    services.recordListeningDuration(trackId, 1, isCompleted = markComplete)
+                }
+            }
         }
         LaunchedEffect(services, playbackQueue, player.currentTrack?.id) {
             while (true) {
@@ -658,6 +678,11 @@ fun App(services: PlatformServices) {
                             playback.setGain(gain)
                             val trackId = player.currentTrack?.id
                             persistence.submit { trackId?.let { services.saveTrackGain(it, gain) } }
+                        },
+                        onAudioEffectPresetChange = { preset ->
+                            playback.setAudioEffectPreset(preset)
+                            player = player.copy(audioEffectPreset = preset)
+                            persistence.submitLatest("audio.effect_preset") { services.saveAudioEffectPreset(preset) }
                         },
                         onToggleFloatingLyrics = features::toggleFloatingLyrics,
                         onOpenSleepTimer = { showSleepTimer = true },

@@ -1,4 +1,8 @@
 package com.resonance.player.ui
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.resonance.player.design.galleryPlinth
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.VideoLibrary
 
@@ -16,8 +20,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -124,6 +128,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -481,7 +486,7 @@ internal fun ToolPage(
             AccessibleIconButton(backLabel, onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = ResonanceColors.TextPrimary)
             }
-            Text(title, style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.TextPrimary)
+            Text(title, style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.TextPrimary, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
         }
         HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
         Column(
@@ -733,8 +738,9 @@ internal fun ThemeOption(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .background(background)
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .selectable(selected, onClick = onClick, role = Role.RadioButton)
+            .border(1.dp, if (selected) ResonanceColors.Primary else Color.Transparent, RoundedCornerShape(10.dp))
+            .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
@@ -756,55 +762,41 @@ internal fun ThemeOption(
 internal fun SectionHeader(title: String) {
     Text(
         title,
-        style = MaterialTheme.typography.labelMedium,
-        color = ResonanceColors.Dim,
-        modifier = Modifier.padding(top = 18.dp, bottom = 4.dp),
+        style = MaterialTheme.typography.titleSmall,
+        color = ResonanceColors.Muted,
+        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
     )
 }
 
 @Composable
-internal fun SettingRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
-    val clickableModifier = if (onClick != null) {
-        Modifier.clickable(onClick = onClick)
-    } else {
-        Modifier
-    }
+internal fun SettingRow(icon: ImageVector, title: String, subtitle: String, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val hovered by interaction.collectIsHoveredAsState()
+    val background by animateColorAsState(if (focused || hovered) ResonanceColors.Soft else Color.Transparent,
+        tween(motionDuration(160)), label = "settingRowBackground")
     Column(modifier) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(clickableModifier)
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(icon, contentDescription = null, tint = ResonanceColors.Muted, modifier = Modifier.size(21.dp))
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(background)
+            .then(if (onClick != null) Modifier.clickable(interactionSource = interaction, indication = ripple(),
+                role = Role.Button, onClick = onClick) else Modifier)
+            .border(1.5.dp, if (focused) ResonanceColors.Primary else Color.Transparent, RoundedCornerShape(14.dp))
+            .heightIn(min = 72.dp).padding(horizontal = 10.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).galleryPlinth(corner = 4.dp, depth = 3.dp),
+                contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = ResonanceColors.Primary, modifier = Modifier.size(21.dp))
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.TextPrimary)
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = ResonanceColors.Dim,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Spacer(Modifier.height(4.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
             }
             if (onClick != null) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = ResonanceColors.Dimmer,
-                    modifier = Modifier.size(20.dp),
-                )
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(20.dp))
             }
         }
-        HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
+        HorizontalDivider(Modifier.padding(start = 64.dp), color = ResonanceColors.Divider, thickness = Dp.Hairline)
     }
 }

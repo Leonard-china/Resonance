@@ -19,6 +19,8 @@ class MusicAssistantTest {
         var playing: String? = null
         var speechPreparations = 0
         var networkAllowed = true
+        val listenedIds = mutableSetOf<String>()
+        override fun hasListened(trackId: String) = trackId in listenedIds
         override suspend fun automaticDownloadsAllowed(unmeteredOnly: Boolean) = networkAllowed
         override suspend fun tracks() = songs.values.toList()
         override suspend fun playlists() = lists
@@ -187,11 +189,13 @@ class MusicAssistantTest {
             } finally { Files.deleteIfExists(path) }
         }
     }
-    @Test fun monthlyBudgetRejectsBeforeCallingProvider() = runBlocking {
+    @Test fun tokenUsageRestrictionsAreCancelledAndDoNotRejectRequests() = runBlocking {
         fixture { runtime, _, _, ai, _ ->
             runtime.saveSettings(runtime.settings().copy(monthlyTokenLimit = 10_000))
-            assertFailsWith<IllegalStateException> { runtime.completeText(listOf(AssistantMessage("user", "A".repeat(20_000))), 3000) }
-            assertTrue(ai.requests.isEmpty())
+            ai.content("ok")
+            val reply = runtime.completeText(listOf(AssistantMessage("user", "A".repeat(20_000))), 3000)
+            assertEquals("ok", reply)
+            assertEquals(1, ai.requests.size)
         }
     }
     @Test fun originalCandidatesBeatLiveCoverAndUnrelatedArtist() {
@@ -577,4 +581,40 @@ class MusicAssistantTest {
         }
     }
 
+
+    @Test fun recommendationRetainedWhenUnlistenedEvenIfIntervalExpired() = runBlocking {
+        fixture { runtime, library, _, ai, store ->
+            ai.songs("FirstBatch"); runtime.recommend(true)
+            val first = library.songs.values.single()
+            // Simulate that interval has passed (createdAt is 48 hours in the past)
+            val pastTime = System.currentTimeMillis() - 48 * 3_600_000L
+            store.update { it.put("recommendations", it.getJSONObject("recommendations").put("createdAt", pastTime)) }
+            runtime.settings() // reload
+            ai.songs("SecondBatch")
+            // Automatic recommend() (force = false): since first song hasn't been listened to, recommendation is retained!
+            runtime.recommend(false)
+            assertEquals(listOf(first.id), runtime.state.value.recommendations.trackIds)
+            assertEquals(listOf("FirstBatch"), library.songs.values.map(Track::title))
+
+            // Now mark as listened
+            library.listenedIds += first.id
+            // Call automatic recommend() again: now that it was listened to, it should update to SecondBatch!
+            runtime.recommend(false)
+            assertEquals(listOf("SecondBatch"), library.songs.values.map(Track::title))
+        }
+    }
+
+    @Test fun chatToolExecutionExceeds16StepsWithoutLimit() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            // Queue 20 consecutive tool calls
+            repeat(20) { i ->
+                ai.call("create_playlist", org.json.JSONObject().put("name", "List$i"))
+            }
+            ai.content("全部20个歌单创建完毕")
+            runtime.chat("创建20个歌单")
+            assertEquals(20, library.lists.size)
+            assertTrue(runtime.state.value.messages.last().content.contains("全部20个歌单创建完毕"))
+            assertFalse(runtime.state.value.messages.last().content.contains("16 轮操作上限"))
+        }
+    }
 }

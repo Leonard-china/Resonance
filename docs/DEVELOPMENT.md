@@ -1,6 +1,6 @@
-# 2026-10-26 — Resonance 详细开发说明：AI 语义找歌、曲库管家、伴奏消除、音频特征与音乐品味画像
+# 2026-10-27 — Resonance 详细开发说明：听歌时长统计、跨平台音效调校与全域温润雅致质感
 
-源码核对日期：2026-10-26（Asia/Shanghai）；当前工作区为 **`0.6.0 / 34`**，新增自然语言语义搜歌、本地曲库智能管家、实时伴奏消除（K歌模式）、本地音频特征提取（BPM/能量）、六维音乐品味雷达与精美歌单分享海报；验证见 [0.6.0 变更记录](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md) 与 [v0.6.0 发布说明](RELEASE_NOTES-0.6.0.md)。各单项修改见 [文档索引](README.md)。
+源码核对日期：2026-10-28（Asia/Shanghai）；当前工作区为 **`0.6.3 / 37`**，新增自然语言语义搜歌、本地曲库智能管家、实时伴奏消除（K歌模式）、本地音频特征提取（BPM/能量）、六维音乐品味雷达与精美歌单分享海报；验证见 [0.6.0 变更记录](changes/2026-10-26-01-ai-features-semantic-search-manager-karaoke-taste.md) 与 [v0.6.0 发布说明](RELEASE_NOTES-0.6.0.md)。各单项修改见 [文档索引](README.md)。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -45,9 +45,10 @@
 | 歌词整体偏移/原文件写回 | 偏移已接入，写回有限 | 偏移已接入，写回有限 | 单曲偏移独立持久化，不宣称完整原文件写回 UI |
 | 自然语言语义找歌 | 已接入 | 已接入 | 搜索栏 AI 语义模式，场景、情绪、曲风与 BPM 意图匹配，带高亮理由 |
 | 本地曲库智能管家 | 已接入 | 已接入 | 一键体检、垃圾字符清理、标题歌手分离、未知专辑规范与多版本音质去重 |
-| 实时伴奏消除 (K歌模式) | 已接入 | 已接入 | 立体声中置人声消除与低频保护，播放菜单一键开关 |
+| 实时伴奏消除与音效预设 | 已接入 | 已接入 | 统一 PCM DSP（原声/人声/低音/流行/摇滚/3D环绕/伴奏消音），全屏与歌曲详情一键切换 |
+| 听歌时长与播放频次统计 | 已接入 | 已接入 | 单曲与全库累计听歌时长、完播次数、最后收听记录，原子持久化并在详情与画像展示 |
 | 本地音频特征提取 | 已接入 | 已接入 | 毫秒级提取整曲 BPM 与能量指标，独立持久化缓存 |
-| 音乐品味画像与分享海报 | 已接入 | 已接入 | 六维雷达动态渲染、听歌性格评语、精美极光暗夜分享卡片与文案复制 |
+| 音乐品味画像与分享海报 | 已接入 | 已接入 | 六维雷达动态渲染、听歌性格评语、时长统计胶囊、精美分享卡片与文案复制 |
 
 <a id="architecture"></a>
 
@@ -92,6 +93,8 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 | J/features/MusicLibraryAccess.kt | AI/Worker 所需的原生曲库读写/删除/收藏/转码桥接 |
 | [J/media/BilibiliClient.kt](../composeApp/src/jvmMain/kotlin/com/resonance/player/media/BilibiliClient.kt) | 公共 metadata、WBI、候选打分、音轨/CDN、封面；MusicVideoSource 可注入 |
 | J/features/MusicTaskJournal.kt、J/enrich/AlbumCoverRepository.kt | 持久步骤/中断恢复/重试、QQ音乐/iTunes/酷狗专辑封面及缓存 |
+| [J/playback/ListeningStatsStore.kt](../composeApp/src/jvmMain/kotlin/com/resonance/player/playback/ListeningStatsStore.kt) | 听歌时长与播放次数原子持久化、单曲/全库/每日聚合快照 |
+| [C/ui/AudioEffectDialog.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/ui/AudioEffectDialog.kt)、C/model/AudioEffectPreset.kt | 跨平台音效预设枚举、双端原生 PCM 滤波算法与选择交互面板 |
 | J/lyrics/ParaformerLyricsClient.kt、AudioLyricAlignment.kt、GeneratedLyricsStore.kt | 百炼WSS识别、音频词时间戳对齐、原文备份及持久缓存 |
 | J/media/Mp3Import.kt | FFmpeg 参数数组、兼容音轨复制或MP3转换、标签/封面、流式 hash |
 | J/lyrics/LrclibLyricsRepository.kt、KrcDecoder.kt | 本地/缓存/LRCLIB，LRC/KRC、来源/偏移 |
@@ -266,7 +269,13 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 LibraryShell：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；助手页隐藏迷你播放器，聊天列表不再混放推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
-曲库标签用 LibraryTabTransition：单棵 Lazy 树、280ms/120dp 流体减速贝塞尔入场与 0.15~1.0 透明度淡入，减少动态效果时只渐显；列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲，DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置，页面转场在固定、不透明且裁剪的 Canvas 视口内执行，页面同样绘制 Canvas，并使用 `using null` 禁止尺寸插值；窗口背景随主题同步、系统栏仅在主题变化时更新，进一步处理顶部黑边（实际 ROM 效果待设备验证）；Android 窗口配置 `#111A1D` 背景与完全透明沉浸式系统栏（SystemBarStyle.auto）。详情仍用 LibraryDetailTransition。完整播放器通过单一 Animatable 在固定尺寸 graphicsLayer 中过渡，280ms drawer 曲线；动态光晕在 Canvas 绘制阶段读相位，过渡期间暂停背后和播放器环境动画。
+UI 与动效核对日期：2026-10-27。曲库标签使用 LibraryTabTransition：单棵 Lazy 树、220ms/32dp 减速入场；减少动态效果时立即切换并停止该过渡。列表/网格状态提升到切换外，进入页面不自动滚到当前歌曲；DestinationContent 的 SaveableStateHolder 保存离开主导航前的浏览位置。主页面转场在固定、不透明的 Canvas 视口内执行，各页面也绘制 Canvas；常规导航保留既有 `SizeTransform(clip = false)` 弹性，滑动时间统一为 280ms，键盘即时导航与减少动效使用 `using null`。此前本节“全部禁用尺寸插值”的描述已与 2026-10-17 的恢复弹性记录不符，本次按实现校正。窗口背景随主题同步、系统栏仅在主题变化时更新；Android 维持 `#111A1D` 窗口背景与透明系统栏，国产 ROM 的实际边缘表现仍需设备验证。详情仍由 LibraryDetailTransition 处理。完整播放器保持单一 Animatable / 固定尺寸 graphicsLayer 的 280ms drawer 过渡，减少动效时为 120ms 淡入淡出；播放器分栏、封面和迷你播放器切歌另外遵循减少动效偏好。
+
+ResonanceTheme 保留青绿 / 冰蓝主色、原生 Sans Serif 字阶和语义颜色；2026-10-27 按用户选定的 18 号画廊展台方向将浅色背景改为淡灰白墙面，深色台面通过明度区分层级。`GallerySurfaces.kt` 集中管理 2dp 封面圆角、9dp 展架、实体台面倒角及右下定向投影；播放键、迷你播放器、助手输入台和工具图标沿用同一材质。阴影使用现有 Compose `dropShadow`，台面绘制通过 `drawWithCache` 缓存；不逐帧改变阴影半径。默认内容色和主题首帧可读性保留，天气配色仍可短暂插值。曲库与播放器的 ResonanceSelectionTab 改为短下划线与文字强调，保留选中语义、48dp 高度和键盘焦点。窄屏曲库保留搜索、任务及更多菜单；新建歌单、多选和预览清理放在更多菜单，教程仍直接呈现新建按钮。空曲库仍区分搜索、导入、新建的操作层级。
+
+SoftNeumorphicButtons 保留青绿主播放键与线性轨道，次要按钮取消独立圆盘并落在实体播放台上。按压采用 120ms / 0.98 反馈，主播放键轻降 1.5dp；减少动效或键盘输入时不缩放或位移。主封面与展架独立，换曲只过渡画面，不再随暂停缩小。歌曲信息入口为「播放选项 → 歌曲与来源」。手机窗口低于 560dp，或字号大于 1.2 且高度不足 840dp 时使用紧凑布局；隐藏的内联音量区通过「播放设置 · 音量与速度」可达。播放进度与音量改用 Material Slider 的原生输入及语义，细轨道与小手柄独立于至少 48dp 的交互高度；手柄的测量容器也保持 48dp，避免只把外层布局撑高却留下细小的语义区域。拖动保留本地预览与实时回调，音量、倍速与平衡在窄窗口或大字号下分行；不增加波浪轨道或音频处理。正在播放指示器只在绘制阶段读相位；FluidAmbientCanvas 缓存三个光场画刷，逐帧只更新位置，暂停、后台、减少动效与播放器过渡的既有停动条件保留。品味雷达使用 280ms 过渡并在绘制阶段读动画值，减少动效时直接显示结果。
+
+工具/设置公共行使用小台面图标，保留焦点/悬停背景与可换行说明。助手阅读区最大宽度为 960dp，顶部操作可换行，消息按发送方区分位置，输入与发送操作放在同一台面；空会话提示仍只填写草稿，不自动发送请求。桌面原生渲染与交互回归见 `DT/ui/UiVisualContractTest`，覆盖深浅主题、两种配色、主题切换首帧、原生滑块语义回调与触控尺寸，以及手机/宽屏/横屏/150% 字号截图；当前截图位于忽略的 `composeApp/build/ui-gallery/screenshots/`；新增小屏大字号主控件边界、歌曲信息和播放设置菜单可达性检查。Android 对应 `UiInteractionContractTest` 已新增，当前验证状态见[画廊 UI 记录](changes/2026-10-27-04-gallery-ledges-native-ui.md)，桌面渲染不等同于 Android 真机验证。
 
 每日推荐始终为歌单网格第一张卡；关闭时进入设置，开启时打开 RecommendationsScreen。持久每日歌单按 DAILY_PLAYLIST_ID 去重，其他歌单保持原顺序。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
 
@@ -410,7 +419,7 @@ DeepSeek 文本可配千问/豆包视觉；未配置视觉则提示，不把图�
 | delete_tracks | 本轮用户明确要求删除音频才允许，删除文件及全部关系 |
 | find_and_download / search_bilibili / import_bilibili | 本地优先、原版候选、指定视频下载与自定义信息 |
 
-最多16轮/单轮20个工具，结果回传后再答复。无效 ID/工具报错，不伪称完成；否定删除、只删歌单等有回归。音乐任务可取消，已完成入库保留。MusicTaskEntry 可带 parentId，任务页按操作分组并汇总截图导入逐首进度；免费失败媒体步骤可批量重试，收费歌词仍单独确认。
+工具调用已取消 16 轮/步骤限制（使用循环持续执行直到任务完成），单轮最多 20 个工具，结果回传后再答复。无效 ID/工具报错，不伪称完成；否定删除、只删歌单等有回归。音乐任务可取消，已完成入库保留。MusicTaskEntry 可带 parentId，任务页按操作分组并汇总截图导入逐首进度；免费失败媒体步骤可批量重试，收费歌词仍单独确认。
 
 ### B 站链路
 
@@ -430,11 +439,13 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 
 固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要按歌手/歌名去重并含最多120首、歌手统计和歌单，工具可搜索大库。支持多会话隔离管理（最多持久化 30 个会话），首条消息自动截取前 20 字生成会话标题，各会话聊天独立落盘；请求严格仅取当前会话最近 16 条上下文，切换或新建会话 0 Token 消耗，彻底避免跨话题 Prompt 膨胀。消息气泡清晰标注回复模型（如 `回复自 通义千问 (qwen3-vl-flash)`），API 设置页提供常用主流模型 Chip 预选与一键恢复默认地址/模型按钮。OCR/翻译持久缓存避免重复成本。
 
-按 YearMonth 累计输入/缓存命中/输出 Token；统一请求包括连接测试计预算。默认月上限1000000，可配置，前置估算含图片和输出；这不是人民币账单保证，供应商失败请求/图片计费可能不同。云端缓存时效由供应商控制，不承诺隔天命中，也不付费发心跳保活。
+按 YearMonth 累计输入/缓存命中/输出 Token（用于助手底部用量统计参考）。已取消所有 Token 使用量与预算上限限制，请求不再因预算超出拦截。云端缓存时效由供应商控制，不承诺隔天命中，也不付费发心跳保活。
 
 ### 推荐生命周期
 
 默认关闭，1–168小时/1–30首；前台到期生成或允许后台。recommendationsUnmeteredOnly 缺省 false，可限制自动下载仅在系统判定的不计费网络；设置显示预计到期和等待状态，手动更新仍会立即联网。Android WorkManager 受节电/网络调度限制，下载有 dataSync 前台通知；Windows 托盘每分钟检查，完全退出后不运行。
+
+2026-10-28工作区：每日推荐未听保护。自动推荐检查到期时，若当前批次推荐歌曲中存在未听过（播放时长与播放次数为 0、且无点赞/评论反馈）的歌曲，即使已达到设定的间隔时间，自动推荐亦不进行更换，完整保留上批推荐等待用户收听；设置中状态提示「本批推荐尚有歌曲未听过，保留不换」。手动点击「更新推荐」仍可强制换批。
 
 2026-10-17工作区：默认使用歌源候选，可显式选AI；按已保存曲库/歌手分布/收藏/拒绝理由找真实候选，临时推荐不作为偏好，按歌曲身份去重并过滤已有/拒绝/冷却期内歌曲后下载。独立历史默认7天不重复；理由引用真实保存歌曲，不采用模型自由生成的数量/风格结论。至少一首成功才提交新批；总失败保留旧批/时间。每首音频入库立即写 recommendationPending（在封面/歌词后处理前），中断待提交音频在下次成功批统一处理。
 
@@ -482,6 +493,20 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 独立任务新增 docs/changes/YYYY-MM-DD-NN-主题.md，标题含日期和主要修改；写具体原因、文件/符号、前后行为、平台/数据、实际验证及限制；更新索引与当前说明，历史记录不覆盖。发布说明另外维护。
 
 不读/输出真实签名私钥、API Key。普通构建不升版，不手改生成 BuildVersion。删除/导入测试隔离数据和音乐目录；临时夹具/截图/日志放忽略的 build，不能提交用户音频或本机工具。
+
+### 本地 UI 设计技能（2026-10-27 核对）
+
+当前工作区已在 `.agents/skills/material-design-3-ui/` 安装社区 [Material Design 3 UI Skill](https://github.com/skydashnet/material-design-3-ui-skill)，技能名为 `material-design-3-ui`，版本 1.1.1，来源提交为 `82783f76de4a5b08a60421cae935cf8de7ca1ee8`。入口为 `SKILL.md`，通过 `references/` 中的 13 份资料按需提供语义配色、排版、间距、组件、状态、自适应、无障碍和 M3 Expressive 指引，可与现有 `frontend-design` 及 Google Android 技能配合使用。
+
+下一轮请求可显式指定 `$material-design-3-ui`。播放器仍按本项目原生 Compose Multiplatform 边界实现；Android 专属 API 与 Windows 共享 UI 的可用性需分别核对。本次只安装协作技能，没有改动页面或升级 Compose/Material 依赖。
+
+技能目录沿用 `.gitignore` 的 `.agents/` 忽略规则，不随仓库提交；根目录 `skills-lock.json` 记录来源、固定 `ref`、上游 `SKILL.md` 路径和内容哈希，安装步骤与验证见 [本次记录](changes/2026-10-27-01-install-material-design-3-ui-skill.md)。新检出仓库仍需安装技能，锁文件本身不提供自动安装能力。
+
+### Media3 音频控制与播放统计技能（2026-10-27 核对）
+
+工作区已在 .agents/skills/media3-analytics-telemetry/ 与 .agents/skills/media3-audio-playback/ 分别安装来自 [sunnat629/android-media-pack](https://github.com/sunnat629/android-media-pack) 的专项技能，版本对齐 Media3 1.10.1。
+- media3-analytics-telemetry：规范播放周期事件监听、PlaybackStats 会话度量与播放时长追踪，指导听歌时长采样与原子持久化，防止度量逻辑干扰播放核心。
+- media3-audio-playback：规范 Media3 音频属性、音频焦点、生命周期及跨平台（KMP）分层，要求平台专用 API 留在 Android 源集，将状态与控制上浮至共享层。
 
 <a id="website"></a>
 
@@ -572,7 +597,7 @@ composeApp/build.gradle.kts的generateAppVersion继续只从version.properties�
 
 ## 18. 用户体验与页面顶边覆盖（2026-10-17 核对，已正式发布至 0.5.0 / 33）
 
-当前代码为 0.5.0 / 33，已正式完成 Android Release 签名 APK、Windows EXE 制作与官网生产部署。完整执行命令、测试数量及设备边界见 [0.5.0 发布记录](changes/2026-10-17-33-release-0.5.0.md) 与 [Antigravity 交接](HANDOFF-2026-10-17-UX-ANTIGRAVITY.md)。
+本节记录 0.5.0 / 33 发布时的体验基线及当时的 Android Release 签名 APK、Windows EXE 与官网部署；当前工作区版本见文首，2026-10-27 的 UI 与动效增量见第 11 节。历史执行命令、测试数量及设备边界见 [0.5.0 发布记录](changes/2026-10-17-33-release-0.5.0.md) 与 [Antigravity 交接](HANDOFF-2026-10-17-UX-ANTIGRAVITY.md)。
 
 | 使用流程 | 实现与数据 | 测试／限制 |
 | --- | --- | --- |
