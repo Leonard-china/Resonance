@@ -31,7 +31,9 @@ tar -xzf Resonance-0.6.6-linux-x86_64.tar.gz
 
 2026-11-04 按用户要求更新到浅色 UI 版本：保留旧 `0.6.5/`，`current` 指向 `0.6.5-20261104-light-ui/`；新增 `~/Desktop/Resonance.desktop`，与应用菜单共用固定启动链接。来源为已校验的完整 Release 便携包，保留既有数据与音乐目录；见[本轮安装记录](changes/2026-11-04-07-release-phone-update-and-linux-shortcut.md)。
 
-2026-11-04 后续已更新为 0.6.6：`current` 现指向 `0.6.6-20261104-release/`，从原桌面快捷方式启动后确认新版进程、Normal 状态和 IsViewable 原生窗口。两个旧程序目录和入口备份保留，应用数据与音乐目录继续沿用原位置；见[本次更新与发布记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。
+2026-11-04 后续已更新为 0.6.6：`current` 当时指向 `0.6.6-20261104-release/`，从原桌面快捷方式启动后确认新版进程、Normal 状态和 IsViewable 原生窗口。两个旧程序目录和入口备份保留，应用数据与音乐目录继续沿用原位置；见[本次更新与发布记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。
+
+2026-11-04 最终导出修复：按用户要求优先重建并安装本轮完整便携包，`current` 现指向 `0.6.6-20261104-export-fix/`，沿用原桌面／菜单入口，直接启动后确认新版 Normal／IsViewable 原生窗口。较早程序和真实数据均保留；包校验及启动过程见[最终安装记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。
 
 ## 文件与平台差异
 

@@ -2,6 +2,8 @@
 
 2026-11-04 定向审计核对：[Bug 与优化报告](audit/2026-11-04/BUG-AND-OPTIMIZATION-REPORT.md)记录当前未修复的导入提交、离线曲库、备份恢复、删除授权/版本去重与 UI 接线等 13 项问题及 9 项优化入口。本次只增加报告/隔离证据并勘误下方能力表；不代表已经修复，也不以历史测试代替本次结果。原生音频分析器/缓存目前没有生产调用点，本地意图搜索仅按元数据文本规则评分，BPM 只显示标签。
 
+2026-11-04 本机最终安装：当前用户 `current` 指向 `0.6.6-20261104-export-fix/`，原桌面／菜单入口和旧程序、音乐数据保留；本次新包及原生可见窗口通过检查，见[安装记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。
+
 2026-11-03 Linux 平台核对：新增原生桌面 Linux x86_64、XDG／凭据适配与 DEB／免安装包构建；命令与平台差异见 [Linux 说明](LINUX.md) 和 [独立变更记录](changes/2026-11-03-04-linux-desktop-support.md)，不以历史 Windows 结果代替本次 Linux 验证。
 
 2026-11-02 当前质量进度：第一批双主题/统计保护/默认 WSS、第二批原生统计/偏好顺序/错误归属、第三批全链路加载与缓冲状态已实现，并完成 MuMu 帧率实测与 Windows 真实桌面可见窗口验收；当前证据见 [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md) 和变更 01–07。公网中继已上线并通过双端原生复测；跨蜂窝网络真机、多人平权控制及 2 小时长时压力验收仍待后续环境具备。PRODUCT_AUDIT 保留修改前基线，下文历史发布结果不能替代当前验收。
@@ -634,7 +636,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 <a id="website"></a>
 
-## 16. 独立官网与匿名论坛（部署迁移核对 2026-11-03）
+## 16. 独立官网与匿名论坛（发布能力核对 2026-11-04）
 
 2026-11-03：用户指定迁往新购阿里云 Ubuntu 24.04 主机，目标 Nginx 直接 HTTPS＋官网／邮件／一起听三项 systemd；不再依赖翼龙启动器或 Cloudflare Tunnel。配置、源码白名单打包及保留真实数据的切换入口见 [阿里云部署](../services/deploy/aliyun/README.md)。新机已安装并恢复网站迁移副本，官网／中继 systemd 运行与重启、回环四页 200／两端 Range 206／WebSocket 配对验证通过；邮件 worker 未启动。公开切换尚未完成，原部署仍为公开入口；北京区续费备案、受信证书、最终数据同步及公网切换须后续完成。
 
@@ -645,8 +647,8 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 - 公共页面：`/`、`/downloads`、`/forum`、`/forum/topic/<slug>`、帖子/回复、话题申请和 `/support`。小屏使用 2×2 首页入口、电脑/手机截图切换、可展开话题列表、单列下载和表单；320/390/768/1440px 浏览器检查见本次记录。
 - 页面使用纯 CSS 与合成器属性（opacity、transform）实现错峰入场、图标浮动循环、原生同源跨文档淡入淡出与视口滚动显现；提供卡片微浮动、主按钮弹性按压、讨论行指示箭头滑动与吸顶毛玻璃导航微交互；引入停留空闲预加载（Idle Prefetching）、触碰悬停即时抢跑与 Speculation Rules API，并配合客户端内存级无缝切页控制器，在可用缓存命中时减少重复加载等待；本次未验证公网零延迟或实际浏览器帧率；严格遵守 prefers-reduced-motion 减弱动态，不支持时平稳回退，不拦截普通导航或下载。展示图使用 WebP；静态 URL 带内容摘要，匹配时公共缓存一年且不写会话 Cookie，动态页仍 no-store。见 [预加载与即时切页记录](changes/2026-10-16-29-website-idle-prefetch-and-instant-navigation.md)、[动效记录](changes/2026-10-16-27-website-dynamic-motion-effects.md) 与 [渐变与缓存记录](changes/2026-10-16-21-site-fades-and-static-cache.md)。
 - 作者登录后保持同一会话即可发帖、回复；身份只由服务端认证判定。`replies` 按 `is_author DESC,id` 返回，作者回复显示作者/置顶标签；同组保持时间顺序，旧数据无迁移。见 [论坛作者记录](changes/2026-10-16-22-author-forum-pinned-replies.md)。
-- 版本发布：`releases.publish` 先把 Windows EXE 和 Android APK 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换两端版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，安装包支持 CDN 边缘缓存（`Cache-Control: public, max-age=86400`）且不注入会话 Cookie，下载页提供国内加速下载镜像通道（实测 5 MB/s+）。见 [下载加速与镜像记录](changes/2026-10-16-28-website-download-speed-and-mirror.md)。Unix 下已打开下载不受旧文件 unlink 影响。
-- `manage.py import-release` 从应用 `version.properties`、同版说明与实际产物导入，不改变应用版本；正式网站可由作者上传与真实版本一致的两端安装包。官网不会自动升级或重建播放器。
+- 版本发布：`releases.publish` 先把 Windows EXE、Android APK 和可选 Linux TAR.GZ 流式写入独立暂存目录，检查格式/版本/空间并计算 SHA-256；SQLite 事务切换本次全部平台版本后清理旧包。历史说明保留，旧安装包只链接 GitHub。失败/低磁盘/降版保留当前版本；下载支持 Range，安装包支持 CDN 边缘缓存（`Cache-Control: public, max-age=86400`）且不注入会话 Cookie，下载页提供国内加速下载镜像通道（实测 5 MB/s+）。见 [下载加速与镜像记录](changes/2026-10-16-28-website-download-speed-and-mirror.md)。Unix 下已打开下载不受旧文件 unlink 影响。
+- `manage.py import-release` 从应用 `version.properties`、同版说明与实际产物导入，不改变应用版本；正式网站可由作者上传与真实版本一致的 Windows／Android 安装包并可选提供 Linux 便携包；CLI 的 `--linux` 同样可选，三端校验成功后一起切换。官网不会自动升级或重建播放器。
 - `data/site.sqlite3` 保存话题、匿名帖子/回复、订阅偏好、邮件草稿/队列和发布记录，WAL + 写事务；截图压缩并去 EXIF，收款码无损编码。真实 `.env`、`secret.key`、`owner.json`、运行数据库及上传文件忽略，不进入部署源码 ZIP 或 Git。
 - 作者地址由 `manage.py setup` 在服务器本地生成，只在终端显示；公共页面无入口，服务端密码散列验证、8 小时会话、CSRF、登录限速。初始没有默认密码。作者可查看数据看板（帖子/回复/话题/申请/订阅/版本）、直接新建话题、设置排序和分类、删除空话题（有帖保护）、审批用户申请、按 ID/URL 精准删帖与回复、关键词搜索帖子、置顶/取消置顶帖子、发布版本、预览/测试/群发邮件、上传收款码。
 - 邮件：确认页面的 POST 才生效，版本更新与推广独立选择；推广默认不勾选，邮件独立投递、支持退订，发送前重新检查偏好。未配置 SMTP 明确关闭订阅/发送。发布安装包不会自动群发。worker 重启保留队列，但 SMTP 成功后进程中断可能少量重复送达。

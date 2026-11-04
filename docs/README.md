@@ -1,5 +1,7 @@
 # 2026-11-04 — Resonance 文档入口与开发变更索引
 
+本机优先更新：[最终导出修复 Linux 电脑安装](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。用户要求先安装到电脑，使用本次重新构建的完整程序，不复用今晚较早的同版本包；实际结果见记录。
+
 当前发布：[0.6.6 三端 GitHub 与官网发布](changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。用户已授权将导出修复发布到 Android／Windows／Linux；本次重新构建及实际上线状态以记录为准，不复用旧 Windows／Linux 包。
 
 最新导出命名与目录：[按歌单名保存并直接打开导出目录](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md)。单歌单使用简洁歌单名，全库使用「整个音乐库」；重名加序号。Android 入口以明确目录 URI 打开系统文件浏览器，并避免复用其他浏览位置；20 项 JVM／最终 6 项设备回归及 Lint 通过。最终正式包已安装原手机，真实歌单命名、旧包保留和连续三次直达 `Download/Resonance` 实测通过；APK、证据和平台限制见记录。
@@ -91,6 +93,7 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-04 | 优先更新本机 Linux 为包含最终歌单导出修复的完整版本 | [具体记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md) |
 | 2026-11-04 | 构建最终导出修复三端产物、推送 GitHub 并更新官网发布 | [具体记录](changes/2026-11-04-20-publish-0.6.6-three-platforms.md) |
 | 2026-11-04 | 导出文件按歌单名命名、重名加序号，并直接打开保存子目录 | [具体记录](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md) |
 | 2026-11-04 | 导出中显示处理状态，完成后提示保存位置／文件名并提供查看入口 | [具体记录](changes/2026-11-04-18-export-location-feedback.md) |
