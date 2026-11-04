@@ -43,6 +43,16 @@ data class SyncReport(
     val message: String,
     val trackCount: Int = 0,
     val playlistCount: Int = 0,
+    val exportedPackage: ExportedPackage? = null,
+    val cancelled: Boolean = false,
+)
+
+/** Transient export result; never persisted into the archive or library. */
+data class ExportedPackage(
+    val fileName: String,
+    val directory: String,
+    val openLocationLabel: String? = null,
+    val locationUri: String? = null,
 )
 
 data class Playlist(

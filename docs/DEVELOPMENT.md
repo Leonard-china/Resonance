@@ -267,6 +267,10 @@ LRCLIB 精确纯文本后继续搜索同步版本；时长偏差过大、仅0时
 
 ## 9. 歌单文件导出/导入
 
+2026-11-04 导出反馈与命名核对：归档任务在 App 级记录运行及结果状态，开始后显示处理中提示，可关闭提示继续使用应用；任务完成后无论当前页面，都显示结果弹窗。单歌单默认 `歌单名.resonance`，全库为 `整个音乐库.resonance`，清理非法字符及重名追加序号。成功后展示 `SyncReport.exportedPackage` 的实际文件名／保存位置，可复制；Android 29+ 的「打开所在目录」以固定 content 文档 URI 和目录 VIEW 显式启动系统浏览器，使用新文档任务防止旧位置复用，直接定位 `Download/Resonance`，仅增加该 Intent 的包可见性查询；26–28 保留实际应用下载目录及复制位置。Windows／Linux 使用原生保存对话框和系统文件夹打开。显示位置与 `locationUri` 分离，无文件管理器时保留路径回退。处理中禁用重复归档，系统选择器取消通过 `SyncReport.cancelled` 区分；新字段仅属内存结果，不改变曲库或包格式。最终包已在原手机完成真实小歌单命名、旧文件保留及三轮目录实测；前轮反馈见[记录 18](changes/2026-11-04-18-export-location-feedback.md)，当前命名、目录行为和验证见[记录 19](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md)。
+
+2026-11-04 导出弹窗核对：`SyncScreen → App.syncAction → SyncPackageDialog` 打开时只修改 UI 状态，确认后才调用平台导出；Android `exportSyncPackage` 的加载／打包／下载目录写入在 `Dispatchers.IO`。选项正文改为最大 360dp 的 `LazyColumn`，说明和歌单一起滚动，按歌单 ID 复用，仅创建可见行；标题和导出／取消由 Material Dialog 保留。整行提供单选语义，默认全库，重新打开重置选择。共享 `FrostedAlertDialog` 保持窗口内 `LocalGlassState=null` 隔离。原手机较早 0.6.5 包已复现 Haze 主线程 ANR，隔离包在同机恢复响应；最终 0.6.6 / 40 已保留数据覆盖安装，13 项 JVM／3 项原生弹窗回归及正式包五轮真实曲库打开／选择／取消通过，未在手机实际打包用户音频。详见[导出弹窗记录](changes/2026-11-04-17-export-dialog-anr-and-lazy-scopes.md)。
+
 唯一实现 PlainSyncPackage，UI“歌单导入/导出”。LAN/QR/deeplink/加密包实现删除。内部 exportSyncPackage/importSyncPackage 和 resonance-sync-1 格式名保留兼容；RESONPKG 旧加密包明确拒绝，需重新导出。
 
 .resonance 是标准 ZIP，含 manifest.properties、audio/、art/，可按歌单/全库导出可打开音频与元数据/关系；缺本地音频的目录条目不当可播放曲导出。不含 Key/Cookie、歌词/OCR 缓存、外观/天气/音量/快照。
@@ -441,7 +445,7 @@ adb shell am instrument -w -r com.resonance.player.debug.test/androidx.test.runn
 Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装、构建和差异见 [Linux 说明](LINUX.md)，实际验证见 [Linux 记录](changes/2026-11-03-04-linux-desktop-support.md)。现有能力表的 Windows 列所列共享桌面逻辑亦用于 Linux，系统差异以本段为准，不能把 Windows 历史验收当成 Linux 已通过。
 
 - 构建：`scripts/build-linux.sh [deb|rpm|portable]`，默认桌面测试 + 便携 tar.gz + DEB；需要 JDK17–21、SDK36、FFmpeg，DEB 需 fakeroot/dpkg-deb，RPM 需 rpmbuild。Linux nativeDistributions 包含完整 Java 模块；不升版、不发布。打包任务必须在对应系统执行。
-- 安装：可使用系统 DEB，或将完整 app image 安装在 `~/.local/opt/resonance/<版本>/` 并创建用户级启动／应用菜单入口；后者不需要管理员权限，也不进入 apt/dpkg。2026-11-03 实际用户安装与正式入口启动见 [安装记录](changes/2026-11-03-05-linux-user-installation.md)。2026-11-04 更新 `current` 至 `0.6.5-20261104-light-ui/` 并增加桌面快捷方式，保留旧程序及应用数据，见[本轮安装记录](changes/2026-11-04-07-release-phone-update-and-linux-shortcut.md)。
+- 安装：可使用系统 DEB，或将完整 app image 安装在 `~/.local/opt/resonance/<版本>/` 并创建用户级启动／应用菜单入口；后者不需要管理员权限，也不进入 apt/dpkg。2026-11-03 实际安装及 11 月 4 日首轮浅色 UI 更新保留为历史记录。本轮 `current` 已更新至 `0.6.6-20261104-release/`，原桌面／菜单入口启动后确认可见原生窗口；旧程序与数据保留，见[0.6.6 更新记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。本机本轮 Linux 发布产物为完整便携 tar.gz，不把旧 DEB 改名复用。
 - 数据：默认 `${XDG_DATA_HOME:-~/.local/share}/resonance`（仅接受绝对 XDG 路径）；新目录不存在时兼容已有 `~/Resonance`；显式 RESONANCE_DATA 优先。音频仍由 RESONANCE_LIBRARY 或 `~/Music/Resonance` 管理，不迁移、不改同步格式。
 - 凭据：DesktopCredentialVault 绑定 library.appDirectory；Windows DPAPI 原前缀兼容，Linux AES-256-GCM 的私有目录为 credentials（0700），key.bin 为 0600；跨进程锁与原子写入保护初建密钥，缺钥／损坏／篡改拒绝解密。它不是系统钥匙串；同用户可读密钥，备份需一并保存。旧明文仍兼容，跨系统凭据需重填。
 - 系统能力：NetworkManager/nmcli 查询不计费状态，未知时等待；天气回退手动城市；托盘取决于桌面环境，无托盘时关闭即退出；透明置顶歌词取决于窗口管理器，Linux 锁定不提供鼠标穿透。KGG 需已有匹配数据库，可用 FLYINGMOUSE_KGG_DB_PATH 指定。
@@ -579,6 +583,8 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | 切标签/播放器掉帧 | LibraryShell、NowPlayingOverlay、MusicStage、AlbumVisuals、LibraryTabTransition、LibraryDetailTransition、FluidAmbientCanvas | UiVisualContractTest / LibraryNavigationTest / LibraryDetailTransitionTest；MusicStageFrameMetricsTest 支持 player/navigation 和 metricsWarmup 诊断，已取得两包配对样本，尚无 Release 性能结论 |
 | 首次教程/学习进度/操作定位 | TutorialCatalog、TutorialController、TutorialScreens、TutorialProgressCodec、App | TutorialProgressTest / TutorialNavigationTest；首次跳过、跨启动继续、透空点击与滚动目标 |
 | 包格式/FLAC | PlainSyncPackage、平台导入 | PlainSyncPackageTest、PlaylistArchiveFormatTest |
+| 打开导出选项卡死／大歌单选择 | SyncScreen、App.syncAction、SyncPackageDialog、FrostedAlertDialog | SyncPackageDialogTest、SyncPackageDialogDeviceTest；原生窗口 Haze 隔离、末尾歌单可达、打开／取消不导出；实际 ZIP 使用上一行回归 |
+| 导出命名／保存位置提示／打开目录 | App.syncInProgress/syncResult、SyncPackageNaming、SyncPackageFeedback、SyncReport.exportedPackage、AndroidExportLocation、平台 openExportLocation | SyncPackageNamingTest、SyncPackageFeedbackTest、SyncPackageFeedbackDeviceTest、AndroidExportLocationTest；命名／重名、处理状态、失败回退、目录 URI 及窗口隔离 |
 | B 站412/匹配错误 | BilibiliClient.json/inspect/search/candidateScore | 官方验证/网络/Cookie，MusicAssistantTest |
 | AI工具/截图/预算 | JvmMusicAssistant、MusicAiClient、AssistantImages、Codec、ocr/*、SongIdentityResolver | MusicAssistantTest、ScreenshotOcrTest、LocalScreenshotOcrTest、MusicFeaturesIntegrationTest |
 | 推荐误删/清理失败 | recommendInternal/pending、原生 delete/activeMusicId | rollover/failure/current-playing/dislike 回归 |

@@ -571,6 +571,7 @@ internal fun SyncScreen(
     onExportSync: () -> Unit,
     onImportSync: () -> Unit,
     message: String?,
+    operationInProgress: Boolean = false,
 ) {
     ToolPage(title = "歌单导入与导出", onBack = onBack, compact = compact) {
         if (message != null) {
@@ -589,14 +590,14 @@ internal fun SyncScreen(
             icon = Icons.Default.FolderOpen,
             title = "导出歌单",
             subtitle = "将歌曲音频、封面和歌单打包为 .resonance",
-            onClick = onExportSync,
+            onClick = onExportSync.takeUnless { operationInProgress },
             modifier = Modifier.tutorialTarget(TutorialTarget.ExportArchive),
         )
         SettingRow(
             icon = Icons.AutoMirrored.Filled.QueueMusic,
             title = "导入歌单",
             subtitle = "校验完整性后合并到本机音乐库",
-            onClick = onImportSync,
+            onClick = onImportSync.takeUnless { operationInProgress },
             modifier = Modifier.tutorialTarget(TutorialTarget.ImportArchive),
         )
     }

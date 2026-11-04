@@ -1,5 +1,13 @@
 # 2026-11-04 — Resonance 文档入口与开发变更索引
 
+当前发布：[0.6.6 三端 GitHub 与官网发布](changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。用户已授权将导出修复发布到 Android／Windows／Linux；本次重新构建及实际上线状态以记录为准，不复用旧 Windows／Linux 包。
+
+最新导出命名与目录：[按歌单名保存并直接打开导出目录](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md)。单歌单使用简洁歌单名，全库使用「整个音乐库」；重名加序号。Android 入口以明确目录 URI 打开系统文件浏览器，并避免复用其他浏览位置；20 项 JVM／最终 6 项设备回归及 Lint 通过。最终正式包已安装原手机，真实歌单命名、旧包保留和连续三次直达 `Download/Resonance` 实测通过；APK、证据和平台限制见记录。
+
+前轮导出反馈：[导出完成显示保存位置、文件名和下载入口](changes/2026-11-04-18-export-location-feedback.md)。补齐导出中的状态与完成结果弹窗及复制位置；16 项 JVM／4 项原手机 Debug 回归及 Lint 通过。后续重连已安装并完成真实小歌单导出；用户新增直达目录和命名要求，当前行为与最终验证以上方记录 19 为准。
+
+最新导出排查与修复：[Android 导出选项 Haze ANR 实机复现与歌单虚拟化](changes/2026-11-04-17-export-dialog-anr-and-lazy-scopes.md)。原手机较早 0.6.5 包打开选项即触发输入超时，主线程栈指向 Haze 状态通知；同机隔离包恢复响应。本次补齐有界懒加载，13 项 JVM／3 项原生弹窗回归及 Lint 通过；最终正式包已保留数据覆盖安装到原手机，真实曲库连续五轮打开／选择／取消通过，无新 ANR。未在手机实际打包用户音频；独立 APK 和验证范围见记录。
+
 最新发布准备：[0.6.6 三端发布与本机桌面更新](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。本次按用户发布要求显式设为 0.6.6 / 40，准备 Android、Linux 与原生 Windows 构建；实际安装、GitHub 推送和 Release 状态以该记录为准。
 
 最新音量弹窗修复：[隔离播放设置弹窗的主窗口采样](changes/2026-11-04-15-volume-dialog-window-isolation.md)。通用 `FrostedAlertDialog` 的表面及内容不再继承主窗口 Haze，使用静态主题渐变；对应回归与 APK、本次实机验证限制见记录。
@@ -83,6 +91,10 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-04 | 构建最终导出修复三端产物、推送 GitHub 并更新官网发布 | [具体记录](changes/2026-11-04-20-publish-0.6.6-three-platforms.md) |
+| 2026-11-04 | 导出文件按歌单名命名、重名加序号，并直接打开保存子目录 | [具体记录](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md) |
+| 2026-11-04 | 导出中显示处理状态，完成后提示保存位置／文件名并提供查看入口 | [具体记录](changes/2026-11-04-18-export-location-feedback.md) |
+| 2026-11-04 | 实机复现导出选项 Haze ANR、验证窗口隔离并改为有界歌单懒加载 | [具体记录](changes/2026-11-04-17-export-dialog-anr-and-lazy-scopes.md) |
 | 2026-11-04 | 准备 0.6.6 三端发布、Windows 原生构建与本机桌面更新 | [具体记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md) |
 | 2026-11-04 | 隔离“音量”播放设置与通用原生弹窗的主窗口毛玻璃采样 | [具体记录](changes/2026-11-04-15-volume-dialog-window-isolation.md) |
 | 2026-11-04 | 构建歌词与新增歌源修复后的 Android Release、核验签名与本次产物 | [具体记录](changes/2026-11-04-13-lyrics-and-sources-release-apk.md) |

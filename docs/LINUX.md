@@ -1,10 +1,10 @@
-# 2026-11-03 — Linux 桌面版使用与构建
+# 2026-11-04 — Linux 桌面版使用与构建
 
-Linux 版复用原生 Compose Desktop 界面、FFmpeg 解码及 Java Sound 播放，不需要浏览器。首批交付面向 x86_64，版本继续来自 `version.properties`，本轮不升版。具体构建及实测结果见 [Linux 支持变更记录](changes/2026-11-03-04-linux-desktop-support.md)。
+Linux 版复用原生 Compose Desktop 界面、FFmpeg 解码及 Java Sound 播放，不需要浏览器。当前 0.6.6 / 40 面向 x86_64，版本来自 `version.properties`。本轮完整便携包与桌面更新见 [0.6.6 发布记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)；最初的适配与 DEB 兼容边界见 [Linux 支持记录](changes/2026-11-03-04-linux-desktop-support.md)。
 
 ## 安装与运行
 
-Ubuntu／Debian 桌面环境：在安装包所在目录执行（文件名以实际产物为准）：
+本轮本机生成完整便携包；DEB／RPM 可按下节在对应发行版构建。已有 0.6.5 DEB 的 Ubuntu／Debian 安装命令如下（不代表本轮已生成同版本 DEB，文件名以实际产物为准）：
 
 ```bash
 sudo apt install ./resonance_0.6.5-1_amd64.deb
@@ -17,7 +17,7 @@ sudo apt install ./resonance_0.6.5-1_amd64.deb
 免安装版需要先安装 FFmpeg，然后完整解压并启动：
 
 ```bash
-tar -xzf Resonance-0.6.5-linux-x86_64.tar.gz
+tar -xzf Resonance-0.6.6-linux-x86_64.tar.gz
 ./Resonance/bin/Resonance
 ```
 
@@ -30,6 +30,8 @@ tar -xzf Resonance-0.6.5-linux-x86_64.tar.gz
 2026-11-03 已在当前电脑完成 `0.6.5` 用户安装并从菜单入口打开，见 [实际安装记录](changes/2026-11-03-05-linux-user-installation.md)。用户安装不进入 apt/dpkg；应用数据和音乐继续使用下述原有目录。系统 DEB 安装方式仍如上，需管理员认证。
 
 2026-11-04 按用户要求更新到浅色 UI 版本：保留旧 `0.6.5/`，`current` 指向 `0.6.5-20261104-light-ui/`；新增 `~/Desktop/Resonance.desktop`，与应用菜单共用固定启动链接。来源为已校验的完整 Release 便携包，保留既有数据与音乐目录；见[本轮安装记录](changes/2026-11-04-07-release-phone-update-and-linux-shortcut.md)。
+
+2026-11-04 后续已更新为 0.6.6：`current` 现指向 `0.6.6-20261104-release/`，从原桌面快捷方式启动后确认新版进程、Normal 状态和 IsViewable 原生窗口。两个旧程序目录和入口备份保留，应用数据与音乐目录继续沿用原位置；见[本次更新与发布记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。
 
 ## 文件与平台差异
 

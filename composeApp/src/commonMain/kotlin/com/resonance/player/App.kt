@@ -166,6 +166,9 @@ fun App(services: PlatformServices) {
             catch (error: Exception) { importMessage = "教程进度读取失败：${error.message.orEmpty()}" }
         }
         var syncAction by remember { mutableStateOf<SyncAction?>(null) }
+        var syncInProgress by remember { mutableStateOf<SyncAction?>(null) }
+        var showSyncProgress by remember { mutableStateOf(false) }
+        var syncResult by remember { mutableStateOf<com.resonance.player.ui.SyncPackageOutcome?>(null) }
         var lyricsState by remember { mutableStateOf<LyricsUiState>(LyricsUiState.Idle) }
         var deepSeekConfig by remember { mutableStateOf(com.resonance.player.model.DeepSeekConfig()) }
         var customLyricsFolder by remember { mutableStateOf<String?>(null) }
@@ -1006,8 +1009,8 @@ fun App(services: PlatformServices) {
                                 }
                             }
                         },
-                        onExportSync = { syncAction = SyncAction.Export },
-                        onImportSync = { syncAction = SyncAction.Import },
+                        onExportSync = { if (syncInProgress == null) syncAction = SyncAction.Export },
+                        onImportSync = { if (syncInProgress == null) syncAction = SyncAction.Import },
                         onExitPreview = {
                             services.setPlaying(false)
                             previewMode = false
@@ -1087,7 +1090,7 @@ fun App(services: PlatformServices) {
                             importMessage = "已将 ${candidateTracks.size} 首歌曲添加到歌单"
                         },
                         message = importMessage,
-                        operationInProgress = operationInProgress || initialLoadInProgress,
+                        operationInProgress = operationInProgress || initialLoadInProgress || syncInProgress != null,
                     )
                 TutorialDialogs(tutorial, ready = !initialLoadInProgress)
 
@@ -1121,8 +1124,12 @@ fun App(services: PlatformServices) {
                         exporting = activeSyncAction == SyncAction.Export,
                         playlists = playlists,
                         onDismiss = { syncAction = null },
-                        onConfirm = { playlistId ->
+                        onConfirm = confirm@ { playlistId ->
+                            if (syncInProgress != null) return@confirm
                             syncAction = null
+                            syncInProgress = activeSyncAction
+                            showSyncProgress = true
+                            importMessage = if (activeSyncAction == SyncAction.Export) "正在导出歌单文件，请稍候…" else "正在导入歌单文件，请稍候…"
                             scope.launch {
                                 try {
                                     val report = if (activeSyncAction == SyncAction.Export) {
@@ -1140,12 +1147,30 @@ fun App(services: PlatformServices) {
                                         val restored = resolveSelectedPlaylistId(selectedPlaylistId, loadedPlaylists)
                                         selectPlaylist(restored)
                                     }
+                                    if (!report.cancelled) syncResult = com.resonance.player.ui.SyncPackageOutcome(activeSyncAction == SyncAction.Export, report)
+                                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                    throw cancelled
                                 } catch (error: Throwable) {
-                                    importMessage = "同步失败：${error.message ?: error::class.simpleName.orEmpty()}"
+                                    importMessage = "${if (activeSyncAction == SyncAction.Export) "导出" else "导入"}失败：${error.message ?: error::class.simpleName.orEmpty()}"
+                                    syncResult = com.resonance.player.ui.SyncPackageOutcome(activeSyncAction == SyncAction.Export,
+                                        com.resonance.player.model.SyncReport(false, importMessage.orEmpty()))
+                                } finally {
+                                    syncInProgress = null
+                                    showSyncProgress = false
                                 }
                             }
                         },
                     )
+                }
+
+                syncInProgress?.let { action ->
+                    if (showSyncProgress) com.resonance.player.ui.SyncPackageProgressDialog(action == SyncAction.Export) {
+                        showSyncProgress = false
+                    }
+                }
+                syncResult?.let { result ->
+                    com.resonance.player.ui.SyncPackageResultDialog(result, onDismiss = { syncResult = null },
+                        onOpenLocation = services::openExportLocation)
                 }
 
                 trackPendingDeletion?.let { track ->

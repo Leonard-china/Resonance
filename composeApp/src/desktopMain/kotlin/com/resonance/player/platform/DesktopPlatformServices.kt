@@ -484,9 +484,10 @@ class DesktopPlatformServices : PlatformServices {
 
     override suspend fun exportSyncPackage(playlistId: String?): SyncReport = withContext(Dispatchers.IO) {
         val allPlaylists = library.loadPlaylists()
-        val target = chooseSyncPackageOnEdt(save = true) ?: return@withContext SyncReport(false, "已取消导出")
-        val allTracks = tracksWithPlaylistArtwork(library.load(), allPlaylists)
         val selectedPlaylists = if (playlistId == null) allPlaylists else allPlaylists.filter { it.id == playlistId }
+        val preferredName = syncPackageFileName(if (playlistId == null) null else selectedPlaylists.single().name)
+        val target = chooseSyncPackageOnEdt(save = true, suggestedName = preferredName) ?: return@withContext SyncReport(false, "已取消导出", cancelled = true)
+        val allTracks = tracksWithPlaylistArtwork(library.load(), allPlaylists)
         val tracks = if (playlistId == null) {
             allTracks
         } else {
@@ -501,11 +502,23 @@ class DesktopPlatformServices : PlatformServices {
             openAudio = { track -> track.sourceUri?.let(Path::of)?.takeIf(Files::isRegularFile)?.let(Files::newInputStream) },
             openArtwork = { track -> openArtworkSource(track.artworkPath) },
         )
-        SyncReport(true, "已导出到 $target", tracks.size, selectedPlaylists.size)
+        SyncReport(true, "已导出到 $target", tracks.size, selectedPlaylists.size,
+            exportedPackage = ExportedPackage(target.fileName.toString(), target.toAbsolutePath().parent.toString(), "打开文件夹"))
+    }
+
+    override suspend fun openExportLocation(directory: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val folder = Path.of(directory)
+            if (!Files.isDirectory(folder) || !java.awt.Desktop.isDesktopSupported()) return@runCatching false
+            val desktop = java.awt.Desktop.getDesktop()
+            if (!desktop.isSupported(java.awt.Desktop.Action.OPEN)) return@runCatching false
+            desktop.open(folder.toFile())
+            true
+        }.getOrDefault(false)
     }
 
     override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
-        val source = chooseSyncPackageOnEdt(save = false) ?: return@withContext SyncReport(false, "已取消导入")
+        val source = chooseSyncPackageOnEdt(save = false) ?: return@withContext SyncReport(false, "已取消导入", cancelled = true)
         val imported = PlainSyncPackage().import(source, library.managedMusicDirectory)
         library.merge(imported.tracks)
         val mergedPlaylists = (library.loadPlaylists() + imported.playlists).associateBy(Playlist::id).values.toList()
@@ -691,7 +704,7 @@ class DesktopPlatformServices : PlatformServices {
         return selection.get()
     }
 
-    private fun chooseSyncPackageOnEdt(save: Boolean): Path? {
+    private fun chooseSyncPackageOnEdt(save: Boolean, suggestedName: String = "整个音乐库.resonance"): Path? {
         val selection = AtomicReference<Path?>()
         SwingUtilities.invokeAndWait {
             val chooser = JFileChooser().apply {
@@ -700,7 +713,11 @@ class DesktopPlatformServices : PlatformServices {
                 isAcceptAllFileFilterUsed = false
                 fileFilter = javax.swing.filechooser.FileNameExtensionFilter("Resonance 歌单文件 (*.resonance)", "resonance")
                 currentDirectory = library.managedMusicDirectory.parent?.toFile()
-                if (save) selectedFile = library.managedMusicDirectory.parent.resolve("Resonance-Sync.resonance").toFile()
+                if (save) {
+                    val parent = library.managedMusicDirectory.parent
+                    val name = uniqueSyncPackageFileName(suggestedName) { Files.exists(parent.resolve(it)) }
+                    selectedFile = parent.resolve(name).toFile()
+                }
             }
             val result = if (save) chooser.showSaveDialog(null) else chooser.showOpenDialog(null)
             if (result == JFileChooser.APPROVE_OPTION) {
@@ -708,6 +725,7 @@ class DesktopPlatformServices : PlatformServices {
                 if (save && !chosen.fileName.toString().endsWith(".resonance", ignoreCase = true)) {
                     chosen = chosen.resolveSibling("${chosen.fileName}.resonance")
                 }
+                if (save) chosen = chosen.resolveSibling(uniqueSyncPackageFileName(chosen.fileName.toString()) { Files.exists(chosen.resolveSibling(it)) })
                 selection.set(chosen)
             }
         }

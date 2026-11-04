@@ -2,7 +2,6 @@ package com.resonance.player.ui
 
 import com.resonance.player.design.FrostedAlertDialog as AlertDialog
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,8 +10,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -25,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.resonance.player.model.Playlist
@@ -48,32 +50,33 @@ fun SyncPackageDialog(
         title = { Text(if (exporting) "导出歌单文件" else "导入歌单文件") },
         text = {
             if (exporting) {
-                Column {
-                    Text(
-                        "选择要打包的内容。音频、封面与歌曲元数据会写入一个普通 Zip 包（.resonance），无需密码。",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 260.dp)
-                            .verticalScroll(rememberScrollState()),
-                    ) {
+                // Bound composition as well as height. A scrollable Column still creates
+                // every playlist on the UI thread when this native window opens.
+                LazyColumn(
+                    Modifier.fillMaxWidth().heightIn(max = 360.dp).selectableGroup(),
+                ) {
+                    item(key = "description", contentType = "description") {
+                        Text(
+                            "将音频、封面与歌曲信息打包为 .resonance 文件，无需密码。按歌单名命名，重复导出会自动加序号。",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
+                    item(key = "library", contentType = "option") {
                         PlaylistOption(
                             label = "整个音乐库",
                             detail = "全部歌单与本地曲目",
                             selected = selectedPlaylistId == null,
                             onClick = { selectedPlaylistId = null },
                         )
-                        playlists.forEach { playlist ->
-                            PlaylistOption(
-                                label = playlist.name,
-                                detail = playlist.subtitle,
-                                selected = selectedPlaylistId == playlist.id,
-                                onClick = { selectedPlaylistId = playlist.id },
-                            )
-                        }
+                    }
+                    items(playlists, key = { "playlist:${it.id}" }, contentType = { "option" }) { playlist ->
+                        PlaylistOption(
+                            label = playlist.name,
+                            detail = playlist.subtitle,
+                            selected = selectedPlaylistId == playlist.id,
+                            onClick = { selectedPlaylistId = playlist.id },
+                        )
                     }
                 }
             } else {
@@ -103,10 +106,11 @@ private fun PlaylistOption(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(vertical = 6.dp),
     ) {
-        RadioButton(selected = selected, onClick = onClick)
+        RadioButton(selected = selected, onClick = null)
         Spacer(Modifier.width(4.dp))
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

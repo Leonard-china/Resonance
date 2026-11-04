@@ -1020,6 +1020,7 @@ private fun DestinationContent(
                 onExportSync = onExportSync,
                 onImportSync = onImportSync,
                 message = message,
+                operationInProgress = operationInProgress,
             )
             LibraryDestination.Settings -> SettingsScreen(
                 compact = compact,

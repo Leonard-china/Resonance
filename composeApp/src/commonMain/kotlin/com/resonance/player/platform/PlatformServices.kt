@@ -124,6 +124,8 @@ interface PlatformServices {
     /** Explicit direct model text generation; does not search or upload audio, and returns no verified timeline. */
     suspend fun requestAiLyrics(track: Track): LyricsFetchResult
     suspend fun exportSyncPackage(playlistId: String?): SyncReport
+    /** Opens the report's platform path/URI; false leaves its display path available for copying. */
+    suspend fun openExportLocation(directory: String): Boolean = false
     suspend fun importSyncPackage(): SyncReport
     suspend fun importMusic(convertToMp3: Boolean = false): ImportReport
     suspend fun deleteLocalTrack(track: Track): DeleteTrackReport

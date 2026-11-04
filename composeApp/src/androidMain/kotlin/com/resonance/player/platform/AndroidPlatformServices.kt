@@ -32,6 +32,9 @@ import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.SyncReport
+import com.resonance.player.model.ExportedPackage
+import com.resonance.player.model.syncPackageFileName
+import com.resonance.player.model.uniqueSyncPackageFileName
 import com.resonance.player.model.Track
 import com.resonance.player.model.CalibrationStatus
 import com.resonance.player.model.durationTextToSeconds
@@ -1060,16 +1063,22 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 openAudio = { track -> openTrackSource(track.sourceUri) },
                 openArtwork = { track -> openArtworkSource(track) },
             )
-            val destination = saveToDownloads(temporary)
-            SyncReport(true, "已导出到下载/Resonance：$destination", tracks.size, selectedPlaylists.size)
+            val destination = saveToDownloads(temporary, syncPackageFileName(if (playlistId == null) null else selectedPlaylists.single().name))
+            SyncReport(true, "已导出到 ${destination.directory}：${destination.fileName}", tracks.size, selectedPlaylists.size,
+                exportedPackage = destination)
         } finally {
             Files.deleteIfExists(temporary)
         }
     }
 
+    override suspend fun openExportLocation(directory: String): Boolean = withContext(Dispatchers.Main) {
+        if (Build.VERSION.SDK_INT < 29) return@withContext false
+        openAndroidExportDirectory(activity, directory)
+    }
+
     override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
         val temporary = activity.cacheDir.toPath().resolve("Resonance-Import.resonance")
-        val sourceUri = pickSyncPackage() ?: return@withContext SyncReport(false, "已取消导入")
+        val sourceUri = pickSyncPackage() ?: return@withContext SyncReport(false, "已取消导入", cancelled = true)
         val sourceName = sourceUri.lastPathSegment?.substringAfterLast('/') ?: "歌单文件"
         activity.contentResolver.openInputStream(sourceUri).use { input ->
             requireNotNull(input) { "无法读取所选歌单文件" }
@@ -1787,13 +1796,18 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun saveToDownloads(source: Path): String {
-        val name = "Resonance-Sync-${System.currentTimeMillis()}.resonance"
+    private fun saveToDownloads(source: Path, preferredName: String): ExportedPackage {
         if (Build.VERSION.SDK_INT >= 29) {
+            val relativePath = "${Environment.DIRECTORY_DOWNLOADS}/Resonance/"
+            val name = uniqueSyncPackageFileName(preferredName) { candidate ->
+                activity.contentResolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, arrayOf(MediaStore.Downloads._ID),
+                    "${MediaStore.Downloads.DISPLAY_NAME} = ? AND ${MediaStore.Downloads.RELATIVE_PATH} = ?",
+                    arrayOf(candidate, relativePath), null).use { it?.moveToFirst() == true }
+            }
             val values = android.content.ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, name)
                 put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
-                put(MediaStore.Downloads.RELATIVE_PATH, "${Environment.DIRECTORY_DOWNLOADS}/Resonance")
+                put(MediaStore.Downloads.RELATIVE_PATH, relativePath)
                 put(MediaStore.Downloads.IS_PENDING, 1)
             }
             val uri = activity.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
@@ -1806,18 +1820,23 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 values.clear()
                 values.put(MediaStore.Downloads.IS_PENDING, 0)
                 activity.contentResolver.update(uri, values, null, null)
+                val actualName = activity.contentResolver.query(uri, arrayOf(MediaStore.Downloads.DISPLAY_NAME), null, null, null).use { cursor ->
+                    check(cursor != null && cursor.moveToFirst()) { "无法确认导出文件名" }
+                    cursor.getString(0)
+                }
+                return ExportedPackage(actualName, "内部存储 / Download / Resonance", "打开所在目录", exportDirectoryUri().toString())
             } catch (error: Throwable) {
                 activity.contentResolver.delete(uri, null, null)
                 throw error
             }
-            return name
         }
 
         val directory = (activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: activity.filesDir)
             .toPath().resolve("Resonance")
         Files.createDirectories(directory)
-        Files.copy(source, directory.resolve(name), StandardCopyOption.REPLACE_EXISTING)
-        return name
+        val name = uniqueSyncPackageFileName(preferredName) { Files.exists(directory.resolve(it)) }
+        Files.copy(source, directory.resolve(name))
+        return ExportedPackage(name, directory.toAbsolutePath().toString())
     }
 
     private fun openTrackSource(value: String?): java.io.InputStream? = runCatching {

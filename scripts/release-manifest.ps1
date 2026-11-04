@@ -12,6 +12,8 @@ New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
 $files = @($apkPath)
 $exePath = Join-Path $projectRoot "composeApp/build/compose/binaries/main-release/exe/Resonance-$Version.exe"
 if (Test-Path -LiteralPath $exePath) { $files += $exePath }
+$linuxPath = Join-Path $projectRoot "composeApp/build/compose/binaries/main-release/tar/Resonance-$Version-linux-x86_64.tar.gz"
+if (Test-Path -LiteralPath $linuxPath) { $files += $linuxPath }
 $checksums = foreach ($file in $files) {
     $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $file).Hash.ToLowerInvariant()
     $name = Split-Path -Leaf $file
