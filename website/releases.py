@@ -1,4 +1,4 @@
-"""Publish both platforms as one release, then remove superseded local files."""
+"""Publish all supplied platforms as one release, preserving legacy dual-platform releases."""
 import hashlib
 import os
 import re
@@ -11,7 +11,8 @@ from db import connect, transaction
 
 GITHUB = 'https://github.com/Leonard-china/Resonance'
 VERSION = re.compile(r'\d{1,4}\.\d{1,4}\.\d{1,4}\Z')
-PLATFORMS = {'windows': ('.exe', b'MZ'), 'android': ('.apk', b'PK')}
+PLATFORMS = {'windows': ('.exe', b'MZ'), 'android': ('.apk', b'PK'), 'linux': ('.tar.gz', b'\x1f\x8b')}
+DOWNLOAD_SUFFIXES = {'windows': '.exe', 'android': '-release.apk', 'linux': '-linux-x86_64.tar.gz'}
 
 
 def sync_directory(path):
@@ -58,8 +59,8 @@ def cleanup(data_dir, database):
 def publish(data_dir, database, version, notes, streams):
     if not VERSION.fullmatch(version) or not notes.strip() or len(notes) > 16000:
         raise ValueError('请填写三段式版本号和不超过 16000 字的更新内容。')
-    if set(streams) != set(PLATFORMS):
-        raise ValueError('请同时提供 Windows EXE 和 Android APK。')
+    if not {'windows', 'android'} <= set(streams) or not set(streams) <= set(PLATFORMS):
+        raise ValueError('请同时提供 Windows EXE 和 Android APK，可一并提供 Linux TAR.GZ。')
     root = Path(data_dir) / 'releases'
     root.mkdir(parents=True, exist_ok=True)
     release_id = uuid.uuid4().hex

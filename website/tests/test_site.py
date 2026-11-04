@@ -1,4 +1,6 @@
 import io
+import gzip
+import hashlib
 import re
 import sqlite3
 import sys
@@ -423,6 +425,47 @@ class SiteTest(unittest.TestCase):
         self.assertEqual(self.client.get('/download/linux').status_code, 404)
         self.assertEqual(self.client.get('/media/secret.key').status_code, 404)
         self.assertEqual(self.client.get('/data/site.sqlite3').status_code, 404)
+
+    def test_three_platform_release_includes_linux_with_correct_links_hash_and_range(self):
+        payload = gzip.compress(b'Linux portable fixture, no user files')
+        release_id = publish(self.data, self.app.config['DATABASE'], '0.6.6', '1. 三端导出修复',
+                             {'windows': io.BytesIO(b'MZwindows'), 'android': io.BytesIO(b'PKandroid'),
+                              'linux': io.BytesIO(payload)})
+        self.assertTrue((self.data / 'releases' / release_id / 'linux.tar.gz').is_file())
+        page = self.client.get('/downloads').get_data(as_text=True)
+        self.assertIn('Linux x86_64', page)
+        self.assertIn('Resonance-0.6.6-linux-x86_64.tar.gz', page)
+        self.assertIn(hashlib.sha256(payload).hexdigest(), page)
+        response = self.client.get('/download/linux')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, payload)
+        self.assertIn('Resonance-0.6.6-linux-x86_64.tar.gz', response.headers['Content-Disposition'])
+        response.close()
+        response = self.client.get('/download/linux', headers={'Range': 'bytes=0-3'})
+        self.assertEqual(response.status_code, 206)
+        self.assertEqual(response.data, payload[:4])
+        response.close()
+
+    def test_invalid_linux_asset_cannot_switch_any_platform_or_remove_the_previous_release(self):
+        previous = self.publish()
+        with self.assertRaises(ValueError):
+            publish(self.data, self.app.config['DATABASE'], '0.6.6', '新版本',
+                    {'windows': io.BytesIO(b'MZwindows'), 'android': io.BytesIO(b'PKandroid'),
+                     'linux': io.BytesIO(b'not a gzip archive')})
+        with connect(self.app.config['DATABASE']) as db:
+            self.assertEqual(active_release(db)['id'], previous)
+        self.assertEqual([p.name for p in (self.data / 'releases').iterdir()], [previous])
+
+    def test_owner_can_atomically_publish_three_platforms_and_reject_wrong_linux_version(self):
+        self.login()
+        def upload(name):
+            return {'version': '0.6.6', 'notes': '三端更新',
+                    'windows': (io.BytesIO(b'MZwindows'), 'Resonance-0.6.6.exe'),
+                    'android': (io.BytesIO(b'PKandroid'), 'Resonance-0.6.6-release.apk'),
+                    'linux': (io.BytesIO(gzip.compress(b'fixture')), name)}
+        self.assertEqual(self.submit(self.private + '/release', upload('Resonance-0.6.5-linux-x86_64.tar.gz')).status_code, 400)
+        self.assertEqual(self.submit(self.private + '/release', upload('Resonance-0.6.6-linux-x86_64.tar.gz')).status_code, 303)
+        self.assertEqual(len(self.query('SELECT * FROM assets')), 3)
 
     def test_cleanup_never_deletes_outside_its_owned_directory(self):
         root = self.data/'releases'

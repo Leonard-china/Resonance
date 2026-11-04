@@ -21,7 +21,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 import mailing
 from db import connect, initialize, rate_limit, settings, transaction
-from releases import GITHUB, active_release, publish
+from releases import GITHUB, PLATFORMS, DOWNLOAD_SUFFIXES, active_release, publish
 
 ROOT = Path(__file__).resolve().parent
 
@@ -52,7 +52,7 @@ def create_app(overrides=None):
         data = ROOT / data
     app.config.update(
         DATA_DIR=data.resolve(), SITE_URL=os.environ.get('SITE_URL', 'http://127.0.0.1:8860').rstrip('/'),
-        PRODUCTION=os.environ.get('PRODUCTION') == '1', MAX_CONTENT_LENGTH=512 * 1024 * 1024,
+        PRODUCTION=os.environ.get('PRODUCTION') == '1', MAX_CONTENT_LENGTH=1280 * 1024 * 1024,
         MAX_FORM_MEMORY_SIZE=256 * 1024, MAX_FORM_PARTS=24,
         SESSION_COOKIE_NAME='resonance_site', SESSION_COOKIE_HTTPONLY=True,
         SESSION_REFRESH_EACH_REQUEST=False,
@@ -273,11 +273,12 @@ def create_app(overrides=None):
                       if re.match(r'^\d+[.、)]', line)][:3]
         if not highlights:
             highlights = [line.strip().lstrip('-• ')[:120] for line in lines if line.strip()][:3]
-        return render_template('downloads.html', active='downloads', assets=assets, history=history, highlights=highlights)
+        return render_template('downloads.html', active='downloads', assets=assets, history=history, highlights=highlights,
+                               download_suffixes=DOWNLOAD_SUFFIXES)
 
     @app.get('/download/<platform>')
     def download(platform):
-        if platform not in ('windows', 'android'):
+        if platform not in PLATFORMS:
             abort(404)
         for _ in range(2):
             with connect(app.config['DATABASE']) as db:
@@ -285,13 +286,15 @@ def create_app(overrides=None):
                 asset = db.execute('SELECT * FROM assets WHERE release_id=? AND platform=?',
                                    (current['id'] if current else '', platform)).fetchone()
             if not asset:
+                if platform == 'linux':
+                    abort(404)
                 abort(503, description='最新版安装包还在准备中，请稍后再试。')
             path = data / 'releases' / current['id'] / asset['filename']
             try:
                 handle = path.open('rb')
             except FileNotFoundError:
                 continue  # Publication may have replaced the release between query and open.
-            ext = '.exe' if platform == 'windows' else '-release.apk'
+            ext = DOWNLOAD_SUFFIXES[platform]
             name = 'Resonance-' + current['version'] + ext
             # Opening before returning keeps active downloads valid when Unix unlinks the old release.
             try:
@@ -530,8 +533,10 @@ def create_app(overrides=None):
     def owner_release():
         version, notes = text('version', 32), text('notes', 16000)
         streams = {}
-        for platform, extension in [('windows', '.exe'), ('android', '.apk')]:
+        for platform, (extension, _) in PLATFORMS.items():
             upload = request.files.get(platform)
+            if platform == 'linux' and (not upload or not upload.filename):
+                continue
             if (not upload or not upload.filename.lower().endswith(extension)
                     or not re.search(r'(?<![\d.])' + re.escape(version) + r'(?!\d|\.\d)', upload.filename)):
                 abort(400, description='请上传文件名包含本次版本号的 Windows EXE 和 Android APK。')

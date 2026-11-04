@@ -1,5 +1,9 @@
 # Resonance 官网
 
+2026-11-04 发布能力核对：官网支持 Windows EXE、Android APK 与可选 Linux x86_64 TAR.GZ，一次校验成功后事务切换；旧双端发布继续兼容。`manage.py import-release --linux <实际便携包路径>` 可一并导入三端。Linux 也显示真实大小、SHA-256、镜像与官网直连，详见[0.6.6 本轮发布记录](../docs/changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。作者发布总请求上限调整为 1280 MiB，每个包仍最多 400 MiB，公开表单沿用原小请求限制；外部代理仍可能限制大请求，大包优先用服务器本地 CLI 导入，不为发布自动群发邮件。
+
+2026-11-03：正在迁移至用户新购阿里云 Ubuntu 主机。新部署使用 Nginx＋独立 systemd 官网／邮件／一起听服务，不依赖翼龙或 Tunnel；配置、源码包、数据迁移和切换步骤见 [阿里云迁移入口](../services/deploy/aliyun/README.md)。新机已恢复并验证迁移副本，官网与中继在回环运行；公开切换待备案、最终数据同步、证书／DNS。下面的容器部署保留为当前公开入口及回滚依据。
+
 独立于 Kotlin 播放器的自托管网站。浅灰绿界面，支持电脑、平板和手机；无需注册，论坛采用帖子与回复。
 
 现网为 [leonard.asia](https://leonard.asia)，实际运行在翼龙容器与 Cloudflare Tunnel 上；维护现网先读 [现网运维说明](OPERATIONS.md)。下文 systemd/Nginx 是其他 Ubuntu 主机的部署方案，不要照搬覆盖现网启动器。

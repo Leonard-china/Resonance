@@ -29,6 +29,7 @@ def main():
     release.add_argument('--version-file', default=str(ROOT.parent / 'version.properties'))
     release.add_argument('--windows')
     release.add_argument('--android')
+    release.add_argument('--linux')
     release.add_argument('--notes')
     announcement = sub.add_parser('publish-announcement', help='发布已审核的更新公告与软件介绍（须先发布对应安装包）')
     announcement.add_argument('content', help='含 version、title、body 的 UTF-8 JSON 文件')
@@ -69,9 +70,14 @@ def main():
             notes = notes.split('## 主要更新', 1)[1].split('\n## ', 1)[0].strip().replace('**', '')
         windows = Path(args.windows) if args.windows else repo / 'release' / version / f'Resonance-{version}.exe'
         android = Path(args.android) if args.android else repo / 'release' / version / f'Resonance-{version}-release.apk'
-        with windows.open('rb') as win, android.open('rb') as apk:
-            publish(data, app.config['DATABASE'], version, notes, {'windows': win, 'android': apk})
-        print(f'已导入 v{version} 的 Windows / Android 真实产物，并计算本次 SHA-256。')
+        from contextlib import ExitStack
+        with ExitStack() as stack:
+            streams = {'windows': stack.enter_context(windows.open('rb')),
+                       'android': stack.enter_context(android.open('rb'))}
+            if args.linux:
+                streams['linux'] = stack.enter_context(Path(args.linux).open('rb'))
+            publish(data, app.config['DATABASE'], version, notes, streams)
+        print(f'已导入 v{version} 的 {" / ".join(streams)} 真实产物，并计算本次 SHA-256。')
     elif args.command == 'publish-announcement':
         from announcements import publish_announcement
         version = publish_announcement(app.config['DATABASE'], args.content)

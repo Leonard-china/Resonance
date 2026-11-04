@@ -62,7 +62,7 @@
 
 <section id="release" class="owner-section">
   <h2>发布新版本</h2>
-  <p class="muted">{% if release %}当前版本 v{{ release.version }}。{% endif %}两端安装包上传成功后一起切换，随后清理服务器上的旧包。历史版本仍使用 GitHub 地址。</p>
+  <p class="muted">{% if release %}当前版本 v{{ release.version }}。{% endif %}本次选择的所有安装包校验成功后一起切换，随后清理服务器上的旧包。历史版本仍使用 GitHub 地址。</p>
   <form action="{{ private }}/release" method="post" enctype="multipart/form-data" class="editor-form" data-pending-label="正在上传并校验…">
     {{ fields(csrf, false) }}
     <label>版本号<input name="version" placeholder="与应用实际发布版本一致，例如 0.4.2" pattern="[0-9]+\.[0-9]+\.[0-9]+" maxlength="32" required></label>
@@ -70,6 +70,7 @@
     <div class="form-grid">
       <label>Windows EXE<input name="windows" type="file" accept=".exe" required><span class="fine">文件名需包含本次版本号。</span></label>
       <label>Android APK<input name="android" type="file" accept=".apk" required><span class="fine">文件名需包含本次版本号。</span></label>
+      <label>Linux TAR.GZ<input name="linux" type="file" accept=".tar.gz"><span class="fine">可选，x86_64 完整便携包，文件名需包含本次版本号。</span></label>
     </div>
     <button class="button primary">上传并发布新版本</button>
   </form>
