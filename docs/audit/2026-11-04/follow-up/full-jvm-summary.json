@@ -1,0 +1,20 @@
+{
+  "tests": 346,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 9,
+  "skippedCases": [
+    "com.resonance.player.playback.DesktopAudioOutputIntegrationTest.platformRecordsWithoutComposeAndDeduplicatesNearEndPauseResume[desktop]",
+    "com.resonance.player.playback.DesktopAudioOutputIntegrationTest.pauseSeekSpeedAndRapidReplacementReachRealAudioOutput[desktop]",
+    "com.resonance.player.together.TogetherRendezvousTest.javaSignaturesInteroperateAndChangedPartnerEndpointCanBeInvited[desktop]",
+    "com.resonance.player.together.TogetherReverseNativeBridgeTest.windowsNativeGuestFollowsMuMuHost[desktop]",
+    "com.resonance.player.together.TogetherWebSocketTest.deployedPinnedTlsRoundTripOverWebSocket[desktop]",
+    "com.resonance.player.together.TogetherWebSocketTest.realPinnedTlsRoundTripOverWebSocket[desktop]",
+    "com.resonance.player.together.TogetherNativeBridgeTest.windowsNativeHostForMuMu[desktop]",
+    "com.resonance.player.together.PromoAssistantProbeTest.captureRealAssistantAnswerWhenConfigured[desktop]",
+    "com.resonance.player.together.TogetherDeviceBridgeTest.windowsHostForPhysicalAndroidPeer[desktop]"
+  ],
+  "publicLyrics": [
+    "Public lyrics acceptance: source=歌源 · QQ 音乐, lines=46, synchronized=true; content omitted\n"
+  ]
+}

@@ -42,9 +42,10 @@ class PlaybackModePersistenceTest {
     fun desktopPlatformServicesPersistsAndLoadsPlaybackMode() = runBlocking {
         val tempDir = Files.createTempDirectory("resonance-playback-test-")
         val previousEnv = System.getProperty("RESONANCE_DATA")
+        var created: DesktopPlatformServices? = null
         try {
             System.setProperty("RESONANCE_DATA", tempDir.toString())
-            val services = DesktopPlatformServices()
+            val services = DesktopPlatformServices().also { created = it }
 
             // Initially default
             val initial = services.loadPlaybackMode()
@@ -63,12 +64,17 @@ class PlaybackModePersistenceTest {
             assertFalse(updated2.shuffleEnabled)
             assertEquals(RepeatMode.One, updated2.repeatMode)
 
-            // Test setPlaybackMode also persists
+            // Live native changes must not bypass the ordered persistence path.
             services.setPlaybackMode(shuffle = true, repeatMode = RepeatMode.Off)
             val updated3 = services.loadPlaybackMode()
-            assertTrue(updated3.shuffleEnabled)
-            assertEquals(RepeatMode.Off, updated3.repeatMode)
+            assertFalse(updated3.shuffleEnabled)
+            assertEquals(RepeatMode.One, updated3.repeatMode)
+            services.savePlaybackMode(shuffle = true, repeatMode = RepeatMode.Off)
+            assertTrue(services.loadPlaybackMode().shuffleEnabled)
+            assertEquals(RepeatMode.Off, services.loadPlaybackMode().repeatMode)
         } finally {
+            created?.close()
+            com.resonance.player.playback.ListeningStatsRepository.release(tempDir)
             if (previousEnv != null) {
                 System.setProperty("RESONANCE_DATA", previousEnv)
             } else {

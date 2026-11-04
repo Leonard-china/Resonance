@@ -1,5 +1,9 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.lyricFocus
+
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -18,8 +22,6 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.foundation.gestures.animateScrollBy
-import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -60,6 +62,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -117,7 +124,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -139,8 +145,6 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
-import kotlin.time.TimeMark
-import kotlin.time.TimeSource
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -162,6 +166,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.border
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.FrostedBackdrop
 import com.resonance.player.design.MusicStageBackdrop
 import com.resonance.player.design.LocalAlbumAtmosphere
 import com.resonance.player.design.rememberAlbumAtmosphere
@@ -245,8 +250,10 @@ internal fun NowPlayingOverlay(
 ) {
     val track = playerState.currentTrack ?: return
     val atmosphere = rememberAlbumAtmosphere(track.artworkSeed, track.artworkPath, track.sourceUri)
+    val glassState = rememberHazeState()
     var paneName by rememberSaveable { mutableStateOf(PlayerPane.Cover.name) }
     var playbackSettings by remember { mutableStateOf(false) }
+    var audioEffects by remember { mutableStateOf(false) }
     val pane = PlayerPane.entries.firstOrNull { it.name == paneName } ?: PlayerPane.Cover
     val tutorial = LocalTutorial.current
     LaunchedEffect(pane, tutorial?.step?.id) {
@@ -255,6 +262,8 @@ internal fun NowPlayingOverlay(
     }
 
     ResonanceBackHandler(enabled = true, onBack = onDismiss)
+    if (audioEffects) AudioEffectDialog(currentPreset = playerState.audioEffectPreset,
+        onPresetSelect = onAudioEffectPresetChange, onDismiss = { audioEffects = false })
     if (playbackSettings) AlertDialog(onDismissRequest = { playbackSettings = false }, title = { Text("播放设置") },
         text = { Column(Modifier.verticalScroll(rememberScrollState())) {
             VolumeAndSpeedRow(playerState.volume, playerState.playbackSpeed, onVolumeChange, onSpeedChange,
@@ -282,11 +291,12 @@ internal fun NowPlayingOverlay(
             ),
         color = ResonanceColors.Canvas,
     ) {
-        CompositionLocalProvider(LocalGlassState provides null, LocalAlbumAtmosphere provides atmosphere) {
+        CompositionLocalProvider(LocalGlassState provides glassState, LocalAlbumAtmosphere provides atmosphere) {
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 val wide = maxWidth >= 720.dp || maxWidth > maxHeight * 1.35f
                 val short = maxHeight < 560.dp || (LocalDensity.current.fontScale > 1.2f && maxHeight < 840.dp)
-                NowPlayingBackdrop(track.artworkSeed, playerState.isPlaying && ambientMotionEnabled, Modifier.matchParentSize())
+                FrostedBackdrop(track, Modifier.matchParentSize().hazeSource(glassState), immersive = true)
+                val statusText = if (playerState.isBuffering) "正在缓冲…" else if (playerState.isPreparing) "正在准备…" else null
                 Column(
                     modifier = Modifier.align(Alignment.Center).widthIn(max = 1280.dp).heightIn(max = 900.dp)
                         .fillMaxSize().padding(horizontal = if (wide) 32.dp else 20.dp, vertical = 10.dp),
@@ -304,17 +314,19 @@ internal fun NowPlayingOverlay(
                         onAudioEffectPresetChange = onAudioEffectPresetChange,
                     )
                     if (wide && !short) {
+                        Box(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 420.dp).fillMaxWidth()) {
+                            PaneSwitcher(pane, onSelect = { paneName = it.name })
+                        }
                         Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp),
                             verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(.43f).fillMaxHeight().padding(vertical = 20.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                                 ArtworkPane(track, Modifier.weight(1f), onDismiss)
                                 Spacer(Modifier.height(20.dp))
-                                TrackIdentity(track)
+                                TrackIdentity(track, statusText = statusText)
                                 Spacer(Modifier.height(12.dp))
                             }
                             Column(Modifier.weight(.57f).fillMaxHeight().padding(vertical = 16.dp)) {
-                                PaneSwitcher(pane, onSelect = { paneName = it.name })
                                 CompositionLocalProvider(LocalLyricStage provides true) {
                                     PaneContent(pane, { paneName = it.name }, track, playerState, lyricsState, queue,
                                         onSeek, onTrackSelected, onRefreshLyrics, onRequestAiLyrics,
@@ -330,6 +342,11 @@ internal fun NowPlayingOverlay(
                             .musicDock().padding(horizontal = 28.dp, vertical = 8.dp)) {
                             PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
                             PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                                TextButton(onClick = { playbackSettings = true }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音量") }
+                                TextButton(onClick = { audioEffects = true }) { Icon(Icons.Default.Tune, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音效") }
+                                if (onOpenSleepTimer != null) TextButton(onClick = onOpenSleepTimer) { Icon(Icons.Default.Timer, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("定时") }
+                            }
                         }
                         Spacer(Modifier.height(12.dp))
                     } else if (wide) {
@@ -343,15 +360,18 @@ internal fun NowPlayingOverlay(
                                     onDismiss = onDismiss, modifier = Modifier.weight(1f),
                                     onPlayNext = onPlayNext, onRemoveFromQueue = onRemoveFromQueue,
                                     onClearQueue = onClearQueue, onMoveInQueueOrder = onMoveInQueueOrder)
-                                TrackIdentity(track, compact = true, singleLine = true)
+                                TrackIdentity(track, compact = true, singleLine = true, statusText = statusText)
                             }
-                            Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                            Column(Modifier.weight(1f).fillMaxHeight().musicDock().padding(12.dp), verticalArrangement = Arrangement.Center) {
                                 PaneSwitcher(pane, onSelect = { paneName = it.name })
                                 PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
                                 PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
                             }
                         }
                     } else {
+                        PaneSwitcher(pane, onSelect = { paneName = it.name })
+                        Spacer(Modifier.height(8.dp))
+                        if (pane != PlayerPane.Cover) TrackIdentity(track, compact = true, statusText = statusText)
                         PaneContent(
                             pane = pane,
                             onPaneChange = { paneName = it.name },
@@ -374,17 +394,21 @@ internal fun NowPlayingOverlay(
                             onMoveInQueueOrder = onMoveInQueueOrder,
                         )
                         Spacer(Modifier.height(8.dp))
-                        TrackIdentity(track, compact = short || pane != PlayerPane.Cover)
+                        if (pane == PlayerPane.Cover) TrackIdentity(track, compact = short, statusText = statusText)
                         if (pane == PlayerPane.Cover) {
                             HeroSyncedLyricsPreview(track, playerState.progress, playerState.positionMs, lyricsState,
                                 onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name }, modifier = Modifier.fillMaxWidth())
                         }
-                        Spacer(Modifier.height(6.dp))
-                        PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
-                        PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
-                        Spacer(Modifier.height(2.dp))
-                        Spacer(Modifier.height(4.dp))
-                        PaneSwitcher(pane, onSelect = { paneName = it.name })
+                        Spacer(Modifier.height(10.dp))
+                        Column(Modifier.fillMaxWidth().musicDock().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
+                            PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                            if (!short) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                TextButton(onClick = { playbackSettings = true }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音量") }
+                                TextButton(onClick = { audioEffects = true }) { Icon(Icons.Default.Tune, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音效") }
+                                if (onOpenSleepTimer != null) TextButton(onClick = onOpenSleepTimer) { Icon(Icons.Default.Timer, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("定时") }
+                            }
+                        }
                         Spacer(Modifier.height(4.dp))
                     }
                 }
@@ -473,25 +497,11 @@ private fun NowPlayingTopBar(
                 )
             }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp, bottom = 6.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(ResonanceColors.DividerStrong)
-            )
-        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
-                .padding(vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             TactileTopBarButton(
@@ -587,30 +597,14 @@ private fun NowPlayingTopBar(
 /** One quiet segmented dock; tabs keep their native selection and keyboard semantics. */
 @Composable
 private fun PaneSwitcher(selected: PlayerPane, onSelect: (PlayerPane) -> Unit) {
-    val position = animateFloatAsState(selected.ordinal.toFloat(),
-        if (LocalReducedMotion.current || LocalInputModeManager.current.inputMode == InputMode.Keyboard) tween(0)
-        else ResonanceMotionTokens.SelectionBounceSpec, label = "playerPaneIndicator")
-    val face = ResonanceColors.Raised
-    Row(Modifier.fillMaxWidth().selectableGroup().clip(RoundedCornerShape(20.dp))
-        .background(ResonanceColors.TextPrimary.copy(alpha = .045f)).drawWithCache {
-            val inset = 4.dp.toPx()
-            val width = ((size.width - inset * 2) / PlayerPane.entries.size).coerceAtLeast(0f)
-            onDrawBehind {
-                drawRoundRect(face, topLeft = androidx.compose.ui.geometry.Offset(inset + width * position.value, inset),
-                    size = androidx.compose.ui.geometry.Size(width, (size.height - inset * 2).coerceAtLeast(0f)),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(16.dp.toPx()))
+    com.resonance.player.design.GlassSegmentedControl(PlayerPane.entries.map { it.label }, selected.ordinal,
+        { onSelect(PlayerPane.entries[it]) }, tabModifier = { index ->
+            when (PlayerPane.entries[index]) {
+                PlayerPane.Lyrics -> Modifier.tutorialTarget(TutorialTarget.PlayerLyrics)
+                PlayerPane.Queue -> Modifier.tutorialTarget(TutorialTarget.PlayerQueue)
+                PlayerPane.Cover -> Modifier
             }
-        }.padding(4.dp)) {
-        PlayerPane.entries.forEach { pane ->
-            ResonanceSelectionTab(pane.label, pane == selected, { onSelect(pane) },
-                icon = pane.icon, contained = true,
-                modifier = Modifier.weight(1f).then(when (pane) {
-                    PlayerPane.Lyrics -> Modifier.tutorialTarget(TutorialTarget.PlayerLyrics)
-                    PlayerPane.Queue -> Modifier.tutorialTarget(TutorialTarget.PlayerQueue)
-                    else -> Modifier
-                }))
-        }
-    }
+        })
 }
 
 @Composable
@@ -639,27 +633,14 @@ private fun PaneContent(
     val reducedMotion = LocalReducedMotion.current
     val keyboardNavigation = LocalInputModeManager.current.inputMode == InputMode.Keyboard
 
-    AnimatedContent(
-        targetState = pane,
+    ContinuousPageTransition(
+        target = pane,
         modifier = modifier.fillMaxWidth().testTag("player-page-swipe").horizontalPageSwipe(
             index = pane.ordinal, count = PlayerPane.entries.size,
             enabled = LocalTutorial.current?.step == null,
             onSelect = { onPaneChange(PlayerPane.entries[it]) },
         ),
-        transitionSpec = {
-            if (keyboardNavigation) {
-                androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
-            } else if (reducedMotion) {
-                fadeIn(tween(90)) togetherWith fadeOut(tween(90))
-            } else {
-                val dir = if (targetState.ordinal >= initialState.ordinal) 1 else -1
-                (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { it * dir } +
-                    fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
-                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -it * dir } +
-                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec))
-            } using null
-        },
-        label = "playerPaneContent",
+        direction = { from, to -> if (to.ordinal >= from.ordinal) 1 else -1 },
     ) { active ->
         when (active) {
             PlayerPane.Cover -> {
@@ -715,8 +696,6 @@ private fun HeroSyncedLyricsPreview(
     onOpenFullLyrics: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val lyricMotion = resonanceSpring<androidx.compose.ui.unit.IntOffset>()
-    val reducedMotion = LocalReducedMotion.current
     val stage = LocalLyricStage.current
     val compactPreview = !stage && LocalDensity.current.fontScale > 1.2f
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
@@ -744,106 +723,14 @@ private fun HeroSyncedLyricsPreview(
                     val positionWithOffset = positionMs + lyrics.offsetMs
                     val activeIndex = lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionWithOffset }
 
-                    AnimatedContent(
-                        targetState = activeIndex,
-                        transitionSpec = {
-                            if (reducedMotion) {
-                                fadeIn(tween(0)) togetherWith fadeOut(tween(0))
-                            } else if (targetState > initialState) {
-                                (slideInVertically(
-                                    animationSpec = lyricMotion
-                                ) { height -> (height * 0.45f).toInt() } + fadeIn(tween(240)))
-                                    .togetherWith(
-                                        slideOutVertically(
-                                            animationSpec = lyricMotion
-                                        ) { height -> -(height * 0.45f).toInt() } + fadeOut(tween(180))
-                                    )
-                            } else {
-                                (slideInVertically(
-                                    animationSpec = lyricMotion
-                                ) { height -> -(height * 0.45f).toInt() } + fadeIn(tween(240)))
-                                    .togetherWith(
-                                        slideOutVertically(
-                                            animationSpec = lyricMotion
-                                        ) { height -> (height * 0.45f).toInt() } + fadeOut(tween(180))
-                                    )
-                            }
-                        },
-                        label = "heroSyncedLyricsScroll",
-                        modifier = Modifier.fillMaxWidth().clipToBounds(),
-                    ) { targetIdx ->
-                        val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
-                        val prevLine = if (targetIdx > 0) lyrics.lines.getOrNull(targetIdx - 1) else null
-                        val currentLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx) else null
-                        val nextLine = if (targetIdx >= 0) lyrics.lines.getOrNull(targetIdx + 1) else lyrics.lines.firstOrNull()
-
-                        fun linePrimaryText(line: LyricLine?): String? = when {
-                            line == null -> null
-                            display == com.resonance.player.model.LyricDisplay.Translation -> line.translation?.takeIf(String::isNotBlank) ?: line.text
-                            else -> line.text
-                        }
-
-                        fun lineTranslationText(line: LyricLine?): String? = when {
-                            line == null -> null
-                            display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank() -> line.translation
-                            else -> null
-                        }
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            val prevText = linePrimaryText(prevLine)
-                            if (prevText != null && !compactPreview) {
-                                Text(
-                                    prevText,
-                                    style = if (stage) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodySmall,
-                                    color = ResonanceColors.Dimmer,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                )
-                                Spacer(Modifier.height(if (stage) 24.dp else 6.dp))
-                            }
-                            val currentPrimary = if (targetIdx >= 0) (linePrimaryText(currentLine) ?: "…") else "前奏 · 等待人声"
-                            Text(
-                                currentPrimary,
-                                style = if (stage) MaterialTheme.typography.headlineLarge.copy(fontSize = 36.sp, lineHeight = 48.sp)
-                                    else if (compactPreview) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp, lineHeight = 30.sp),
-                                fontWeight = FontWeight.SemiBold,
-                                color = ResonanceColors.TextPrimary,
-                                maxLines = if (stage) 4 else 2,
-                                softWrap = true,
-                                overflow = TextOverflow.Ellipsis,
-                                textAlign = TextAlign.Center,
-                            )
-                            val currentTrans = lineTranslationText(currentLine)
-                            if (currentTrans != null) {
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    currentTrans,
-                                    style = if (stage) MaterialTheme.typography.titleMedium else MaterialTheme.typography.bodySmall,
-                                    color = ResonanceColors.Muted,
-                                    maxLines = 2,
-                                    softWrap = true,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                            val nextText = linePrimaryText(nextLine)
-                            if (nextText != null && !compactPreview) {
-                                Spacer(Modifier.height(if (stage) 24.dp else 6.dp))
-                                Text(
-                                    nextText,
-                                    style = if (stage) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodySmall,
-                                    color = ResonanceColors.Dim,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    textAlign = TextAlign.Center,
-                                )
-                            }
-                        }
-                    }
+                    SyncedLyricsPreview(
+                        lyrics = lyrics,
+                        activeIndex = activeIndex,
+                        display = LocalMusicFeatures.current?.settings?.lyricDisplay
+                            ?: com.resonance.player.model.LyricDisplay.Bilingual,
+                        stage = stage,
+                        compact = compactPreview,
+                    )
                 } else {
                     val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
                     val firstLineText = lyrics.lines.firstOrNull()?.let { line ->
@@ -873,7 +760,7 @@ private fun HeroSyncedLyricsPreview(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ResonanceColors.Dim, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("暂无歌词 · 点击查看或使用 AI 检索", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
+                    Text("暂无歌词 · 点击查找", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim)
                 }
             }
             LyricsUiState.Idle -> {
@@ -921,13 +808,12 @@ private fun ArtworkPane(
         ),
         contentAlignment = Alignment.Center,
     ) {
-        val artworkCorner = 10.dp
-        val artworkSize = minOf(maxWidth - 48.dp, maxHeight - 48.dp, 352.dp).coerceAtLeast(0.dp)
+        val artworkCorner = 14.dp
+        val artworkSize = minOf(maxWidth - 24.dp, maxHeight - 24.dp, 380.dp).coerceAtLeast(0.dp)
         Box(
             modifier = Modifier
                 .size(artworkSize)
                 .testTag("player-artwork")
-                .musicSleevePerspective()
                 .shadow(
                     elevation = 16.dp,
                     shape = RoundedCornerShape(artworkCorner),
@@ -955,13 +841,13 @@ private fun ArtworkPane(
 }
 
 @Composable
-private fun TrackIdentity(track: Track, compact: Boolean = false, singleLine: Boolean = false) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+private fun TrackIdentity(track: Track, compact: Boolean = false, singleLine: Boolean = false, statusText: String? = null) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalAlignment = Alignment.Start) {
         Text(track.title, style = if (compact) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center, maxLines = if (singleLine) 1 else 2, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Start, maxLines = if (singleLine) 1 else 2, overflow = TextOverflow.Ellipsis,
             color = ResonanceColors.TextPrimary, fontWeight = FontWeight.Bold)
-        Text(track.artist.ifBlank { "未知艺术家" }, style = MaterialTheme.typography.bodyMedium,
-            color = ResonanceColors.Muted, textAlign = TextAlign.Center, maxLines = if (singleLine) 1 else 2,
+        Text(statusText ?: track.artist.ifBlank { "未知艺术家" }, style = MaterialTheme.typography.bodyMedium,
+            color = if (statusText != null) ResonanceColors.Primary else ResonanceColors.Muted, textAlign = TextAlign.Start, maxLines = if (singleLine) 1 else 2,
             overflow = TextOverflow.Ellipsis)
     }
 }
@@ -983,12 +869,14 @@ private fun TactilePlayPauseButton(
     isPlaying: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    isLoading: Boolean = false,
 ) {
     SoftHeroPlayButton(
         isPlaying = isPlaying,
         onClick = onClick,
         modifier = modifier,
-        size = 70.dp,
+        size = 58.dp,
+        isLoading = isLoading,
     )
 }
 
@@ -1003,7 +891,7 @@ private fun TactileSkipButton(
         isNext = icon == Icons.Default.SkipNext,
         onClick = onClick,
         modifier = modifier,
-        size = 54.dp,
+        size = 46.dp,
         contentDescription = contentDescription,
     )
 }
@@ -1021,7 +909,7 @@ private fun TactileSecondaryButton(
         contentDescription = contentDescription,
         onClick = onClick,
         modifier = modifier,
-        size = 44.dp,
+        size = 40.dp,
         isActive = isActive,
     )
 }
@@ -1056,6 +944,7 @@ private fun PlaybackControls(
         )
         TactilePlayPauseButton(
             isPlaying = playerState.isPlaying,
+            isLoading = playerState.isLoading,
             onClick = onTogglePlay,
         )
         TactileSkipButton(
@@ -1185,13 +1074,11 @@ private fun LyricsPane(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(8.dp))
-            .background(ResonanceColors.CanvasElevated)
             .padding(8.dp)
     ) {
         when (state) {
-            LyricsUiState.Idle, LyricsUiState.Loading -> LyricsLoading()
-            is LyricsUiState.Unavailable -> Column(Modifier.fillMaxSize()) { TranslationControls(); Box(Modifier.weight(1f)) { LyricsUnavailable(state.message, onRefresh, onRequestAi) } }
+            LyricsUiState.Idle, LyricsUiState.Loading -> LyricsStatusContent("正在查找歌词…", true, onRefresh, onRequestAi)
+            is LyricsUiState.Unavailable -> LyricsStatusContent(state.message, false, onRefresh, onRequestAi)
             is LyricsUiState.Ready -> LyricsContent(
                 track = track,
                 progress = progress,
@@ -1206,46 +1093,44 @@ private fun LyricsPane(
 }
 
 @Composable
-private fun LyricsLoading() {
+private fun LyricsStatusContent(message: String, loading: Boolean, onRefresh: () -> Unit, onRequestAi: () -> Unit) {
+    val feature = LocalMusicFeatures.current
+    val generating = feature?.generatingTextLyrics == true || feature?.generatingLyrics == true
+    var toolsExpanded by remember { mutableStateOf(false) }
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp)
+            .testTag("lyrics-status"),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.spacedBy(8.dp, if (toolsExpanded) Alignment.Top else Alignment.CenterVertically),
     ) {
-        CircularProgressIndicator(color = ResonanceColors.Primary, modifier = Modifier.size(32.dp))
-        Spacer(Modifier.height(14.dp))
-        Text("正在匹配歌词…", style = MaterialTheme.typography.titleSmall, color = ResonanceColors.Muted)
-    }
-}
-
-@Composable
-private fun LyricsUnavailable(message: String, onRefresh: () -> Unit, onRequestAi: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(Icons.Default.GraphicEq, contentDescription = null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(40.dp))
-        Spacer(Modifier.height(12.dp))
-        Text(message, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center, color = ResonanceColors.Muted)
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TextButton(onClick = onRefresh) {
-                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Primary)
-                Spacer(Modifier.width(6.dp))
-                Text("重试检索", color = ResonanceColors.Primary)
+        if (!toolsExpanded) {
+            if (loading || generating) CircularProgressIndicator(Modifier.size(28.dp), color = ResonanceColors.Primary)
+            else Icon(Icons.Default.GraphicEq, null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(24.dp))
+            Text(when {
+                feature?.generatingTextLyrics == true -> "正在请求 AI 歌词文本…"
+                feature?.generatingLyrics == true -> "正在识别人声与时间轴…"
+                else -> message
+            }, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = ResonanceColors.Muted)
+            if (!loading && !generating) {
+                androidx.compose.material3.FilledTonalButton(onClick = onRefresh) { Text("查找歌词") }
             }
-            OutlinedButton(onClick = onRequestAi) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = ResonanceColors.Primary)
-                Spacer(Modifier.width(6.dp))
-                Text("AI 查找歌词", color = ResonanceColors.Primary)
+            if (!feature?.textLyricsError.isNullOrBlank()) {
+                Text(feature!!.textLyricsError, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("lyrics-text-error"))
             }
+        }
+        TextButton(onClick = { toolsExpanded = !toolsExpanded }, modifier = Modifier.testTag("lyric-tools")) {
+            Text(if (toolsExpanded) "收起工具" else "歌词工具")
+        }
+        if (toolsExpanded) {
+            if (feature != null) TranslationControls()
+            else TextButton(onClick = onRequestAi) { Text("AI 生成歌词文本") }
         }
     }
 }
 
 @Composable
-private fun LyricsContent(
+internal fun LyricsContent(
     track: Track,
     progress: Float,
     nativePositionMs: Long? = null,
@@ -1276,78 +1161,81 @@ private fun LyricsContent(
     } else {
         -1
     }
-    val listState = rememberLazyListState()
+    val listState = rememberLyricListState(track.id, lyrics.lines, activeIndex)
     val isDragged by listState.interactionSource.collectIsDraggedAsState()
-    var lastUserDragMark by remember { mutableStateOf<TimeMark?>(null) }
-
-    LaunchedEffect(isDragged) {
-        if (isDragged) {
-            lastUserDragMark = TimeSource.Monotonic.markNow()
-        }
-    }
-
-    val density = LocalDensity.current
-    val approxItemHeight = with(density) { 52.dp.roundToPx() }
-
-    LaunchedEffect(activeIndex) {
-        if (activeIndex >= 0) {
-            val mark = lastUserDragMark
-            val allowAutoScroll = !isDragged && (mark == null || mark.elapsedNow().inWholeMilliseconds >= 3000L)
-            if (allowAutoScroll) {
-                val viewportHeight = listState.layoutInfo.viewportSize.height
-                val itemInfo = listState.layoutInfo.visibleItemsInfo.find { it.index == activeIndex }
-                if (itemInfo != null) {
-                    val targetOffset = (viewportHeight - itemInfo.size) / 2
-                    val diff = itemInfo.offset - targetOffset
-                    if (reducedMotion) {
-                        listState.scrollBy(diff.toFloat())
-                    } else {
-                        listState.animateScrollBy(
-                            diff.toFloat(),
-                            animationSpec = tween(durationMillis = 280, easing = ResonanceMotionTokens.ExitEasing)
-                        )
-                    }
-                } else {
-                    listState.scrollToItem(activeIndex)
-                    val itemNow = listState.layoutInfo.visibleItemsInfo.find { it.index == activeIndex }
-                    val currentOffset = itemNow?.offset ?: 0
-                    val currentSize = itemNow?.size ?: approxItemHeight
-                    val realTarget = (viewportHeight - currentSize) / 2
-                    val diff = currentOffset - realTarget
-                    if (diff != 0) {
-                        listState.scrollBy(diff.toFloat())
-                    }
+    var browsing by remember(listState) { mutableStateOf(false) }
+    var userInputRevision by remember(listState) { mutableStateOf(0) }
+    var followRequest by remember(listState) { mutableStateOf(0) }
+    val browsingConnection = remember(listState) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (source == NestedScrollSource.UserInput && available.y != 0f) {
+                    browsing = true
+                    userInputRevision++
                 }
+                return Offset.Zero
             }
         }
     }
+    LaunchedEffect(isDragged) {
+        if (isDragged) browsing = true
+    }
+    // Time starts after the finger and fling stop. A paused song can still resume following.
+    LaunchedEffect(browsing, isDragged, listState.isScrollInProgress, userInputRevision) {
+        if (browsing && !isDragged && !listState.isScrollInProgress) {
+            delay(5_000)
+            browsing = false
+        }
+    }
+    val display = LocalMusicFeatures.current?.settings?.lyricDisplay
+        ?: com.resonance.player.model.LyricDisplay.Bilingual
+    FollowLyric(
+        listState, activeIndex.coerceAtLeast(0),
+        enabled = lyrics.synchronized && !browsing && !isDragged,
+        reducedMotion = reducedMotion,
+        layoutKey = listOf(display, LocalDensity.current.fontScale, lyrics.lines),
+        request = followRequest,
+    )
+    var toolsExpanded by remember(track.id) { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        TranslationControls()
-        Text(if (lyrics.synchronized) "同步歌词 · ${lyrics.source}" else "纯文本歌词 · 可手动滚动，或生成同步歌词", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, modifier = Modifier.padding(horizontal = 8.dp))
-        if (lyrics.synchronized && onAdjustOffset != null) {
-            var calibrating by remember(track.id) { mutableStateOf(false) }
-            TextButton(onClick = { calibrating = !calibrating }) {
-                Text(if (calibrating) "收起校准" else "时间不准？校准时间轴")
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (lyrics.synchronized) "同步歌词 · ${lyrics.source}" else "纯文本歌词 · 可手动滚动",
+                style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+            )
+            TextButton(onClick = { toolsExpanded = !toolsExpanded }, modifier = Modifier.testTag("lyric-tools")) {
+                Text(if (toolsExpanded) "收起工具" else "歌词工具")
             }
-            if (calibrating) {
-                Text("整体提前／落后可校准；越唱偏差越大时请更换歌词或音源版本。",
-                    style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    TextButton(onClick = { onAdjustOffset(-500L) }) { Text("歌词提前了") }
-                    TextButton(onClick = { onAdjustOffset(-lyrics.offsetMs) }, enabled = lyrics.offsetMs != 0L) {
-                        Text(if (lyrics.offsetMs == 0L) "正常" else "%+.1fs · 重置".format(lyrics.offsetMs / 1000.0))
+        }
+        if (toolsExpanded) {
+            TranslationControls()
+            if (lyrics.synchronized && onAdjustOffset != null) {
+                var calibrating by remember(track.id) { mutableStateOf(false) }
+                TextButton(onClick = { calibrating = !calibrating }) {
+                    Text(if (calibrating) "收起校准" else "时间不准？校准时间轴")
+                }
+                if (calibrating) {
+                    Text("整体提前／落后可校准；越唱偏差越大时请更换歌词或音源版本。",
+                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        TextButton(onClick = { onAdjustOffset(-500L) }) { Text("歌词提前了") }
+                        TextButton(onClick = { onAdjustOffset(-lyrics.offsetMs) }, enabled = lyrics.offsetMs != 0L) {
+                            Text(if (lyrics.offsetMs == 0L) "正常" else "%+.1fs · 重置".format(lyrics.offsetMs / 1000.0))
+                        }
+                        TextButton(onClick = { onAdjustOffset(500L) }) { Text("歌词落后了") }
                     }
-                    TextButton(onClick = { onAdjustOffset(500L) }) { Text("歌词落后了") }
                 }
             }
         }
         BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            val centerPadding = (maxHeight / 2 - 28.dp).coerceAtLeast(20.dp)
+            val centerPadding = if (lyrics.synchronized) maxHeight / 2 else 8.dp
 
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().testTag("player-lyrics-list").nestedScroll(browsingConnection),
                 contentPadding = PaddingValues(top = centerPadding, bottom = centerPadding, start = 8.dp, end = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
@@ -1356,26 +1244,28 @@ private fun LyricsContent(
                     LyricRow(
                         line = line,
                         active = isActive,
+                        modifier = Modifier.testTag("lyric-line-$index").semantics { selected = isActive },
                         onClick = line.timestampMs?.takeIf { lyrics.synchronized }?.let { timestamp ->
                             {
-                                lastUserDragMark = null
-                                onSeek((timestamp - lyrics.offsetMs).coerceAtLeast(0L).toFloat() / durationMs.toFloat())
+                                browsing = false
+                                followRequest++
+                                onSeek(((timestamp - lyrics.offsetMs).coerceAtLeast(0L).toFloat() / durationMs.toFloat()).coerceIn(0f, 1f))
                             }
                         },
                     )
                 }
             }
 
-            val mark = lastUserDragMark
-            val isPaused = mark != null && mark.elapsedNow().inWholeMilliseconds < 3500L
-            if (isPaused && activeIndex >= 0) {
+            if (browsing && lyrics.synchronized && activeIndex >= 0) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(bottom = 16.dp)
                         .clip(CircleShape)
                         .background(ResonanceColors.Primary)
-                        .clickable { lastUserDragMark = null }
+                        .testTag("lyric-return-current")
+                        .clickable(role = Role.Button) { browsing = false; followRequest++ }
+                        .heightIn(min = 48.dp)
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -1383,14 +1273,14 @@ private fun LyricsContent(
                         Icon(
                             Icons.Default.PlayArrow,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             "回到当前播放",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
@@ -1401,11 +1291,11 @@ private fun LyricsContent(
 }
 
 @Composable
-private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
+private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
     val stage = LocalLyricStage.current
     val interactionSource = remember { MutableInteractionSource() }
     val color by animateColorAsState(
-        targetValue = if (active) ResonanceColors.TextPrimary else ResonanceColors.Muted,
+        targetValue = if (active) ResonanceColors.Notice else ResonanceColors.Muted,
         animationSpec = tween(motionDuration(160)),
         label = "lyricColor",
     )
@@ -1419,10 +1309,11 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
     } else Modifier
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .then(interaction)
+            .lyricFocus(active)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1431,15 +1322,15 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?) {
         Text(
             if (display == com.resonance.player.model.LyricDisplay.Translation) line.translation ?: line.text else line.text,
             style = if (stage) MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 38.sp)
-                else if (active) MaterialTheme.typography.titleLarge else MaterialTheme.typography.bodyLarge,
-            fontWeight = if (active) FontWeight.Bold else FontWeight.Normal,
+                else MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Medium,
             color = color,
         )
         if (display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank()) {
             Text(
                 line.translation,
                 style = if (stage) MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 26.sp) else MaterialTheme.typography.bodySmall,
-                color = color.copy(alpha = if (active) 0.85f else 0.55f),
+                color = if (active) color else color.copy(alpha = color.alpha * 0.85f),
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
@@ -1464,8 +1355,6 @@ private fun QueuePane(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .background(ResonanceColors.CanvasElevated)
             .padding(10.dp)
     ) {
         if (queue.isEmpty()) {

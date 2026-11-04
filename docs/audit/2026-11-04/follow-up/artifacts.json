@@ -1,0 +1,19 @@
+{
+  "version": "0.6.5 / 39",
+  "kind": "Debug and instrumented-test APK; not a signed release or device installation",
+  "artifacts": [
+    {
+      "path": "composeApp/build/outputs/apk/androidTest/debug/composeApp-debug-androidTest.apk",
+      "bytes": 1340279,
+      "sha256": "1fed315882970635221ea1e9f6274b86d3e7edaddf387a45b8761dd6989b5440"
+    },
+    {
+      "path": "composeApp/build/outputs/apk/debug/Resonance-0.6.5-debug.apk",
+      "bytes": 177194149,
+      "sha256": "97d318b7a07fbb2465fcc59912ad5e0976f36abc9296734028e7a3a766cb63c4"
+    }
+  ],
+  "lint": {
+    "Warning": 107
+  }
+}

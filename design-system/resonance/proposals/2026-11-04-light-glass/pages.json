@@ -1,0 +1,470 @@
+[
+  {
+    "id": "library",
+    "title": "音乐库 · 歌曲",
+    "group": "音乐库",
+    "source": "LibraryShell.LibraryScreen"
+  },
+  {
+    "id": "playlists",
+    "title": "音乐库 · 歌单",
+    "group": "音乐库",
+    "source": "LibraryShell.LibraryTab.Playlists"
+  },
+  {
+    "id": "albums",
+    "title": "音乐库 · 专辑",
+    "group": "音乐库",
+    "source": "LibraryShell.LibraryTab.Albums"
+  },
+  {
+    "id": "artists",
+    "title": "音乐库 · 歌手",
+    "group": "音乐库",
+    "source": "LibraryShell.LibraryTab.Artists"
+  },
+  {
+    "id": "playlist",
+    "title": "歌单详情",
+    "group": "音乐库",
+    "source": "LibraryDetail.PlaylistDetail"
+  },
+  {
+    "id": "album",
+    "title": "专辑详情",
+    "group": "音乐库",
+    "source": "LibraryDetail.AlbumDetail"
+  },
+  {
+    "id": "artist",
+    "title": "歌手详情",
+    "group": "音乐库",
+    "source": "LibraryDetail.ArtistDetail"
+  },
+  {
+    "id": "favorites",
+    "title": "我喜欢的音乐",
+    "group": "音乐库",
+    "source": "LibraryDetail.Favorites"
+  },
+  {
+    "id": "search",
+    "title": "本地搜索",
+    "group": "查找音乐",
+    "source": "LibraryDestination.Discover / LibrarySearchIndex"
+  },
+  {
+    "id": "online",
+    "title": "在线搜索",
+    "group": "查找音乐",
+    "source": "OnlineSongSearch"
+  },
+  {
+    "id": "semantic",
+    "title": "描述找歌",
+    "group": "查找音乐",
+    "source": "SemanticSongSearch"
+  },
+  {
+    "id": "recommendations",
+    "title": "每日推荐",
+    "group": "发现与推荐",
+    "source": "RecommendationsScreen"
+  },
+  {
+    "id": "recommendation-history",
+    "title": "推荐历史",
+    "group": "发现与推荐",
+    "source": "RecommendationHistoryScreen"
+  },
+  {
+    "id": "player-cover",
+    "title": "播放器 · 封面",
+    "group": "播放器",
+    "source": "NowPlayingOverlay"
+  },
+  {
+    "id": "player-lyrics",
+    "title": "播放器 · 歌词",
+    "group": "播放器",
+    "source": "NowPlayingOverlay"
+  },
+  {
+    "id": "player-queue",
+    "title": "播放器 · 队列",
+    "group": "播放器",
+    "source": "NowPlayingOverlay"
+  },
+  {
+    "id": "assistant",
+    "title": "音乐助手 · 对话",
+    "group": "音乐助手",
+    "source": "AssistantScreen / AssistantMusicAttachment"
+  },
+  {
+    "id": "assistant-welcome",
+    "title": "音乐助手 · 新会话",
+    "group": "音乐助手",
+    "source": "AssistantWelcome"
+  },
+  {
+    "id": "assistant-history",
+    "title": "助手会话历史",
+    "group": "音乐助手",
+    "source": "AssistantScreen history dialog"
+  },
+  {
+    "id": "together",
+    "title": "一起听 · 创建房间",
+    "group": "一起听",
+    "source": "TogetherScreen disconnected"
+  },
+  {
+    "id": "join",
+    "title": "一起听 · 加入朋友",
+    "group": "一起听",
+    "source": "TogetherScreen joining"
+  },
+  {
+    "id": "room",
+    "title": "一起听 · 房间",
+    "group": "一起听",
+    "source": "TogetherScreen connected / TogetherRoomComponents"
+  },
+  {
+    "id": "members",
+    "title": "房间成员",
+    "group": "一起听",
+    "source": "TogetherRoomComponents / host controls"
+  },
+  {
+    "id": "room-queue",
+    "title": "共享播放队列",
+    "group": "一起听",
+    "source": "TogetherRoomComponents expanded queue"
+  },
+  {
+    "id": "room-ai",
+    "title": "房间 AI 选歌",
+    "group": "一起听",
+    "source": "TogetherAiQueue"
+  },
+  {
+    "id": "partners",
+    "title": "常听伙伴",
+    "group": "一起听",
+    "source": "TogetherCompanionPanel"
+  },
+  {
+    "id": "room-help",
+    "title": "共听连接指南",
+    "group": "一起听",
+    "source": "TogetherScreen connection help / details"
+  },
+  {
+    "id": "tools",
+    "title": "工具",
+    "group": "工具与管理",
+    "source": "ProfileScreen"
+  },
+  {
+    "id": "import",
+    "title": "导入音乐",
+    "group": "工具与管理",
+    "source": "ImportScreen"
+  },
+  {
+    "id": "import-progress",
+    "title": "导入进度",
+    "group": "工具与管理",
+    "source": "MusicTaskProgress / ImportProgress"
+  },
+  {
+    "id": "conversion",
+    "title": "音频转换",
+    "group": "工具与管理",
+    "source": "ImportScreen KGMA/KGG flow"
+  },
+  {
+    "id": "archive",
+    "title": "歌单导入与导出",
+    "group": "工具与管理",
+    "source": "SyncScreen / SyncPackageDialog"
+  },
+  {
+    "id": "archive-preview",
+    "title": "歌单包内容预览",
+    "group": "工具与管理",
+    "source": "SyncPackageDialog"
+  },
+  {
+    "id": "tasks",
+    "title": "音乐任务",
+    "group": "工具与管理",
+    "source": "MusicTasksScreen"
+  },
+  {
+    "id": "sources",
+    "title": "歌源管理",
+    "group": "工具与管理",
+    "source": "MusicSourcesScreen"
+  },
+  {
+    "id": "source-settings",
+    "title": "来源偏好",
+    "group": "工具与管理",
+    "source": "MusicSourcesScreen source preferences"
+  },
+  {
+    "id": "storage",
+    "title": "下载与空间",
+    "group": "工具与管理",
+    "source": "MusicStorageScreen"
+  },
+  {
+    "id": "cleanup",
+    "title": "空间清理预览",
+    "group": "工具与管理",
+    "source": "MusicStorageScreen pending cleanup"
+  },
+  {
+    "id": "manager",
+    "title": "曲库智能管家",
+    "group": "工具与管理",
+    "source": "SmartManagerScreen"
+  },
+  {
+    "id": "duplicates",
+    "title": "重复版本检查",
+    "group": "工具与管理",
+    "source": "SmartManagerScreen duplicate review"
+  },
+  {
+    "id": "taste",
+    "title": "音乐品味画像",
+    "group": "工具与管理",
+    "source": "TasteRadarScreen"
+  },
+  {
+    "id": "settings",
+    "title": "设置",
+    "group": "设置与帮助",
+    "source": "SettingsScreen / MusicFeatureSettingsSection"
+  },
+  {
+    "id": "appearance",
+    "title": "外观与动态效果",
+    "group": "设置与帮助",
+    "source": "AppearanceSettings"
+  },
+  {
+    "id": "playback",
+    "title": "播放与音效",
+    "group": "设置与帮助",
+    "source": "MusicFeatureSettingsSection playback"
+  },
+  {
+    "id": "lyrics-settings",
+    "title": "歌词与翻译",
+    "group": "设置与帮助",
+    "source": "TranslationControls / floating lyrics preferences"
+  },
+  {
+    "id": "ai-settings",
+    "title": "模型与 API",
+    "group": "设置与帮助",
+    "source": "AiConnectionEditor"
+  },
+  {
+    "id": "schedule",
+    "title": "每日推荐计划",
+    "group": "设置与帮助",
+    "source": "MusicFeatureSettingsSection recommendations"
+  },
+  {
+    "id": "speech",
+    "title": "同步歌词生成",
+    "group": "设置与帮助",
+    "source": "MusicFeatureSettingsSection speech"
+  },
+  {
+    "id": "account",
+    "title": "B 站账号",
+    "group": "设置与帮助",
+    "source": "BilibiliLoginDialogs"
+  },
+  {
+    "id": "login-qr",
+    "title": "扫码登录状态",
+    "group": "设置与帮助",
+    "source": "BilibiliQrLoginDialog"
+  },
+  {
+    "id": "folders",
+    "title": "本地音乐与歌词目录",
+    "group": "设置与帮助",
+    "source": "SettingsScreen local folders"
+  },
+  {
+    "id": "audio-help",
+    "title": "音量平衡说明",
+    "group": "设置与帮助",
+    "source": "AudioBalanceHelpScreen"
+  },
+  {
+    "id": "tutorial",
+    "title": "使用教程",
+    "group": "设置与帮助",
+    "source": "TutorialScreen / TutorialCatalog"
+  },
+  {
+    "id": "tutorial-chapter",
+    "title": "教程章节",
+    "group": "设置与帮助",
+    "source": "TutorialScreens quick / chapter"
+  },
+  {
+    "id": "about",
+    "title": "关于 Resonance",
+    "group": "设置与帮助",
+    "source": "AboutScreen / SponsorDialog"
+  },
+  {
+    "id": "release-notes",
+    "title": "版本更新说明",
+    "group": "设置与帮助",
+    "source": "AboutScreen release notes"
+  },
+  {
+    "id": "sponsor",
+    "title": "支持作者",
+    "group": "设置与帮助",
+    "source": "SponsorDialog"
+  },
+  {
+    "id": "create-playlist",
+    "title": "新建歌单",
+    "group": "弹窗与操作",
+    "source": "CreatePlaylistDialog / RenamePlaylistDialog"
+  },
+  {
+    "id": "edit-track",
+    "title": "编辑歌曲信息",
+    "group": "弹窗与操作",
+    "source": "EditTrackDialog"
+  },
+  {
+    "id": "batch",
+    "title": "多选与歌单管理",
+    "group": "弹窗与操作",
+    "source": "BatchAddToPlaylistDialog / selection toolbar"
+  },
+  {
+    "id": "add-to-playlist",
+    "title": "添加到歌单",
+    "group": "弹窗与操作",
+    "source": "BatchAddToPlaylistDialog"
+  },
+  {
+    "id": "enrich",
+    "title": "批量补全歌曲信息",
+    "group": "弹窗与操作",
+    "source": "BatchEnrichDialog"
+  },
+  {
+    "id": "enrich-result",
+    "title": "补全结果报告",
+    "group": "弹窗与操作",
+    "source": "BatchEnrichDialog report"
+  },
+  {
+    "id": "screenshot",
+    "title": "歌单截图导入",
+    "group": "弹窗与操作",
+    "source": "ScreenshotImportDialog"
+  },
+  {
+    "id": "screenshot-result",
+    "title": "截图识别结果",
+    "group": "弹窗与操作",
+    "source": "ScreenshotImportDialog recognized songs"
+  },
+  {
+    "id": "video",
+    "title": "B 站音频导入",
+    "group": "弹窗与操作",
+    "source": "VideoImportDialog"
+  },
+  {
+    "id": "sleep",
+    "title": "睡眠定时",
+    "group": "弹窗与操作",
+    "source": "SleepTimerDialog"
+  },
+  {
+    "id": "effects",
+    "title": "音效预设",
+    "group": "弹窗与操作",
+    "source": "AudioEffectDialog"
+  },
+  {
+    "id": "share",
+    "title": "音乐分享卡",
+    "group": "弹窗与操作",
+    "source": "ShareCardDialog"
+  },
+  {
+    "id": "track-source",
+    "title": "歌曲来源详情",
+    "group": "弹窗与操作",
+    "source": "TrackSourceDetails"
+  },
+  {
+    "id": "delete-confirm",
+    "title": "删除确认",
+    "group": "弹窗与操作",
+    "source": "DeletePlaylistDialog / BatchDeleteTracksDialog"
+  },
+  {
+    "id": "playback-error",
+    "title": "播放失败反馈",
+    "group": "状态与反馈",
+    "source": "PlaybackErrorDialog"
+  },
+  {
+    "id": "empty-library",
+    "title": "空曲库",
+    "group": "状态与反馈",
+    "source": "LibraryScreen empty / PlayingPlaceholderScreen"
+  },
+  {
+    "id": "loading",
+    "title": "加载与缓冲",
+    "group": "状态与反馈",
+    "source": "PlaybackState feedback / MusicTaskProgress"
+  },
+  {
+    "id": "taste-dimensions",
+    "title": "品味雷达与维度",
+    "group": "工具与管理",
+    "source": "TasteRadarScreen dimension details"
+  },
+  {
+    "id": "weather",
+    "title": "天气配色与城市",
+    "group": "设置与帮助",
+    "source": "AppearanceSettings weather"
+  },
+  {
+    "id": "feedback",
+    "title": "推荐反馈",
+    "group": "弹窗与操作",
+    "source": "Recommendation feedback reason/comment dialog"
+  },
+  {
+    "id": "floating-lyrics",
+    "title": "悬浮歌词",
+    "group": "播放器",
+    "source": "FloatingLyricsHost / DesktopFloatingLyrics"
+  }
+]

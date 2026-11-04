@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-01",
+  "desktop": {
+    "tests": 280,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4
+  },
+  "skipped_cases": [
+    "com.resonance.player.together.PromoAssistantProbeTest.captureRealAssistantAnswerWhenConfigured[desktop]",
+    "com.resonance.player.together.TogetherDeviceBridgeTest.windowsHostForPhysicalAndroidPeer[desktop]",
+    "com.resonance.player.together.TogetherNativeBridgeTest.windowsNativeHostForMuMu[desktop]",
+    "com.resonance.player.together.TogetherReverseNativeBridgeTest.windowsNativeGuestFollowsMuMuHost[desktop]"
+  ],
+  "android_lint": {
+    "errors": 0,
+    "warnings": 110
+  },
+  "android_debug": "assembleDebug successful (up-to-date after current-source build)",
+  "relay_python_tests": {
+    "tests": 6,
+    "result": "passed"
+  },
+  "launcher_bash_syntax": "passed",
+  "screenshots": [
+    "player-dark-1280.png",
+    "player-light-1280.png",
+    "player-dark-360-large-text.png",
+    "player-light-360-large-text.png",
+    "library-light-1280.png",
+    "together-dark-1280.png",
+    "together-light-1280.png",
+    "together-dark-360-large-text.png",
+    "together-light-360-large-text.png",
+    "settings-light-640-large-text.png",
+    "playback-error-light.png",
+    "playback-error-dark.png"
+  ],
+  "final_source_unchanged": true,
+  "production_deployed": false,
+  "physical_device_checked": false,
+  "real_api_dollar_cost": "unavailable"
+}

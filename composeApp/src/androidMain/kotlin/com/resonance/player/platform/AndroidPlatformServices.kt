@@ -43,6 +43,9 @@ import com.resonance.player.io.readUpTo
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.ReturnCode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,6 +61,7 @@ import java.security.MessageDigest
 import kotlin.coroutines.resume
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -70,19 +74,31 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
-    override val listenTogether by lazy {
-        com.resonance.player.together.JvmListenTogetherService(activity.cacheDir.toPath().resolve("together-audio"), { track ->
-            val source = requireNotNull(track.sourceUri)
-            when {
-                source.startsWith("content://") -> activity.contentResolver.openInputStream(Uri.parse(source)) ?: error("无法读取音频")
-                source.startsWith("file:") -> Files.newInputStream(java.nio.file.Paths.get(java.net.URI(source)))
-                !source.contains("://") -> Files.newInputStream(java.nio.file.Paths.get(source))
-                else -> error("一起听仅共享本机可读取的音频")
-            }
-        }, onGuestStopped = { setPlaying(false) })
+    override val togetherInvitations = MutableStateFlow<String?>(null)
+    fun offerTogetherInvitation(value: String) {
+        if (listenTogether.inspectInvitation(value) != null) togetherInvitations.value = value
     }
+    override fun dismissTogetherInvitation() { togetherInvitations.value = null }
+    override fun shareTogetherInvitation(text: String): Boolean {
+        if (text.length > 4096) return false
+        return runCatching {
+            activity.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, text)
+            }, "邀请朋友一起听"))
+            true
+        }.getOrDefault(false)
+    }
+    override val listenTogether by lazy {
+        com.resonance.player.together.AndroidTogetherRuntime.get(activity).service
+    }
+    override var togetherLocalSnapshot: Any?
+        get() = com.resonance.player.together.AndroidTogetherRuntime.get(activity).localPlaybackSnapshot
+        set(value) { com.resonance.player.together.AndroidTogetherRuntime.get(activity).localPlaybackSnapshot = value }
+    override val managesTogetherPlayback: Boolean get() = true
 
     override fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
+        beginPlaybackRequest()
         stopAudioPreview()
         withPlayer { activePlayer ->
             val position = (com.resonance.player.model.durationTextToSeconds(track.durationText) * 1000L * progress.coerceIn(0f, 1f)).toLong()
@@ -93,6 +109,16 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             activePlayer.prepare()
         }
     }
+    override suspend fun awaitSynchronizedReady(trackId: String): Boolean = kotlinx.coroutines.withTimeoutOrNull(15_000) {
+        while (true) {
+            val ready = withContext(Dispatchers.Main.immediate) {
+                player?.let { it.currentMediaItem?.mediaId == trackId && it.playbackState == Player.STATE_READY } == true
+            }
+            if (ready) return@withTimeoutOrNull true
+            delay(25)
+        }
+        @Suppress("UNREACHABLE_CODE") false
+    } ?: false
     override val supportsWebLogin: Boolean get() = true
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     private var conversionSession: Long? = null
@@ -195,6 +221,27 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         }
     }
     override val foreground = MutableStateFlow(false)
+    override val togetherNotificationsBlocked = MutableStateFlow(areTogetherNotificationsBlocked())
+    private var togetherNotificationRequested = false
+    private fun areTogetherNotificationsBlocked(): Boolean =
+        !androidx.core.app.NotificationManagerCompat.from(activity).areNotificationsEnabled() ||
+            (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) ||
+            activity.getSystemService(android.app.NotificationManager::class.java)
+                ?.getNotificationChannel("together-messages")?.importance == android.app.NotificationManager.IMPORTANCE_NONE
+    override fun requestTogetherNotifications() {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+            (!togetherNotificationRequested || ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS))) {
+            togetherNotificationRequested = true
+            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            val channel = activity.getSystemService(android.app.NotificationManager::class.java)?.getNotificationChannel("together-messages")
+            val intent = Intent(if (channel?.importance == android.app.NotificationManager.IMPORTANCE_NONE)
+                android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS else android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, activity.packageName)
+            if (channel != null) intent.putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, channel.id)
+            runCatching { activity.startActivity(intent) }
+        }
+    }
     override val systemReduceMotion: Boolean get() = false
     override fun updateSystemBars(isDark: Boolean) {
         androidx.core.view.WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
@@ -204,6 +251,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
     private val foregroundObserver = LifecycleEventObserver { _, event ->
         foreground.value = activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        if (event == Lifecycle.Event.ON_RESUME) togetherNotificationsBlocked.value = areTogetherNotificationsBlocked()
         if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
             cancelVolumeCalibration()
         }
@@ -218,9 +266,26 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private val controllerFuture = MediaController.Builder(
         activity,
         SessionToken(activity, ComponentName(activity, PlaybackService::class.java)),
-    ).buildAsync()
+    ).setListener(object : MediaController.Listener {
+        override fun onAvailableSessionCommandsChanged(controller: MediaController, commands: androidx.media3.session.SessionCommands) {
+            flushAudioCommands(controller)
+        }
+        override fun onDisconnected(controller: MediaController) {
+            if (!disposed && player === controller) {
+                player = null
+                pendingAudioCommands.clear()
+                pendingAudioTimeouts.values.forEach { it.cancel() }
+                pendingAudioTimeouts.clear()
+                if (listenTogether.state.value.isGuest) listenTogether.pauseGuestAudio("播放连接已中断，本机声音已暂停")
+                errorEvents.tryEmit(PlaybackIssue("播放器连接已中断，请重新打开应用后重试", requestId = playbackRequest))
+            }
+        }
+    }).buildAsync()
     private var player: MediaController? = null
+    private var disposed = false
     private val pendingPlayerActions = mutableListOf<(MediaController) -> Unit>()
+    private val pendingAudioCommands = mutableMapOf<String, android.os.Bundle>()
+    private val pendingAudioTimeouts = mutableMapOf<String, Job>()
     private var pendingDocumentResult: ((Uri?) -> Unit)? = null
     private var pendingTreeResult: ((Uri?) -> Unit)? = null
     private var pendingDocumentsResult: ((List<Uri>) -> Unit)? = null
@@ -245,6 +310,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         pendingAudioPermissionResult = null
     }
     private val requestNotificationPermission = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        togetherNotificationsBlocked.value = areTogetherNotificationsBlocked()
         pendingNotificationPermissionResult?.invoke(granted)
         pendingNotificationPermissionResult = null
     }
@@ -262,8 +328,15 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-    private val errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    override val playbackErrors: Flow<String> = errorEvents
+    private val errorEvents = MutableSharedFlow<PlaybackIssue>(extraBufferCapacity = 8)
+    private var playbackRequest = 0L
+    private var playbackRequestedAt = Long.MIN_VALUE
+    private fun beginPlaybackRequest() { playbackRequest++; playbackRequestedAt = android.os.SystemClock.elapsedRealtime() }
+    override val playbackErrors: Flow<String> get() = playbackIssues.map { it.message }
+    override val playbackIssues: Flow<PlaybackIssue> get() = merge(errorEvents,
+        listeningStatsRepository.errors.filterNotNull().map { PlaybackIssue(it, PlaybackIssue.Source.Statistics) })
+    override fun isCurrentPlaybackIssue(issue: PlaybackIssue): Boolean =
+        !disposed && issue.matches(player?.currentMediaItem?.mediaId, playbackRequest)
     private val trackEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
     private val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
@@ -273,7 +346,8 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override fun setVocalSuppression(enabled: Boolean) {
         com.resonance.player.PlaybackService.setVocalSuppression(enabled)
     }
-    private val listeningStatsStore by lazy { com.resonance.player.playback.ListeningStatsStore(activity.filesDir.toPath()) }
+    private val listeningStatsRepository by lazy { com.resonance.player.playback.ListeningStatsRepository.get(activity.filesDir.toPath()) }
+    private val listeningStatsStore get() = listeningStatsRepository.store
     override val currentAudioEffectPreset get() = com.resonance.player.PlaybackService.audioEffectPresetState
 
     override fun setAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {
@@ -288,9 +362,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         activity.getSharedPreferences("ui_state", android.content.Context.MODE_PRIVATE).edit().putString("audio.effect_preset", preset.id).apply()
     }
 
-    override fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean) {
-        listeningStatsStore.recordPlayback(trackId, deltaSeconds, isCompleted)
+    override suspend fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean) = withContext(Dispatchers.IO) {
+        listeningStatsRepository.record(trackId, deltaSeconds, isCompleted)
+        listeningStatsRepository.flush()
     }
+
+    override suspend fun flushListeningStats() = withContext(Dispatchers.IO) { listeningStatsRepository.flush() }
 
     override fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? {
         return listeningStatsStore.getTrackStats(trackId)
@@ -333,8 +410,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
             setHandleAudioBecomingNoisy(true)
             addListener(object : Player.Listener {
-                override fun onPlayerError(error: androidx.media3.common.PlaybackException) { errorEvents.tryEmit("试听失败：" + error.message); stopAudioPreview() }
-                override fun onPlaybackStateChanged(playbackState: Int) { if (playbackState == Player.STATE_ENDED) stopAudioPreview() }
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    errorEvents.tryEmit(PlaybackIssue("试听失败：" + error.message, PlaybackIssue.Source.Preview)); stopAudioPreview() }
+                override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) stopAudioPreview() }
             })
             setMediaItem(MediaItem.fromUri(android.net.Uri.fromFile(java.io.File(path))))
             prepare(); play()
@@ -358,19 +437,26 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override val playbackPositionMs: Long? get() = player?.currentPosition?.coerceAtLeast(0L)
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
+    private val isBufferingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    override val isBufferingChanges: Flow<Boolean> = isBufferingEvents
     override val activeTrackChanges: Flow<String> = trackEvents
 
     init {
         activity.lifecycle.addObserver(foregroundObserver)
         AndroidArtworkResolver.application = activity.application
         controllerFuture.addListener({
+            if (disposed) return@addListener
             val controller = runCatching(controllerFuture::get).getOrNull() ?: return@addListener
             player = controller
             controller.addListener(object : Player.Listener {
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-                    errorEvents.tryEmit(error.message ?: "音频解码失败")
+                    isBufferingEvents.tryEmit(false)
+                    if (disposed || player !== controller || error.timestampMs < playbackRequestedAt) return
+                    errorEvents.tryEmit(PlaybackIssue(error.message ?: "音频解码失败",
+                        trackId = controller.currentMediaItem?.mediaId, requestId = playbackRequest))
                 }
                 override fun onPlaybackStateChanged(playbackState: Int) {
+                    isBufferingEvents.tryEmit(playbackState == Player.STATE_BUFFERING)
                     if (playbackState == Player.STATE_ENDED) {
                         isPlayingEvents.tryEmit(false)
                         if (!com.resonance.player.PlaybackService.sleepTimerStoppedAtEnd) endedEvents.tryEmit(Unit)
@@ -382,14 +468,19 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 }
 
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    if (!playWhenReady) isBufferingEvents.tryEmit(false)
                     if (!playWhenReady && reason in setOf(Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS,
                             Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) && listenTogether.state.value.isGuest) {
                         // A remote heartbeat must never undo a call interruption or unplugged headphones.
-                        listenTogether.leave()
+                        if (!listenTogether.state.value.localAudioPaused) listenTogether.pauseGuestAudio("音频输出已改变，本机跟听已暂停")
                     }
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    if (disposed || player !== controller) return
+                    // A native error can be created before this transition callback is delivered.
+                    // Only explicit commands advance the timestamp cutoff, not delayed callbacks.
+                    playbackRequest++
                     mediaItem?.mediaId?.takeIf(String::isNotBlank)?.let(trackEvents::tryEmit)
                 }
             })
@@ -402,10 +493,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 else -> RepeatMode.Off
             }
             applyPlaybackMode(controller, shuffle, repeatMode)
-            synchronized(pendingPlayerActions) {
-                pendingPlayerActions.forEach { it(controller) }
-                pendingPlayerActions.clear()
-            }
+            val pending = synchronized(pendingPlayerActions) { pendingPlayerActions.toList().also { pendingPlayerActions.clear() } }
+            pending.forEach { if (!disposed && controller.isConnected) it(controller) }
+            flushAudioCommands(controller)
         }, ContextCompat.getMainExecutor(activity))
         uiScope.launch {
             while (isActive) {
@@ -569,12 +659,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode): Unit = withContext(Dispatchers.IO) {
-        activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
+        val saved = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
             .edit()
             .putBoolean("playback.shuffleEnabled", shuffle)
             .putString("playback.repeatMode", repeatMode.name)
             .commit()
-        Unit
+        check(saved) { "播放模式未能保存，请检查存储空间" }
     }
 
     override suspend fun loadTrackVolume(trackId: String): Float? = withContext(Dispatchers.IO) {
@@ -928,6 +1018,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             forceRefresh = forceRefresh,
             customLyricsFolder = resolveLyricsFolder(),
             aiFallback = null,
+            sourceFallback = musicAssistant::findSourceLyrics,
         )
 
     override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
@@ -1223,6 +1314,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
+        beginPlaybackRequest()
         stopAudioPreview()
         com.resonance.player.PlaybackService.sleepTimerStoppedAtEnd = false
         val uri = track.sourceUri ?: return
@@ -1243,21 +1335,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun setPlaying(isPlaying: Boolean) {
+        if (!isPlaying) isBufferingEvents.tryEmit(false)
         if (isPlaying) stopAudioPreview()
         withPlayer { if (isPlaying) it.play() else it.pause() }
     }
 
     override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
         withPlayer { applyPlaybackMode(it, shuffle, repeatMode) }
-        uiScope.launch(Dispatchers.IO) {
-            try {
-                activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
-                    .edit()
-                    .putBoolean("playback.shuffleEnabled", shuffle)
-                    .putString("playback.repeatMode", repeatMode.name)
-                    .apply()
-            } catch (_: Throwable) {}
-        }
     }
 
     override fun setVolume(volume: Float) {
@@ -1268,8 +1352,25 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     private fun sendAudioCommand(controller: MediaController, action: String, args: android.os.Bundle) {
+        if (disposed || !controller.isConnected) return
         val command = com.resonance.player.AudioSessionCommands.command(action)
-        check(controller.isSessionCommandAvailable(command)) { "音频命令未注册：$action" }
+        if (!controller.isSessionCommandAvailable(command)) {
+            val snapshot = android.os.Bundle(args)
+            pendingAudioCommands[action] = snapshot
+            pendingAudioTimeouts.remove(action)?.cancel()
+            pendingAudioTimeouts[action] = uiScope.launch {
+                delay(5_000)
+                if (!disposed && pendingAudioCommands[action] === snapshot) {
+                    pendingAudioCommands.remove(action)
+                    pendingAudioTimeouts.remove(action)
+                    android.util.Log.w("ResonanceAudio", "Session command unavailable after timeout: $action")
+                    errorEvents.tryEmit(PlaybackIssue("播放器尚未准备好接收此操作，请稍后重试", requestId = playbackRequest))
+                }
+            }
+            return
+        }
+        pendingAudioCommands.remove(action)
+        pendingAudioTimeouts.remove(action)?.cancel()
         val result = controller.sendCustomCommand(command, args)
         result.addListener({
             try {
@@ -1277,6 +1378,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                     android.util.Log.e("ResonanceAudio", "Audio command failed: $action")
             } catch (error: Exception) { android.util.Log.e("ResonanceAudio", "Audio command failed: $action", error) }
         }, ContextCompat.getMainExecutor(activity))
+    }
+
+    private fun flushAudioCommands(controller: MediaController) {
+        if (disposed || player !== controller || !controller.isConnected) return
+        pendingAudioCommands.toMap().forEach { (action, args) ->
+            if (controller.isSessionCommandAvailable(com.resonance.player.AudioSessionCommands.command(action))) sendAudioCommand(controller, action, args)
+        }
     }
 
     override fun setPlaybackSpeed(speed: Float) {
@@ -1320,7 +1428,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun close() {
-        listenTogether.close()
+        if (disposed) return
+        disposed = true
+        synchronized(pendingPlayerActions) { pendingPlayerActions.clear() }
+        pendingAudioCommands.clear()
+        pendingAudioTimeouts.values.forEach { it.cancel() }
+        pendingAudioTimeouts.clear()
         stopAudioPreview()
         cancelVolumeCalibration()
         activity.lifecycle.removeObserver(foregroundObserver)
@@ -1368,6 +1481,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     private fun withPlayer(action: (MediaController) -> Unit) {
+        if (disposed) return
         val activePlayer = player
         if (activePlayer != null) {
             action(activePlayer)

@@ -1,0 +1,325 @@
+{
+  "date": "2026-11-03",
+  "timezone": "Asia/Shanghai",
+  "version": "0.6.5/39",
+  "purpose": "Bounded deployment and performance verification; no public cutover",
+  "target": {
+    "os": "Ubuntu 24.04",
+    "vcpus": 2,
+    "visible_memory_mib_approx": 894
+  },
+  "cloud_full_run": {
+    "command_name": "resonance-isolated-performance-20261103",
+    "execution_id": "t-bj071zs7bo3t1j4",
+    "started_local": "2026-11-03 19:32:46",
+    "finished_local": "2026-11-03 19:33:02",
+    "exit_code": 0,
+    "executed_source_sha256": "657fdf32de1cfbea62b1dbf25fd5649a63f15506d43f1772545927e851526d68",
+    "interpretation": "All stage error counts zero; recovery checks true; burst and mixed load show seconds of tail latency",
+    "report": {
+      "kind": "server-loopback-https-wss",
+      "user_audio_used": false,
+      "public_listener_created": false,
+      "client_generator_on_same_host": true,
+      "website": [
+        {
+          "concurrency": 1,
+          "requests": 30,
+          "errors": 0,
+          "error_types": [],
+          "median_ms": 10.865,
+          "p95_ms": 14.594,
+          "p99_ms": 14.692,
+          "requests_per_second": 88.98
+        },
+        {
+          "concurrency": 4,
+          "requests": 80,
+          "errors": 0,
+          "error_types": [],
+          "median_ms": 40.411,
+          "p95_ms": 61.245,
+          "p99_ms": 76.772,
+          "requests_per_second": 92.76
+        },
+        {
+          "concurrency": 12,
+          "requests": 120,
+          "errors": 0,
+          "error_types": [],
+          "median_ms": 116.512,
+          "p95_ms": 157.133,
+          "p99_ms": 181.07,
+          "requests_per_second": 95.07
+        }
+      ],
+      "downloads": [
+        {
+          "platform": "android",
+          "bytes": 16777216,
+          "mib_per_second": 105.63
+        },
+        {
+          "platform": "windows",
+          "bytes": 16777216,
+          "mib_per_second": 97.92
+        }
+      ],
+      "relay": [
+        {
+          "pairs": 1,
+          "errors": 0,
+          "error_types": [],
+          "results": [
+            {
+              "pairing_ms": 31.748,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 6.11,
+              "median_ms": 2.091,
+              "p95_ms": 456.21,
+              "p99_ms": 539.179
+            }
+          ]
+        },
+        {
+          "pairs": 3,
+          "errors": 0,
+          "error_types": [],
+          "results": [
+            {
+              "pairing_ms": 43.949,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 3.54,
+              "median_ms": 215.096,
+              "p95_ms": 1513.592,
+              "p99_ms": 1706.714
+            },
+            {
+              "pairing_ms": 210.602,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 3.73,
+              "median_ms": 138.419,
+              "p95_ms": 1309.045,
+              "p99_ms": 1575.408
+            },
+            {
+              "pairing_ms": 392.354,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 3.99,
+              "median_ms": 64.088,
+              "p95_ms": 1258.004,
+              "p99_ms": 1366.82
+            }
+          ]
+        },
+        {
+          "pairs": 6,
+          "errors": 0,
+          "error_types": [],
+          "results": [
+            {
+              "pairing_ms": 75.173,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 2.42,
+              "median_ms": 738.49,
+              "p95_ms": 2150.521,
+              "p99_ms": 2213.85
+            },
+            {
+              "pairing_ms": 379.337,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 2.09,
+              "median_ms": 2371.376,
+              "p95_ms": 3023.047,
+              "p99_ms": 3335.769
+            },
+            {
+              "pairing_ms": 378.723,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 2.09,
+              "median_ms": 2366.445,
+              "p95_ms": 3015.794,
+              "p99_ms": 3449.098
+            },
+            {
+              "pairing_ms": 377.959,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 2.1,
+              "median_ms": 2360.361,
+              "p95_ms": 3012.298,
+              "p99_ms": 3127.236
+            },
+            {
+              "pairing_ms": 377.787,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 2.14,
+              "median_ms": 1947.543,
+              "p95_ms": 2451.556,
+              "p99_ms": 2538.626
+            },
+            {
+              "pairing_ms": 376.325,
+              "bytes_round_trip": 8388608,
+              "sustained_round_trip_mib_per_second": 2.1,
+              "median_ms": 2377.508,
+              "p95_ms": 3012.384,
+              "p99_ms": 3607.199
+            }
+          ]
+        }
+      ],
+      "mixed": {
+        "pages": {
+          "concurrency": 4,
+          "requests": 80,
+          "errors": 0,
+          "error_types": [],
+          "median_ms": 49.681,
+          "p95_ms": 145.034,
+          "p99_ms": 1952.476,
+          "requests_per_second": 26.99
+        },
+        "downloads": [
+          {
+            "platform": "android",
+            "bytes": 16777216,
+            "mib_per_second": 4.66
+          },
+          {
+            "platform": "windows",
+            "bytes": 16777216,
+            "mib_per_second": 4.63
+          }
+        ]
+      },
+      "resources": {
+        "peak_memory_mib": {
+          "resonance-site": 91.19,
+          "resonance-relay": 14.91,
+          "resonance-benchmark-4f6707fd": 32.23
+        },
+        "minimum_host_available_mib": 387.48,
+        "average_cpu_percent_of_one_core": {
+          "resonance-site": 19.57,
+          "resonance-relay": 0.0,
+          "resonance-benchmark-4f6707fd": 25.46
+        },
+        "new_oom_kills": {
+          "resonance-site": 0,
+          "resonance-relay": 0,
+          "resonance-benchmark-4f6707fd": 0
+        }
+      },
+      "services_unchanged": true,
+      "production_budget_unchanged": true,
+      "test_listeners_removed": true
+    }
+  },
+  "steady_relay_run": {
+    "status": "not_executed",
+    "reason": "Browser control disconnected before command submission; prepared profile is not a passed test"
+  },
+  "local_native_run": {
+    "status": "passed_with_one_skip",
+    "tests": 18,
+    "passed": 17,
+    "skipped": 1,
+    "failed": 0,
+    "suite_results": {
+      "playback.DesktopAudioOutputIntegrationTest": {
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "7.88"
+      },
+      "together.TogetherWebSocketTest": {
+        "tests": "4",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "1",
+        "time": "0.722"
+      },
+      "together.ListenTogetherTest": {
+        "tests": "10",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "13.123"
+      },
+      "together.TogetherServerRoutingTest": {
+        "tests": "2",
+        "failures": "0",
+        "errors": "0",
+        "skipped": "0",
+        "time": "3.873"
+      }
+    },
+    "environment": "Linux, JDK 17; real FFmpeg and Java Sound muted output with generated audio; local Python WSS/TLS fixture",
+    "gradle_task": ":composeApp:desktopTest",
+    "filters": [
+      "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+      "com.resonance.player.together.TogetherWebSocketTest",
+      "com.resonance.player.together.ListenTogetherTest",
+      "com.resonance.player.together.TogetherServerRoutingTest"
+    ],
+    "flags": [
+      "--max-workers=1",
+      "-Dorg.gradle.jvmargs=-Xmx384m",
+      "--no-configuration-cache",
+      "--console=plain"
+    ],
+    "production_websocket_test": "skipped: deployed endpoint environment variable not configured",
+    "reports": [
+      {
+        "file": "build/aliyun-benchmark-20261103/native-test-results/TEST-com.resonance.player.playback.DesktopAudioOutputIntegrationTest.xml",
+        "sha256": "a33fc6e915e7f96e2b342cd181ea3e13cc042a8a45d0dac61e3f87216000f7b9"
+      },
+      {
+        "file": "build/aliyun-benchmark-20261103/native-test-results/TEST-com.resonance.player.together.ListenTogetherTest.xml",
+        "sha256": "ec78098e64686119dd042b4cf4278e7dcd4df0d1555373b04ac807a6c2490433"
+      },
+      {
+        "file": "build/aliyun-benchmark-20261103/native-test-results/TEST-com.resonance.player.together.TogetherServerRoutingTest.xml",
+        "sha256": "f0ecd72b07a0d3b90ecf160416bbee3772bede819b701a1e2a6397f6b1f4055d"
+      },
+      {
+        "file": "build/aliyun-benchmark-20261103/native-test-results/TEST-com.resonance.player.together.TogetherWebSocketTest.xml",
+        "sha256": "e3e643cb159f18ad258a292b4edf1e5c86aa1ea8eed016a47eacacfd8112788c"
+      }
+    ]
+  },
+  "local_benchmark_tests": {
+    "command": "python3 -W error::ResourceWarning -m unittest discover -s services/deploy/aliyun -p 'test_benchmark.py' -v",
+    "tests": 2,
+    "passed": 2,
+    "failed": 0
+  },
+  "final_source_sha256": {
+    "services/deploy/aliyun/benchmark.py": "f06d2e2fc520e6f62515608ee44a6af6f71bf287a0308d73374070f37dcb8ec0",
+    "services/deploy/aliyun/test_benchmark.py": "b9df7b275a6de4d944d09a89f67ed292591a28e46f3ebf59bcbb7d527b948459",
+    "services/deploy/aliyun/package.py": "e85644d2e1ddac18046ce9cac2c372fc2f6e8f0ee946bcec55e0223d9991a2d6"
+  },
+  "not_verified": [
+    "New server public HTTPS/WSS",
+    "WAN bandwidth or latency",
+    "Android/Windows device playback on new server",
+    "Real native multiuser room load",
+    "Long-session stability",
+    "Browser rendering frame rates",
+    "Real SMTP delivery"
+  ],
+  "preserved": [
+    "Existing public website and relay routes",
+    "Production service state and restart counters",
+    "Production relay budget",
+    "User audio and credentials",
+    "Current version and unrelated working tree changes"
+  ],
+  "source_bundle": {
+    "path": "build/aliyun/Resonance-aliyun.zip",
+    "sha256": "a4edb23a6a01c420e37e66591c05b5c4e25a2f7ab91a35b69c19142754321f87",
+    "entries": 64,
+    "verification": "CRC, source bytes, path and runtime-data exclusions passed; not uploaded in this follow-up"
+  }
+}

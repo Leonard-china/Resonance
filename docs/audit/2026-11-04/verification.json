@@ -1,0 +1,621 @@
+{
+  "date": "2026-11-04T15:03:22.837828+08:00",
+  "version": "0.6.5 / 39",
+  "head": "fdf4735d77758412de2639803ebf9d2793269057",
+  "scope": "Current dirty working tree; audit report only; no product fixes",
+  "desktop": {
+    "total": {
+      "tests": 331,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 9
+    },
+    "passed": 322,
+    "suites": [
+      {
+        "suite": "com.resonance.player.AssistantMusicLinksTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.CatalogArtworkRematchTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.FloatingLyricsTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.ImportReportMessageTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.LibrarySearchIndexTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.ListeningSessionTrackerTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.LyricScrollTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.MusicTaskGroupsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.PersistenceQueueTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.PlaybackIssueTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.PlaybackModePersistenceTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.PlaybackModeWriterTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.PlaybackQueueResolutionTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.SelectedPlaylistStateTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.StatePreservationTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.TogetherPlaybackDriverTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.TogetherSuggestionsTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.WeatherPaletteTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.ai.DeepSeekClientTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.audio.AudioFeatureAnalyzerTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.audio.FfmpegLoudnessIntegrationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.audio.LoudnessAnalysisTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.audio.PcmGainProcessorTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.conversion.KggCipherTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.conversion.KgmaCipherTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.conversion.KgmaDeviceFixtureTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.enrich.AlbumCoverRepositoryTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.enrich.MetadataEnricherTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.ArtworkDecodeTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.MusicAiWireTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.MusicAssistantTest",
+        "tests": 37,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.MusicJsonStoreTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.MusicSourceRegistryTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.PlaylistArchiveFormatTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.RecommendationPolicyTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.ScreenshotOcrTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.StorageAndAssistantExtraTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.features.TutorialProgressTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.lyrics.KrcDecoderTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.model.SemanticSearchIntentParserTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.model.TasteAnalyticsEngineTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.platform.LibraryPersistenceTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      {
+        "suite": "com.resonance.player.playback.DesktopPlaybackFailureTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.ListeningStatsStoreTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.PlaybackSnapshotTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.sync.CrossDeviceSyncFixtureTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.sync.PlainSyncPackageTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.ListenTogetherTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.PromoAssistantProbeTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherCompanionTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherConnectionBoundsTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherDeviceBridgeTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherNativeBridgeTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherPrefetchCancellationTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherRendezvousTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherReverseNativeBridgeTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 1
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherServerRoutingTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherSessionTest",
+        "tests": 10,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.together.TogetherWebSocketTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 2
+      },
+      {
+        "suite": "com.resonance.player.ui.LyricsMotionTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.ui.RecommendationPlaybackTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.ui.UiVisualContractTest",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      {
+        "suite": "com.resonance.player.util.PinyinUtilsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    ],
+    "skipped": [
+      "com.resonance.player.playback.DesktopAudioOutputIntegrationTest.platformRecordsWithoutComposeAndDeduplicatesNearEndPauseResume[desktop]",
+      "com.resonance.player.playback.DesktopAudioOutputIntegrationTest.pauseSeekSpeedAndRapidReplacementReachRealAudioOutput[desktop]",
+      "com.resonance.player.together.PromoAssistantProbeTest.captureRealAssistantAnswerWhenConfigured[desktop]",
+      "com.resonance.player.together.TogetherDeviceBridgeTest.windowsHostForPhysicalAndroidPeer[desktop]",
+      "com.resonance.player.together.TogetherNativeBridgeTest.windowsNativeHostForMuMu[desktop]",
+      "com.resonance.player.together.TogetherRendezvousTest.javaSignaturesInteroperateAndChangedPartnerEndpointCanBeInvited[desktop]",
+      "com.resonance.player.together.TogetherReverseNativeBridgeTest.windowsNativeGuestFollowsMuMuHost[desktop]",
+      "com.resonance.player.together.TogetherWebSocketTest.deployedPinnedTlsRoundTripOverWebSocket[desktop]",
+      "com.resonance.player.together.TogetherWebSocketTest.realPinnedTlsRoundTripOverWebSocket[desktop]"
+    ]
+  },
+  "lint": {
+    "severity": {
+      "Warning": 107
+    },
+    "ids": {
+      "ApplySharedPref": 6,
+      "OldTargetApi": 1,
+      "AndroidGradlePluginVersion": 2,
+      "GradleDependency": 9,
+      "NewerVersionAvailable": 24,
+      "DiscouragedApi": 1,
+      "ObsoleteSdkInt": 2,
+      "StaticFieldLeak": 1,
+      "UnusedResources": 2,
+      "UseKtx": 36,
+      "UseTomlInstead": 23
+    }
+  },
+  "extra_native_local_transport": {
+    "ignored": 0,
+    "failures": [],
+    "assumptionSkips": [
+      "deployedPinnedTlsRoundTripOverWebSocket(com.resonance.player.together.TogetherWebSocketTest)"
+    ],
+    "run": 8,
+    "timeMs": 8766
+  },
+  "python": {
+    "website": {
+      "tests": 42,
+      "failures": 0
+    },
+    "relay": {
+      "tests": 11,
+      "failures": 0
+    },
+    "rendezvous": {
+      "tests": 7,
+      "failures": 0
+    },
+    "deployment_tools": {
+      "tests": 2,
+      "failures": 0
+    }
+  },
+  "not_executed": [
+    "Android device instrumentation",
+    "Windows native output / installer",
+    "public production relay acceptance",
+    "cross-cellular and multi-hour rooms",
+    "live SMTP or paid AI/source services",
+    "fresh APK/desktop release packaging"
+  ],
+  "raw_logs": "build/audit-2026-11-04/"
+}

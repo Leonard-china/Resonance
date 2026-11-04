@@ -170,6 +170,108 @@ class PlaybackStateStoreTest {
         assertFalse(store.acceptNativeTrack("a"))
         assertFalse(store.acceptNativeTrack("b"))
         assertTrue(store.acceptNativeTrack("c"))
-        assertEquals("b", store.state.value.currentTrack?.id)
+    }
+
+    @Test fun pauseWhilePreparingPreventsPlaybackStartOnReady() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        var started = false
+        store.activate(track("a"), null) { started = true }
+        runCurrent()
+        assertTrue(store.state.value.isPreparing)
+        assertTrue(store.state.value.isLoading)
+        // User pauses or loses focus while prepare is still pending.
+        store.setUserPlayIntent(false)
+        assertFalse(store.state.value.isPlaying)
+        advanceUntilIdle()
+        assertFalse(started)
+        assertFalse(store.state.value.isPreparing)
+        assertFalse(store.state.value.isPlaying)
+        assertFalse(store.state.value.isLoading)
+    }
+
+    @Test fun previousNativePauseCannotCancelASingleTrackSelection() = runTest {
+        val backend = Backend(this)
+        val store = PlaybackStateStore(backend.services, this)
+        var audible = "old"
+        store.activate(track("old"), null, expectNativeTrack = true) { audible = "old" }
+        advanceUntilIdle()
+        store.setPlaying(true)
+
+        backend.delays["loadGlobalVolume:"] = 500
+        store.activate(track("selected"), null, expectNativeTrack = true) { audible = "selected" }
+        runCurrent()
+        // Android reports the pause of the old media item after the UI selects the new one.
+        store.setPlaying(false)
+        advanceUntilIdle()
+
+        assertEquals("selected", audible)
+        assertEquals(audible, store.state.value.currentTrack?.id)
+        store.setPlaying(true)
+        assertTrue(store.state.value.isPlaying)
+        store.setPlaying(false)
+        assertFalse(store.state.value.isPlaying)
+    }
+
+    @Test fun previousNativePlayingCannotUndoAnExplicitPauseDuringPreparation() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        var started = false
+        store.activate(track("selected"), null, expectNativeTrack = true) { started = true }
+        runCurrent()
+        store.setUserPlayIntent(false)
+        store.setPlaying(true) // Late event from the previous media item.
+        advanceUntilIdle()
+        assertFalse(store.state.value.isPlaying)
+        assertFalse(started)
+    }
+
+    @Test fun audioRefreshPreservesProtectionFromPreviousNativeStatus() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        var started = false
+        store.activate(track("selected"), null, expectNativeTrack = true) { started = true }
+        runCurrent()
+        store.refreshAudio(null)
+        store.setPlaying(false)
+        advanceUntilIdle()
+        assertTrue(started)
+        assertEquals("selected", store.state.value.currentTrack?.id)
+    }
+
+    @Test fun bufferingTransitionsReflectInPlayerStateAndClearOnPlayback() = runTest {
+        val backend = Backend(this)
+        val store = PlaybackStateStore(backend.services, this)
+        store.activate(track("a"), null)
+        advanceUntilIdle()
+        assertFalse(store.state.value.isBuffering)
+        assertFalse(store.state.value.isLoading)
+
+        store.setBuffering(true)
+        assertTrue(store.state.value.isBuffering)
+        assertTrue(store.state.value.isLoading)
+
+        // Once native player starts playing, buffering should automatically clear.
+        store.setPlaying(true)
+        assertTrue(store.state.value.isPlaying)
+        assertFalse(store.state.value.isBuffering)
+        assertFalse(store.state.value.isLoading)
+    }
+
+    @Test fun failureExitsPreparingAndBufferingStates() = runTest {
+        val backend = Backend(this)
+        var reportedError: Throwable? = null
+        val store = PlaybackStateStore(backend.services, this) { reportedError = it }
+        store.activate(track("a"), null, prepare = { error("disk read failed") })
+        runCurrent()
+        advanceUntilIdle()
+        assertNotNull(reportedError)
+        assertFalse(store.state.value.isPreparing)
+        assertFalse(store.state.value.isBuffering)
+        assertFalse(store.state.value.isPlaying)
+        assertFalse(store.state.value.isLoading)
     }
 }

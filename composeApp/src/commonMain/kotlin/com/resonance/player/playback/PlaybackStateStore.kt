@@ -18,18 +18,33 @@ class PlaybackStateStore(
     private val onError: (Throwable) -> Unit = {},
 ) {
     val state = mutableStateOf(PlayerState())
+    val currentGeneration: Long get() = generation
     private var generation = 0L
+    private var userPlayIntent = true
     private var volumeRevision = 0L
     private var gainRevision = 0L
     private var audioJob: Job? = null
-    private data class StartAction(val prepare: suspend () -> Unit, val ready: () -> Unit)
+    private data class StartAction(
+        val prepare: suspend () -> Unit,
+        val ready: () -> Unit,
+        val startsNativePlayback: Boolean,
+    )
     private var pendingStart: StartAction? = null
     private var closed = false
     private var expectedNativeTrack: String? = null
 
-    fun activate(track: Track, playlistId: String?, resetGain: Boolean = true, expectNativeTrack: Boolean = false,
-        prepare: suspend () -> Unit = {}, analyzeLoudness: Boolean = true, onReady: () -> Unit = {}) {
+    fun activate(
+        track: Track,
+        playlistId: String?,
+        resetGain: Boolean = true,
+        expectNativeTrack: Boolean = false,
+        autoPlay: Boolean = true,
+        prepare: suspend () -> Unit = {},
+        analyzeLoudness: Boolean = true,
+        onReady: () -> Unit = {},
+    ) {
         if (closed) return
+        userPlayIntent = autoPlay
         if (expectNativeTrack) expectedNativeTrack = track.id
         else if (expectedNativeTrack != track.id) expectedNativeTrack = null
         services.cancelVolumeCalibration()
@@ -37,10 +52,18 @@ class PlaybackStateStore(
         val volumeVersion = volumeRevision
         val gainVersion = gainRevision
         audioJob?.cancel()
-        val start = StartAction(prepare, onReady)
+        val start = StartAction(prepare, onReady, startsNativePlayback = expectNativeTrack)
         pendingStart = start
-        state.value = state.value.copy(currentTrack = track, progress = 0f, positionMs = null,
-            trackGainDb = 0f, isCurrentTrackCalibrated = false)
+        state.value = state.value.copy(
+            currentTrack = track,
+            isPreparing = true,
+            isBuffering = false,
+            isPlaying = false,
+            progress = 0f,
+            positionMs = null,
+            trackGainDb = 0f,
+            isCurrentTrackCalibrated = false,
+        )
         if (resetGain) services.setTrackGain(0f)
         audioJob = scope.launch {
             var started = false
@@ -61,9 +84,15 @@ class PlaybackStateStore(
                 start.prepare()
                 coroutineContext.ensureActive()
                 if (request != generation) return@launch
-                onReady()
+                state.value = state.value.copy(isPreparing = false)
                 started = true
                 pendingStart = null
+                if (userPlayIntent) {
+                    onReady()
+                } else {
+                    // User requested pause or lost focus while preparing; do not resume playback on ready.
+                    services.setPlaying(false)
+                }
                 if (analyzeLoudness && !track.id.startsWith("together:") && calibrated == null && automatic && cached == null) {
                     val analyzed = services.analyzeAndCacheLoudnessGain(track)
                     coroutineContext.ensureActive()
@@ -73,6 +102,7 @@ class PlaybackStateStore(
                 throw cancelled
             } catch (error: Exception) {
                 if (request == generation) {
+                    state.value = state.value.copy(isPreparing = false, isBuffering = false, isPlaying = false)
                     if (!started) {
                         // Persistence/preparation failures must not start an obsolete queue.
                         pendingStart = null
@@ -84,15 +114,48 @@ class PlaybackStateStore(
         }
     }
 
+    fun setUserPlayIntent(playing: Boolean) {
+        if (closed) return
+        userPlayIntent = playing
+        if (!playing) {
+            state.value = state.value.copy(isPlaying = false)
+        }
+    }
+
+    fun setPlaying(playing: Boolean) {
+        if (closed) return
+        // Until onReady submits the new track, native status still belongs to the previous media.
+        // Explicit user actions go through setUserPlayIntent and must remain authoritative.
+        if (pendingStart?.startsNativePlayback == true) return
+        userPlayIntent = playing
+        state.value = state.value.copy(
+            isPlaying = playing,
+            isBuffering = if (playing) false else state.value.isBuffering,
+        )
+    }
+
+    fun setBuffering(buffering: Boolean) {
+        if (closed) return
+        state.value = state.value.copy(isBuffering = buffering)
+    }
+
     /** Cancels pending starts before releasing a temporary peer-owned playback item. */
     fun clearCurrentTrack() {
         ++generation
+        userPlayIntent = false
         audioJob?.cancel()
         audioJob = null
         pendingStart = null
         expectedNativeTrack = null
         services.setPlaying(false)
-        state.value = state.value.copy(currentTrack = null, progress = 0f, positionMs = null, isPlaying = false)
+        state.value = state.value.copy(
+            currentTrack = null,
+            progress = 0f,
+            positionMs = null,
+            isPlaying = false,
+            isBuffering = false,
+            isPreparing = false,
+        )
     }
 
     private fun applyGain(gain: Float, calibrated: Boolean) {
@@ -121,7 +184,15 @@ class PlaybackStateStore(
         val current = state.value
         current.currentTrack?.let {
             val pending = pendingStart
-            activate(it, playlistId, resetGain = false, prepare = pending?.prepare ?: {}, onReady = pending?.ready ?: {})
+            activate(
+                it,
+                playlistId,
+                resetGain = false,
+                expectNativeTrack = pending?.startsNativePlayback == true,
+                autoPlay = userPlayIntent,
+                prepare = pending?.prepare ?: {},
+                onReady = pending?.ready ?: {},
+            )
             state.value = state.value.copy(progress = current.progress, positionMs = current.positionMs, isPlaying = current.isPlaying)
         }
     }
@@ -138,8 +209,17 @@ class PlaybackStateStore(
 
     fun playbackFailed() {
         expectedNativeTrack = null
-        state.value = state.value.copy(isPlaying = false)
+        userPlayIntent = false
+        state.value = state.value.copy(isPlaying = false, isBuffering = false, isPreparing = false)
     }
 
-    fun close() { closed = true; ++generation; pendingStart = null; expectedNativeTrack = null; audioJob?.cancel() }
+    fun close() {
+        closed = true
+        ++generation
+        userPlayIntent = false
+        pendingStart = null
+        expectedNativeTrack = null
+        audioJob?.cancel()
+        state.value = state.value.copy(isPreparing = false, isBuffering = false, isPlaying = false)
+    }
 }

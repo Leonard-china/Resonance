@@ -1,6 +1,8 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.gradle.api.tasks.Copy
 import java.util.Properties
+import java.io.File
+import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 
 val releaseKeystoreProperties = Properties().apply {
     val propertiesFile = rootProject.file("keystore.properties")
@@ -134,6 +136,7 @@ android {
     buildToolsVersion = "36.0.0"
     sourceSets.getByName("main").assets.srcDir("src/ocrModels")
     sourceSets.getByName("main").resources.srcDir("src/jvmMain/resources")
+    sourceSets.getByName("debug").manifest.srcFile("src/androidDebug/AndroidManifest.xml")
 
     defaultConfig {
         applicationId = "com.resonance.player"
@@ -181,6 +184,8 @@ android {
     }
 }
 
+val desktopHostIsWindows = System.getProperty("os.name").startsWith("Windows", true)
+
 compose.desktop {
     application {
         mainClass = "com.resonance.player.MainKt"
@@ -189,8 +194,13 @@ compose.desktop {
             configurationFiles.from(project.file("compose-desktop.pro"))
         }
         nativeDistributions {
-            appResourcesRootDir.set(layout.buildDirectory.dir("desktopAppResources"))
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe)
+            if (desktopHostIsWindows) appResourcesRootDir.set(layout.buildDirectory.dir("desktopAppResources"))
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Deb, TargetFormat.Rpm)
+            // java.sql, TLS providers and reflection-based integrations must work in the bundled JVM.
+            if (!desktopHostIsWindows) {
+                includeAllModules = true
+                licenseFile.set(rootProject.file("LICENSE"))
+            }
             packageName = "Resonance"
             packageVersion = appVersionName
             description = "Local music library, player, converter, and playlist archives"
@@ -198,37 +208,61 @@ compose.desktop {
             windows {
                 iconFile.set(project.file("src/desktopMain/resources/resonance.ico"))
             }
+            linux {
+                iconFile.set(project.file("src/desktopMain/resources/resonance-icon.png"))
+                packageName = "resonance"
+                appCategory = "AudioVideo"
+                menuGroup = "AudioVideo"
+                shortcut = true
+                // Use the distribution's maintained FFmpeg instead of bundling a dynamically linked binary.
+            }
         }
     }
 }
 
-val ffmpegSource = providers.environmentVariable("RESONANCE_FFMPEG").orElse(
-    "D:/Software/Github/FlyMouseFormat/release/exe/FlyingMouse Format/resources/ffmpeg/ffmpeg.exe",
-)
+// Windows bundles FFmpeg. Linux declares it as a system dependency.
+val ffmpegSource = providers.environmentVariable("RESONANCE_FFMPEG").orElse(provider {
+    System.getenv("PATH").orEmpty().split(File.pathSeparator)
+        .map { File(it, "ffmpeg.exe") }.firstOrNull { it.isFile }?.absolutePath.orEmpty()
+})
 val prepareDesktopAppResources by tasks.registering(Copy::class) {
+    onlyIf { desktopHostIsWindows }
     from(ffmpegSource)
     into(layout.buildDirectory.dir("desktopAppResources/windows"))
     rename { "ffmpeg.exe" }
     doFirst {
         require(file(ffmpegSource.get()).isFile) {
-            "找不到 FFmpeg。请用 RESONANCE_FFMPEG 指向 ffmpeg.exe（建议放在 D: 盘）。"
+            "Cannot find FFmpeg. Set RESONANCE_FFMPEG to an existing ffmpeg.exe."
         }
     }
 }
 
 tasks.matching {
     it.name in setOf(
-        "prepareAppResources",
-        "createDistributable",
-        "createReleaseDistributable",
-        "packageExe",
-        "packageMsi",
-        "packageReleaseExe",
-        "packageReleaseMsi",
-        "packageDistributionForCurrentOS",
+        "prepareAppResources", "createDistributable", "createReleaseDistributable",
+        "packageExe", "packageMsi", "packageReleaseExe", "packageReleaseMsi",
+        "packageDistributionForCurrentOS", "packageReleaseDistributionForCurrentOS",
     )
 }.configureEach {
-    dependsOn(prepareDesktopAppResources)
+    if (desktopHostIsWindows) dependsOn(prepareDesktopAppResources)
+}
+
+tasks.withType<AbstractJPackageTask>().configureEach {
+    if (targetFormat == TargetFormat.Deb || targetFormat == TargetFormat.Rpm) {
+        freeArgs.addAll("--linux-package-deps", "ffmpeg")
+    }
+}
+
+tasks.register<Tar>("packageLinuxPortable") {
+    group = "distribution"
+    description = "Archive the complete Linux release app image, including its Java runtime"
+    dependsOn("createReleaseDistributable")
+    onlyIf { System.getProperty("os.name").startsWith("Linux", true) }
+    compression = Compression.GZIP
+    val architecture = if (System.getProperty("os.arch") == "amd64") "x86_64" else System.getProperty("os.arch")
+    archiveFileName.set("Resonance-$appVersionName-linux-$architecture.tar.gz")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main-release/tar"))
+    from(layout.buildDirectory.dir("compose/binaries/main-release/app")) { include("Resonance/**") }
 }
 
 tasks.register("bumpVersion") {

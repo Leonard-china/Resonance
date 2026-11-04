@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -51,7 +53,7 @@ internal fun RecommendationHistoryScreen(compact: Boolean, onBack: () -> Unit) {
                 val track = feature.library.firstOrNull { it.title.equals(song.title, true) && it.artist.equals(song.artist, true) }
                     ?: Track("history", song.title, song.artist, song.album, "0:00", 0)
                 val feedback = assistant.feedbackFor(track)
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(song.title, style = MaterialTheme.typography.titleMedium)
                         Text(song.artist + " · " + song.album.ifBlank { "专辑未提供" })
@@ -62,7 +64,7 @@ internal fun RecommendationHistoryScreen(compact: Boolean, onBack: () -> Unit) {
                             TextButton(onClick = { feature.launch { assistant.setRecommendationVote(track, if (feedback?.vote == RecommendationVote.Dislike) RecommendationVote.Neutral else RecommendationVote.Dislike) } }, enabled = !state.task.running) { Text(if (feedback?.vote == RecommendationVote.Dislike) "已踩 · 撤销" else "踩") }
                             TextButton(onClick = { editing = track; comment = feedback?.comment.orEmpty() }, enabled = !state.task.running) { Text("编辑评论") }
                             TextButton(onClick = { feature.searchQuery = song.title + " " + song.artist; feature.searchOnline = true; feature.onNavigate(LibraryDestination.Discover) }) { Text("重新查找") }
-                            if (track.id != "history") TextButton(onClick = { feature.onPlay(track) }) { Text("播放／恢复下载") }
+                            if (track.id != "history") TextButton(onClick = { feature.onPlay(track, feature.library) }) { Text("播放／恢复下载") }
                         }
                     }
                 }

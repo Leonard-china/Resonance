@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.resonanceGlass
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,10 +52,10 @@ fun ShareCardDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = ResonanceColors.Raised,
+            color = androidx.compose.ui.graphics.Color.Transparent,
             modifier = Modifier
                 .widthIn(max = 420.dp)
-                .padding(16.dp),
+                .padding(16.dp).resonanceGlass(shape = RoundedCornerShape(24.dp)),
         ) {
             Column(
                 Modifier

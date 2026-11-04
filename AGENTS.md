@@ -10,9 +10,9 @@
 
 ## 实现边界
 
-- 播放器是 Kotlin / Compose Multiplatform 原生项目，目标是 Android 和 Windows。`website/` 是独立的 Python 官网与匿名论坛，部署和数据都与播放器隔离；不要把官网样式套到原生 UI，也不要把播放器改成 Web 应用。
-- `commonMain` 存放共享模型、UI、状态及平台接口，`jvmMain` 存放两端共用的 JVM 实现；平台能力分别落在 `androidMain`、`desktopMain`。
-- 修改平台接口时检查两端实现；修改播放、持久化或同步时检查对应回归测试及数据兼容性。
+- 播放器是 Kotlin / Compose Multiplatform 原生项目，目标是 Android、Windows 和 Linux。`website/` 是独立的 Python 官网与匿名论坛，部署和数据都与播放器隔离；不要把官网样式套到原生 UI，也不要把播放器改成 Web 应用。
+- `commonMain` 存放共享模型、UI、状态及平台接口，`jvmMain` 存放移动端和桌面端共用的 JVM 实现；平台能力分别落在 `androidMain`、`desktopMain`。
+- 修改平台接口时检查 Android 和桌面实现；桌面系统能力需分别检查 Windows 与 Linux；修改播放、持久化或同步时检查对应回归测试及数据兼容性。
 - 保留原音频的转换流程、播放任务防竞争机制、配置写入顺序、原子文件与备份恢复、同步包校验和路径边界。
 - 文件删除会影响用户真实音频；元数据写回可能改变文件。不得把文档中列出的待办或风险当成用户已经授权修复的需求。
 - 不读取或输出真实 `keystore.properties`、签名私钥和用户 API Key，不把用户数据、歌曲或本机工具路径当作可提交资源。

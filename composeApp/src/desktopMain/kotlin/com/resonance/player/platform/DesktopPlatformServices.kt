@@ -15,6 +15,9 @@ import com.resonance.player.conversion.DesktopManagedMp3Converter
 import com.resonance.player.sync.PlainSyncPackage
 import kotlinx.coroutines.Dispatchers
 import com.resonance.player.model.CalibrationStatus
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +49,10 @@ class DesktopPlatformServices : PlatformServices {
             require(!source.contains("://") || source.startsWith("file:")) { "一起听仅共享本机音频" }
             val path = if (source.startsWith("file:")) java.nio.file.Paths.get(java.net.URI(source)) else java.nio.file.Paths.get(source)
             Files.newInputStream(path)
-        }, onGuestStopped = { setPlaying(false) })
+        }, onGuestStopped = { setPlaying(false) }, prefetchNetworkAllowed = { automaticRecommendationAllowed(unmeteredOnly = true) },
+            companionStore = com.resonance.player.together.TogetherCompanionStore(library.appDirectory.resolve("together-companions"),
+                credentialVault::encrypt,
+                credentialVault::decrypt, TogetherDefaults.RelayUrl)).apply { trackPlayerReadiness(true) }
     }
 
     override fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
@@ -54,8 +60,11 @@ class DesktopPlatformServices : PlatformServices {
         playingMusicId = track.id
         player.setPlaybackSpeed(speed)
         player.play(track, autoPlay = playing, initialProgress = progress.coerceIn(0f, 1f))
-        isPlayingEvents.tryEmit(playing)
     }
+    override suspend fun awaitSynchronizedReady(trackId: String): Boolean = kotlinx.coroutines.withTimeoutOrNull(15_000) {
+        while (!player.isPrepared(trackId)) kotlinx.coroutines.delay(25)
+        true
+    } ?: false
     override val supportsKgg = true
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     override val importProgress = MutableStateFlow<ImportProgress?>(null)
@@ -78,7 +87,8 @@ class DesktopPlatformServices : PlatformServices {
         _vocalSuppressionState.value = enabled
         player.setVocalSuppression(enabled)
     }
-    private val listeningStatsStore by lazy { com.resonance.player.playback.ListeningStatsStore(library.appDirectory) }
+    private val listeningStatsRepository by lazy { com.resonance.player.playback.ListeningStatsRepository.get(library.appDirectory) }
+    private val listeningStatsStore get() = listeningStatsRepository.store
     private val _audioEffectPresetState = MutableStateFlow(com.resonance.player.model.AudioEffectPreset.Off)
     override val currentAudioEffectPreset: StateFlow<com.resonance.player.model.AudioEffectPreset> = _audioEffectPresetState
 
@@ -96,9 +106,12 @@ class DesktopPlatformServices : PlatformServices {
         library.writeUiValue("audio.effect_preset", preset.id)
     }
 
-    override fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean) {
-        listeningStatsStore.recordPlayback(trackId, deltaSeconds, isCompleted)
+    override suspend fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean) = withContext(Dispatchers.IO) {
+        listeningStatsRepository.record(trackId, deltaSeconds, isCompleted)
+        listeningStatsRepository.flush()
     }
+
+    override suspend fun flushListeningStats() = withContext(Dispatchers.IO) { listeningStatsRepository.flush() }
 
     override fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? {
         return listeningStatsStore.getTrackStats(trackId)
@@ -228,6 +241,7 @@ class DesktopPlatformServices : PlatformServices {
         selected
     }
     private val library = DesktopLibraryStore()
+    private val credentialVault by lazy { com.resonance.player.features.DesktopCredentialVault(library.appDirectory) }
     @Volatile private var playingMusicId: String? = null
     private val assistantScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     private var recommendationJob: kotlinx.coroutines.Job? = null
@@ -259,7 +273,7 @@ class DesktopPlatformServices : PlatformServices {
         com.resonance.player.features.JvmMusicAssistant(
             com.resonance.player.features.MusicJsonStore(library.appDirectory.resolve("music-assistant")), library.managedMusicDirectory,
             com.resonance.player.features.DesktopMusicAccess(library, { id -> if (playingMusicId == id) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) } }, { playingMusicId }),
-            com.resonance.player.features.DesktopCredentialVault::encrypt, com.resonance.player.features.DesktopCredentialVault::decrypt,
+            credentialVault::encrypt, credentialVault::decrypt,
             screenshotOcr = com.resonance.player.features.desktopScreenshotOcr(),
             autoInstallBuiltinSources = true,
         )
@@ -289,24 +303,71 @@ class DesktopPlatformServices : PlatformServices {
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-    private val errorEvents = MutableSharedFlow<String>(extraBufferCapacity = 1)
-    override val playbackErrors: Flow<String> = errorEvents
+    @Volatile private var hostShuffle = false
+    @Volatile private var hostRepeat = RepeatMode.Off
+    private val errorEvents = MutableSharedFlow<PlaybackIssue>(extraBufferCapacity = 8)
+    override val playbackErrors: Flow<String> get() = playbackIssues.map { it.message }
+    override val playbackIssues: Flow<PlaybackIssue> get() = merge(errorEvents,
+        listeningStatsRepository.errors.filterNotNull().map { PlaybackIssue(it, PlaybackIssue.Source.Statistics) })
+    override fun isCurrentPlaybackIssue(issue: PlaybackIssue): Boolean =
+        issue.matches(player.snapshot().currentTrack?.id, player.currentRequestId)
     private val player: DesktopAudioPlayer = DesktopAudioPlayer(
         onEnded = {
             playingMusicId = null
             isPlayingEvents.tryEmit(false)
-            if (!sleep.trackEnded()) endedEvents.tryEmit(Unit)
+            if (!sleep.trackEnded() && !(listenTogether.state.value.role == TogetherRole.Host && togetherHostDriver.trackEnded())) endedEvents.tryEmit(Unit)
         },
         onProgress = { progressEvents.tryEmit(it) },
         onPlayingChanged = { isPlayingEvents.tryEmit(it) },
+        onBufferingChanged = { isBufferingEvents.tryEmit(it) },
         onError = { errorEvents.tryEmit(it) },
+        stats = listeningStatsRepository.recorder(),
     )
+    override var togetherLocalSnapshot: Any? = null
+    override val managesTogetherPlayback: Boolean get() = true
+    private val togetherPlaybackScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+    private val togetherHostDriver by lazy {
+        com.resonance.player.playback.TogetherHostPlaybackDriver(listenTogether, togetherPlaybackScope,
+            current = { player.snapshot().copy(shuffleEnabled = hostShuffle, repeatMode = hostRepeat) },
+            replaceQueue = { tracks, target ->
+                val current = player.snapshot()
+                if (tracks.isEmpty()) {
+                    if (current.currentTrack != null) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) }
+                } else if (tracks.none { it.id == current.currentTrack?.id }) {
+                    val wanted = player.playWhenReady
+                    tracks.firstOrNull { it.id == target }?.let {
+                        playingMusicId = it.id
+                        player.play(it, autoPlay = wanted)
+                    }
+                }
+            }, select = { track, _, autoPlay ->
+                stopAudioPreview(); playingMusicId = track.id
+                player.play(track, autoPlay = autoPlay)
+            }, playing = ::setPlaying, seek = ::seekTo, onError = listenTogether::reportHostPlaybackFailure)
+    }
+    private val togetherDriver by lazy {
+        com.resonance.player.playback.TogetherPlaybackDriver(listenTogether, togetherPlaybackScope,
+            current = { player.snapshot() }, prepare = { frame -> frame.track?.let { playSynchronized(it, frame.progress, false, frame.speed) } },
+            seek = ::seekTo, playing = ::setPlaying, speed = ::setPlaybackSpeed, ready = ::awaitSynchronizedReady)
+    }
+    init {
+        togetherPlaybackScope.launch {
+            togetherDriver
+            togetherHostDriver
+            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
+                  val room = listenTogether.state.value
+                  val hosting = room.role == TogetherRole.Host
+                  if (hosting) listenTogether.publishNativePlayback(player.snapshot(), room.roomSessionId)
+                  kotlinx.coroutines.delay(if (hosting) 100 else 500)
+            }
+        }
+    }
 
     override val playbackEnded: Flow<Unit> = endedEvents
     private val sleep: com.resonance.player.playback.PlaybackSleepTimer = com.resonance.player.playback.PlaybackSleepTimer(assistantScope, onExpire = { player.setPlaying(false); isPlayingEvents.tryEmit(false) })
     override val sleepTimer get() = sleep.state
     override fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) = sleep.set(option)
-    private val preview = com.resonance.player.audio.DesktopPcmPlayer({}, {}, {}, { errorEvents.tryEmit("试听失败：$it") })
+    private val preview = com.resonance.player.audio.DesktopPcmPlayer({}, {}, {}, { errorEvents.tryEmit(PlaybackIssue("试听失败：$it", PlaybackIssue.Source.Preview)) })
     override fun previewAudio(path: String) {
         preview.close()
         preview.play(Track("source-preview", "试听", "", "", "0:30", 0, sourceUri = path))
@@ -319,6 +380,8 @@ class DesktopPlatformServices : PlatformServices {
     override val playbackPositionMs: Long? get() = player.positionMs
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
+    private val isBufferingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
+    override val isBufferingChanges: Flow<Boolean> = isBufferingEvents
     override val activeTrackChanges: Flow<String> = emptyFlow()
 
     override suspend fun loadLibrary(): List<Track> = withContext(Dispatchers.IO) { library.load() }
@@ -407,6 +470,7 @@ class DesktopPlatformServices : PlatformServices {
             forceRefresh = forceRefresh,
             customLyricsFolder = library.loadCustomLyricsFolder(),
             aiFallback = null,
+            sourceFallback = musicAssistant::findSourceLyrics,
         )
 
     override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
@@ -518,19 +582,18 @@ class DesktopPlatformServices : PlatformServices {
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
         stopAudioPreview()
+        hostShuffle = shuffle; hostRepeat = repeatMode
         playingMusicId = track.id
-        isPlayingEvents.tryEmit(true)
         player.play(track)
     }
 
     override fun setPlaying(isPlaying: Boolean) {
         if (isPlaying) stopAudioPreview()
-        isPlayingEvents.tryEmit(isPlaying)
         player.setPlaying(isPlaying)
     }
 
     override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
-        library.savePlaybackMode(shuffle, repeatMode)
+        hostShuffle = shuffle; hostRepeat = repeatMode
     }
 
     override fun setVolume(volume: Float) = player.setVolume(volume)
@@ -597,11 +660,17 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun close() {
+        togetherDriver.close()
+        togetherHostDriver.close()
+        togetherPlaybackScope.cancel()
         listenTogether.close()
         sleep.close()
         stopAudioPreview()
         assistantScope.cancel()
         player.close()
+        kotlinx.coroutines.runBlocking {
+            kotlinx.coroutines.withTimeoutOrNull(3_000) { runCatching { listeningStatsRepository.flush() } }
+        }
     }
 
     private fun openArtworkSource(value: String?): java.io.InputStream? {
@@ -756,8 +825,7 @@ internal class DesktopMusicScanner(
 }
 
 internal class DesktopLibraryStore(
-    val appDirectory: Path = (System.getProperty("RESONANCE_DATA") ?: System.getenv("RESONANCE_DATA"))?.takeIf(String::isNotBlank)?.let(Path::of)
-        ?: Path.of(System.getenv("LOCALAPPDATA") ?: System.getProperty("user.home"), "Resonance"),
+    val appDirectory: Path = DesktopPaths.dataDirectory(),
 ) {
     private val libraryFile = appDirectory.resolve("library.properties")
     private val playlistFile = appDirectory.resolve("playlists.properties")
@@ -1116,28 +1184,67 @@ internal class DesktopLibraryStore(
     private fun preferredManagedMusicDirectory(): Path {
         System.getenv("RESONANCE_LIBRARY")?.takeIf(String::isNotBlank)?.let { return Path.of(it) }
         val dDrive = Path.of("D:\\")
-        return if (Files.isDirectory(dDrive)) dDrive.resolve("Music").resolve("Resonance")
+        return if (System.getProperty("os.name").startsWith("Windows", true) && Files.isDirectory(dDrive)) dDrive.resolve("Music").resolve("Resonance")
         else Path.of(System.getProperty("user.home"), "Music", "Resonance")
     }
 }
 
 private class DesktopAudioPlayer(
-    onEnded: () -> Unit,
-    onProgress: (Float) -> Unit,
-    onPlayingChanged: (Boolean) -> Unit,
-    onError: (String) -> Unit,
+    private val onEnded: () -> Unit,
+    private val onProgress: (Float) -> Unit,
+    private val onPlayingChanged: (Boolean) -> Unit,
+    private val onBufferingChanged: (Boolean) -> Unit,
+    private val onError: (PlaybackIssue) -> Unit,
+    private val stats: com.resonance.player.playback.ListeningStatsRecorder,
 ) {
-    private val backend = com.resonance.player.audio.DesktopPcmPlayer(onEnded, onProgress, onPlayingChanged, onError)
+    private val backend: com.resonance.player.audio.DesktopPcmPlayer =
+        com.resonance.player.audio.DesktopPcmPlayer({}, {}, {}, {}, ::event)
+    val currentRequestId: Long? get() = backend.currentRequestId
+    @Synchronized private fun event(event: com.resonance.player.audio.DesktopPlaybackEvent) {
+        if (event.requestId != backend.currentRequestId) return
+        sample(event.snapshot)
+        when (event.kind) {
+            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Buffering -> onBufferingChanged(true)
+            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Playing -> {
+                onBufferingChanged(false)
+                onPlayingChanged(event.snapshot.isPlaying)
+            }
+            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Progress -> onProgress(event.snapshot.progress)
+            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Ended -> { onBufferingChanged(false); stats.finish(); onProgress(1f); onEnded() }
+            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Error -> {
+                onBufferingChanged(false)
+                onPlayingChanged(false)
+                onError(PlaybackIssue(event.message,
+                    trackId = event.snapshot.currentTrack?.id, requestId = event.requestId))
+            }
+        }
+    }
+    private fun sample(state: PlayerState = backend.snapshot(), discontinuity: Boolean = false) {
+        stats.sample(state.currentTrack?.id, state.positionMs ?: 0L,
+            state.currentTrack?.durationText?.let { durationTextToSeconds(it) * 1000L } ?: 0L,
+            state.isPlaying, state.playbackSpeed, discontinuity)
+    }
     val positionMs: Long? get() = backend.positionMs
-    fun play(track: Track, autoPlay: Boolean = true, initialProgress: Float = 0f) = backend.play(track, autoPlay, initialProgress)
-    fun setPlaying(isPlaying: Boolean) = backend.setPlaying(isPlaying)
+    fun isPrepared(trackId: String): Boolean = backend.isPrepared(trackId)
+    fun snapshot(): PlayerState = backend.snapshot()
+    val playWhenReady: Boolean get() = backend.playWhenReady
+    @Synchronized fun play(track: Track, autoPlay: Boolean = true, initialProgress: Float = 0f) {
+        sample(); stats.start(track.id, (durationTextToSeconds(track.durationText) * 1000L * initialProgress).toLong())
+        backend.play(track, autoPlay, initialProgress)
+    }
+    @Synchronized fun setPlaying(isPlaying: Boolean) {
+        sample()
+        if (!isPlaying) onBufferingChanged(false)
+        if (isPlaying && backend.sessionClosed) stats.start(backend.snapshot().currentTrack?.id)
+        backend.setPlaying(isPlaying)
+    }
     fun setVolume(volume: Float) = backend.setVolume(volume)
     fun setTrackGain(gainDb: Float) = backend.setTrackGain(gainDb)
-    fun setPlaybackSpeed(speed: Float) = backend.setPlaybackSpeed(speed)
+    @Synchronized fun setPlaybackSpeed(speed: Float) { sample(); backend.setPlaybackSpeed(speed); sample(discontinuity = true) }
     fun setVocalSuppression(enabled: Boolean) = backend.setVocalSuppression(enabled)
     fun setPreset(preset: com.resonance.player.model.AudioEffectPreset) = backend.setPreset(preset)
-    fun seekTo(fraction: Float) = backend.seekTo(fraction)
-    fun close() = backend.close()
+    @Synchronized fun seekTo(fraction: Float) { sample(); backend.seekTo(fraction); sample(discontinuity = true) }
+    @Synchronized fun close() { sample(); onBufferingChanged(false); backend.close(); stats.flushSoon() }
 }
 
 private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")

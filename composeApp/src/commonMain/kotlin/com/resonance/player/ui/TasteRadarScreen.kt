@@ -48,12 +48,12 @@ fun TasteRadarScreen(
     ResonanceBackHandler(onBack = onBack)
     val persona = remember(tracks) { TasteAnalyticsEngine.analyze(tracks) }
     val scrollState = rememberScrollState()
-    val pagePadding = if (compact) 16.dp else 32.dp
+    val pagePadding = if (compact) 20.dp else 40.dp
 
     Column(
         Modifier
             .fillMaxSize()
-            .background(ResonanceColors.Canvas)
+            .background(androidx.compose.ui.graphics.Color.Transparent)
     ) {
         // Top Bar
         Row(
@@ -99,7 +99,7 @@ fun TasteRadarScreen(
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = ResonanceColors.Raised),
+                colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
             ) {
                 Column(Modifier.padding(24.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -122,7 +122,9 @@ fun TasteRadarScreen(
                     Spacer(Modifier.height(16.dp))
 
                     val feature = LocalMusicFeatures.current
-                    val stats = remember { feature?.services?.getAllListeningStats() }
+                    val statsResult = remember { runCatching { feature?.services?.getAllListeningStats() } }
+                    val stats = statsResult.getOrNull()
+                    if (statsResult.isFailure) Text("听歌记录暂不可用，原有记录已保留", color = MaterialTheme.colorScheme.error)
                     if (stats != null && stats.totalSeconds > 0) {
                         Row(
                             modifier = Modifier
@@ -202,7 +204,7 @@ fun TasteRadarScreen(
             Card(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ResonanceColors.Raised),
+                colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
             ) {
                 Column(Modifier.padding(16.dp)) {
                     Text("维度细则", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)

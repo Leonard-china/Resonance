@@ -1,0 +1,136 @@
+{
+  "executed_at": "2026-11-01T22:18:51.187008+08:00",
+  "totals": {
+    "tests": 36,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "com.resonance.player.ListeningSessionTrackerTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.PersistenceQueueTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.playback.DesktopPlaybackFailureTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.playback.ListeningStatsStoreTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.playback.PlaybackStateStoreTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.PlaybackIssueTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.PlaybackModePersistenceTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.PlaybackModeWriterTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.TogetherPlaybackDriverTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "name": "com.resonance.player.ui.UiVisualContractTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "gradle_log": "build/stability-20261101/verified.log",
+  "android": "compileDebugKotlinAndroid succeeded; no new APK/device validation",
+  "commands": [
+    ".\\gradlew.bat :composeApp:desktopTest --tests '*ListeningSessionTrackerTest' --tests '*ListeningStats*Test' --tests '*PlaybackModeWriterTest' --tests '*PlaybackModePersistenceTest' --tests '*PlaybackIssueTest' --tests '*DesktopPlaybackFailureTest' --tests '*PersistenceQueueTest' --tests '*PlaybackStateStoreTest' --tests '*TogetherPlaybackDriverTest' --tests '*TogetherHostPlaybackDriverTest' --tests '*UiVisualContractTest.playbackErrorOffersRetryInBothThemes' :composeApp:compileDebugKotlinAndroid --offline --no-daemon --no-configuration-cache --max-workers=2 --console=plain",
+    ".\\gradlew.bat :composeApp:compileDebugKotlinAndroid --offline --no-daemon --no-configuration-cache --max-workers=2 --console=plain"
+  ],
+  "filter_note": "TogetherHostPlaybackDriverTest filter matched no class; only listed suites are executed evidence.",
+  "new_tests": 10,
+  "modified_existing_test": "PlaybackModePersistenceTest: explicit save remains covered; native setter no longer implicitly persists",
+  "first_run": "12 tests, 11 passed, 1 failed: old implicit setter persistence expectation; verified.log is corrected final run",
+  "unverified": [
+    "fresh full suite/lint/installers after second batch",
+    "Android Activity recreation/background/error ordering on device",
+    "real audio output and A-B-A playback",
+    "public production deployment and cross-network"
+  ],
+  "source_sha256": {
+    "composeApp/src/jvmMain/kotlin/com/resonance/player/playback/ListeningStatsRepository.kt": "392be61c0c773e5ef4d817e276d7f44c3604090304e41652177691c0dd30b74f",
+    "composeApp/src/jvmMain/kotlin/com/resonance/player/playback/ListeningStatsStore.kt": "f8702018e65a828413b2e20686c60cc327422f6a618cc970086f0dd965996392",
+    "composeApp/src/desktopTest/kotlin/com/resonance/player/PlaybackModePersistenceTest.kt": "1eec4c18743a00218665a1454ae01046b0176e3f93179137b47092b81991c8c3",
+    "composeApp/src/desktopTest/kotlin/com/resonance/player/playback/DesktopPlaybackFailureTest.kt": "d03569d6c74f2a2c44c8b717e47151df9b35165a96b3f1c3735a7c088ea702bc",
+    "composeApp/src/desktopTest/kotlin/com/resonance/player/playback/ListeningStatsRepositoryTest.kt": "792683997f75a6119e313a06a0bdb5330e2d0c8b1685e59977d06903cdd265fa",
+    "composeApp/src/desktopMain/kotlin/com/resonance/player/audio/DesktopPcmPlayer.kt": "f8bb217378a02a3f00fc06aa4a549166ebc327b990086c5cacdc33b17485ad09",
+    "composeApp/src/desktopMain/kotlin/com/resonance/player/platform/DesktopPlatformServices.kt": "0377e9e611fa9c27818fdea5ac0986707efcbf70e2fe767313731944069a253c",
+    "composeApp/src/commonTest/kotlin/com/resonance/player/ListeningSessionTrackerTest.kt": "455da0fb78e7a453cfbe419477868e3c386634366f16320964ffa770edb6db4c",
+    "composeApp/src/commonTest/kotlin/com/resonance/player/PlaybackIssueTest.kt": "3611f8f66823eddb1ac5751eed76d550a42dc6464e171c43de39abc57b8a9f75",
+    "composeApp/src/commonTest/kotlin/com/resonance/player/PlaybackModeWriterTest.kt": "7c09e95e3382af80f65462f1239130b351cd9d86f6cafa052267619312bc59d1",
+    "composeApp/src/commonMain/kotlin/com/resonance/player/App.kt": "28c136760e9efbe0a73a03185be7ea0497b82104a49386f9d2961893231ec177",
+    "composeApp/src/commonMain/kotlin/com/resonance/player/data/PlaybackModeWriter.kt": "5a6726461124d255e3142e7fb081f9ead021fb64f4e99eab6dcd45011bc9fb86",
+    "composeApp/src/commonMain/kotlin/com/resonance/player/platform/PlatformServices.kt": "1842f41c3b4d76bbf76b8297b844f35bff54c7c0f7d0cdb03065733875f276f7",
+    "composeApp/src/commonMain/kotlin/com/resonance/player/platform/PlaybackIssue.kt": "f75adaddea3400ae7c973e24a00ff460935adfc267c8e280460c99138b443f54",
+    "composeApp/src/commonMain/kotlin/com/resonance/player/playback/ListeningSessionTracker.kt": "22d15062c58976c123dec9c9add8e163274b25f370a211d77265162dd3c5fac2",
+    "composeApp/src/commonMain/kotlin/com/resonance/player/ui/PlaybackErrorDialog.kt": "37392e2ca1866241622cfe7f0c084a0886767431653a788196d2c9e409d47f44",
+    "composeApp/src/androidMain/kotlin/com/resonance/player/PlaybackService.kt": "a6b9997682f5319d836c85473e14cab6bd10dba2e71ce8baeb000f8045e59806",
+    "composeApp/src/androidMain/kotlin/com/resonance/player/platform/AndroidPlatformServices.kt": "3488868019f6c9cb624bae43e51d381fff3f3aae409a7914c99fe4a7106e1eb3"
+  },
+  "source_frozen_at": "2026-11-01T22:25:32.903233+08:00",
+  "android_final": "compileDebugKotlinAndroid succeeded in 41s after Android-only timestamp cutoff correction; desktop sources unchanged after 36 passing tests",
+  "android_final_log": "build/stability-20261101/android-final.log",
+  "evidence_sha256": {
+    "build/stability-20261101/verified.log": "425d843f901f63fa5fd979b00cc3388f933d846c21cee64340d4c7e63467faca",
+    "build/stability-20261101/android-final.log": "a14a836904167c72028f476a61af83cb784676248fb8532a209a9ebdd0a1d06a"
+  },
+  "billing_note": "Account 5-hour usage 80%, weekly 12% at last query; not token cost or USD spending.",
+  "checkpoint": ".git/audit-checkpoints/stability-20261101-215043/files",
+  "new_source_whitespace": "passed",
+  "documentation_links": "7 changed documents checked; no missing local links",
+  "git_check_log": "build/stability-20261101/diff-check.log (repository line-ending configuration)"
+}

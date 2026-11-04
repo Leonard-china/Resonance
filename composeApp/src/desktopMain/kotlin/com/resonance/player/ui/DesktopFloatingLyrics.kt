@@ -40,7 +40,7 @@ fun DesktopFloatingLyricsWindow(player: PlayerState, lyrics: LyricsUiState, sett
         val content: @Composable () -> Unit = {
             Column(Modifier.fillMaxSize().background(Color(0xB0182024)).padding(horizontal = 18.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                 if (!locked) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { onSettingsChange(settings.copy(floatingLyricsLocked = true)) }) { Text("锁定并穿透", color = Color.White) }
+                    TextButton(onClick = { onSettingsChange(settings.copy(floatingLyricsLocked = true)) }) { Text(if (System.getProperty("os.name").startsWith("Windows")) "锁定并穿透" else "锁定位置", color = Color.White) }
                     IconButton(onClick = { onSettingsChange(settings.copy(floatingLyrics = false)) }, modifier = Modifier.size(36.dp)) { Icon(Icons.Default.Close, "关闭桌面歌词", tint = Color.White) }
                 }
                 Text(first, color = Color(0xFFABF1D9), fontSize = settings.floatingLyricsSize.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 2)

@@ -116,7 +116,7 @@ class LibraryNavigationTest {
         ui.onNodeWithTag("library-page-swipe").performTouchInput {
             swipe(Offset(width * 0.8f, height / 2f), Offset(width * 0.2f, height / 2f))
         }
-        ui.onNodeWithText("发送").assertIsDisplayed()
+        ui.onNodeWithContentDescription("发送").assertIsDisplayed()
     }
     @Test fun aboutShowsHighlightsForInstalledVersion() {
         show()
@@ -125,13 +125,15 @@ class LibraryNavigationTest {
         ui.onNodeWithText("当前版本更新 · v" + APP_VERSION).performScrollTo().assertIsDisplayed()
         APP_RELEASE_HIGHLIGHTS.firstOrNull()?.let { ui.onNodeWithText(it).performScrollTo().assertIsDisplayed() }
     }
-    @Test fun assistantReplacesBottomSearchAndHidesMiniPlayer() {
+    @Test fun assistantKeepsPlayerAndDockBoundsStable() {
         show()
         ui.onNodeWithContentDescription("打开正在播放详情与歌词").assertIsDisplayed()
         ui.onNodeWithText("搜索").assertDoesNotExist()
+        val dock = ui.onNodeWithTag("app-dock").fetchSemanticsNode().boundsInRoot
         ui.onNodeWithText("音乐助手").performClick()
-        ui.onNodeWithContentDescription("打开正在播放详情与歌词").assertDoesNotExist()
-        ui.onNodeWithText("发送").assertIsDisplayed()
+        ui.onNodeWithContentDescription("打开正在播放详情与歌词").assertIsDisplayed()
+        org.junit.Assert.assertEquals(dock, ui.onNodeWithTag("app-dock").fetchSemanticsNode().boundsInRoot)
+        ui.onNodeWithContentDescription("发送").assertIsDisplayed()
     }
     @Test fun assistantHeaderKeepsTitleOnOneLineAndActionsVisible() {
         show()
@@ -142,7 +144,9 @@ class LibraryNavigationTest {
                 org.junit.Assert.assertTrue(action(results))
                 org.junit.Assert.assertEquals(1, results.single().lineCount)
             }
-        for (label in listOf("新对话", "历史", "任务", "设置")) ui.onNodeWithText(label).assertIsDisplayed()
+        ui.onNodeWithContentDescription("新对话").assertIsDisplayed()
+        ui.onNodeWithContentDescription("助手选项").performClick()
+        for (label in listOf("对话历史", "音乐任务", "助手设置")) ui.onNodeWithText(label).assertIsDisplayed()
     }
     @Test fun assistantExampleFillsDraftWithoutSendingRequest() {
         show()

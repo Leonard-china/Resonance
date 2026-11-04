@@ -3,114 +3,106 @@ package com.resonance.player.playback
 import com.resonance.player.model.AllListeningStats
 import com.resonance.player.model.TrackListeningStats
 import org.json.JSONObject
-import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.AtomicMoveNotSupportedException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 
-/**
- * 听歌时长与播放次数统计持久化存储（原子写入与内存缓存）
- */
-class ListeningStatsStore(private val storageDir: Path) {
+/** Call disk operations from IO. A failed load never becomes an empty writable history. */
+class ListeningStatsStore(private val storageDir: Path, private val flushIntervalMillis: Long = 0) {
     private val file = storageDir.resolve("listening-stats.json")
-    private val trackMap = ConcurrentHashMap<String, TrackListeningStats>()
-    private val dailyMap = ConcurrentHashMap<String, Long>()
-    @Volatile private var totalListeningSeconds = 0L
+    private val backup = storageDir.resolve("listening-stats.json.bak")
+    private val trackMap = mutableMapOf<String, TrackListeningStats>()
+    private val dailyMap = mutableMapOf<String, Long>()
+    private var totalListeningSeconds = 0L
+    private var dirty = false
+    @get:Synchronized internal val hasPendingWrites: Boolean get() = dirty
+    private var lastFlushNanos = 0L
 
-    init {
-        loadFromDisk()
-    }
+    init { loadFromDisk() }
 
-    fun getTrackStats(trackId: String): TrackListeningStats? = trackMap[trackId]
-
-    fun getAllStats(): AllListeningStats = AllListeningStats(
-        totalSeconds = totalListeningSeconds,
-        trackStats = trackMap.toMap(),
-        dailySeconds = dailyMap.toMap(),
-    )
+    @Synchronized fun getTrackStats(trackId: String): TrackListeningStats? = trackMap[trackId]
+    @Synchronized fun getAllStats(): AllListeningStats = AllListeningStats(
+        totalSeconds = totalListeningSeconds, trackStats = trackMap.toMap(), dailySeconds = dailyMap.toMap())
 
     @Synchronized
     fun recordPlayback(trackId: String, deltaSeconds: Int, isCompleted: Boolean = false) {
         if (deltaSeconds <= 0 && !isCompleted) return
         val current = trackMap[trackId] ?: TrackListeningStats(trackId)
-        val updated = current.copy(
+        trackMap[trackId] = current.copy(
             totalSeconds = current.totalSeconds + deltaSeconds.coerceAtLeast(0),
-            playCount = if (isCompleted) current.playCount + 1 else current.playCount,
-            lastPlayedAt = System.currentTimeMillis(),
-        )
-        trackMap[trackId] = updated
+            playCount = current.playCount + if (isCompleted) 1 else 0,
+            lastPlayedAt = System.currentTimeMillis())
         totalListeningSeconds += deltaSeconds.coerceAtLeast(0)
-
-        val dateKey = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
-        dailyMap.compute(dateKey) { _, old -> (old ?: 0L) + deltaSeconds.coerceAtLeast(0) }
-
-        saveToDisk()
+        val day = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).format(Date())
+        dailyMap[day] = (dailyMap[day] ?: 0L) + deltaSeconds.coerceAtLeast(0)
+        dirty = true
+        if (lastFlushNanos == 0L || isCompleted ||
+            (System.nanoTime() - lastFlushNanos) / 1_000_000 >= flushIntervalMillis) flush()
     }
 
-    @Synchronized
+    private fun parse(path: Path): JSONObject? = runCatching {
+        if (!Files.isRegularFile(path)) return@runCatching null
+        JSONObject(String(Files.readAllBytes(path), Charsets.UTF_8)).also { json ->
+            require(json.getLong("totalListeningSeconds") >= 0)
+            val tracks = json.getJSONObject("tracks")
+            tracks.keys().forEach { key -> tracks.getJSONObject(key).let {
+                require(it.getLong("totalSeconds") >= 0 && it.getInt("playCount") >= 0 && it.getLong("lastPlayedAt") >= 0)
+            } }
+            val daily = json.getJSONObject("daily")
+            daily.keys().forEach { require(daily.getLong(it) >= 0) }
+        }
+    }.getOrNull()
+
     private fun loadFromDisk() {
-        if (!Files.exists(file)) return
-        try {
-            val bytes = Files.readAllBytes(file)
-            val json = JSONObject(String(bytes, StandardCharsets.UTF_8))
-            totalListeningSeconds = json.optLong("totalListeningSeconds", 0L)
-
-            val tracksObj = json.optJSONObject("tracks")
-            if (tracksObj != null) {
-                val keys = tracksObj.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val item = tracksObj.optJSONObject(key) ?: continue
-                    trackMap[key] = TrackListeningStats(
-                        trackId = key,
-                        totalSeconds = item.optLong("totalSeconds", 0L),
-                        playCount = item.optInt("playCount", 0),
-                        lastPlayedAt = item.optLong("lastPlayedAt", 0L),
-                    )
-                }
+        val primary = parse(file)
+        val json = primary ?: parse(backup)?.also {
+            if (Files.isRegularFile(file)) {
+                val preserved = Files.createTempFile(storageDir, "listening-stats-corrupt-", ".json")
+                Files.copy(file, preserved, StandardCopyOption.REPLACE_EXISTING)
             }
-
-            val dailyObj = json.optJSONObject("daily")
-            if (dailyObj != null) {
-                val keys = dailyObj.keys()
-                while (keys.hasNext()) {
-                    val dateKey = keys.next()
-                    dailyMap[dateKey] = dailyObj.optLong(dateKey, 0L)
-                }
-            }
-        } catch (_: Exception) {}
+            replace(file, it.toString().toByteArray(Charsets.UTF_8))
+        }
+        if (json == null) {
+            check(!Files.exists(file) && !Files.exists(backup)) { "听歌记录损坏且没有可恢复备份，请保留记录文件后检查" }
+            return
+        }
+        totalListeningSeconds = json.getLong("totalListeningSeconds")
+        val tracks = json.getJSONObject("tracks")
+        tracks.keys().forEach { key -> val item = tracks.getJSONObject(key)
+            trackMap[key] = TrackListeningStats(key, item.getLong("totalSeconds"), item.getInt("playCount"), item.getLong("lastPlayedAt"))
+        }
+        val daily = json.getJSONObject("daily")
+        daily.keys().forEach { dailyMap[it] = daily.getLong(it) }
     }
 
-    @Synchronized
-    private fun saveToDisk() {
+    /** Flush accepted increments on pause, track change and composition disposal; keep dirty on failure. */
+    @Synchronized fun flush() {
+        if (!dirty) return
+        val tracks = JSONObject()
+        trackMap.forEach { (key, value) -> tracks.put(key, JSONObject()
+            .put("totalSeconds", value.totalSeconds).put("playCount", value.playCount).put("lastPlayedAt", value.lastPlayedAt)) }
+        val daily = JSONObject()
+        dailyMap.forEach { (day, seconds) -> daily.put(day, seconds) }
+        val bytes = JSONObject().put("totalListeningSeconds", totalListeningSeconds)
+            .put("tracks", tracks).put("daily", daily).toString().toByteArray(Charsets.UTF_8)
+        // Never replace a valid backup with a corrupt primary.
+        parse(file)?.let { replace(backup, it.toString().toByteArray(Charsets.UTF_8)) }
+        replace(file, bytes)
+        dirty = false
+        lastFlushNanos = System.nanoTime()
+    }
+
+    private fun replace(target: Path, bytes: ByteArray) {
+        Files.createDirectories(storageDir)
+        val temp = Files.createTempFile(storageDir, ".listening-", ".tmp")
         try {
-            Files.createDirectories(storageDir)
-            val json = JSONObject()
-            json.put("totalListeningSeconds", totalListeningSeconds)
-
-            val tracksObj = JSONObject()
-            for ((key, value) in trackMap) {
-                val item = JSONObject()
-                item.put("totalSeconds", value.totalSeconds)
-                item.put("playCount", value.playCount)
-                item.put("lastPlayedAt", value.lastPlayedAt)
-                tracksObj.put(key, item)
-            }
-            json.put("tracks", tracksObj)
-
-            val dailyObj = JSONObject()
-            for ((dateKey, secs) in dailyMap) {
-                dailyObj.put(dateKey, secs)
-            }
-            json.put("daily", dailyObj)
-
-            val temp = storageDir.resolve("listening-stats.json.tmp")
-            Files.write(temp, json.toString(2).toByteArray(StandardCharsets.UTF_8))
-            Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-        } catch (_: Exception) {}
+            Files.write(temp, bytes)
+            try { Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE) }
+            catch (_: AtomicMoveNotSupportedException) { Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING) }
+        } finally { Files.deleteIfExists(temp) }
     }
 }

@@ -34,7 +34,7 @@ internal fun AppearanceSettings() {
         AccentMode.entries.forEach { mode ->
             FilterChip(selected = preferences.accentMode == mode,
                 onClick = { appearance.onPreferencesChange(preferences.copy(accentMode = mode)) },
-                label = { Text(mode.label) },
+                label = { Text(if (mode == AccentMode.Sage) "默认配色" else mode.label) },
                 leadingIcon = if (preferences.accentMode == mode) {
                     { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
                 } else null,
@@ -42,7 +42,7 @@ internal fun AppearanceSettings() {
         }
     }
     if (preferences.accentMode == AccentMode.Weather) {
-        Text("晴天浅灰绿，雨雪冰蓝；阴天和获取失败时保持当前配色。",
+        Text("晴天使用默认配色，雨雪使用冰蓝；阴天和获取失败时保持当前配色。",
             style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         Text("使用设备大致位置获取 Open-Meteo 当地天气。仅在前台更新；定位不可用时使用你选择的城市。",
             style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted,
@@ -100,7 +100,7 @@ internal fun AppearanceSettings() {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("减少动态效果", color = ResonanceColors.TextPrimary, fontWeight = FontWeight.Medium)
-            Text("关闭环境漂移与弹性缩放，保留必要状态反馈", style = MaterialTheme.typography.bodySmall,
+            Text("减少页面位移与缩放，保留必要状态反馈", style = MaterialTheme.typography.bodySmall,
                 color = ResonanceColors.Muted)
         }
         Switch(checked = preferences.reduceMotion,

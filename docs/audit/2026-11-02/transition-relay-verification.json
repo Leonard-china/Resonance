@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-11-02T08:11:18.745303+08:00",
+  "transition_device": {
+    "tests": 4,
+    "passed": 4,
+    "log": "build\\transition-relay-20261102\\transition-final-device.log"
+  },
+  "combined_android_device": {
+    "tests": 10,
+    "passed": 10,
+    "failed": 0,
+    "seconds": 63.804,
+    "log": "build\\transition-relay-20261102\\device-final-ten.log"
+  },
+  "relay_local": {
+    "tests": 9,
+    "passed": 9,
+    "failed": 0,
+    "log": "build\\transition-relay-20261102\\relay-verified.log"
+  },
+  "build": "assembleDebugAndroidTest successful, 39s, isolated validation20261102 app",
+  "shell_syntax": "run-public-relay.sh and exact start.sh.proposed checked with existing Git Bash; passed",
+  "production": "Read-only inspection only; deployment approval and Cloudflare login pending",
+  "source_sha256": {
+    "composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player/LibraryDetailTransitionTest.kt": "8f52c8fbd3b5586b18504f945f1f1d6a509a40e0e6a482a8c80b0a14118778d0",
+    "services/relay/supervise.py": "d836d4cb6050016c39ee0722e974c258201de042cf00f4e28712dfb0befa6e8a",
+    "services/relay/test_supervise.py": "b61b1d7108e4d2c3a74200866ffa2f232ac671b552ffcf09651fc2491cd841f3",
+    "services/relay/start-hook.sh": "3cd3ef458d29f0002a7fa2c8a59bd60f85646b2c5a7ad22f0d2eaff49a6f6513"
+  },
+  "checkpoint": ".git\\audit-checkpoints\\transition-relay-20261102-080310"
+}

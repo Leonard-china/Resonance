@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,7 +46,7 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
             items(groupMusicTasks(state.tasks), key = { it.root.id }) { group ->
                 val task = group.root
                 var expanded by remember(task.id) { mutableStateOf(false) }
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(task.title, style = MaterialTheme.typography.titleMedium)
                         if (task.progress.total > 0) Text("已处理 ${task.progress.completed} / ${task.progress.total} · ${task.progress.detail}", style = MaterialTheme.typography.bodySmall)
@@ -132,7 +134,7 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (tracks.isEmpty()) item { Text("已内置歌源，开启推荐后点击“更新推荐”即可开始；也可先收藏喜欢的歌，帮助了解你的偏好。", color = ResonanceColors.Muted) }
             items(tracks, key = Track::id) { track ->
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (selecting) Checkbox(track.id in selected, { checked -> selected = if (checked) selected + track.id else selected - track.id }, enabled = !busy)
@@ -142,8 +144,7 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
                                 Text(track.artist, style = MaterialTheme.typography.bodySmall, maxLines = 1)
                             }
                             IconButton(onClick = {
-                                if (track.sourceUri.isNullOrBlank()) feature.launch { val restored = assistant.restoreDownload(track.id); feature.onReload(); feature.onPlay(restored) }
-                                else feature.onPlay(track)
+                                feature.playRecommendation(track, tracks)
                             }, enabled = !busy) { Icon(Icons.Default.PlayArrow, "播放推荐") }
                             IconButton(onClick = { feature.favorite(track) }, enabled = !busy) { Icon(if (track.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder, if (track.isFavorite) "已收藏" else "收藏歌曲") }
                         }

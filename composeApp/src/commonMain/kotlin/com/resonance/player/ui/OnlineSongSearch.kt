@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,7 +48,7 @@ internal fun OnlineSongSearch(query: String, modifier: Modifier = Modifier) {
             }
             items(shown, key = { it.sourceId + ":" + it.id }) { song ->
                 val key = song.sourceId + ":" + song.id
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(song.title, style = MaterialTheme.typography.titleMedium)
                         Text(song.artist + " · " + song.album.ifBlank { "专辑未提供" })

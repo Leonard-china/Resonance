@@ -1,0 +1,38 @@
+{
+  "date": "2026-11-02",
+  "timezone": "Asia/Shanghai",
+  "windows_tests": 1,
+  "android_tests": 1,
+  "failures": 0,
+  "skipped": 0,
+  "host_duration_seconds": 90,
+  "transport": "Public WSS forced by unusable Android loopback direct candidate port 1; no adb reverse at that port",
+  "device": "MuMu Android 12, isolated com.resonance.player.validation20261102",
+  "audio": "Synthetic 960-second 220Hz low-amplitude MP3, no user audio",
+  "windows_output": "real FFmpeg/Java Sound, muted",
+  "source_sha256": {
+    "composeApp/src/desktopTest/kotlin/com/resonance/player/together/TogetherNativeBridgeTest.kt": "233a63fab33fdcb2fd9e2b3bc2815835f7c1d8b6015aaa45b7446fae34dc3536",
+    "composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player/TogetherNativePlaybackDeviceTest.kt": "724b956ffaa1525aa03358407aa54bd53a2936462c292b744b0904c304e1a6a6"
+  },
+  "first_run": {
+    "windows": "failed: Native peer disconnected (completion protocol missing)",
+    "android": "passed"
+  },
+  "limitations": [
+    "same physical host, not independent mobile network",
+    "about 90 seconds, not multi-hour or multiplayer",
+    "No product playback-state implementation or performance claim"
+  ],
+  "windows-native.csv": {
+    "rows": 89,
+    "last_elapsed_ms": "89121",
+    "last_playing": "true",
+    "sha256": "6c682593f7a82214333207bda53f818ea6b2d73a179a5dd4dc9979acbe77989a"
+  },
+  "android-native.csv": {
+    "rows": 88,
+    "last_elapsed_ms": "88079",
+    "last_playing": "true",
+    "sha256": "23545d4402d13550e59df67187a284b03f20c8d832a6c4740be1bcdbc28d3be6"
+  }
+}

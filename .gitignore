@@ -28,3 +28,8 @@ Thumbs.db
 Classical_Piano_Music_Pack/
 BiBiPiano_Popular_Music_Pack/
 *.resonance
+.impeccable/review/
+
+# Python build and verification caches
+__pycache__/
+*.py[cod]

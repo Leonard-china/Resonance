@@ -1,10 +1,44 @@
-# 2026-10-28 — Resonance 文档入口与开发变更索引
+# 2026-11-04 — Resonance 文档入口与开发变更索引
 
-当前工作区：**0.6.4 / 38**。已发布基线见 [0.6.4 发布说明](RELEASE_NOTES-0.6.4.md) 与 [0.6.4 变更记录](changes/2026-10-28-08-release-0.6.4.md)。本轮发布 Mineradio 沉浸音乐舞台、端到端加密双人一起听与自适应封面氛围双端正式版；历史 0.6.3 基线见 [0.6.3 发布说明](RELEASE_NOTES-0.6.3.md)。
+最新发布准备：[0.6.6 三端发布与本机桌面更新](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。本次按用户发布要求显式设为 0.6.6 / 40，准备 Android、Linux 与原生 Windows 构建；实际安装、GitHub 推送和 Release 状态以该记录为准。
+
+最新音量弹窗修复：[隔离播放设置弹窗的主窗口采样](changes/2026-11-04-15-volume-dialog-window-isolation.md)。通用 `FrostedAlertDialog` 的表面及内容不再继承主窗口 Haze，使用静态主题渐变；对应回归与 APK、本次实机验证限制见记录。
+
+最新 UI 视觉与 Release：[纯正毛玻璃透光调优、剔除残留红色与原生平整播放按键安装包](changes/2026-11-04-14-frosted-glass-palette-and-native-controls.md)。全屏背景去饱和度限制解除（0.35f→0.65f）且遮罩下调（0.86f→0.58f），彻底剔除残留红色并对接天气冰蓝/矿物绿；大播放键告别 AI 概念图的伪 3D 玻璃球与光晕，收敛至 58dp 平整实心哑光圆钮与纯白矢量三角；全量 UI 31 项测试全通过；Release APK 已构建并完成 v2 签名校验。
+
+最新 Android Release：[本轮歌词与歌源修复安装包](changes/2026-11-04-13-lyrics-and-sources-release-apk.md)，0.6.5 / 39，159.65 MiB；构建、v1／v2 签名、正式包信息、ZIP 对齐和五个内置歌源资源检查通过。仅本地构建，未安装手机或公开上传；独立 APK 与实际校验链接见记录。
+
+最新实现：[歌词查找与空态布局](changes/2026-11-04-09-lyrics-source-recovery-and-compact-tools.md)、[音效弹窗隔离](changes/2026-11-04-10-audio-effect-dialog-window-isolation.md)、[收藏仅显示数量](changes/2026-11-04-11-favorites-count-only.md)、[增加 QQ／独立音乐歌源与 VPN DNS 兼容](changes/2026-11-04-12-more-builtin-sources-and-vpn-dns.md)。版本仍为 0.6.5 / 39；全量桌面 337 通过／9 跳过，最终针对性 33 项全通过，Android Debug／测试 APK 与 Lint 通过；[验证和原生截图](audit/2026-11-04/follow-up/VALIDATION.md)明确记录手机断开与 Windows 未验收的限制。
+
+最新排查：[Bug 与优化报告](audit/2026-11-04/BUG-AND-OPTIMIZATION-REPORT.md)。基于当前未提交源码发现 13 项问题（6 P1、7 P2）与 9 项优化建议，尚未实施修复。本次 JVM 331 项中 322 通过、9 跳过，Release Lint 0 Error / 107 Warning；本地原生音频与协议补测 7 通过、1 跳过。Python 官网/中继/寻址/部署工具分别 42/11/7/2 项通过；设备、Windows 和线上验证边界见报告及[独立记录](changes/2026-11-04-08-bug-audit-and-optimization-report.md)。
+
+最新本机安装：[手机 Release 覆盖更新与 Linux 桌面快捷方式](changes/2026-11-04-07-release-phone-update-and-linux-shortcut.md)。版本保持 0.6.5 / 39；设备安装与启动结果见记录。
+
+最新原生 UI：[双端浅色方案落地与连续导航](changes/2026-11-04-06-native-light-ui-and-continuous-navigation.md)。桌面侧栏/工具栏/播放条、曲库封面网格、设置八组子页及原生转场已接入；实际验证与平台限制以该记录为准。
+
+前轮本地交付：[布局与切页性能](changes/2026-11-03-11-macos-layout-and-navigation-cost.md)、[助手点播与队列](changes/2026-11-03-12-assistant-playable-music-links.md)。实现于 11 月 3 日，11 月 4 日核对交付。最终定向原生测试 18 项通过；Release、Debug 和测试 APK 构建通过。第一版布局包真机超时帧约 34%→6%，最终细节版真机复测按用户要求延期。
+
+前轮界面补修：[全应用磨砂覆盖](changes/2026-11-03-09-app-wide-frosted-material.md)、[歌词高亮恢复](changes/2026-11-03-10-restore-lyric-focus.md)。此前首轮材质记录不能代表整应用已经视觉验收；本次验证与设备限制见新记录。
+
+最新部署实测：[阿里云官网性能、中继排队与原生播放验证](changes/2026-11-03-07-aliyun-deployment-performance-validation.md)。新机回环页面 12 并发 p95 157 ms、零错误；混合下载与多路大文件中继存在秒级尾延迟。本地原生／协议 17 项通过、1 项公网验收跳过；新机跨网播放和长期稳定性尚未确认。
+
+最新服务器迁移：[阿里云直接部署与一起听统一服务器连接](changes/2026-11-03-06-aliyun-hosting-and-server-routed-together.md)。客户端源码与部署包已准备，新机已恢复官网迁移副本并运行官网／一起听中继；回环页面、Range、配对和重启验证通过。公开切换待补足购买期、备案、正式数据同步及证书／DNS；原入口尚未替换。
+
+最新 UI 调整：[一起听房间重排与固定邀请入口](changes/2026-11-03-03-together-room-and-pinned-invitation.md)。复制／分享始终位于房间顶栏，共享队列首页最多显示三首，完整列表单独滚动；成员与 AI 选歌默认收起。按当前会话要求不运行测试。
+
+前轮 UI（当前布局以上方最新记录为准）：已按用户确认的 macOS 毛玻璃方向实施原生磨砂材质、封面背景、四项导航和播放器控制台，包含[连续歌词修复](changes/2026-11-03-01-continuous-lyrics-motion.md)。本轮用户要求直接构建 APK、不运行测试；本次结果与限制见[磨砂 UI 与 Release APK](changes/2026-11-03-02-frosted-ui-and-release-apk.md)。[旧 UI 方案](changes/2026-11-02-09-android-first-ui-plan.md)和[图片探索](changes/2026-11-02-10-ui-redesign-skills-and-frosted-material.md)保留作历史依据。
+
+最新结果：[Android 0.6.5 Release APK 编译、签名验证与设备拉起验收](changes/2026-11-02-08-release-apk-build.md)，[播放加载与缓冲状态全链路实现、帧率实测及桌面可见窗口验收](changes/2026-11-02-07-loading-and-buffering-feedback.md)，[转场断言已修复](changes/2026-11-02-02-wait-for-detail-transition-idle.md)，[一起听服务器已部署并验证公网 TLS](changes/2026-11-02-04-public-relay-deployment.md)，[强制公网中继双端原生验收与完成握手](changes/2026-11-02-05-native-public-relay-acceptance.md)。本批接续入口为 [2026-11-02 剩余质量交接](HANDOFF-2026-11-02-REMAINING-QUALITY.md)。历史结果不替代当前验证。
+
+第一批双主题/一起听 UI、第二批统计/偏好/错误归属修复、第三批加载与缓冲全链路状态已实施，并完成 MuMu 帧率实测与 Windows 真实桌面窗口验收。服务器已经用户批准上线；独立跨网蜂窝真机、多人平权及长时压力验收仍待后续环境具备。准确进度见 [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md)；[PRODUCT_AUDIT.md](PRODUCT_AUDIT.md) 保留原始审计，不代表所有待办已完成。
+
+当前工作区：**0.6.6 / 40**，版本唯一来源为 `version.properties`。本次用户明确要求三端发布，见 [0.6.6 发布说明](RELEASE_NOTES-0.6.6.md)及[发布状态](changes/2026-11-04-16-release-0.6.6-three-platforms.md)；此前公开基线见 [0.6.5 发布说明](RELEASE_NOTES-0.6.5.md)。普通构建仍不自动升版。
+
+已按[三项特色规划](changes/2026-10-30-01-product-positioning-and-listen-together-plan.md)和[陪伴房间需求](changes/2026-10-30-07-companion-room-chat-and-partner-scope.md)实施。新版 MuMu 七项聊天/配对/邀请、五项音频会话及反向原生通过，可选寻址完成本地互通。本次最终针对性桌面 70 项中 66 通过、4 项显式跳过，Android Release 48 项通过；[本次双端 Release 已保存并核验](changes/2026-10-31-13-current-release-artifacts-and-device-verification.md)，Windows 同次原生运行时启动通过，四份软件/校验/说明文件已向自己的[微信文件传输助手上传结束](changes/2026-10-31-14-windows-startup-and-wechat-transfer.md)。两小时 Windows/MuMu 原生和聊天验收已通过，正式 Android 包安装/启动成功但非冷启动；新宣传片的模型配置失败待修复。维护者此后新增[跨网、多人平权、卡顿与提醒需求](changes/2026-10-31-15-multiplayer-equal-control-and-cross-network-plan.md)，该新需求尚未完成。
 
 ## 新 AI 从这里开始
 
-当前工作区已完成双端 0.6.4 正式版构建并发布，涵盖 Mineradio 风格原生音乐舞台 UI、Android 16 布局修正、封面取色氛围与跳跃回弹、双人加密直连一起听与极简剪贴板交互。版本号更新为 `0.6.4 / 38`。
+当前工作区包含 0.6.5 的队列管理、下一首播放、曲库排序与筛选；最新歌词修复和宣传素材见下方独立记录。历史发布结果不能代替本轮构建与设备验证。
 
 1. 读根目录 [AGENTS.md](../AGENTS.md) 与 [AI 协作流程](AI-WORKFLOW.md)。
 2. 根据 [开发说明的任务定位表](DEVELOPMENT.md#gaps) 找相关章节、实现、测试。
@@ -13,6 +47,11 @@
 
 | 文档 | 用途 |
 | --- | --- |
+| [2026-11-02 剩余质量接手提示词](HANDOFF-2026-11-02-REMAINING-QUALITY.md) | 当前入口：状态反馈、性能测量、独立网络和最终验收；推荐模型与安全边界 |
+| [2026-11-01 Antigravity 质量收尾交接](HANDOFF-2026-11-01-ANTIGRAVITY-QUALITY-FINISH.md) | 历史交接；服务已上线，当前状态以 11 月 2 日记录为准 |
+| [累计优化结果](OPTIMIZATION_REPORT.md) | 双主题、统计与播放反馈、已部署 WSS、实际验证及剩余工作 |
+| [2026-11-01 产品质量审计](PRODUCT_AUDIT.md) | 当前架构、确认功能、风险优先级、原生截图、真实基线及待确认优化计划 |
+| [2026-11-01 早期 Antigravity 接线验收提示词](HANDOFF-2026-11-01-ANTIGRAVITY-VALIDATION.md) | 历史参考；本批接手范围以最新质量收尾交接为准 |
 | [详细开发说明](DEVELOPMENT.md) | 当前模块/状态/存储、两端功能、AI工具、截图、推荐清理、翻译/悬浮、构建/排查 |
 | [AI 协作流程](AI-WORKFLOW.md) | 最小上下文、实施顺序、文档/验证/交接规则 |
 | [变更模板](CHANGE-TEMPLATE.md) | 日期、原因、具体修改、前后/数据、真实验证、限制 |
@@ -38,10 +77,112 @@
 | [0.4.1 发布说明](RELEASE_NOTES-0.4.1.md) | 历史 0.4.1 Android/Windows 正式版记录 |
 | [0.4.0 发布说明](RELEASE_NOTES-0.4.0.md) | 历史 0.4.0 Android 正式版记录 |
 
+Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异见 [Linux 说明](LINUX.md)，本次结果见 [Linux 支持记录](changes/2026-11-03-04-linux-desktop-support.md)。
+
 ## 变更记录（最新在前）
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-04 | 准备 0.6.6 三端发布、Windows 原生构建与本机桌面更新 | [具体记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md) |
+| 2026-11-04 | 隔离“音量”播放设置与通用原生弹窗的主窗口毛玻璃采样 | [具体记录](changes/2026-11-04-15-volume-dialog-window-isolation.md) |
+| 2026-11-04 | 构建歌词与新增歌源修复后的 Android Release、核验签名与本次产物 | [具体记录](changes/2026-11-04-13-lyrics-and-sources-release-apk.md) |
+| 2026-11-04 | 内置歌源从三源增至五源、保留用户选择并安全兼容 VPN Fake-IP | [具体记录](changes/2026-11-04-12-more-builtin-sources-and-vpn-dns.md) |
+| 2026-11-04 | “我喜欢的音乐”仅显示歌曲数量 | [具体记录](changes/2026-11-04-11-favorites-count-only.md) |
+| 2026-11-04 | 音效弹窗移除跨窗口模糊并使用有界预设列表 | [具体记录](changes/2026-11-04-10-audio-effect-dialog-window-isolation.md) |
+| 2026-11-04 | 歌词查找接入真实歌源、模型拒绝解释与可滚动精简空态 | [具体记录](changes/2026-11-04-09-lyrics-source-recovery-and-compact-tools.md) |
+| 2026-11-04 | 排查播放器/官网缺陷、复现数据与删除授权问题并交付优化报告 | [具体记录](changes/2026-11-04-08-bug-audit-and-optimization-report.md) |
+| 2026-11-04 | 构建手机 Release、同签名覆盖更新并安装 Linux 桌面快捷方式 | [具体记录](changes/2026-11-04-07-release-phone-update-and-linux-shortcut.md) |
+| 2026-11-04 | 将双端浅色方案落地到原生界面、设置分组与可中断导航 | [具体记录](changes/2026-11-04-06-native-light-ui-and-continuous-navigation.md) |
+| 2026-11-04 | 重做HTML切页交接，保留固定导航/播放条并支持连续反向 | [具体记录](changes/2026-11-04-05-continuous-prototype-navigation.md) |
+| 2026-11-04 | 补齐HTML原型主导航、曲库标签与详情的可中断切页动画 | [具体记录](changes/2026-11-04-04-prototype-page-transitions.md) |
+| 2026-11-04 | 修复本地UI预览拒绝连接，改为独立用户服务运行 | [具体记录](changes/2026-11-04-03-persistent-ui-preview-service.md) |
+| 2026-11-04 | 提供78个页面与关键状态的双端浅色图、全图总览和可试HTML动效原型 | [具体记录](changes/2026-11-04-02-light-ui-proposal-and-html-prototype.md) |
+| 2026-11-04 | 安装官网设计、动效检查与宣传视频技能，记录来源和许可证 | [具体记录](changes/2026-11-04-01-install-design-motion-video-skills.md) |
+| 2026-11-03 | 助手回复支持真实歌曲链接、点播与保序追加队列 | [具体记录](changes/2026-11-03-12-assistant-playable-music-links.md) |
+| 2026-11-03 | 按 macOS 确认稿重排原生布局，合并底座并降低切页绘制开销 | [具体记录](changes/2026-11-03-11-macos-layout-and-navigation-cost.md) |
+| 2026-11-03 | 恢复歌词当前行亮色文字与淡底焦点，保持连续滚动和稳定行高 | [具体记录](changes/2026-11-03-10-restore-lyric-focus.md) |
+| 2026-11-03 | 补齐全应用磨砂页面、列表与弹窗材质，并构建本地试用 APK | [具体记录](changes/2026-11-03-09-app-wide-frosted-material.md) |
+| 2026-11-03 | 修复每日推荐单次点击被旧暂停回调取消、声音与曲目错位及切歌混入整库 | [具体记录](changes/2026-11-03-08-daily-recommendation-playback-selection.md) |
+| 2026-11-03 | 实测阿里云官网并发、下载与中继排队，验证本地原生音频输出并提供有界复测工具 | [具体记录](changes/2026-11-03-07-aliyun-deployment-performance-validation.md) |
+| 2026-11-03 | 安装阿里云 Nginx／systemd 与数据副本，并改为服务器邀请不尝试设备直连（待备案切换） | [具体记录](changes/2026-11-03-06-aliyun-hosting-and-server-routed-together.md) |
+| 2026-11-03 | 安装 Linux 当前用户版、接入 KDE 应用菜单并从正式入口启动 | [具体记录](changes/2026-11-03-05-linux-user-installation.md) |
+| 2026-11-03 | 增加 Linux 原生桌面版、XDG／凭据适配、DEB 与免安装包及实际验证 | [具体记录](changes/2026-11-03-04-linux-desktop-support.md) |
+| 2026-11-03 | 重排一起听房间、固定复制邀请入口并将长队列收纳为独立列表 | [具体记录](changes/2026-11-03-03-together-room-and-pinned-invitation.md) |
+| 2026-11-03 | 落地 macOS 毛玻璃原生 UI、四项导航与播放器控制台，并构建试用 APK（未测试） | [具体记录](changes/2026-11-03-02-frosted-ui-and-release-apk.md) |
+| 2026-11-03 | 歌词预览连续滚动、稳定高亮排版与手动浏览后恢复跟随 | [具体记录](changes/2026-11-03-01-continuous-lyrics-motion.md) |
+| 2026-11-02 | 补入 Impeccable、探索全新 UI 图片方案并明确 macOS 毛玻璃材质（未实施） | [具体记录](changes/2026-11-02-10-ui-redesign-skills-and-frosted-material.md) |
+| 2026-11-02 | 制定 Android 优先的全项目原生 UI 优化方案（待实施） | [具体记录](changes/2026-11-02-09-android-first-ui-plan.md) |
+| 2026-11-02 | Android 0.6.5 Release APK 编译、签名验证与设备拉起验收 | [具体记录](changes/2026-11-02-08-release-apk-build.md) |
+| 2026-11-02 | 播放加载与缓冲状态全链路实现、帧率实测及桌面可见窗口验收 | [具体记录](changes/2026-11-02-07-loading-and-buffering-feedback.md) |
+| 2026-11-02 | 根据实际模型列表更正 Antigravity 接手推荐为 Gemini 3.8 Flash High | [具体记录](changes/2026-11-02-06-correct-handoff-model.md) |
+| 2026-11-02 | 强制公网中继双端原生验收，修正测试结束握手并保存失败证据 | [具体记录](changes/2026-11-02-05-native-public-relay-acceptance.md) |
+| 2026-11-02 | 自有一起听中继上线，公网证书锁定 TLS 与官网回归通过 | [具体记录](changes/2026-11-02-04-public-relay-deployment.md) |
+| 2026-11-02 | 准备一起听独立守护与现网启动补丁（未部署） | [具体记录](changes/2026-11-02-03-public-relay-supervision-preparation.md) |
+| 2026-11-02 | 等待真实动画空闲，修复转场背景像素断言 | [具体记录](changes/2026-11-02-02-wait-for-detail-transition-idle.md) |
+| 2026-11-02 | 双端原生验收与本地候选包，保留失败证据 | [具体记录](changes/2026-11-02-01-native-validation-and-local-candidates.md) |
+| 2026-11-01 | 按原生请求区分播放、试听与保存失败，阻止旧错误覆盖当前曲目 | [具体记录](changes/2026-11-01-19-scoped-playback-failures.md) |
+| 2026-11-01 | 捕获完整随机/循环偏好，按操作顺序持久化并报告失败 | [具体记录](changes/2026-11-01-18-ordered-playback-preferences.md) |
+| 2026-11-01 | 原生播放会话计时、暂停完播去重与共享统计写入器 | [具体记录](changes/2026-11-01-17-native-listening-session-accounting.md) |
+| 2026-11-01 | 明确剩余工作并交接 Antigravity 设备验收、本地候选包与生产边界 | [具体记录](changes/2026-11-01-16-antigravity-quality-finish-handoff.md) |
+| 2026-11-01 | 为所有安装用户接入自有服务器的 WSS 中继 | [具体记录](changes/2026-11-01-15-public-websocket-relay.md) |
+| 2026-11-01 | 统一明暗银灰主题并简化一起听首页 | [具体记录](changes/2026-11-01-14-dual-theme-and-simpler-together-ui.md) |
+| 2026-11-01 | 拖动结束再跳转并在播放器上显示失败 | [具体记录](changes/2026-11-01-13-seek-commit-and-visible-playback-errors.md) |
+| 2026-11-01 | 保护听歌记录并把统计写盘移到 IO | [具体记录](changes/2026-11-01-12-listening-stats-integrity-and-batching.md) |
+| 2026-11-01 | 完成产品只读质量审计、保存检查点与原生视觉基线，列出统计可靠性及播放交互优化方案 | [具体记录](changes/2026-11-01-11-product-quality-audit-and-native-baseline.md) |
+| 2026-11-01 | 修复歌词译文隐藏、翻译错误无提示与迟到缓存覆盖，统一语言匹配并保护切歌结果 | [具体记录](changes/2026-11-01-10-lyrics-translation-feedback-and-result-lifecycle.md) |
+| 2026-11-01 | 修复一起听群聊与单聊路由、客户端消息丢包并完成双端全量测试与 Release 交付 | [具体记录](changes/2026-11-01-09-together-chat-routing-and-full-validation.md) |
+| 2026-11-01 | 整理 Antigravity 最终构建验收提示词与当前源码边界 | [具体记录](changes/2026-11-01-08-antigravity-validation-handoff.md) |
+| 2026-11-01 | 应用内聊天未读与跳到最新；成员离开后恢复剩余聊天通道；未构建测试 | [具体记录](changes/2026-11-01-07-unread-chat-and-surviving-member-channel.md) |
+| 2026-11-01 | 群快照修订/输入校验、就绪隔离与上传失败清理；未构建测试 | [具体记录](changes/2026-11-01-06-validate-room-snapshots-and-media-recovery.md) |
+| 2026-11-01 | 原生作用域处理协调端控制、混合共享队列增删排序与界面投影；未构建测试 | [具体记录](changes/2026-11-01-05-native-host-controls-and-playable-queue.md) |
+| 2026-11-01 | 群聊逐成员回执、落盘转发名单与有序补发；尚未构建测试 | [具体记录](changes/2026-11-01-04-persist-group-chat-recipient-receipts.md) |
+| 2026-11-01 | 拒绝旧房间迟到的聊天附着和成员列表；尚未构建测试 | [具体记录](changes/2026-11-01-03-reject-stale-companion-room-attachments.md) |
+| 2026-11-01 | AI 直接生成歌词文本，区分音频识别时间轴并保护切歌结果；尚未构建测试 | [具体记录](changes/2026-11-01-02-direct-ai-lyrics-text.md) |
+| 2026-11-01 | 限制多人并发接收的房间音频缓存总量；尚未构建测试 | [具体记录](changes/2026-11-01-01-bound-concurrent-room-audio-cache.md) |
+| 2026-10-31 | 将异步广播与播放器动作绑定对应房间会话；尚未构建测试 | [具体记录](changes/2026-10-31-35-bind-room-actions-to-session.md) |
+| 2026-10-31 | 为成员保留限期的中继重连路由；尚未构建测试 | [具体记录](changes/2026-10-31-34-relay-routes-for-member-reconnect.md) |
+| 2026-10-31 | 修正中继等待队列并发清理与房间上限；尚未运行测试 | [具体记录](changes/2026-10-31-33-relay-waiting-queue-cleanup.md) |
+| 2026-10-31 | 将已校验的成员贡献音频接入创建者播放队列；尚未构建测试 | [具体记录](changes/2026-10-31-32-play-contributed-room-audio.md) |
+| 2026-10-31 | 接通房间基础播放请求并同步创建者已有队列；尚未构建测试 | [具体记录](changes/2026-10-31-31-route-room-playback-controls-and-queue.md) |
+| 2026-10-31 | 限定并续期 Android 活动房间运行锁；尚未构建测试 | [具体记录](changes/2026-10-31-30-bound-and-renew-android-room-locks.md) |
+| 2026-10-31 | 为各成员串行化媒体传输并固定协程媒体 ID；尚未构建测试 | [具体记录](changes/2026-10-31-29-serialize-room-audio-transfers.md) |
+| 2026-10-31 | 修正群聊会话与成员序号隔离、并发入房及上传边界；尚未构建测试 | [具体记录](changes/2026-10-31-28-group-chat-routing-and-admission-safety.md) |
+| 2026-10-31 | 禁止 Windows 跟听微调反复触发解码重启；尚未构建测试 | [具体记录](changes/2026-10-31-27-avoid-desktop-tempo-restarts.md) |
+| 2026-10-31 | 停止自动将 UDP STUN 结果视作 TCP 直连候选 | [具体记录](changes/2026-10-31-26-do-not-publish-udp-stun-as-tcp-candidate.md) |
+| 2026-10-31 | 公网 STUN 候选发现、Android 锁屏防断连保活与歌曲详情分享至 AI 推荐相似曲目；尚未构建测试 | [具体记录](changes/2026-10-31-25-public-stun-discovery-and-ai-similar-tracks.md) |
+| 2026-10-31 | 引入播放速率微调以平滑时间同步并缓解卡顿；尚未构建测试 | [具体记录](changes/2026-10-31-24-playback-tempo-sync-and-stutter-mitigation.md) |
+| 2026-10-31 | 接入多人一起听房间协调器、平权控制与隔离群聊；尚未构建测试 | [具体记录](changes/2026-10-31-23-multiplayer-room-coordinator-and-equal-control.md) |
+| 2026-10-31 | 防止旧连接收尾覆盖新连接、拒绝加入时延长恢复期限；尚未构建测试 | [具体记录](changes/2026-10-31-22-retire-disconnected-peer-before-reusing-slot.md) |
+| 2026-10-31 | 编写多人平等控制和共享队列的内存状态基础；尚未接入房间 | [具体记录](changes/2026-10-31-21-multimember-room-state-foundation.md) |
+| 2026-10-31 | 编写可选独立中继、内层房间 TLS 和直连失败回退；未构建测试、审计或部署 | [具体记录](changes/2026-10-31-20-opt-in-encrypted-relay-transport.md) |
+| 2026-10-31 | 长房间稳定一段时间后重置连续断线重试次数；尚未构建测试 | [具体记录](changes/2026-10-31-19-retry-budget-per-stable-connection.md) |
+| 2026-10-31 | 新版双人房间播放、切歌和进度控制免审批，保留旧版能力协商；尚未构建测试 | [具体记录](changes/2026-10-31-18-equal-two-person-playback-controls.md) |
+| 2026-10-31 | Android 消息通知、权限引导及 Windows 托盘提醒接线；尚未构建测试 | [具体记录](changes/2026-10-31-17-chat-notifications-on-android-and-windows.md) |
+| 2026-10-31 | 聊天提醒基础事件仅在新消息保存后发出，重复与清空后旧包不再次发出；系统通知尚未接线 | [具体记录](changes/2026-10-31-16-deduplicate-incoming-chat-alert-events.md) |
+| 2026-10-31 | 维护者反馈移动网络跨网失败、卡顿、房主特权和人数限制；确认可选加密中继及多人平权改进方向 | [具体规划](changes/2026-10-31-15-multiplayer-equal-control-and-cross-network-plan.md) |
+| 2026-10-31 | 本次 Windows 原生冷启动通过，软件、校验清单与说明已确认上传文件传输助手 | [具体记录](changes/2026-10-31-14-windows-startup-and-wechat-transfer.md) |
+| 2026-10-31 | 当前陪伴房间双端 Release 构建、重新验签/哈希及真实设备验收状态 | [具体记录](changes/2026-10-31-13-current-release-artifacts-and-device-verification.md) |
+| 2026-10-31 | 新宣传摄影机接入真实 AI 回答、加密聊天与配对，成片仍待设备拍摄验收 | [具体记录](changes/2026-10-31-12-real-ai-and-companion-promo-camera.md) |
+| 2026-10-31 | 音频命令授权变化时有限排队，关闭旧控制器后拒绝晚到操作；MuMu 五项通过 | [具体记录](changes/2026-10-31-11-defer-unavailable-audio-commands-and-retire-old-controller.md) |
+| 2026-10-31 | 没有配对伙伴时延后监听，减少首次启动的防火墙打扰 | [具体记录](changes/2026-10-31-10-defer-unpaired-invitation-listener.md) |
+| 2026-10-31 | 原生跨端验收素材用应用私有目录，修复 shell 外部文件权限问题 | [具体记录](changes/2026-10-31-09-private-native-test-fixtures.md) |
+| 2026-10-31 | 隔离构建/原生验收并记录失败、重测与 Release 真实状态 | [具体记录](changes/2026-10-31-08-isolated-native-validation-and-release-build.md) |
+| 2026-10-31 | 官方 DeepSeek Flash/V4 短任务显式关闭默认思考，保留其它兼容接口 | [具体修改](changes/2026-10-31-07-request-final-content-from-deepseek-flash.md) |
+| 2026-10-31 | 网络变化/关闭时显式中止预取并清理半成品，默认等待用户开启 | [具体修改](changes/2026-10-31-06-retire-cancelled-prefetch-and-opt-in-default.md) |
+| 2026-10-31 | 本机音频中断保留房间和聊天，主动恢复后对齐；验证进行中 | [具体修改](changes/2026-10-31-05-keep-room-during-local-audio-interruption.md) |
+| 2026-10-31 | 默认关闭的签名伙伴寻址与独立自托管服务；本地服务七项通过，原生集成验收进行中 | [具体修改](changes/2026-10-31-04-opt-in-signed-partner-rendezvous.md) |
+| 2026-10-31 | 配对伙伴直接邀听、对方接受才进房、移除后拒绝新邀；验证进行中 | [具体修改](changes/2026-10-31-03-paired-partner-direct-invitations.md) |
+| 2026-10-31 | 新增加密本机聊天、送达确认/重发去重、独立清空及设备配对；界面设备验收进行中 | [具体修改](changes/2026-10-31-02-encrypted-local-chat-and-device-pairing.md) |
+| 2026-10-31 | 限制八个候选地址、取消全部未完成握手并去除原始异常回显 | [具体修改](changes/2026-10-31-01-cancel-bounded-direct-connections.md) |
+| 2026-10-30 | 确认长时间双人房间、本机聊天与常听伙伴需求，先完善直连，独立评估会合服务 | [实施边界](changes/2026-10-30-07-companion-room-chat-and-partner-scope.md) |
+| 2026-10-30 | 维护者明确选择 MIT，添加原创代码 LICENSE 并保留第三方许可边界 | [具体修改](changes/2026-10-30-06-mit-license.md) |
+| 2026-10-30 | 一起听支持多候选地址自动探测与 IPv6 候选，实际跨网仍取决于网络可达 | [具体修改](changes/2026-10-30-05-multi-candidate-ipv6-listen-together.md) |
+| 2026-10-30 | 导航改为 SavedState 恢复，修正 MuMu 输入配置重建后回首页；新包待复测 | [具体修改](changes/2026-10-30-04-preserve-navigation-across-input-configuration.md) |
+| 2026-10-30 | 重做源码、AI 助手与真实原生加密一起听的 50 秒宣传主线；已获真实 AI 测试授权，模型配置/拍摄待完成，许可证待定 | [制作记录](changes/2026-10-30-03-source-ai-and-real-together-promo.md) |
+| 2026-10-30 | 一起听邀请审批/TTL/二维码、有限恢复、原生同步与真实 ready、预取、共享队列/歌词和 AI 候选确认入队；最终验收与交付进行中 | [具体修改](changes/2026-10-30-02-listen-together-session-and-native-playback.md) |
+| 2026-10-30 | 规划开源、AI 助手、端到端加密一起听的宣传主线，以及邀请、同步、重连、共享队列和跨网取舍；仅文档规划 | [具体规划](changes/2026-10-30-01-product-positioning-and-listen-together-plan.md) |
+| 2026-10-29 | MuMu 实录原生播放器并制作原创配乐的 40 秒横竖版宣传片，提供可复现拍摄与剪辑脚本 | [具体修改](changes/2026-10-29-03-native-mumu-promo-film.md) |
+| 2026-10-29 | 修正带留白的歌词居中坐标、平滑跟随、手动浏览后立即返回与自动恢复，收起歌词工具 | [具体修改](changes/2026-10-29-02-lyrics-centered-follow-and-manual-browsing.md) |
 | 2026-10-29 | 播放队列深度管理、下一首播放插队、曲库多维排序筛选与歌词舞台交互打磨并发布 v0.6.5 | [具体修改](changes/2026-10-29-01-queue-play-next-library-sorting-and-lyrics-polish.md) |
 | 2026-10-28 | 构建并发布 Resonance v0.6.4 正式版至 GitHub 与官网 | [具体修改](changes/2026-10-28-08-release-0.6.4.md) |
 | 2026-10-28 | 引入双人加密一起听并极简交互体验，支持剪贴板智能识别与自然语言邀请提取 | [具体修改](changes/2026-10-28-07-encrypted-listen-together-and-simplified-interaction.md) |

@@ -1,0 +1,40 @@
+{
+  "status": "proposal-not-native-implementation",
+  "date": "2026-11-04",
+  "mode": "operate",
+  "theme": "light",
+  "colors": {
+    "canvas": "#F3F5F8",
+    "surface": "#FFFFFFD9",
+    "text": "#25303C",
+    "muted": "#5C6572",
+    "accent": "#A53649",
+    "accentSoft": "#F1DFE4"
+  },
+  "motion": {
+    "pressMs": 140,
+    "playerMs": 280,
+    "lyricMs": 280,
+    "drawerCurve": [
+      0.32,
+      0.72,
+      0,
+      1
+    ],
+    "pageMs": 280,
+    "pageTravelPx": 12,
+    "pageCurve": "drawerCurve",
+    "pageBehavior": "overlapping-content-retargetable-css-transition"
+  },
+  "screenshots": {
+    "desktop": [
+      1440,
+      960
+    ],
+    "phone": [
+      390,
+      844
+    ],
+    "count": 156
+  }
+}

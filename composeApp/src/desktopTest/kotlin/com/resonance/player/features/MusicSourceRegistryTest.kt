@@ -11,7 +11,7 @@ import kotlin.test.*
 
 class MusicSourceRegistryTest {
     private class Network : SourceNetwork {
-        val requests = mutableListOf<JSONObject>()
+        val requests = java.util.concurrent.CopyOnWriteArrayList<JSONObject>()
         override suspend fun request(options: JSONObject): JSONObject {
             requests += options
             return JSONObject().put("status", 200).put("headers", JSONObject()).put("body",
@@ -102,21 +102,38 @@ class MusicSourceRegistryTest {
     @Test fun builtinSourcesInstalledSuccessfullyAndExposeCoreCapabilities() = runBlocking {
         fixture { sources, _, _ ->
             val installed = sources.installBuiltinSources()
-            assertEquals(3, installed.size)
+            assertEquals(5, installed.size)
             val names = installed.map { it.name }.toSet()
             assertTrue(names.contains("网易云音乐"))
             assertTrue(names.contains("酷我音乐"))
             assertTrue(names.contains("酷狗音乐"))
+            assertTrue(names.contains("QQ 音乐"))
+            assertTrue(names.contains("Internet Archive · Netlabels"))
             installed.forEach { source ->
                 assertTrue("search" in source.capabilities, "${source.name} 缺少 search")
                 assertTrue("getMediaSource" in source.capabilities, "${source.name} 缺少 getMediaSource")
-                assertTrue("getLyric" in source.capabilities, "${source.name} 缺少 getLyric")
+                if (source.name != "Internet Archive · Netlabels") assertTrue("getLyric" in source.capabilities, "${source.name} 缺少 getLyric")
                 assertTrue(source.enabled, "${source.name} 应当默认启用")
             }
             // 幂等性测试
             val reinstalled = sources.installBuiltinSources()
-            assertEquals(3, reinstalled.size)
-            assertEquals(3, sources.list().size)
+            assertEquals(5, reinstalled.size)
+            assertEquals(5, sources.list().size)
+        }
+    }
+    @Test fun builtinUpgradeAddsSourcesOnceWithoutRestoringRemovedOrEnablingDisabledSources() = runBlocking {
+        fixture { sources, store, _ ->
+            sources.install(MusicSourceRegistry.loadBuiltinScript("netease.js")!!)
+            val first = sources.list().single()
+            sources.enable(first.id, false)
+            sources.ensureBuiltinSources()
+            assertFalse(sources.list().first { it.id == first.id }.enabled)
+            assertFalse(sources.list().any { it.name == "酷我音乐" })
+            val added = sources.list().first { it.name == "QQ 音乐" }
+            sources.remove(added.id)
+            store.update { it.remove("builtinSourcesVersion") }
+            sources.ensureBuiltinSources()
+            assertFalse(sources.list().any { it.id == added.id })
         }
     }
     @Test fun recommendationsWithEmptyArtistsUsesDefaultPopularSeeds() = runBlocking {

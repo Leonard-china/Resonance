@@ -1,0 +1,73 @@
+{
+  "source_hashes": {
+    "website/app.py": "4d8b893ef0ef1efb1f858c9d13a6eff78ce10d09385edee602b06f3b7f9f908c",
+    "website/deploy/nginx-aliyun.conf": "e8c9b277fbf4618140c1399b884db4a18f527c46e6ac76140951f286d4cbc0b2",
+    "services/relay/websocket_server.py": "7adff57c82eec1318e47dfc8249cae8e754c303f0406b71c4ed2e9773ef13336",
+    "services/relay/deploy/resonance-relay.service": "5c07294b7dde5570a5def4b51e0139df53717bcd7bb2bd61062267eba16b64f2",
+    "services/deploy/aliyun/prepare.sh": "31a16ea43f6447a9b330a92fcdeec22c745898d8938c6427b537af03845ca5b5"
+  },
+  "services": {
+    "resonance-site": "active",
+    "resonance-relay": "active"
+  },
+  "public_cutover": false,
+  "mail_worker_started": false,
+  "final_sync_required": true,
+  "date": "2026-11-03",
+  "version": "0.6.5",
+  "version_code": 39,
+  "local_website_tests": {
+    "passed": 42
+  },
+  "local_relay_tests": {
+    "passed": 11
+  },
+  "target_website_tests": {
+    "passed": 42
+  },
+  "target_relay_tests": {
+    "passed": 8
+  },
+  "android_release_kotlin_compile": "passed",
+  "nginx_syntax": "passed_with_isolated_test_certificate",
+  "runtime": {
+    "pages_200": 4,
+    "range_206": 2,
+    "relay_loopback_pairing": "passed",
+    "after_restart": "passed",
+    "nginx": "masked",
+    "mail_worker": "inactive"
+  },
+  "public_prerequisite": "User chose Beijing; subscription duration and ICP filing pending; trusted HTTPS, final data/budget sync and DNS pending",
+  "kotlin_tests": {
+    "TogetherServerRoutingTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "TogetherWebSocketTest": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 1
+    },
+    "TogetherConnectionBoundsTest": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "ListenTogetherTest": {
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "temporary_access_revoked": true,
+  "temporary_swap_removed": true,
+  "temporary_encryption_material_removed": true,
+  "deployed_bundle_sha256": "65436dbdb06c25af530a4ebfbb9563dc029c29ca6d405b27d238055524cbaba9",
+  "final_source_bundle_sha256": "35b35271b851a4a842ed1a6b57c7fe5d6c180190fd9f6287a3e03e949862680a"
+}

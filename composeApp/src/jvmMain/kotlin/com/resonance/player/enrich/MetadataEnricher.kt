@@ -3,14 +3,11 @@ package com.resonance.player.enrich
 import com.resonance.player.ai.DeepSeekClient
 import com.resonance.player.io.readUpTo
 import com.resonance.player.lyrics.LrclibLyricsRepository
-import com.resonance.player.lyrics.parseLrc
 import com.resonance.player.model.AiEnrichResult
 import com.resonance.player.model.BatchEnrichOptions
 import com.resonance.player.model.BatchEnrichProgress
 import com.resonance.player.model.BatchEnrichReport
 import com.resonance.player.model.DeepSeekConfig
-import com.resonance.player.model.LyricLine
-import com.resonance.player.model.Lyrics
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.Track
 import kotlinx.coroutines.ensureActive
@@ -190,30 +187,11 @@ class MetadataEnricher(
 
                 // 如果 AI 生成了歌词
                 if (stillNeedsLyrics && !aiResult.lyrics.isNullOrBlank()) {
-                    val cleaned = deepSeekClient.cleanLrcResponse(aiResult.lyrics)
-                    val lines = parseLrc(cleaned)
-                    val lyricsObj = if (lines.isNotEmpty()) {
-                        Lyrics(
-                            trackId = currentTrack.id,
-                            lines = lines,
-                            synchronized = true,
-                            instrumental = aiResult.isInstrumental,
-                            source = "AI",
-                            fromCache = false,
-                        )
-                    } else {
-                        val plainLines = cleaned.lineSequence().map(String::trim).filter(String::isNotEmpty).map { LyricLine(null, it) }.toList()
-                        Lyrics(
-                            trackId = currentTrack.id,
-                            lines = plainLines,
-                            synchronized = false,
-                            instrumental = aiResult.isInstrumental,
-                            source = "AI",
-                            fromCache = false,
-                        )
+                    val generated = deepSeekClient.parseGeneratedLyrics(currentTrack, aiResult.lyrics, config.model, aiResult.isInstrumental)
+                    if (generated is LyricsFetchResult.Found) {
+                        lyricsRepository.writeCache(currentTrack, generated)
+                        lyricsFound = true
                     }
-                    lyricsRepository.writeCache(currentTrack, LyricsFetchResult.Found(lyricsObj))
-                    lyricsFound = true
                 }
             }
         }

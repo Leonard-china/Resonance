@@ -133,6 +133,8 @@ data class CalibrationStatus(
 data class PlayerState(
     val currentTrack: Track? = null,
     val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
+    val isPreparing: Boolean = false,
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.Off,
     val progress: Float = 0f,
@@ -146,7 +148,9 @@ data class PlayerState(
     val calibrationStatus: CalibrationStatus = CalibrationStatus(),
     val isCurrentTrackCalibrated: Boolean = false,
     val audioEffectPreset: AudioEffectPreset = AudioEffectPreset.Off,
-)
+) {
+    val isLoading: Boolean get() = isPreparing || isBuffering
+}
 
 data class LyricLine(
     val timestampMs: Long?,

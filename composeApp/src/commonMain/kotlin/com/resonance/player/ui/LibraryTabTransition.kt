@@ -1,50 +1,60 @@
 package com.resonance.player.ui
 
-import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalInputModeManager
-import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import com.resonance.player.design.LocalReducedMotion
 import com.resonance.player.design.ResonanceMotionTokens
-import kotlin.math.sin
-import kotlin.math.PI
 
-/** Single lazy tree with a short directional reveal; saved list state stays outside. */
+/** Retains both actual pages through an interrupted transition; never replaces the moving tree. */
 @Composable
-internal fun LibraryTabTransition(index: Int, content: @Composable () -> Unit) {
-    val reduced = LocalReducedMotion.current || LocalInputModeManager.current.inputMode == InputMode.Keyboard
-    val progress = remember { Animatable(1f) }
-    var previous by remember { mutableIntStateOf(index) }
-    var direction by remember { mutableIntStateOf(1) }
-    LaunchedEffect(index, reduced) {
-        if (reduced) {
-            previous = index
-            progress.snapTo(1f)
-        } else if (previous != index) {
-            val settled = kotlin.math.abs(progress.value - 1f) < .001f
-            if (settled) direction = if (index > previous) 1 else -1
-            previous = index
-            // A second selection keeps the current displacement instead of kicking off again.
-            if (settled) progress.snapTo(0f)
-            progress.animateTo(
-                targetValue = 1f,
-                animationSpec = ResonanceMotionTokens.SelectionBounceSpec,
-            )
+internal fun <T> ContinuousPageTransition(
+    target: T,
+    modifier: Modifier = Modifier,
+    immediate: Boolean = false,
+    direction: (T, T) -> Int,
+    content: @Composable (T) -> Unit,
+) {
+    val still = immediate || LocalReducedMotion.current || LocalInputModeManager.current.inputMode == InputMode.Keyboard
+    val travel = with(LocalDensity.current) { ResonanceMotionTokens.PageTravel.roundToPx() }
+    AnimatedContent(targetState = target, modifier = modifier.clipToBounds(), transitionSpec = {
+        if (still) (EnterTransition.None togetherWith ExitTransition.None) using null
+        else {
+            val sign = direction(initialState, targetState)
+            (slideInHorizontally(ResonanceMotionTokens.PageSlideSpec) { sign * travel } +
+                fadeIn(ResonanceMotionTokens.PageFadeInSpec)) togetherWith
+                (slideOutHorizontally(ResonanceMotionTokens.PageSlideSpec) { -sign * travel } +
+                    fadeOut(ResonanceMotionTokens.PageFadeOutSpec)) using null
         }
-    }
-    Box(Modifier.fillMaxSize().clipToBounds()) {
-        Box(Modifier.fillMaxSize().graphicsLayer {
-            val p = progress.value
-            val d = direction
-            alpha = if (reduced) 1f else (0.15f + 0.85f * p).coerceIn(0.15f, 1f)
-            translationX = if (reduced) 0f else d * 32.dp.toPx() * (1f - p)
-            translationY = if (reduced) 0f else -4.dp.toPx() * sin((p * PI).toFloat())
-        }) { content() }
+    }, label = "continuousPage") { page ->
+        val active = page == target
+        Box(Modifier.fillMaxSize().focusProperties { canFocus = active }
+            .then(if (active) Modifier else Modifier.clearAndSetSemantics { })
+            .pointerInput(active) {
+                if (!active) awaitPointerEventScope {
+                    while (true) awaitPointerEvent(PointerEventPass.Initial).changes.forEach { it.consume() }
+                }
+            }) { content(page) }
     }
 }
+
+@Composable
+internal fun LibraryTabTransition(index: Int, content: @Composable (Int) -> Unit) =
+    ContinuousPageTransition(index, Modifier.fillMaxSize(), direction = { from, to -> if (to >= from) 1 else -1 }, content = content)

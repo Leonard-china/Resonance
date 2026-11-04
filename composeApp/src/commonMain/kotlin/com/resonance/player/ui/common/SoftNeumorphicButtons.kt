@@ -1,7 +1,9 @@
 package com.resonance.player.ui.common
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
@@ -131,27 +133,37 @@ fun Modifier.softConvexDisc(
 }
 
 @Composable
-fun SoftHeroPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 70.dp) {
+fun SoftHeroPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, size: Dp = 58.dp, isLoading: Boolean = false) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val focused by interaction.collectIsFocusedAsState()
     val reduced = LocalReducedMotion.current || LocalInputModeManager.current.inputMode == InputMode.Keyboard
-    val scale by animateFloatAsState(if (pressed && !reduced) 0.98f else 1f,
-        tween(motionDuration(ResonanceMotionTokens.PressDuration), easing = ResonanceMotionTokens.ExitEasing), label = "playPress")
+    val scale by animateFloatAsState(
+        targetValue = if (pressed && !reduced) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium),
+        label = "playPress"
+    )
     val outline = ResonanceColors.Primary
     val face = ResonanceColors.TextPrimary
     val glyph = ResonanceColors.Canvas
-    Box(modifier.size(size.coerceAtLeast(48.dp)).semantics { contentDescription = if (isPlaying) "暂停" else "播放" }
+    Box(modifier.size(size.coerceAtLeast(48.dp)).semantics { contentDescription = if (isLoading) "加载中" else if (isPlaying) "暂停" else "播放" }
         .clickable(interactionSource = interaction, indication = ripple(), role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center) {
-        Box(Modifier.size(size).galleryShadow(CircleShape, depth = 6.dp).graphicsLayer {
+        Box(Modifier.size(size).galleryShadow(CircleShape, depth = 3.dp).graphicsLayer {
             scaleX = scale; scaleY = scale
-            translationY = ((1f - scale) / 0.02f) * 1.5.dp.toPx()
         }.clip(CircleShape).background(face)
             .border(if (focused) 3.dp else 0.dp, if (focused) outline else Color.Transparent, CircleShape),
             contentAlignment = Alignment.Center) {
-            Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null,
-                tint = glyph, modifier = Modifier.size(if (size >= 60.dp) 34.dp else 25.dp))
+            if (isLoading) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    color = glyph,
+                    strokeWidth = if (size >= 50.dp) 2.5.dp else 2.dp,
+                    modifier = Modifier.size(if (size >= 50.dp) 24.dp else 18.dp),
+                )
+            } else {
+                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null,
+                    tint = glyph, modifier = Modifier.size(if (size >= 50.dp) 28.dp else 22.dp))
+            }
         }
     }
 }
@@ -197,8 +209,8 @@ fun SoftUtilityButton(icon: ImageVector, contentDescription: String, onClick: ()
 }
 
 @Composable
-fun SoftMiniPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) =
-    SoftHeroPlayButton(isPlaying, onClick, modifier, size = 44.dp)
+fun SoftMiniPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, isLoading: Boolean = false) =
+    SoftHeroPlayButton(isPlaying, onClick, modifier, size = 44.dp, isLoading = isLoading)
 
 @Composable
 fun SoftMiniSkipButton(isNext: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) =
@@ -255,7 +267,7 @@ private fun WavySlider(
     val pressed by interaction.collectIsPressedAsState()
     val dragging by interaction.collectIsDraggedAsState()
     val active = ResonanceColors.Primary
-    val inactive = if (ResonanceColors.isDark) Color(0xFF2A3D39) else Color(0xFFCAD8D3)
+    val inactive = ResonanceColors.DividerStrong
     var editing by remember { mutableStateOf(false) }
     var preview by remember { mutableFloatStateOf(value) }
     val displayValue = (if (editing) preview else value).coerceIn(0f, 1f)
@@ -270,9 +282,9 @@ private fun WavySlider(
             editing = true
             preview = it
             onPreview(it)
-            onValueChange(it)
         },
         onValueChangeFinished = {
+            if (editing) onValueChange(preview)
             editing = false
             onPreview(null)
         },
@@ -285,7 +297,7 @@ private fun WavySlider(
                 Box(
                     Modifier
                         .size(thumbSize)
-                        .galleryShadow(CircleShape, depth = 4.dp)
+                        .galleryShadow(CircleShape, depth = 2.dp)
                         .clip(CircleShape)
                         .background(active)
                         .border(2.dp, if (ResonanceColors.isDark) Color(0xFFE4ECE8) else Color.White, CircleShape)

@@ -1,0 +1,19 @@
+{
+  "tests": 33,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "classes": [
+    "com.resonance.player.ai.DeepSeekClientTest",
+    "com.resonance.player.features.BuiltinMusicSourcesTest",
+    "com.resonance.player.features.MusicSourceRegistryTest",
+    "com.resonance.player.features.PublicSourceDnsTest",
+    "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+    "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "com.resonance.player.ui.PlayerRecoveryUiTest"
+  ],
+  "publicLyrics": [
+    "Public lyrics acceptance: source=歌源 · QQ 音乐, lines=46, synchronized=true; content omitted\n"
+  ]
+}

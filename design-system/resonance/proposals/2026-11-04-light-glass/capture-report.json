@@ -1,0 +1,1109 @@
+{
+  "viewports": {
+    "desktop": [
+      1440,
+      960
+    ],
+    "phone": [
+      390,
+      844
+    ]
+  },
+  "pageCount": 78,
+  "captures": 156,
+  "errors": [],
+  "audit": [
+    {
+      "page": "library",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 歌曲"
+    },
+    {
+      "page": "playlists",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 歌单"
+    },
+    {
+      "page": "albums",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 专辑"
+    },
+    {
+      "page": "artists",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 歌手"
+    },
+    {
+      "page": "playlist",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单详情"
+    },
+    {
+      "page": "album",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "专辑详情"
+    },
+    {
+      "page": "artist",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌手详情"
+    },
+    {
+      "page": "favorites",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "我喜欢的音乐"
+    },
+    {
+      "page": "search",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "本地搜索"
+    },
+    {
+      "page": "online",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "在线搜索"
+    },
+    {
+      "page": "semantic",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "描述找歌"
+    },
+    {
+      "page": "recommendations",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "每日推荐"
+    },
+    {
+      "page": "recommendation-history",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "推荐历史"
+    },
+    {
+      "page": "player-cover",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放器 · 封面"
+    },
+    {
+      "page": "player-lyrics",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放器 · 歌词"
+    },
+    {
+      "page": "player-queue",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放器 · 队列"
+    },
+    {
+      "page": "assistant",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐助手 · 对话"
+    },
+    {
+      "page": "assistant-welcome",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐助手 · 新会话"
+    },
+    {
+      "page": "assistant-history",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "助手会话历史"
+    },
+    {
+      "page": "together",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "一起听 · 创建房间"
+    },
+    {
+      "page": "join",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "一起听 · 加入朋友"
+    },
+    {
+      "page": "room",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "一起听 · 房间"
+    },
+    {
+      "page": "members",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "房间成员"
+    },
+    {
+      "page": "room-queue",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "共享播放队列"
+    },
+    {
+      "page": "room-ai",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "房间 AI 选歌"
+    },
+    {
+      "page": "partners",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "常听伙伴"
+    },
+    {
+      "page": "room-help",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "共听连接指南"
+    },
+    {
+      "page": "tools",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "工具"
+    },
+    {
+      "page": "import",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "导入音乐"
+    },
+    {
+      "page": "import-progress",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "导入进度"
+    },
+    {
+      "page": "conversion",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音频转换"
+    },
+    {
+      "page": "archive",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单导入与导出"
+    },
+    {
+      "page": "archive-preview",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单包内容预览"
+    },
+    {
+      "page": "tasks",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐任务"
+    },
+    {
+      "page": "sources",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌源管理"
+    },
+    {
+      "page": "source-settings",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "来源偏好"
+    },
+    {
+      "page": "storage",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "下载与空间"
+    },
+    {
+      "page": "cleanup",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "空间清理预览"
+    },
+    {
+      "page": "manager",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "曲库智能管家"
+    },
+    {
+      "page": "duplicates",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "重复版本检查"
+    },
+    {
+      "page": "taste",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐品味画像"
+    },
+    {
+      "page": "settings",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "设置"
+    },
+    {
+      "page": "appearance",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "外观与动态效果"
+    },
+    {
+      "page": "playback",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放与音效"
+    },
+    {
+      "page": "lyrics-settings",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌词与翻译"
+    },
+    {
+      "page": "ai-settings",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "模型与 API"
+    },
+    {
+      "page": "schedule",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "每日推荐计划"
+    },
+    {
+      "page": "speech",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "同步歌词生成"
+    },
+    {
+      "page": "account",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "B 站账号"
+    },
+    {
+      "page": "login-qr",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "扫码登录状态"
+    },
+    {
+      "page": "folders",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "本地音乐与歌词目录"
+    },
+    {
+      "page": "audio-help",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音量平衡说明"
+    },
+    {
+      "page": "tutorial",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "使用教程"
+    },
+    {
+      "page": "tutorial-chapter",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "教程章节"
+    },
+    {
+      "page": "about",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "关于 Resonance"
+    },
+    {
+      "page": "release-notes",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "版本更新说明"
+    },
+    {
+      "page": "sponsor",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "支持作者"
+    },
+    {
+      "page": "create-playlist",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "新建歌单"
+    },
+    {
+      "page": "edit-track",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "编辑歌曲信息"
+    },
+    {
+      "page": "batch",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "多选与歌单管理"
+    },
+    {
+      "page": "add-to-playlist",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "添加到歌单"
+    },
+    {
+      "page": "enrich",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "批量补全歌曲信息"
+    },
+    {
+      "page": "enrich-result",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "补全结果报告"
+    },
+    {
+      "page": "screenshot",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单截图导入"
+    },
+    {
+      "page": "screenshot-result",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "截图识别结果"
+    },
+    {
+      "page": "video",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "B 站音频导入"
+    },
+    {
+      "page": "sleep",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "睡眠定时"
+    },
+    {
+      "page": "effects",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音效预设"
+    },
+    {
+      "page": "share",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐分享卡"
+    },
+    {
+      "page": "track-source",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌曲来源详情"
+    },
+    {
+      "page": "delete-confirm",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "删除确认"
+    },
+    {
+      "page": "playback-error",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放失败反馈"
+    },
+    {
+      "page": "empty-library",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "空曲库"
+    },
+    {
+      "page": "loading",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "加载与缓冲"
+    },
+    {
+      "page": "taste-dimensions",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "品味雷达与维度"
+    },
+    {
+      "page": "weather",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "天气配色与城市"
+    },
+    {
+      "page": "feedback",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "推荐反馈"
+    },
+    {
+      "page": "floating-lyrics",
+      "device": "desktop",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "悬浮歌词"
+    },
+    {
+      "page": "library",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 歌曲"
+    },
+    {
+      "page": "playlists",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 歌单"
+    },
+    {
+      "page": "albums",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 专辑"
+    },
+    {
+      "page": "artists",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐库 · 歌手"
+    },
+    {
+      "page": "playlist",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单详情"
+    },
+    {
+      "page": "album",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "专辑详情"
+    },
+    {
+      "page": "artist",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌手详情"
+    },
+    {
+      "page": "favorites",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "我喜欢的音乐"
+    },
+    {
+      "page": "search",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "本地搜索"
+    },
+    {
+      "page": "online",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "在线搜索"
+    },
+    {
+      "page": "semantic",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "描述找歌"
+    },
+    {
+      "page": "recommendations",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "每日推荐"
+    },
+    {
+      "page": "recommendation-history",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "推荐历史"
+    },
+    {
+      "page": "player-cover",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放器 · 封面"
+    },
+    {
+      "page": "player-lyrics",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放器 · 歌词"
+    },
+    {
+      "page": "player-queue",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放器 · 队列"
+    },
+    {
+      "page": "assistant",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐助手 · 对话"
+    },
+    {
+      "page": "assistant-welcome",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐助手 · 新会话"
+    },
+    {
+      "page": "assistant-history",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "助手会话历史"
+    },
+    {
+      "page": "together",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "一起听 · 创建房间"
+    },
+    {
+      "page": "join",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "一起听 · 加入朋友"
+    },
+    {
+      "page": "room",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "一起听 · 房间"
+    },
+    {
+      "page": "members",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "房间成员"
+    },
+    {
+      "page": "room-queue",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "共享播放队列"
+    },
+    {
+      "page": "room-ai",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "房间 AI 选歌"
+    },
+    {
+      "page": "partners",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "常听伙伴"
+    },
+    {
+      "page": "room-help",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "共听连接指南"
+    },
+    {
+      "page": "tools",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "工具"
+    },
+    {
+      "page": "import",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "导入音乐"
+    },
+    {
+      "page": "import-progress",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "导入进度"
+    },
+    {
+      "page": "conversion",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音频转换"
+    },
+    {
+      "page": "archive",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单导入与导出"
+    },
+    {
+      "page": "archive-preview",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单包内容预览"
+    },
+    {
+      "page": "tasks",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐任务"
+    },
+    {
+      "page": "sources",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌源管理"
+    },
+    {
+      "page": "source-settings",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "来源偏好"
+    },
+    {
+      "page": "storage",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "下载与空间"
+    },
+    {
+      "page": "cleanup",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "空间清理预览"
+    },
+    {
+      "page": "manager",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "曲库智能管家"
+    },
+    {
+      "page": "duplicates",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "重复版本检查"
+    },
+    {
+      "page": "taste",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐品味画像"
+    },
+    {
+      "page": "settings",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "设置"
+    },
+    {
+      "page": "appearance",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "外观与动态效果"
+    },
+    {
+      "page": "playback",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放与音效"
+    },
+    {
+      "page": "lyrics-settings",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌词与翻译"
+    },
+    {
+      "page": "ai-settings",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "模型与 API"
+    },
+    {
+      "page": "schedule",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "每日推荐计划"
+    },
+    {
+      "page": "speech",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "同步歌词生成"
+    },
+    {
+      "page": "account",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "B 站账号"
+    },
+    {
+      "page": "login-qr",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "扫码登录状态"
+    },
+    {
+      "page": "folders",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "本地音乐与歌词目录"
+    },
+    {
+      "page": "audio-help",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音量平衡说明"
+    },
+    {
+      "page": "tutorial",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "使用教程"
+    },
+    {
+      "page": "tutorial-chapter",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "教程章节"
+    },
+    {
+      "page": "about",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "关于 Resonance"
+    },
+    {
+      "page": "release-notes",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "版本更新说明"
+    },
+    {
+      "page": "sponsor",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "支持作者"
+    },
+    {
+      "page": "create-playlist",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "新建歌单"
+    },
+    {
+      "page": "edit-track",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "编辑歌曲信息"
+    },
+    {
+      "page": "batch",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "多选与歌单管理"
+    },
+    {
+      "page": "add-to-playlist",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "添加到歌单"
+    },
+    {
+      "page": "enrich",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "批量补全歌曲信息"
+    },
+    {
+      "page": "enrich-result",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "补全结果报告"
+    },
+    {
+      "page": "screenshot",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌单截图导入"
+    },
+    {
+      "page": "screenshot-result",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "截图识别结果"
+    },
+    {
+      "page": "video",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "B 站音频导入"
+    },
+    {
+      "page": "sleep",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "睡眠定时"
+    },
+    {
+      "page": "effects",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音效预设"
+    },
+    {
+      "page": "share",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "音乐分享卡"
+    },
+    {
+      "page": "track-source",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "歌曲来源详情"
+    },
+    {
+      "page": "delete-confirm",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "删除确认"
+    },
+    {
+      "page": "playback-error",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "播放失败反馈"
+    },
+    {
+      "page": "empty-library",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "空曲库"
+    },
+    {
+      "page": "loading",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "加载与缓冲"
+    },
+    {
+      "page": "taste-dimensions",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "品味雷达与维度"
+    },
+    {
+      "page": "weather",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "天气配色与城市"
+    },
+    {
+      "page": "feedback",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "推荐反馈"
+    },
+    {
+      "page": "floating-lyrics",
+      "device": "phone",
+      "horizontalOverflow": false,
+      "badImages": 0,
+      "title": "悬浮歌词"
+    }
+  ]
+}

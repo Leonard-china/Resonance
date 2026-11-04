@@ -163,30 +163,8 @@ class DesktopManagedMp3Converter(
         moveIntoPlace(temporary, target)
     }
 
-    private fun locateFfmpeg(): Path {
-        if (ffmpegOverride != null && Files.isRegularFile(ffmpegOverride)) return ffmpegOverride
-
-        val configured = sequenceOf(
-            System.getProperty("resonance.ffmpeg"),
-            System.getenv("RESONANCE_FFMPEG"),
-        ).filterNotNull().filter(String::isNotBlank).map(Path::of).firstOrNull(Files::isRegularFile)
-        if (configured != null) return configured
-
-        val composeResource = System.getProperty("compose.application.resources.dir")
-            ?.let(Path::of)?.resolve("ffmpeg.exe")
-        if (composeResource != null && Files.isRegularFile(composeResource)) return composeResource
-
-        val packaged = System.getProperty("jpackage.app-path")?.let(Path::of)?.parent
-            ?.resolve("app")?.resolve("resources")?.resolve("ffmpeg.exe")
-        if (packaged != null && Files.isRegularFile(packaged)) return packaged
-
-        val devFallback = Path.of(
-            "D:\\Software\\Github\\FlyMouseFormat\\release\\exe\\FlyingMouse Format\\resources\\ffmpeg\\ffmpeg.exe",
-        )
-        if (Files.isRegularFile(devFallback)) return devFallback
-
-        return Path.of("ffmpeg.exe")
-    }
+    private fun locateFfmpeg(): Path = ffmpegOverride?.takeIf(Files::isRegularFile)
+        ?: Path.of(com.resonance.player.audio.FfmpegExecutable.locate())
 
     private fun targetFor(source: Path): Path {
         val rawName = source.fileName.toString().substringBeforeLast('.').ifBlank { "未命名音乐" }

@@ -4,8 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,9 +24,26 @@ internal fun TrackSourceDetails(
     origin: MediaOrigin?,
     stats: TrackListeningStats? = null,
     preset: AudioEffectPreset? = null,
+    onAskAiSimilar: (() -> Unit)? = null,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(track.artist + " · " + track.album, style = MaterialTheme.typography.bodyMedium)
+
+        if (onAskAiSimilar != null) {
+            FilledTonalButton(
+                onClick = onAskAiSimilar,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 2.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.filledTonalButtonColors(
+                    containerColor = ResonanceColors.PrimarySoft,
+                    contentColor = ResonanceColors.Primary
+                )
+            ) {
+                Icon(Icons.Default.AutoAwesome, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("分享给 AI 推荐相似曲目", fontWeight = FontWeight.SemiBold)
+            }
+        }
 
         if (stats != null) {
             Column(

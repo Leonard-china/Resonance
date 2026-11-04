@@ -5,7 +5,7 @@
 - 修改日期：YYYY-MM-DD（Asia/Shanghai）
 - 类型：功能 / Bug 修复 / 重构 / 文档 / 构建配置
 - 适用版本：从 `version.properties` 读取；说明是否改变版本号
-- 影响平台：共享 / Android / Windows
+- 影响平台：共享 / Android / Windows / Linux
 - 关联记录或需求：链接；没有则写“无”
 
 ## 需求或问题

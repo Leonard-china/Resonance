@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -156,7 +158,7 @@ internal fun TutorialScreen(compact: Boolean, onBack: () -> Unit) {
 
 @Composable
 private fun TutorialCard(title: String, description: String, actions: @Composable () -> Unit) {
-    Surface(color = ResonanceColors.Raised, shape = RoundedCornerShape(18.dp),
+    Surface(color = ResonanceColors.GlassLight, shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, ResonanceColors.Divider), modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)

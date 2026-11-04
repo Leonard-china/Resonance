@@ -1,0 +1,118 @@
+name: Build Windows release
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Commit SHA or ref to build
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-release-${{ inputs.source_ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Read release version
+        id: version
+        shell: pwsh
+        run: |
+          $line = Get-Content version.properties | Where-Object { $_ -match '^versionName=' }
+          $version = ($line -split '=', 2)[1].Trim()
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Invalid release version' }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Prepare SDK, actual FFmpeg binary and WiX 3
+        shell: pwsh
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+          if ($LASTEXITCODE -ne 0) { throw 'Android SDK installation failed' }
+          choco install ffmpeg --no-progress --yes
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg installation failed' }
+          $ffmpeg = Get-ChildItem (Join-Path $env:ChocolateyInstall 'lib/ffmpeg') -Filter ffmpeg.exe -Recurse |
+            Where-Object { $_.Length -gt 1MB } | Select-Object -First 1
+          if (-not $ffmpeg) { throw 'Actual FFmpeg binary not found; do not bundle a Chocolatey shim' }
+          & $ffmpeg.FullName -version
+          if ($LASTEXITCODE -ne 0) { throw 'FFmpeg startup failed' }
+          "RESONANCE_FFMPEG=$($ffmpeg.FullName)" >> $env:GITHUB_ENV
+          $wix = Get-ChildItem ${env:ProgramFiles(x86)} -Directory -Filter 'WiX Toolset v3*' |
+            Sort-Object Name -Descending | Select-Object -First 1
+          if (-not $wix) { throw 'WiX 3 missing from Windows runner' }
+          $wixBin = Join-Path $wix.FullName 'bin'
+          if (-not (Test-Path (Join-Path $wixBin 'candle.exe'))) { throw 'WiX candle.exe missing' }
+          $wixBin >> $env:GITHUB_PATH
+      - name: Run desktop regressions and build EXE
+        shell: pwsh
+        run: |
+          ./gradlew.bat :composeApp:desktopTest :composeApp:createReleaseDistributable :composeApp:packageReleaseExe --no-configuration-cache --console=plain
+          if ($LASTEXITCODE -ne 0) { throw 'Windows tests or packaging failed' }
+      - name: Verify full app image and isolated startup
+        shell: pwsh
+        run: |
+          $image = Join-Path $PWD 'composeApp/build/compose/binaries/main-release/app/Resonance'
+          $launcher = Join-Path $image 'Resonance.exe'
+          if (-not (Test-Path $launcher)) { throw 'Packaged launcher missing' }
+          $bundledFfmpeg = Get-ChildItem $image -Filter ffmpeg.exe -Recurse | Select-Object -First 1
+          if (-not $bundledFfmpeg) { throw 'Bundled FFmpeg missing' }
+          if ((Get-FileHash $bundledFfmpeg.FullName).Hash -ne (Get-FileHash $env:RESONANCE_FFMPEG).Hash) {
+            throw 'Bundled FFmpeg differs from the actual tested binary'
+          }
+          $fixture = Join-Path $env:RUNNER_TEMP 'resonance-release-smoke'
+          New-Item -ItemType Directory -Force $fixture | Out-Null
+          $env:RESONANCE_DATA = Join-Path $fixture 'data'
+          $env:RESONANCE_LIBRARY = Join-Path $fixture 'music'
+          $process = Start-Process $launcher -PassThru -RedirectStandardOutput (Join-Path $fixture 'stdout.log') -RedirectStandardError (Join-Path $fixture 'stderr.log')
+          try {
+            Start-Sleep -Seconds 12
+            $process.Refresh()
+            if ($process.HasExited) { throw "Packaged app exited during startup: $($process.ExitCode)" }
+            "Packaged process alive; window handle: $($process.MainWindowHandle)"
+          } finally {
+            if (-not $process.HasExited) { $process.Kill(); $process.WaitForExit(5000) | Out-Null }
+          }
+      - name: Collect current EXE and checksum
+        shell: pwsh
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          $file = Join-Path $PWD "composeApp/build/compose/binaries/main-release/exe/Resonance-$env:RELEASE_VERSION.exe"
+          if (-not (Test-Path $file)) { throw 'Current release EXE missing' }
+          $out = Join-Path $PWD 'release/windows'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Copy-Item $file $out
+          $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path $file -Leaf)" | Set-Content (Join-Path $out 'SHA256SUMS-Windows.txt') -Encoding utf8NoBOM
+          git rev-parse HEAD | Set-Content (Join-Path $out 'SOURCE-COMMIT.txt') -Encoding utf8NoBOM
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-${{ steps.version.outputs.version }}
+          path: release/windows/
+          compression-level: 0
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-release-reports
+          path: |
+            composeApp/build/reports/tests
+            composeApp/build/compose/logs
+            ${{ runner.temp }}/resonance-release-smoke/*.log
+          retention-days: 14

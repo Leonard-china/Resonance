@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.resonance.player.design.ResonanceColors
-import com.resonance.player.design.resonanceGlass
 import com.resonance.player.model.AudioEffectPreset
 
 @Composable
@@ -34,8 +33,10 @@ fun AudioEffectDialog(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .heightIn(max = 560.dp)
                 .padding(horizontal = 8.dp)
-                .resonanceGlass(shape = RoundedCornerShape(22.dp))
+                // A native dialog has its own window; do not sample the player's Haze layers across it.
+                .background(ResonanceColors.CanvasElevated, RoundedCornerShape(22.dp))
                 .border(1.dp, ResonanceColors.Divider.copy(alpha = 0.5f), RoundedCornerShape(22.dp))
                 .padding(20.dp),
         ) {
@@ -66,7 +67,7 @@ fun AudioEffectDialog(
                             color = ResonanceColors.TextPrimary,
                         )
                         Text(
-                            text = "双端原生 16-bit PCM 硬件加速实时调校",
+                            text = "即时生效，不会改变原音频文件",
                             style = MaterialTheme.typography.bodySmall,
                             color = ResonanceColors.Muted,
                         )
@@ -76,10 +77,10 @@ fun AudioEffectDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 380.dp),
+                    modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(AudioEffectPreset.entries) { preset ->
+                    items(AudioEffectPreset.entries, key = { it.id }, contentType = { "audio-preset" }) { preset ->
                         val isSelected = preset == currentPreset
                         Row(
                             modifier = Modifier

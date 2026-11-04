@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.resonanceGlass
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -22,7 +24,7 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
     val valid = chosen.isNotEmpty() && chosen.all { it.name.isNotBlank() && it.tracks.all { song -> song.title.isNotBlank() && song.artist.isNotBlank() } }
     fun dismiss() { if (!state.task.running) feature.launch { assistant.discardScreenshotImport() } }
     Dialog(onDismissRequest = ::dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth(0.94f).widthIn(max = 760.dp).fillMaxHeight(0.92f), shape = MaterialTheme.shapes.large) {
+        Surface(Modifier.fillMaxWidth(0.94f).widthIn(max = 760.dp).fillMaxHeight(0.92f).resonanceGlass(shape = MaterialTheme.shapes.large), shape = MaterialTheme.shapes.large, color = androidx.compose.ui.graphics.Color.Transparent) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("核对截图歌单", style = MaterialTheme.typography.headlineSmall)
                 Text("已选择 ${selected.size} 首 · ${draft.recognition}。可编辑歌名、歌手和专辑；确认后再匹配本地或下载。", style = MaterialTheme.typography.bodySmall)
@@ -38,7 +40,7 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
                         itemsIndexed(list.tracks, key = { index, _ -> "$listIndex-$index" }) { songIndex, song ->
                             val key = listIndex to songIndex
                             fun change(value: SongRequest) { lists = lists.mapIndexed { n, old -> if (n == listIndex) old.copy(tracks = old.tracks.mapIndexed { m, entry -> if (m == songIndex) value else entry }) else old } }
-                            Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.medium) {
+                            Surface(color = com.resonance.player.design.ResonanceColors.GlassLight, shape = MaterialTheme.shapes.medium) {
                                 Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                     Row {
                                         Checkbox(key in selected, { checked -> selected = if (checked) selected + key else selected - key })

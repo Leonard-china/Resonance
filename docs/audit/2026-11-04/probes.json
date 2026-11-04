@@ -1,0 +1,59 @@
+[
+  {
+    "evidence": {
+      "fileAfterFailure": "synthetic replacement",
+      "error": "同步清单缺少 playlist.0.name"
+    },
+    "id": "B01_import_commits_before_playlist_validation"
+  },
+  {
+    "evidence": 1,
+    "id": "B02_missing_library_visible"
+  },
+  {
+    "evidence": 1,
+    "id": "B02_library_after_restore"
+  },
+  {
+    "evidence": "IllegalArgumentException",
+    "id": "B03_theme_backup_bypass"
+  },
+  {
+    "evidence": "Dark",
+    "id": "B03_generic_reader_recovers"
+  },
+  {
+    "evidence": {
+      "帮我删除这首歌的文件": true,
+      "如何删除歌曲？": true,
+      "只删除歌单里的歌曲，不删除音频文件": true,
+      "解释一下删除音频有什么风险": true
+    },
+    "id": "B04_deletion_authorization"
+  },
+  {
+    "evidence": "IllegalStateException",
+    "id": "B05_corrupt_stats"
+  },
+  {
+    "evidence": {
+      "selectedToClean": ["live"],
+      "groups": 1
+    },
+    "id": "B06_distinct_recordings_marked_duplicates"
+  },
+  {
+    "evidence": {
+      "bpmRange": "125..155",
+      "keywords": []
+    },
+    "id": "B08_bpm_only_intent"
+  },
+  {
+    "evidence": {
+      "acceptedReferences": 1000000,
+      "durationMs": 101
+    },
+    "id": "B09_unbounded_playlist_reference_count"
+  }
+]

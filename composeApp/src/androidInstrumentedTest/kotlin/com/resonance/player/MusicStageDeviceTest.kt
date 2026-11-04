@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
@@ -23,7 +23,7 @@ import java.io.File
 
 /** Real device window and native controls, with no user library, account or network service. */
 class MusicStageDeviceTest {
-    @get:Rule val ui = createComposeRule()
+    @get:Rule val ui = createAndroidComposeRule<PromoCaptureActivity>()
     private val args = InstrumentationRegistry.getArguments()
     private val mode = if (args.getString("stageTheme") == "light") ThemeMode.Light else ThemeMode.Dark
     private val label = args.getString("stageLabel") ?: "device"

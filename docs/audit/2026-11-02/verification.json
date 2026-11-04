@@ -1,0 +1,56 @@
+{
+  "desktopTest": {
+    "tests": 290,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 4
+  },
+  "testReleaseUnitTest": {
+    "tests": 55,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "Error": 0,
+    "Fatal": 0,
+    "Warning": 107,
+    "Information": 0
+  },
+  "artifacts": [
+    {
+      "path": "build/final-20261102/candidates/Resonance-0.6.5-debug.apk",
+      "sha256": "14bc7dc63110e842dc4e6adb2fcc4c861c3c18c0d50bd6e129785af5bfc54910",
+      "bytes": 176886488
+    },
+    {
+      "path": "build/final-20261102/candidates/Resonance-0.6.5-release.apk",
+      "sha256": "8ba7e9f9c4e30c2e1a77d117e08c6d2d8c693b4646c2a2c1cd2aa081f4bc0e15",
+      "bytes": 167317178
+    },
+    {
+      "path": "build/final-20261102/candidates/Resonance-0.6.5.exe",
+      "sha256": "ee6b717f56f1916606f662f0dd79537f04a7c6a2c316e0552e79df479a43c3a6",
+      "bytes": 322490880
+    }
+  ],
+  "android_device": {
+    "tests": 10,
+    "passed": 9,
+    "failed": 1,
+    "log": "build/final-20261102/android-final-device.log",
+    "failure": "LibraryDetailTransitionTest.openingCoversTheListAndClipsAtTheViewport line 79: after 400ms, Canvas remained where transparent/black was expected; incoming-panel coverage and clipping assertions passed. Animation settle versus retained background requires investigation."
+  },
+  "desktop_native": "Final 2 real-output tests passed; initial statistics timeout remains unexplained",
+  "startup": {
+    "Id": 37648,
+    "MainWindowTitle": "",
+    "Responding": true
+  },
+  "startup_limit": "Windows owned process alive/responding; no verified application window or interaction, so not a completed startup/UI acceptance.",
+  "changed_test_sha256": {
+    "composeApp/src/desktopTest/kotlin/com/resonance/player/playback/DesktopAudioOutputIntegrationTest.kt": "117d527d1b97d5436de7586a766915b3bfe30877ed4f5a0b29e9a6fb29640245",
+    "composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player/ListeningSessionDeviceTest.kt": "6375c3edb8a5e885f3a159df97df0f41b2e1bcb71aa331a0ab015bc2af6b5f5f",
+    "composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player/LibraryDetailTransitionTest.kt": "5f1a9d28a17f8f91632e916b421a295a1b831646cf4c3efc4dd8284b8a5753b5"
+  }
+}

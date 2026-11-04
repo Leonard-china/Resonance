@@ -15,16 +15,25 @@ interface MusicAiTransport {
 }
 
 /** Provider-neutral wire client. Native music tools execute locally, never model-provided shell code. */
-class MusicAiClient : MusicAiTransport {
+class MusicAiClient(private val openConnection: (URI) -> HttpURLConnection = { it.toURL().openConnection() as HttpURLConnection }) : MusicAiTransport {
     override suspend fun complete(connection: AiConnection, messages: JSONArray, tools: JSONArray?, maxTokens: Int): AiReply = withContext(Dispatchers.IO) {
         require(connection.configured) { "请在设置中填写 ${connection.provider.label} 的 HTTPS 接口、模型和 API Key" }
         val base = connection.baseUrl.trim().trimEnd('/')
         val endpoint = URI(if (base.endsWith("/chat/completions")) base else "$base/chat/completions")
         require(endpoint.scheme == "https" && endpoint.userInfo == null && !endpoint.host.isNullOrBlank()) { "AI 接口必须是有效 HTTPS 地址" }
+        val isReasoner = connection.model.contains("reasoner", ignoreCase = true)
+        val effectiveTokens = if (isReasoner && maxTokens < 1024) 1024 else maxTokens
         val request = JSONObject().put("model", connection.model.trim()).put("messages", messages)
-            .put("max_tokens", maxTokens).put("temperature", 0.3).put("stream", false)
+            .put("max_tokens", effectiveTokens).put("stream", false)
+        if (!isReasoner) request.put("temperature", 0.3)
+        // The official Flash/V4 endpoints now default to high-effort thinking. These short
+        // music/tool requests expect final content; keep legacy reasoner selections unchanged.
+        if (endpoint.host.equals("api.deepseek.com", ignoreCase = true) && connection.model.trim().lowercase() in
+            setOf("deepseek-flash", "deepseek-v4-flash", "deepseek-v4-flash-vision-exp", "deepseek-v4-pro")) {
+            request.put("thinking", JSONObject().put("type", "disabled"))
+        }
         if (tools != null) request.put("tools", tools).put("tool_choice", "auto")
-        val http = endpoint.toURL().openConnection() as HttpURLConnection
+        val http = openConnection(endpoint)
         val cancellation = CoroutineScope(currentCoroutineContext()).launch(Dispatchers.Default) { try { awaitCancellation() } finally { http.disconnect() } }
         try {
             http.requestMethod = "POST"

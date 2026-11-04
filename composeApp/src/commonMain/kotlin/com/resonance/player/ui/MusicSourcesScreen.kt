@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,7 +30,8 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             item {
-                Text("已为您内置网易云音乐、酷我音乐、酷狗音乐等主流公共歌源，开箱即用，无需到处寻找插件。", style = MaterialTheme.typography.bodyMedium)
+                Text("内置网易云音乐、酷我音乐、酷狗音乐、QQ 音乐及 Internet Archive 独立音乐目录。", style = MaterialTheme.typography.bodyMedium)
+                Text("平台授权、地区与网络会影响可用性；付费或受限音频不会自动解锁。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("搜索歌曲无需配置 AI，也不消耗模型额度。下载、封面和歌词优先使用同一歌曲来源。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item {
@@ -55,7 +58,7 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
                 }
             }
             items(state.sources, key = MusicSourceInfo::id) { source ->
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
                     Column(Modifier.fillMaxWidth().padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
@@ -137,7 +140,7 @@ internal fun MusicStorageScreen(compact: Boolean, onBack: () -> Unit) {
                 }
             }
             items(report?.entries.orEmpty(), key = { it.track.id }) { entry ->
-                Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer) {
+                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(entry.track.title, style = MaterialTheme.typography.titleMedium)
                         Text(entry.track.artist, color = MaterialTheme.colorScheme.onSurfaceVariant)

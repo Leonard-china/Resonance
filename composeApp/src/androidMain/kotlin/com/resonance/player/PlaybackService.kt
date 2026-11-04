@@ -38,6 +38,20 @@ class PlaybackService : MediaSessionService() {
         mutableState = sleepTimerState)
     private var trackAudioJob: Job? = null
     private val handler = Handler(Looper.getMainLooper())
+    private val stats by lazy {
+        com.resonance.player.playback.ListeningStatsRepository.get(filesDir.toPath()).recorder(android.os.SystemClock::elapsedRealtime)
+    }
+    private var listeningTrackId: String? = null
+    private fun sampleListening(player: Player, discontinuity: Boolean = false) {
+        stats.sample(player.currentMediaItem?.mediaId, player.currentPosition.coerceAtLeast(0),
+            player.duration.coerceAtLeast(0), player.isPlaying, player.playbackParameters.speed, discontinuity)
+    }
+    private val listeningTick = object : Runnable {
+        override fun run() {
+            mediaSession?.player?.let { sampleListening(it) }
+            handler.postDelayed(this, 1_000)
+        }
+    }
     private val snapshotTick = object : Runnable {
         override fun run() { persistPlayback(); handler.postDelayed(this, 5_000) }
     }
@@ -55,7 +69,35 @@ class PlaybackService : MediaSessionService() {
                 .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), true)
             setHandleAudioBecomingNoisy(true)
             addListener(object : Player.Listener {
+                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                    if (playWhenReady) {
+                        val together = com.resonance.player.together.AndroidTogetherRuntime.get(this@PlaybackService).service
+                        if (together.state.value.isGuest && together.state.value.localAudioPaused) {
+                            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) together.resumeGuestAudio()
+                            else { pause(); return }
+                        }
+                    }
+                    if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM && sleep.trackEnded()) sleepTimerStoppedAtEnd = true
+                    if (!playWhenReady && reason in setOf(Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS,
+                            Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY)) {
+                        val together = com.resonance.player.together.AndroidTogetherRuntime.get(this@PlaybackService).service
+                        if (together.state.value.isGuest) together.pauseGuestAudio(
+                            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) "音频输出已改变，本机声音已暂停" else "其它应用正在使用声音，本机跟听已暂停")
+                    }
+                }
+                override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
+                    if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS) {
+                        val together = com.resonance.player.together.AndroidTogetherRuntime.get(this@PlaybackService).service
+                        if (together.state.value.isGuest) together.pauseGuestAudio("其它应用正在使用声音，本机跟听已暂停")
+                    }
+                }
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) stats.finish()
+                    if (mediaItem?.mediaId != listeningTrackId || currentPosition == 0L ||
+                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                        stats.start(mediaItem?.mediaId, currentPosition.coerceAtLeast(0))
+                    } else sampleListening(this@apply, discontinuity = true)
+                    listeningTrackId = mediaItem?.mediaId
                     if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
                         if (sleep.trackEnded()) sleepTimerStoppedAtEnd = true
                     }
@@ -64,10 +106,17 @@ class PlaybackService : MediaSessionService() {
                     persistPlayback()
                 }
                 override fun onIsPlayingChanged(isPlaying: Boolean) { persistPlayback() }
-                override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                    if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM && sleep.trackEnded()) sleepTimerStoppedAtEnd = true
+                override fun onEvents(player: Player, events: Player.Events) { sampleListening(player) }
+                override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                    if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {
+                        // Settle only the old real position; the seek jump itself contributes nothing.
+                        stats.sample(oldPosition.mediaItem?.mediaId, oldPosition.positionMs, duration.coerceAtLeast(0),
+                            false, playbackParameters.speed)
+                        sampleListening(this@apply, discontinuity = true)
+                    }
                 }
                 override fun onPlaybackStateChanged(playbackState: Int) {
+                    if (playbackState == Player.STATE_ENDED) { sampleListening(this@apply); stats.finish() }
                     if (playbackState == Player.STATE_ENDED && sleep.trackEnded()) sleepTimerStoppedAtEnd = true
                     if (playbackState == Player.STATE_ENDED || playbackState == Player.STATE_IDLE) activeMusicId = null
                     else activeMusicId = currentMediaItem?.mediaId
@@ -111,7 +160,9 @@ class PlaybackService : MediaSessionService() {
                 }
             }).build()
         overlay = com.resonance.player.features.AndroidLyricsOverlay(this, player, audioScope)
+        com.resonance.player.together.AndroidTogetherRuntime.get(this).bind(player)
         handler.post(snapshotTick)
+        handler.post(listeningTick)
     }
 
     /** Also follows track changes when no Activity/controller is connected. */
@@ -166,9 +217,13 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
     override fun onDestroy() {
+        com.resonance.player.together.AndroidTogetherRuntime.get(this).unbind(mediaSession?.player)
         sleep.close()
         persistPlayback()
         handler.removeCallbacks(snapshotTick)
+        handler.removeCallbacks(listeningTick)
+        mediaSession?.player?.let { sampleListening(it) }
+        stats.flushSoon()
         overlay?.close()
         activeService = null
         activeMusicId = null

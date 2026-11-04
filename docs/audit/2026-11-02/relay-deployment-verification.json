@@ -1,0 +1,94 @@
+{
+  "date": "2026-11-02",
+  "timezone": "Asia/Shanghai",
+  "server_installed": {
+    "status": "installed_pending_restart",
+    "backup": "/home/container/resonance-relay-backups/20261102/start.sh",
+    "startup_sha256": "559889190bbe59bfa4b4260905231a4c7e92f5d0c0c95bbb1fd02065f086554f",
+    "bundle_sha256": "976e4afa1586027427a45539fe23d7fe12f13273dc027d7158d1691506e56358"
+  },
+  "routing": {
+    "validation": "5 routing cases passed",
+    "status": "configured_pending_restart",
+    "path": "/home/container/.cloudflared/config.yml",
+    "sha256": "9bb2c3b8b22e187c15b80f570690f7ed1247f004bd02b066f8e21f32f00044fe",
+    "previous_config": "absent"
+  },
+  "remote": {
+    "loopback_bidirectional_bytes": 8192,
+    "supervisor_lock_held": true,
+    "budget_reserved": 2097152,
+    "data_mode": "0o700",
+    "website_loopback_status": 200,
+    "sources": {
+      "websocket_server.py": "f96eeb116537818baa937d4248a1aa891a15e3714b8c3a77a43265f694ee6fc6",
+      "supervise.py": "d836d4cb6050016c39ee0722e974c258201de042cf00f4e28712dfb0befa6e8a",
+      "run-public-relay.sh": "790220a74b1f45b7a82942451d8ce369c8efaf210b479c81712d1b7438eb1958",
+      "requirements.txt": "395a0cbc832e51c019afbfdd5a797220af835591acac81147268f424927b7720",
+      "start-hook.sh": "3cd3ef458d29f0002a7fa2c8a59bd60f85646b2c5a7ad22f0d2eaff49a6f6513"
+    },
+    "loopback_listeners": 1,
+    "status": "passed"
+  },
+  "public_wss": {
+    "checked_at": "2026-11-02T00:39:53.192321+00:00",
+    "wss_bidirectional_bytes": 8192,
+    "wss_status": "passed",
+    "/": {
+      "status": 403
+    },
+    "/downloads": {
+      "status": 403
+    },
+    "/forum": {
+      "status": 403
+    },
+    "/resonance-relay/v1/extra": {
+      "status": 403
+    }
+  },
+  "website": {
+    "checked_at": "2026-11-02T00:41:05.534446+00:00",
+    "user_agent": "ResonanceDeploymentCheck/1.0",
+    "/": {
+      "status": 200,
+      "cache": "MISS"
+    },
+    "/downloads": {
+      "status": 200,
+      "cache": "MISS"
+    },
+    "/forum": {
+      "status": 200,
+      "cache": "DYNAMIC"
+    },
+    "/resonance-relay/v1/extra": {
+      "status": 404
+    }
+  },
+  "linux_tests": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "jvm_tests": {
+    "tests": 4,
+    "failures": 0,
+    "skipped": 0,
+    "cases": [
+      "endpointRejectsInsecureOrAmbiguousTargets[desktop]",
+      "deployedPinnedTlsRoundTripOverWebSocket[desktop]",
+      "defaultsRespectSavedOptOutAndCustomServer[desktop]",
+      "realPinnedTlsRoundTripOverWebSocket[desktop]"
+    ]
+  },
+  "limitations": [
+    "No independent mobile-network/physical-device acceptance",
+    "No capacity/load testing",
+    "No Cloudflare edge rate-limit rule added",
+    "No new client release"
+  ],
+  "jvm_test_sha256": "753f7e11aed3f638a20beda1a9673467cd874d0f0e258ce37ac9664bb16fbe73"
+}

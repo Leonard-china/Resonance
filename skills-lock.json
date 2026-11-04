@@ -115,6 +115,55 @@
       "sourceType": "github",
       "skillPath": "testing/testing-setup/SKILL.md",
       "computedHash": "69fccbd7662c04b6d4b886d5323033ac9acf1343957fca1eecbc2a4d13c547e9"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "ref": "e89e3ada3e875a89ac2c5d33d11e65ebef6fe285",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "fab04b31f946573b00a8559db1fc070f8ea5825254d491c2b13156e5661a86d7"
+    },
+    "design-taste-frontend": {
+      "source": "Leonxlnx/taste-skill",
+      "sourceType": "github",
+      "ref": "12af471f627f866411b4bd785b19646d3672784c",
+      "skillPath": "skills/taste-skill/SKILL.md",
+      "computedHash": "6ac8ba6089dcbc303744a507a4587113c5d845ca2f658b3ce2b0b5eab108fb0d"
+    },
+    "onetake": {
+      "source": "feitangyuan/onetake",
+      "sourceType": "github",
+      "ref": "013a61ac8d98883c73733f59c06e49e9ba444f14",
+      "skillPath": "SKILL.md",
+      "computedHash": "89f8c40adaaa72bfddc753488f74e43e2ca10b206c8f404f0d1e3c13b0fbce7c"
+    },
+    "remove-animations": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "ref": "f1090bec277140d02ed202440185ad9d02ac1490",
+      "skillPath": "skills/remove-animations/SKILL.md",
+      "computedHash": "5d738305c722c25e054a9e3b67e68d4429617d9fbae4bc8861b73cc25c8ba84c"
+    },
+    "animation-performance": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "ref": "f1090bec277140d02ed202440185ad9d02ac1490",
+      "skillPath": "skills/animation-performance/SKILL.md",
+      "computedHash": "333f6a387124d0eda927614671f8be3a00d1ddeb9f43cf8b7fa7032630414311"
+    },
+    "mobile-native": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "ref": "f1090bec277140d02ed202440185ad9d02ac1490",
+      "skillPath": "skills/mobile-native/SKILL.md",
+      "computedHash": "f221cea36642168df6d3d6d7f236237cbf1ae669138ff7df07775674223d49ad"
+    },
+    "break-ui": {
+      "source": "emilkowalski/skills",
+      "sourceType": "github",
+      "ref": "f1090bec277140d02ed202440185ad9d02ac1490",
+      "skillPath": "skills/break-ui/SKILL.md",
+      "computedHash": "60ada67662925f4df5e3c6ff41cac3ab241b66f8898100a5ffcd7ba7196cb868"
     }
   }
 }

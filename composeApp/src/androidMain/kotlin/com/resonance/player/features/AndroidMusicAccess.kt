@@ -224,6 +224,7 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
 }
 
 object AndroidCredentialVault {
+    @Synchronized
     private fun key(): javax.crypto.SecretKey {
         val store = java.security.KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey("resonance-ai", null) as? javax.crypto.SecretKey)?.let { return it }

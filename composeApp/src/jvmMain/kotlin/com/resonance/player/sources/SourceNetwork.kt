@@ -23,11 +23,7 @@ internal class PublicSourceNetwork : SourceNetwork {
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
         .callTimeout(40, TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false)
-        .dns(object : Dns {
-            override fun lookup(hostname: String): List<InetAddress> = InetAddress.getAllByName(hostname).toList().also { addresses ->
-                require(addresses.isNotEmpty() && addresses.all(::publicAddress)) { "歌源只允许访问公网地址" }
-            }
-        }).build()
+        .dns(PublicSourceDns()).build()
 
     override suspend fun request(options: JSONObject): JSONObject = withContext(Dispatchers.IO) {
         val method = options.optString("method", "GET").uppercase()

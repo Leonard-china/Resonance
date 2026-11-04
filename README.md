@@ -1,8 +1,10 @@
 # Resonance
 
-Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量平衡、双语与桌面歌词、B 站音频导入及多模型音乐助手。
+Android / Windows / Linux 原生音乐播放器：本地曲库、歌单、自动音量平衡、双语与桌面歌词、B 站音频导入及多模型音乐助手。
 
-开发入口：[文档索引](docs/README.md) · [详细开发说明](docs/DEVELOPMENT.md) · [AI 协作规则](AGENTS.md)。当前版本 **v0.5.0 / versionCode 33**，最新发布包见 [v0.5.0 Release](https://github.com/Leonard-china/Resonance/releases/tag/v0.5.0)、[版本说明](docs/RELEASE_NOTES-0.5.0.md) 与 [官网发布](https://leonard.asia)。
+项目原创代码采用 [MIT 许可证](LICENSE)。依赖、移植代码与随包工具保留各自许可，见[第三方说明](docs/THIRD_PARTY.md)。
+
+开发入口：[文档索引](docs/README.md) · [详细开发说明](docs/DEVELOPMENT.md) · [AI 协作规则](AGENTS.md)。当前工作区 **v0.6.6 / versionCode 40**，版本唯一来源是 `version.properties`；见 [版本说明](docs/RELEASE_NOTES-0.6.6.md) 与 [本轮发布状态](docs/changes/2026-11-04-16-release-0.6.6-three-platforms.md)。公开产物以 [GitHub Releases](https://github.com/Leonard-china/Resonance/releases) 为准。
 
 本轮全面落地统一搜索／试听、截图核对编辑、任务汇总与批量重试、离线恢复与文件重定位、推荐历史与反馈管理、双端原生睡眠定时、Windows 全局快捷键与网络策略限制，并彻底消除页面转场黑边；见 [v0.5.0 版本说明](docs/RELEASE_NOTES-0.5.0.md) 与 [交接记录](docs/HANDOFF-2026-10-17-UX-ANTIGRAVITY.md)。
 
@@ -19,7 +21,7 @@ Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量�
 | 音乐助手 | 千问、DeepSeek、豆包、自定义接口；文本/视觉模型分开选择 |
 | 截图导歌单 | 本地 OCR / 云端 API 可切换；先勾选和编辑核对，再确认下载／整理 |
 | 推荐 | 间隔／数量／后台／网络条件可选，独立点赞、踩与评论；收藏或入歌单保留；历史反馈可管理 |
-| 转换 | KGMA v3/slot1 两端；KGG v5 仅 Windows，需本机酷狗密钥 |
+| 转换 | KGMA v3/slot1；KGG v5 桌面端需匹配酷狗密钥，Linux 需显式指定密钥库 |
 | 歌单文件 | 导入/导出 .resonance，携带音频、封面、信息与歌单 |
 | 智能补全 | 公共来源优先、可选 AI，取消保留已完成结果 |
 
@@ -29,7 +31,7 @@ Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量�
 
 首次启动可选择“快速了解”图文教程或“跟着操作”逐章学习，也可以跳过。以后在 **设置 → 使用教程** 中查看完整说明、继续进度或重新练习；教程离线可读。
 
-1. 打开“导入”，扫描系统音频或选择文件夹。转换页显示阶段、文件和进度，可取消，源文件保留。Android 不支持 KGG，请在 Windows 转换后通过歌单文件导入。
+1. 打开“导入”，扫描系统音频或选择文件夹。转换页显示阶段、文件和进度，可取消，源文件保留。Android 不支持 KGG，请在桌面端转换后通过歌单文件导入；Linux 密钥库配置见 Linux 说明。
 2. 播放器/设置开启“统一播放音量”；详细操作在单独的“音量平衡使用说明”页面。系统音量和播放器主音量仍由你控制。
 3. 需要 AI 聊天或云端识图时，在设置配置模型地址、模型名、API Key，保存并测试连接；本地 OCR 和普通歌源搜索无需 Key。分别选择“用于音乐管理”和“用于截图识别”。DeepSeek 文本可搭配千问/豆包视觉；豆包需填自己的实际模型/接入点 ID。
 4. 主导航“音乐助手”可发送歌单长截图，默认本地 OCR，无需识图 Key；设置可切换云端 API。识别后先显示可勾选、编辑的预览；确认后才创建歌单并匹配本地／下载，取消不下载。截断歌名继续核对完整信息，有歧义则列出未完成项。聊天管理仍需配置音乐助手 API。
@@ -49,13 +51,15 @@ Android / Windows 原生音乐播放器：本地曲库、歌单、自动音量�
 
 聊天使用稳定排序的曲库摘要、固定工具前缀及短历史；OCR/译文落盘缓存。设置可设月 Token 上限，助手显示输入、缓存命中和输出计数；服务商缓存期限和真实账单以平台为准。
 
-仅在云端 API 识图模式上传选中的截图；本地 OCR 图片留在本机。歌词、曲目/歌单文本与聊天会按功能发给用户选中的模型，聊天/截图功能不上传整库音频；主动生成同步歌词会上传当前整首音频并独立按时长计费。新凭据在 Windows 用 DPAPI，Android 用 KeyStore AES-GCM；旧 DeepSeek 配置兼容保留，可能仍有历史明文。详见 [第三方及数据说明](docs/THIRD_PARTY.md)。
+仅在云端 API 识图模式上传选中的截图；本地 OCR 图片留在本机。歌词、曲目/歌单文本与聊天会按功能发给用户选中的模型，聊天/截图功能不上传整库音频；主动生成同步歌词会上传当前整首音频并独立按时长计费。新凭据在 Windows 用 DPAPI，Android 用 KeyStore AES-GCM，Linux 用私有权限密钥文件加 AES-GCM；旧 DeepSeek 配置兼容保留，可能仍有历史明文。详见 [第三方及数据说明](docs/THIRD_PARTY.md)。
 
 音乐助手通过实际音乐工具执行，不开放任意命令行/其他软件控制。删除音频工具需要本轮明确删除指令；歌单删除只删关系。不喜欢和临时推荐清理由专门流程实现。
 
+Linux x86_64 试用版提供 DEB 与免安装压缩包，随包携带 Java，使用系统 FFmpeg；安装、数据目录与平台差异见 [Linux 使用说明](docs/LINUX.md)。
+
 ## 开发与构建
 
-需要 JDK17（脚本支持17–21）、Android SDK36 / Build Tools36.0.0、Gradle Wrapper。Windows 播放/转换/打包需 ffmpeg.exe，可用 RESONANCE_FFMPEG 指定。真实签名配置仅保存在本机，模板为 keystore.properties.example。
+需要 JDK17（脚本支持17–21）、Android SDK36 / Build Tools36.0.0、Gradle Wrapper。Windows 播放/转换/打包需 ffmpeg.exe，可用 RESONANCE_FFMPEG 指定；Linux 使用系统 ffmpeg，构建入口为 `scripts/build-linux.sh`。真实签名配置仅保存在本机，模板为 keystore.properties.example。
 
 ```powershell
 .\gradlew.bat :composeApp:allTests :composeApp:lintRelease :composeApp:assembleDebug
@@ -73,4 +77,4 @@ Windows 调试必须同时设置 RESONANCE_DATA、RESONANCE_LIBRARY 到独立目
 
 B 站接口可能要求登录/验证，当前开发网络探测返回 HTTP412，未验通实际账号在线下载；未提供用户 Key，收费模型服务尚未实测。模拟回归不能代替真实服务验证。Android KGG 不支持，后台调度不保证精确执行时间；纯文本歌词不伪造时间轴。
 
-本仓库尚无项目级 LICENSE；第三方按各自许可核对，Windows FFmpeg 以实际二进制为准。[组件与服务](docs/THIRD_PARTY.md)。
+项目原创代码采用 MIT；第三方按各自许可核对，Windows FFmpeg 以实际二进制为准，Linux FFmpeg 由发行版提供。[组件与服务](docs/THIRD_PARTY.md)。

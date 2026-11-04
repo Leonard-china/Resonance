@@ -4,6 +4,9 @@ import com.resonance.player.model.APP_RELEASE_DATE
 import com.resonance.player.model.APP_RELEASE_HIGHLIGHTS
 import com.resonance.player.model.APP_VERSION
 import com.resonance.player.ui.swipePageTarget
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
 import kotlin.test.*
 
 class HorizontalPageSwipeUnitTest {
@@ -53,10 +56,19 @@ class HorizontalPageSwipeUnitTest {
 
     @Test
     fun appVersionAndHighlightsGeneratedFromReleaseNotes() {
-        assertEquals("0.6.5", APP_VERSION)
-        assertEquals("2026-10-29", APP_RELEASE_DATE)
-        assertEquals(5, APP_RELEASE_HIGHLIGHTS.size)
-        assertTrue(APP_RELEASE_HIGHLIGHTS[0].contains("播放队列"))
-        assertTrue(APP_RELEASE_HIGHLIGHTS.last().contains("Android"))
+        val root = Path.of("..").toAbsolutePath().normalize()
+        val version = Properties().apply {
+            Files.newInputStream(root.resolve("version.properties")).use(::load)
+        }.getProperty("versionName")
+        assertEquals(version, APP_VERSION, "Generated version must follow version.properties")
+        val notes = Files.readAllLines(root.resolve("docs/RELEASE_NOTES-$version.md"))
+        assertTrue(APP_RELEASE_DATE.matches(Regex("\\d{4}-\\d{2}-\\d{2}")))
+        assertTrue(notes.first().startsWith("# $APP_RELEASE_DATE"))
+        val section = notes.indexOf("## 主要更新")
+        assertTrue(section >= 0, "Release notes must contain current highlights")
+        val nextHeading = (section + 1 until notes.size).firstOrNull { notes[it].startsWith("## ") } ?: notes.size
+        val expected = notes.subList(section + 1, nextHeading).filter { it.startsWith("- ") }.map { it.substring(2) }
+        assertTrue(expected.isNotEmpty(), "Release highlights must not be empty")
+        assertEquals(expected, APP_RELEASE_HIGHLIGHTS, "About-page highlights must match this release")
     }
 }

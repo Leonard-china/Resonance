@@ -90,11 +90,25 @@ class StorageAndAssistantExtraTest {
             val song = library.songs.values.single()
             val path = Path.of(song.sourceUri!!)
             val file = path.toFile()
-            FileOutputStream(file).use {
-                val report = runtime.cleanupDownloads(listOf(song.id))
-                assertEquals(0, report.deletedFiles)
-                assertEquals(song.sourceUri, library.songs.getValue(song.id).sourceUri)
-                assertTrue(report.messages.any { it.contains("未能释放") })
+            // Windows blocks unlink of an open file; POSIX permits it. Deny parent-directory
+            // writes on POSIX so this exercises the same actual deletion failure on both hosts.
+            val posix = Files.getFileAttributeView(path.parent, java.nio.file.attribute.PosixFileAttributeView::class.java)
+            val permissions = posix?.readAttributes()?.permissions()
+            try {
+                FileOutputStream(file).use {
+                    if (permissions != null) {
+                        Files.setPosixFilePermissions(path.parent, permissions.filterNot {
+                            it.name.endsWith("_WRITE")
+                        }.toSet())
+                        org.junit.Assume.assumeFalse("Requires permission enforcement", Files.isWritable(path.parent))
+                    }
+                    val report = runtime.cleanupDownloads(listOf(song.id))
+                    assertEquals(0, report.deletedFiles)
+                    assertEquals(song.sourceUri, library.songs.getValue(song.id).sourceUri)
+                    assertTrue(report.messages.any { it.contains("未能释放") })
+                }
+            } finally {
+                if (permissions != null) Files.setPosixFilePermissions(path.parent, permissions)
             }
             assertTrue(Files.isRegularFile(path))
         }

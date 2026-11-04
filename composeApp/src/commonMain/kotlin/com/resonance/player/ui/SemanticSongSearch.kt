@@ -134,7 +134,7 @@ fun SemanticSongSearch(
                             .fillMaxWidth()
                             .clickable { match.track?.let { onTrackSelected(it) } },
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = ResonanceColors.Raised),
+                        colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
                     ) {
                         Row(
                             Modifier.padding(14.dp),

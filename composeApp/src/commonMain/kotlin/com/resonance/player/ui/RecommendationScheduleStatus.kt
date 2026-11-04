@@ -18,17 +18,18 @@ internal fun RecommendationScheduleStatus(feature: MusicFeatureController) {
         }
     }
     val due = state.recommendations.createdAt + feature.settings.intervalHours * 3_600_000L
-    val hasUnlistened = remember(state.recommendations.trackIds, now) {
+    val listeningStatus = remember(state.recommendations.trackIds, now) { runCatching {
         val stats = feature.services
         state.recommendations.trackIds.any { id ->
             val s = stats.getTrackListeningStats(id)
             (s == null || (s.totalSeconds <= 0 && s.playCount <= 0))
         }
-    }
+    } }
     val next = when {
+        listeningStatus.isFailure -> "听歌记录暂不可用，暂时保留本批推荐"
         networkAllowed == false -> "等待符合设置的网络"
         state.task.running -> "音乐任务处理中，完成后再检查"
-        state.recommendations.createdAt > 0L && state.recommendations.trackIds.isNotEmpty() && hasUnlistened -> "本批推荐尚有歌曲未听过，保留不换"
+        state.recommendations.createdAt > 0L && state.recommendations.trackIds.isNotEmpty() && listeningStatus.getOrDefault(true) -> "本批推荐尚有歌曲未听过，保留不换"
         state.recommendations.createdAt == 0L || now >= due -> "已到期，条件满足时检查"
         else -> "预计下次到期：" + feature.services.formatDateTime(due)
     }

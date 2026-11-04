@@ -6,7 +6,12 @@ import com.dokar.quickjs.binding.function
 import com.dokar.quickjs.evaluate
 import com.resonance.player.features.MusicJsonStore
 import com.resonance.player.model.*
+import com.resonance.player.lyrics.parseLrc
+import com.resonance.player.lyrics.usableTimeline
+import com.resonance.player.media.SongIdentityResolver
 import kotlinx.coroutines.*
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.nio.file.Files
@@ -76,24 +81,43 @@ internal class MusicSourceRegistry(
         }
         installed
     }
+    /** Add the new bundle once, preserving disabled/removed and user-edited existing sources. */
+    suspend fun ensureBuiltinSources() = withContext(Dispatchers.IO) {
+        val root = store.read()
+        if (root.optInt("builtinSourcesVersion") >= 2) return@withContext
+        val files = if (!root.has("musicSources")) BUILTIN_SCRIPTS else listOf("qq.js", "archive.js")
+        val removed = strings(root.optJSONArray("removedBuiltinSources")).toSet()
+        for (file in files) {
+            val script = loadBuiltinScript(file) ?: error("缺少内置歌源：$file")
+            val name = JSONObject(evaluate(script, "JSON.stringify({name:module.exports.platform})", false)).getString("name")
+            if (MusicJsonStore.hash(name) !in removed && list().none { it.name == name }) install(script)
+        }
+        store.update { it.put("builtinSourcesVersion", 2) }
+    }
     fun enable(id: String, enabled: Boolean) {
         val all = list(); require(all.any { it.id == id }) { "歌源不存在" }
         store.update { it.put("musicSources", JSONArray(all.map { source -> encode(if (source.id == id) source.copy(enabled = enabled) else source) })) }
     }
     fun remove(id: String) {
         val all = list(); require(all.any { it.id == id }) { "歌源不存在" }
-        store.update { it.put("musicSources", JSONArray(all.filterNot { source -> source.id == id }.map(::encode))) }
+        store.update {
+            it.put("musicSources", JSONArray(all.filterNot { source -> source.id == id }.map(::encode)))
+            it.put("removedBuiltinSources", JSONArray((strings(it.optJSONArray("removedBuiltinSources")) + id).distinct()))
+        }
         Files.deleteIfExists(scriptPath(id))
     }
     suspend fun search(query: String, limit: Int = 40): List<SourceSong> {
         require(query.isNotBlank()) { "请输入歌曲或歌手" }
-        val result = mutableListOf<SourceSong>()
-        val failures = mutableListOf<String>()
-        for (source in list().filter { it.enabled && "search" in it.capabilities }) {
-            try { result += parseSongs(source.id, call(source.id, "search", JSONArray().put(query.take(180)).put(1).put("music"))) }
-            catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { failures += source.name }
-        }
+        val permits = Semaphore(3)
+        val outcomes = coroutineScope { list().filter { it.enabled && "search" in it.capabilities }.map { source -> async {
+            permits.withPermit {
+                try { parseSongs(source.id, call(source.id, "search", JSONArray().put(query.take(180)).put(1).put("music"))) to "" }
+                catch (cancelled: CancellationException) { throw cancelled }
+                catch (_: Exception) { emptyList<SourceSong>() to source.name }
+            }
+        } }.awaitAll() }
+        val result = outcomes.flatMap { it.first }
+        val failures = outcomes.map { it.second }.filter(String::isNotBlank)
         if (result.isEmpty() && failures.isNotEmpty()) error("这些歌源查询未完成，请检查插件或网络：" + failures.joinToString("、"))
         val grouped = result.distinctBy { it.sourceId + ":" + it.id }.groupBy { it.sourceId }.values.toList()
         return (0 until (grouped.maxOfOrNull { it.size } ?: 0)).flatMap { index -> grouped.mapNotNull { it.getOrNull(index) } }.take(limit)
@@ -138,6 +162,35 @@ internal class MusicSourceRegistry(
         if (raw != null) return raw.take(300_000)
         val link = (result as? JSONObject)?.optString("lrc")?.takeIf { it.startsWith("https://") || it.startsWith("http://") } ?: return null
         return network.request(JSONObject().put("url", link)).takeIf { it.optInt("status") == 200 }?.optString("body")
+    }
+    /** Search metadata and fetch the source's published lyrics; never download or upload audio. */
+    suspend fun findLyrics(track: Track): LyricsFetchResult = coroutineScope {
+        if (track.title.isBlank() || track.isMissingArtist) return@coroutineScope LyricsFetchResult.Unavailable("请先补充准确的歌名和歌手，再查找歌词", false)
+        val request = SongRequest(track.title, track.artist, track.album)
+        val duration = durationTextToSeconds(track.durationText)
+        val candidates = list().filter { it.enabled && "search" in it.capabilities && "getLyric" in it.capabilities }.take(8)
+        val results = candidates.map { source -> async {
+            try {
+                withTimeoutOrNull(8_000) {
+                    val songs = parseSongs(source.id, call(source.id, "search", JSONArray().put("${track.title} ${track.artist}".take(180)).put(1).put("music")))
+                        .filter { SongIdentityResolver.matches(request, SongRequest(it.title, it.artist, it.album)) }
+                        .filter { duration <= 0 || it.durationSeconds <= 0 || kotlin.math.abs(it.durationSeconds - duration) <= maxOf(8, duration / 25) }
+                        .sortedBy { if (duration > 0 && it.durationSeconds > 0) kotlin.math.abs(it.durationSeconds - duration) else Int.MAX_VALUE }
+                    for (song in songs.take(2)) {
+                        val raw = lyrics(song)?.trim()?.takeIf { it.isNotEmpty() && it !in setOf("null", "undefined") && !it.startsWith("<") } ?: continue
+                        val lrc = parseLrc(raw)
+                        val synchronized = usableTimeline(lrc, duration)
+                        val lines = if (lrc.isNotEmpty()) lrc.map { if (synchronized) it else it.copy(timestampMs = null) }
+                            else raw.lineSequence().map(String::trim).filter { it.isNotEmpty() && !it.startsWith("[") }.map { LyricLine(null, it) }.toList()
+                        if (lines.isNotEmpty()) return@withTimeoutOrNull Lyrics(track.id, lines, synchronized, false, "歌源 · ${source.name}")
+                    }
+                    null
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+        } }.awaitAll()
+        results.firstOrNull { it != null }?.let { LyricsFetchResult.Found(it) }
+            ?: LyricsFetchResult.Unavailable("已查询歌词库和可用歌源，暂未找到匹配此歌手与版本的歌词", true)
     }
     suspend fun call(id: String, method: String, args: JSONArray): Any? {
         require(method in METHODS) { "歌源操作不支持" }
@@ -196,7 +249,7 @@ internal class MusicSourceRegistry(
         private fun strings(value: JSONArray?): List<String> = value?.let { (0 until it.length()).map(it::optString) }.orEmpty()
         private fun encode(info: MusicSourceInfo) = JSONObject().put("id", info.id).put("name", info.name)
             .put("version", info.version).put("enabled", info.enabled).put("capabilities", JSONArray(info.capabilities))
-        val BUILTIN_SCRIPTS = listOf("netease.js", "kuwo.js", "kugou.js")
+        val BUILTIN_SCRIPTS = listOf("netease.js", "kuwo.js", "kugou.js", "qq.js", "archive.js")
         fun loadBuiltinScript(name: String): String? {
             val stream = MusicSourceRegistry::class.java.classLoader?.getResourceAsStream("music-source/builtin/$name")
                 ?: return null

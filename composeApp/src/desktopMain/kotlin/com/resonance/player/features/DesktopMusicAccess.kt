@@ -76,13 +76,3 @@ internal class DesktopMusicAccess(private val store: DesktopLibraryStore, privat
         } finally { process.destroyForcibly(); process.waitFor(3, TimeUnit.SECONDS); Files.deleteIfExists(log) }
     }
 }
-
-internal object DesktopCredentialVault {
-    fun encrypt(value: String): String {
-        if (value.isBlank()) return ""
-        require(System.getProperty("os.name").startsWith("Windows")) { "当前凭据保护需要 Windows" }
-        return "dpapi:" + java.util.Base64.getEncoder().encodeToString(com.sun.jna.platform.win32.Crypt32Util.cryptProtectData(value.toByteArray(Charsets.UTF_8)))
-    }
-    fun decrypt(value: String): String = if (!value.startsWith("dpapi:")) value else
-        String(com.sun.jna.platform.win32.Crypt32Util.cryptUnprotectData(java.util.Base64.getDecoder().decode(value.substringAfter(':'))), Charsets.UTF_8)
-}

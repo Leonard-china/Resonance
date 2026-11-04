@@ -62,6 +62,45 @@ class ListeningStatsStoreTest {
         }
     }
 
+    @Test fun corruptHistoryIsPreservedAndValidBackupRecovers() {
+        val root = Files.createTempDirectory("stats-recovery-")
+        try {
+            val file = root.resolve("listening-stats.json")
+            Files.writeString(file, "{broken-history")
+            assertFailsWith<IllegalStateException> { ListeningStatsStore(root) }
+            assertEquals("{broken-history", Files.readString(file))
+            Files.delete(file) // This test owns the temporary fixture only.
+            ListeningStatsStore(root).apply { recordPlayback("a", 10); recordPlayback("a", 20) }
+            Files.writeString(file, "{broken-history")
+            val recovered = ListeningStatsStore(root)
+            assertEquals(10L, recovered.getAllStats().totalSeconds)
+            Files.list(root).use { paths ->
+                val preserved = paths.filter { it.fileName.toString().startsWith("listening-stats-corrupt-") }.findFirst().orElseThrow()
+                assertEquals("{broken-history", Files.readString(preserved))
+            }
+            recovered.recordPlayback("a", 2)
+            assertEquals(12L, ListeningStatsStore(root).getAllStats().totalSeconds)
+        } finally { root.toFile().deleteRecursively() }
+    }
+
+    @Test fun batchedWritesFlushWithoutLosingAcceptedSecondsAndReportFailures() {
+        val root = Files.createTempDirectory("stats-batching-")
+        try {
+            val store = ListeningStatsStore(root, 60_000)
+            store.recordPlayback("a", 1)
+            repeat(9) { store.recordPlayback("a", 1) }
+            assertEquals(1L, ListeningStatsStore(root).getAllStats().totalSeconds)
+            store.flush()
+            assertEquals(10L, ListeningStatsStore(root).getAllStats().totalSeconds)
+            val invalid = root.resolve("blocked")
+            Files.writeString(invalid, "fixture")
+            val blocked = ListeningStatsStore(invalid)
+            assertFails { blocked.recordPlayback("b", 1) }
+            assertEquals(1L, blocked.getAllStats().totalSeconds)
+            assertFails { blocked.flush() }
+        } finally { root.toFile().deleteRecursively() }
+    }
+
     @Test
     fun audioEffectPresetFromIdWorks() {
         assertEquals(AudioEffectPreset.Off, AudioEffectPreset.fromId(null))

@@ -79,6 +79,24 @@ class MusicAssistantTest {
         } finally { Files.walk(root).use { files -> files.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
     }
 
+    @Test fun libraryToolReturnsPlayableLinksWithoutExposingFileLocations() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            val song = Track("local / 中文", "Evening", "Artist", "Album", "3:00", 1,
+                sourceUri = "private/audio.mp3", artworkPath = "private/art.jpg")
+            library.songs[song.id] = song
+            ai.call("search_library", JSONObject().put("query", "Evening"))
+            ai.content("可以听 [Evening](${assistantTrackLink(song.id)})")
+            runtime.chat("找一些 Evening 的歌", emptyList())
+            val messages = ai.requests.last()
+            val result = (0 until messages.length()).map(messages::getJSONObject).last { it.optString("role") == "tool" }
+            val linked = JSONArray(result.getString("content")).getJSONObject(0)
+            assertEquals(assistantTrackLink(song.id), linked.getString("playLink"))
+            assertFalse(linked.has("source")); assertFalse(linked.has("artwork"))
+            val reply = runtime.state.value.messages.last()
+            assertEquals(listOf(song), resolveAssistantMusic(reply.content, library.songs).tracks)
+        }
+    }
+
     @Test fun recommendationRolloverDeletesOnlyUnsavedDownloads() = runBlocking {
         fixture { runtime, library, _, ai, _ ->
             ai.songs("KeepFavorite", "KeepPlaylist", "Temporary"); runtime.recommend(true)
@@ -154,6 +172,30 @@ class MusicAssistantTest {
             assertFailsWith<IllegalArgumentException> { runtime.translate(Track("t", "Test", "A", "", "0:10", 0), original, "中文") }
             assertNull(runtime.cachedTranslation(original, "中文"))
             assertTrue(original.lines.all { it.translation == null })
+        }
+    }
+    @Test fun translationCacheNormalizesTargetLanguageLikeFreshRequests() = runBlocking {
+        fixture { runtime, _, _, ai, _ ->
+            val original = Lyrics("t", listOf(LyricLine(1000, "Hello")), true, false, "Fixture")
+            val track = Track("t", "Example", "Artist", "", "0:10", 0)
+            ai.content("[\"你好\"]")
+            val result = runtime.translate(track, original, " 中文 ")
+            assertEquals("中文", result.translationLanguage)
+            assertEquals(result, runtime.cachedTranslation(original, " 中文 "))
+            assertEquals(result, runtime.translate(track, original, "中文"))
+            assertEquals(1, ai.requests.size)
+        }
+    }
+    @Test fun emptyOrNonJsonTranslationReturnsUsefulErrorWithoutCaching() = runBlocking {
+        fixture { runtime, _, _, ai, _ ->
+            val original = Lyrics("t", listOf(LyricLine(1000, "Hello")), true, false, "Fixture")
+            for (content in listOf("", "null", "无法提供译文")) {
+                ai.content(content)
+                val failure = assertFailsWith<Exception> { runtime.translate(Track("t", "Example", "Artist", "", "0:10", 0), original, "中文") }
+                assertTrue(failure.message.orEmpty().contains("译文"))
+                assertNull(runtime.cachedTranslation(original, "中文"))
+            }
+            assertEquals(listOf(LyricLine(1000, "Hello")), original.lines)
         }
     }
     @Test fun screenshotRecognitionIsCachedAndExistingSongsAreNotDownloadedAgain() = runBlocking {

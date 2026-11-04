@@ -1,4 +1,6 @@
 package com.resonance.player.ui
+
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.resonance.player.design.galleryPlinth
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -70,7 +72,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import com.resonance.player.platform.loadSponsorQr
@@ -130,6 +131,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -202,14 +204,16 @@ internal fun ProfileScreen(
     onOpenAbout: () -> Unit,
 ) {
     val features = LocalMusicFeatures.current
-    val pagePadding = if (compact) 16.dp else 32.dp
-    Column(Modifier.widthIn(max = 880.dp).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pagePadding)) {
+    val pagePadding = if (compact) 20.dp else 40.dp
+    Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding)
+        .verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp)) {
         Text(
             "工具",
             style = MaterialTheme.typography.headlineLarge,
             color = ResonanceColors.TextPrimary,
             modifier = Modifier.padding(top = 14.dp, bottom = 10.dp),
         )
+        SectionHeader("音乐管理")
         SettingRow(
             icon = Icons.Default.LibraryMusic,
             title = "导入音乐",
@@ -222,9 +226,8 @@ internal fun ProfileScreen(
             subtitle = "完整保存音频、封面与歌单信息",
             onClick = onOpenSync,
         )
-        SettingRow(Icons.Default.AutoAwesome, "音乐助手", "聊天管理、歌单截图和每日推荐", { features?.onNavigate?.invoke(LibraryDestination.Assistant) })
-        SettingRow(Icons.Default.Headphones, "与朋友一起听", "双人直连 · 端到端加密 · 无中转", { features?.onNavigate?.invoke(LibraryDestination.Together) })
         SettingRow(Icons.Default.CleaningServices, "曲库智能管家", "智能洗歌、标签清洗与版本去重", { features?.onNavigate?.invoke(LibraryDestination.SmartManager) })
+        SectionHeader("聆听与偏好")
         SettingRow(Icons.Default.AutoAwesome, "音乐品味画像", "六维品味雷达图与听歌性格分析", { features?.onNavigate?.invoke(LibraryDestination.TasteRadar) })
         SettingRow(Icons.Default.LibraryMusic, "歌源", "搜索专辑单曲 · 导入 MusicFree 源", { features?.onNavigate?.invoke(LibraryDestination.Sources) })
         SettingRow(Icons.Default.FolderOpen, "下载与空间", "管理下载、临时空间和重复文件", { features?.onNavigate?.invoke(LibraryDestination.Storage) })
@@ -277,7 +280,7 @@ internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Resonance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
                 Text("版本：v$APP_VERSION", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Primary)
-                Text("平台：Android / Windows 原生跨平台 (Kotlin Multiplatform + Compose)", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+                Text("平台：Android / Windows / Linux 原生跨平台 (Kotlin Multiplatform + Compose)", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
                 Text("架构模式：Local-First · Zero Cloud Dependency · High Fidelity", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
             }
         }
@@ -478,10 +481,10 @@ internal fun ToolPage(
     backLabel: String = "返回工具",
     content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
-    val pagePadding = if (compact) 16.dp else 32.dp
+    val pagePadding = if (compact) 20.dp else 40.dp
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
-            modifier = Modifier.widthIn(max = 880.dp).fillMaxWidth().padding(start = pagePadding - 12.dp, end = pagePadding, top = 8.dp),
+            modifier = Modifier.widthIn(max = 1100.dp).fillMaxWidth().padding(horizontal = pagePadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AccessibleIconButton(backLabel, onClick = onBack) {
@@ -489,14 +492,14 @@ internal fun ToolPage(
             }
             Text(title, style = MaterialTheme.typography.headlineMedium, color = ResonanceColors.TextPrimary, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
         }
-        HorizontalDivider(color = ResonanceColors.Divider, thickness = Dp.Hairline)
         Column(
             modifier = Modifier
-                .widthIn(max = 880.dp)
+                .widthIn(max = 1100.dp)
                 .fillMaxWidth()
                 .weight(1f)
+                .padding(start = pagePadding, end = pagePadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = pagePadding, vertical = 12.dp),
+                .padding(top = 8.dp, bottom = 28.dp),
         ) {
             content()
         }
@@ -599,6 +602,11 @@ internal fun SyncScreen(
     }
 }
 
+internal enum class SettingsSection(val title: String) {
+    Overview("设置"), Appearance("外观与动态效果"), Playback("播放与音效"), Lyrics("歌词与翻译"),
+    Ai("模型与 API"), Recommendations("每日推荐计划"), Speech("同步歌词生成"), Bilibili("B 站账号"), Folders("本地音乐与歌词目录")
+}
+
 @Composable
 internal fun SettingsScreen(
     compact: Boolean,
@@ -618,10 +626,43 @@ internal fun SettingsScreen(
     var lyricsFolder by remember(customLyricsFolder) { mutableStateOf(customLyricsFolder.orEmpty()) }
     var folderSavedMessage by remember { mutableStateOf<String?>(null) }
 
-    ToolPage(title = "设置", onBack = onBack, compact = compact) {
-        val tutorial = LocalTutorial.current
-        SettingRow(Icons.Default.Info, "使用教程", "快速了解 · 跟着操作 · 随时继续学习", { tutorial?.directory() })
-        SectionHeader("外观")
+    var sectionName by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(SettingsSection.Overview.name) }
+    val section = SettingsSection.entries.firstOrNull { it.name == sectionName } ?: SettingsSection.Overview
+    val tutorial = LocalTutorial.current
+    LaunchedEffect(tutorial?.step?.target) {
+        when (tutorial?.step?.target) {
+            TutorialTarget.AiConfig, TutorialTarget.AiTest -> sectionName = SettingsSection.Ai.name
+            TutorialTarget.RecommendationSettings -> sectionName = SettingsSection.Recommendations.name
+            TutorialTarget.TranslationSettings, TutorialTarget.FloatingLyrics -> sectionName = SettingsSection.Lyrics.name
+            TutorialTarget.SpeechSettings -> sectionName = SettingsSection.Speech.name
+            TutorialTarget.BiliLogin -> sectionName = SettingsSection.Bilibili.name
+            else -> Unit
+        }
+    }
+    com.resonance.player.platform.ResonanceBackHandler(section != SettingsSection.Overview) { sectionName = SettingsSection.Overview.name }
+    ContinuousPageTransition(section, Modifier.fillMaxSize(), direction = { from, to -> if (to == SettingsSection.Overview || to.ordinal < from.ordinal) -1 else 1 }) { active ->
+    ToolPage(title = active.title, onBack = { if (active == SettingsSection.Overview) onBack() else sectionName = SettingsSection.Overview.name },
+        compact = compact, backLabel = if (active == SettingsSection.Overview) "返回工具" else "返回设置") {
+        if (active == SettingsSection.Overview) {
+            Text("按你的习惯，安排每一次聆听。", color = ResonanceColors.Muted, style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 20.dp))
+            val entries = listOf(
+                Triple(SettingsSection.Appearance, Icons.Default.LightMode, "主题、天气配色与减少动态"),
+                Triple(SettingsSection.Playback, Icons.Default.GraphicEq, "音量平衡、播放方式与键盘操作"),
+                Triple(SettingsSection.Lyrics, Icons.Default.MusicNote, "原文、译文与悬浮歌词"),
+                Triple(SettingsSection.Ai, Icons.Default.AutoAwesome, "模型连接、截图识别与 API 配置"),
+                Triple(SettingsSection.Recommendations, Icons.Default.LibraryMusic, "推荐方式、更新间隔与下载偏好"),
+                Triple(SettingsSection.Speech, Icons.Default.GraphicEq, "语音识别与同步时间轴"),
+                Triple(SettingsSection.Bilibili, Icons.Default.VideoLibrary, "登录与音频导入授权"),
+                Triple(SettingsSection.Folders, Icons.Default.FolderOpen, "本地曲库、歌词和下载目录"),
+            )
+            entries.forEach { (target, icon, subtitle) -> SettingRow(icon, target.title, subtitle, { sectionName = target.name }) }
+            SectionHeader("帮助")
+            SettingRow(Icons.Default.Info, "使用教程", "快速了解 · 跟着操作 · 随时继续学习", { tutorial?.directory() })
+            SettingRow(Icons.Default.Info, "Resonance", "版本 v$APP_VERSION · 本地优先的跨平台音乐播放器", null)
+        }
+        if (active == SettingsSection.Appearance) {
+        SectionHeader("主题")
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -633,8 +674,10 @@ internal fun SettingsScreen(
 
         AppearanceSettings()
 
-        MusicFeatureSettingsSection()
+        }
+        MusicFeatureSettingsSection(active)
 
+        if (active == SettingsSection.Folders) {
         SectionHeader("本地歌词与酷狗下载目录")
         Text(
             "自动查找音频旁的 KRC / LRC 歌词，也可选择自己的歌词目录。Android 授权目录会建立本地歌词索引。",
@@ -674,7 +717,7 @@ internal fun SettingsScreen(
                 shape = RoundedCornerShape(8.dp),
                 colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                     containerColor = ResonanceColors.Primary,
-                    contentColor = androidx.compose.ui.graphics.Color.White,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
             ) {
                 Text("保存目录")
@@ -711,14 +754,16 @@ internal fun SettingsScreen(
         SettingRow(Icons.Default.LibraryMusic, "扫描音乐", "查找并导入本机音频文件", onClick = onOpenImport)
         SettingRow(Icons.Default.FolderOpen, "音乐库位置", libraryLocation, onClick = null)
 
+        }
+        if (active == SettingsSection.Playback) {
         SectionHeader("播放与解码")
         SettingRow(Icons.Default.GraphicEq, "转换质量", "默认 MP3 320 kbps · 原 MP3 不重新编码", onClick = null)
         SettingRow(Icons.Default.MusicNote, "KRC / LRC 解密", "支持酷狗原生 KRC 解密、LRCLIB 自动匹配及本地多级模糊索引", onClick = null)
         SettingRow(Icons.Default.Shuffle, "播放与队列", "记住随机 / 循环模式和上次选中的歌单", onClick = null)
 
-        SectionHeader("关于")
-        SettingRow(Icons.Default.Info, "Resonance", "版本 v$APP_VERSION · 本地优先的跨平台音乐播放器", onClick = null)
+        }
         Spacer(Modifier.height(24.dp))
+    }
     }
 }
 
@@ -774,19 +819,16 @@ internal fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCl
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val background by animateColorAsState(if (focused || hovered) ResonanceColors.Soft else Color.Transparent,
+    val background by animateColorAsState(if (focused || hovered) ResonanceColors.Soft else ResonanceColors.GlassLight,
         tween(motionDuration(160)), label = "settingRowBackground")
-    Column(modifier) {
+    Column(modifier.padding(bottom = 6.dp)) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(background)
             .then(if (onClick != null) Modifier.clickable(interactionSource = interaction, indication = ripple(),
                 role = Role.Button, onClick = onClick) else Modifier)
             .border(1.5.dp, if (focused) ResonanceColors.Primary else Color.Transparent, RoundedCornerShape(14.dp))
             .heightIn(min = 72.dp).padding(horizontal = 10.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).galleryPlinth(corner = 4.dp, depth = 3.dp),
-                contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = ResonanceColors.Primary, modifier = Modifier.size(21.dp))
-            }
+            Icon(icon, null, tint = ResonanceColors.Muted, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.TextPrimary)
@@ -798,6 +840,5 @@ internal fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCl
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(20.dp))
             }
         }
-        HorizontalDivider(Modifier.padding(start = 64.dp), color = ResonanceColors.Divider, thickness = Dp.Hairline)
     }
 }

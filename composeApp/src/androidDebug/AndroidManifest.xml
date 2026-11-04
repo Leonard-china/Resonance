@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Opt-in fixture host only; never included in release or exposed to other applications. -->
+        <activity android:name="com.resonance.player.PromoCaptureActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="touchscreen|keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode" />
+    </application>
+</manifest>

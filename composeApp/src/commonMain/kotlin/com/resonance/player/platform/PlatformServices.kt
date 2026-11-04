@@ -10,12 +10,22 @@ import com.resonance.player.model.RepeatMode
 import com.resonance.player.model.SyncReport
 import com.resonance.player.model.Track
 import com.resonance.player.model.CalibrationStatus
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 interface PlatformServices {
     val listenTogether: ListenTogetherService? get() = null
+    val togetherInvitations: StateFlow<String?> get() = MutableStateFlow(null)
+    /** Null means this platform has no runtime notification permission to request. */
+    val togetherNotificationsBlocked: StateFlow<Boolean>? get() = null
+    fun requestTogetherNotifications() {}
+    fun dismissTogetherInvitation() {}
+    /** Returns false when this platform has no native text share sheet. */
+    fun shareTogetherInvitation(text: String): Boolean = false
+    val managesTogetherPlayback: Boolean get() = false
+    suspend fun awaitSynchronizedReady(trackId: String): Boolean = true
     fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
         restorePausedPlayback(track, listOf(track), progress, false, RepeatMode.Off)
         setPlaybackSpeed(speed)
@@ -33,8 +43,13 @@ interface PlatformServices {
     fun canDrawOverlays(): Boolean = true
     fun requestOverlayPermission(): Boolean = false
     val playbackErrors: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
+    val playbackIssues: Flow<PlaybackIssue> get() = playbackErrors.map { PlaybackIssue(it) }
+    fun isCurrentPlaybackIssue(issue: PlaybackIssue): Boolean = true
     val supportsKeyboardShortcuts: Boolean get() = false
     suspend fun automaticRecommendationAllowed(unmeteredOnly: Boolean): Boolean = true
+    var togetherLocalSnapshot: Any?
+        get() = null
+        set(_) {}
     val sleepTimer: StateFlow<com.resonance.player.model.SleepTimerState> get() = MutableStateFlow(com.resonance.player.model.SleepTimerState())
     fun setSleepTimer(option: com.resonance.player.model.SleepTimerOption) {}
     fun setVocalSuppression(enabled: Boolean) {}
@@ -45,7 +60,8 @@ interface PlatformServices {
     val currentAudioEffectPreset: StateFlow<com.resonance.player.model.AudioEffectPreset> get() = MutableStateFlow(com.resonance.player.model.AudioEffectPreset.Off)
     suspend fun loadAudioEffectPreset(): com.resonance.player.model.AudioEffectPreset = com.resonance.player.model.AudioEffectPreset.Off
     suspend fun saveAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {}
-    fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean = false) {}
+    suspend fun recordListeningDuration(trackId: String, deltaSeconds: Int, isCompleted: Boolean = false) {}
+    suspend fun flushListeningStats() {}
     fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? = null
     fun getAllListeningStats(): com.resonance.player.model.AllListeningStats = com.resonance.player.model.AllListeningStats()
     fun previewAudio(path: String) {}
@@ -67,6 +83,7 @@ interface PlatformServices {
     val playbackPositionMs: Long? get() = null
     val playbackProgress: Flow<Float>
     val isPlayingChanges: Flow<Boolean>
+    val isBufferingChanges: Flow<Boolean> get() = kotlinx.coroutines.flow.emptyFlow()
     val activeTrackChanges: Flow<String>
 
     suspend fun loadLibrary(): List<Track>
@@ -104,6 +121,7 @@ interface PlatformServices {
 
     suspend fun setTrackFavorite(trackId: String, favorite: Boolean)
     suspend fun loadLyrics(track: Track, forceRefresh: Boolean = false): LyricsFetchResult
+    /** Explicit direct model text generation; does not search or upload audio, and returns no verified timeline. */
     suspend fun requestAiLyrics(track: Track): LyricsFetchResult
     suspend fun exportSyncPackage(playlistId: String?): SyncReport
     suspend fun importSyncPackage(): SyncReport
@@ -118,6 +136,7 @@ interface PlatformServices {
     ): com.resonance.player.model.BatchEnrichReport
     fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode)
     fun setPlaying(isPlaying: Boolean)
+    /** Apply to the native session only; persist the captured pair separately through the ordered writer. */
     fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode)
     fun setVolume(volume: Float)
     fun setPlaybackSpeed(speed: Float)

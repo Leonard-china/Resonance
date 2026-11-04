@@ -20,10 +20,10 @@ import androidx.compose.ui.unit.dp
 /** Natural tactile tokens: warm organic surfaces, squircle corners, soft ambient shadows. */
 object GalleryTokens {
     val ArtworkCorner = 14.dp
-    val PlinthCorner = 14.dp
+    val PlinthCorner = 18.dp
     val ShelfHeight = 0.dp
-    val Face: Color @Composable @ReadOnlyComposable get() = ResonanceColors.CanvasElevated
-    val Edge: Color @Composable @ReadOnlyComposable get() = ResonanceColors.Divider
+    val Face: Color @Composable @ReadOnlyComposable get() = ResonanceColors.Glass
+    val Edge: Color @Composable @ReadOnlyComposable get() = ResonanceColors.GlassBorderSubtle
     val Highlight: Color @Composable @ReadOnlyComposable get() =
         if (ResonanceColors.isDark) Color(0xFF384649) else Color.White
     val Cast: Color @Composable @ReadOnlyComposable get() =
@@ -40,7 +40,7 @@ fun Modifier.galleryShadow(shape: Shape, depth: Dp = 8.dp): Modifier =
 
 /** Elevated tactile card container with clean rounded corners and subtle border. */
 @Composable
-fun Modifier.galleryPlinth(corner: Dp = GalleryTokens.PlinthCorner, depth: Dp = 6.dp): Modifier {
+fun Modifier.galleryPlinth(corner: Dp = GalleryTokens.PlinthCorner, depth: Dp = 3.dp): Modifier {
     val face = GalleryTokens.Face
     val edge = GalleryTokens.Edge
     val shape = RoundedCornerShape(corner)
@@ -65,3 +65,11 @@ fun GalleryArtworkMount(modifier: Modifier = Modifier, content: @Composable BoxS
         content = content,
     )
 }
+
+/** A small chrome control over an already softened backdrop; no extra sampling or blur. */
+@Composable
+fun Modifier.glassControlSurface(): Modifier = this
+    .size(48.dp).padding(4.dp)
+    .clip(androidx.compose.foundation.shape.CircleShape)
+    .background(ResonanceColors.GlassLight)
+    .border(1.dp, ResonanceColors.GlassBorder, androidx.compose.foundation.shape.CircleShape)

@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.resonance.player.model.ThemeMode
 
 /**
- * Native gallery surfaces with sage / ice-blue accents and legible text.
+ * Approved frosted glass palette with mineral sage and ice blue accents; weather preferences seamlessly switch palettes.
  */
 data class ResonanceColorTokens(
     val isDark: Boolean,
@@ -86,33 +86,44 @@ data class ResonanceColorTokens(
 
 private fun colors(dark: Boolean, palette: WeatherPalette): ResonanceColorTokens {
     val blue = palette == WeatherPalette.IceBlue
-    val primary = Color(if (dark) { if (blue) 0xFFA9C5FF else 0xFF8CD0BC } else { if (blue) 0xFF315FD0 else 0xFF2F7467 })
+    val primary = Color(
+        if (dark) {
+            if (blue) 0xFFA9C5FF else 0xFF8CD0BC
+        } else {
+            if (blue) 0xFF2563EB else 0xFF1E7B68
+        }
+    )
     return ResonanceColorTokens(
         isDark = dark,
-        Canvas = Color(if (dark) 0xFF0B0E14 else 0xFFF2F4F7),
-        CanvasElevated = Color(if (dark) 0xFF181E28 else 0xFFFCFDFE),
-        Raised = Color(if (dark) 0xFF202733 else 0xFFFCFDFE),
-        Soft = Color(if (dark) 0xFF202733 else 0xFFE6EBF0),
-        SurfaceSubtle = Color(if (dark) 0xFF202733 else 0xFFE8ECF1),
-        Glass = Color(if (dark) 0xDE141A24 else 0xDEFFFFFF),
-        GlassLight = Color(if (dark) 0xE61C2430 else 0xE6FFFFFF),
-        GlassUltra = Color(if (dark) 0xF21C2430 else 0xF2FFFFFF),
-        GlassBorder = Color(if (dark) 0x32FFFFFF else 0xCFFFFFFF),
-        GlassBorderSubtle = Color(if (dark) 0x1CFFFFFF else 0x18243C33),
-        GlassBorderGlow = primary.copy(alpha = 0.30f),
-        Divider = Color(if (dark) 0x24FFFFFF else 0x18243C33),
-        DividerStrong = Color(if (dark) 0x40FFFFFF else 0x30243C33),
-        TextPrimary = Color(if (dark) 0xFFF1F4F8 else 0xFF202B39),
-        Muted = Color(if (dark) 0xFFB9C3D1 else 0xFF536171),
-        Dim = Color(if (dark) 0xFFA9B5C5 else 0xFF596778),
-        Dimmer = Color(if (dark) 0xFF9AA9BC else 0xFF596778),
-        Primary = primary, PrimaryGlow = primary, PrimarySoft = primary.copy(alpha = if (dark) 0.16f else 0.10f),
+        Canvas = Color(if (dark) 0xFF182027 else 0xFFF3F5F8),
+        CanvasElevated = Color(if (dark) 0xFF242D35 else 0xFFF9FAFC),
+        Raised = Color(if (dark) 0xFF303A44 else 0xFFFFFFFF),
+        Soft = Color(if (dark) 0xFF303A44 else 0xFFE9EDF2),
+        SurfaceSubtle = Color(if (dark) 0xFF303A44 else 0xFFE9EDF2),
+        Glass = Color(if (dark) 0xA82B3540 else 0xD9FFFFFF),
+        GlassLight = Color(if (dark) 0x8C35414D else 0x9EFFFFFF),
+        GlassUltra = Color(if (dark) 0xE6242D35 else 0xEBF8FAFC),
+        GlassBorder = Color(if (dark) 0x38FFFFFF else 0xDDFFFFFF),
+        GlassBorderSubtle = Color(if (dark) 0x20FFFFFF else 0x90FFFFFF),
+        GlassBorderGlow = primary.copy(alpha = 0.20f),
+        Divider = Color(if (dark) 0x24FFFFFF else 0x20465365),
+        DividerStrong = Color(if (dark) 0x40FFFFFF else 0x30465365),
+        TextPrimary = Color(if (dark) 0xFFF1F3F5 else 0xFF25303C),
+        Muted = Color(if (dark) 0xFFC1CAD3 else 0xFF5C6572),
+        Dim = Color(if (dark) 0xFFB9C4CF else 0xFF5C6572),
+        Dimmer = Color(if (dark) 0xFFB9C4CF else 0xFF5C6572),
+        Primary = primary,
+        PrimaryGlow = primary,
+        PrimarySoft = primary.copy(alpha = if (dark) 0.16f else 0.10f),
         Positive = Color(if (dark) 0xFF8CD0BC else 0xFF2F7467),
-        PositiveGlow = primary, PositiveSoft = primary.copy(alpha = 0.12f),
-        Notice = Color(if (dark) 0xFFA9C5FF else 0xFF365FA8),
-        Secondary = primary, SecondaryGlow = primary, SecondarySoft = primary.copy(alpha = 0.10f),
+        PositiveGlow = primary,
+        PositiveSoft = primary.copy(alpha = 0.12f),
+        Notice = primary,
+        Secondary = primary,
+        SecondaryGlow = primary,
+        SecondarySoft = primary.copy(alpha = 0.10f),
         Info = Color(if (dark) 0xFFA9C5FF else 0xFF365FA8),
-        Shadow = Color(0xFF10281F),
+        Shadow = Color(0xFF111318),
     )
 }
 
@@ -130,7 +141,7 @@ fun motionDuration(duration: Int): Int = if (LocalReducedMotion.current) 0 else 
 /**
  * 界面切换规范动效：
  * Central timing for navigation, selection and press feedback.
- * Existing size springs remain available for the main destination transition.
+ * Destination bounds stay fixed; only short offsets and opacity animate.
  */
 object ResonanceMotionTokens {
     val ExitEasing = CubicBezierEasing(0.23f, 1f, 0.32f, 1f)
@@ -139,19 +150,16 @@ object ResonanceMotionTokens {
     const val TabDuration = 220
     const val ReducedDuration = 90
     val PlayerSpec: FiniteAnimationSpec<Float> = tween(280, easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f))
-    // A softer spring keeps the small overshoot without the abrupt medium-stiffness launch.
-    val PageSlideSpec: FiniteAnimationSpec<IntOffset> = spring(
-        dampingRatio = Spring.DampingRatioLowBouncy,
-        stiffness = Spring.StiffnessMediumLow,
-    )
+    // Keep high-frequency page changes brief and interruptible, with no bounce.
+    val PageEasing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
+    const val PageDuration = 280
+    val PageTravel = 12.dp
+    val PageSlideSpec: FiniteAnimationSpec<IntOffset> = tween(PageDuration, easing = PageEasing)
 
-    val DetailSlideSpec: FiniteAnimationSpec<IntOffset> = spring(
-        dampingRatio = Spring.DampingRatioLowBouncy,
-        stiffness = Spring.StiffnessMediumLow,
-    )
+    val DetailSlideSpec: FiniteAnimationSpec<IntOffset> = PageSlideSpec
 
     val SelectionBounceSpec: FiniteAnimationSpec<Float> = spring(
-        dampingRatio = Spring.DampingRatioLowBouncy,
+        dampingRatio = 1f,
         stiffness = Spring.StiffnessLow,
     )
 
@@ -161,13 +169,13 @@ object ResonanceMotionTokens {
 
     // 伴随滑动的柔和渐变：入场 280ms / 退场 180ms，杜绝提前消隐导致的黑色虚空割裂
     val PageFadeInSpec: FiniteAnimationSpec<Float> = tween(
-        durationMillis = 280,
-        easing = ExitEasing,
+        durationMillis = PageDuration,
+        easing = PageEasing,
     )
 
     val PageFadeOutSpec: FiniteAnimationSpec<Float> = tween(
-        durationMillis = 180,
-        easing = ExitEasing,
+        durationMillis = PageDuration,
+        easing = PageEasing,
     )
 }
 
@@ -209,12 +217,12 @@ object ResonanceColors {
 
 /** Gallery mounts are nearly square; interactive controls retain gentler corners. */
 object ResonanceShapes {
-    val Button = RoundedCornerShape(8.dp)
-    val ArtworkSmall = RoundedCornerShape(2.dp)
-    val Artwork = RoundedCornerShape(2.dp)
-    val ArtworkLarge = RoundedCornerShape(2.dp)
-    val Panel = RoundedCornerShape(8.dp)
-    val Card = RoundedCornerShape(8.dp)
+    val Button = RoundedCornerShape(12.dp)
+    val ArtworkSmall = RoundedCornerShape(8.dp)
+    val Artwork = RoundedCornerShape(14.dp)
+    val ArtworkLarge = RoundedCornerShape(20.dp)
+    val Panel = RoundedCornerShape(16.dp)
+    val Card = RoundedCornerShape(16.dp)
     val Capsule = RoundedCornerShape(999.dp)
 }
 
@@ -247,34 +255,22 @@ fun Modifier.resonancePressable(
     }
 }
 
-/**
- * 现代声学磨砂玻璃修饰符（Frosted Glassmorphism）：
- * - 柔和漫反射环境阴影（Soft Drop Shadow）
- * - 半透明光感倾斜渐变（Translucent Specular Gradient）
- * - 物理高光双重倒角描边（Dual-stop Beveled Highlight Border）
- */
+/** Frosted material: sampled backdrop, a thin tint and a quiet illuminated edge. */
 @Composable
 fun Modifier.resonanceGlass(
     shape: Shape = ResonanceShapes.Panel,
     backgroundColor: Color = ResonanceColors.Glass,
     backgroundGradient: List<Color>? = null,
-    borderColors: List<Color> = listOf(ResonanceColors.GlassBorderSubtle, ResonanceColors.GlassBorderSubtle),
+    borderColors: List<Color> = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
     borderWidth: Dp = 1.dp,
     shadowElevation: Dp = 2.dp,
     shadowColor: Color = ResonanceColors.Shadow.copy(alpha = if (ResonanceColors.isDark) 0.35f else 0.08f),
 ): Modifier {
     val glassState = LocalGlassState.current
-    val gradient = backgroundGradient ?: if (ResonanceColors.isDark) {
-        listOf(
-            backgroundColor.copy(alpha = (backgroundColor.alpha * 1.22f).coerceAtMost(0.95f)),
-            backgroundColor.copy(alpha = 0.86f),
-        )
-    } else {
-        listOf(
-            backgroundColor.copy(alpha = 0.95f),
-            backgroundColor.copy(alpha = 0.86f),
-        )
-    }
+    val gradient = backgroundGradient ?: listOf(
+        backgroundColor.copy(alpha = (backgroundColor.alpha + .04f).coerceAtMost(.92f)),
+        backgroundColor.copy(alpha = (backgroundColor.alpha - .08f).coerceAtLeast(.35f)),
+    )
 
     return this
         .then(
@@ -292,8 +288,8 @@ fun Modifier.resonanceGlass(
             val glassStyle = HazeBlurStyle(
             backgroundColor = ResonanceColors.Canvas,
             colorEffects = listOf(HazeColorEffect.tint(Brush.verticalGradient(gradient))),
-            blurRadius = 18.dp,
-            noiseFactor = 0.025f,
+            blurRadius = 28.dp,
+            noiseFactor = 0.012f,
             fallbackColorEffect = HazeColorEffect.tint(backgroundColor.copy(alpha = 0.96f)),
             )
             Modifier.hazeEffect(glassState) { blurEffect { style = glassStyle } }
@@ -310,12 +306,12 @@ fun Modifier.resonanceGlass(
 
 private val resonanceTypography = Typography(
     displayMedium = TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Bold,
-        fontSize = 30.sp, lineHeight = 38.sp, letterSpacing = (-0.4).sp),
+        fontSize = 28.sp, lineHeight = 36.sp, letterSpacing = (-0.4).sp),
     displayLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp,
+        fontSize = 36.sp,
+        lineHeight = 44.sp,
         letterSpacing = (-0.3).sp,
     ),
     displaySmall = TextStyle(

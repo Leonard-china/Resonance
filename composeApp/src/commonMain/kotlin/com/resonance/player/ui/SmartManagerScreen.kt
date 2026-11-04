@@ -39,7 +39,7 @@ fun SmartManagerScreen(
     var report by remember { mutableStateOf<SmartLibraryAuditReport?>(null) }
     var isAuditing by remember { mutableStateOf(false) }
 
-    val pagePadding = if (compact) 16.dp else 24.dp
+    val pagePadding = if (compact) 20.dp else 40.dp
 
     fun runAudit() {
         isAuditing = true
@@ -56,7 +56,7 @@ fun SmartManagerScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(ResonanceColors.Canvas)
+            .background(androidx.compose.ui.graphics.Color.Transparent)
     ) {
         // Top Bar
         Row(
@@ -105,7 +105,7 @@ fun SmartManagerScreen(
                 .fillMaxWidth()
                 .padding(horizontal = pagePadding, vertical = 8.dp),
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = ResonanceColors.Raised),
+            colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
         ) {
             Row(
                 Modifier
@@ -122,7 +122,7 @@ fun SmartManagerScreen(
         // Tabs
         PrimaryTabRow(
             selectedTabIndex = selectedTab,
-            containerColor = ResonanceColors.Canvas,
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
             contentColor = ResonanceColors.Primary,
             divider = { HorizontalDivider(color = ResonanceColors.Divider) },
         ) {
@@ -210,7 +210,7 @@ private fun TagCleaningView(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = ResonanceColors.Raised),
+                    colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
                 ) {
                     Row(
                         Modifier.padding(12.dp),
@@ -303,7 +303,7 @@ private fun DuplicateCleaningView(
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = ResonanceColors.Raised),
+                    colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
                 ) {
                     Column(Modifier.padding(14.dp)) {
                         val first = group.tracks.first()

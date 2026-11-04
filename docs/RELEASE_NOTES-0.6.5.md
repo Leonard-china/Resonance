@@ -17,8 +17,8 @@ Resonance 0.6.5 正式版带来全方位的播放体验精细打磨：推出深�
 <!-- GENERATED-CHECKSUMS -->
 | 文件 | 大小 | SHA-256 |
 | --- | --- | --- |
-| `Resonance-0.6.5-release.apk` | 159.28 MiB | `caf42a45eb9b4618479716c40b69f802e238820f2ee586dc9a35344d7a068fdc` |
-| `Resonance-0.6.5.exe` | 306.87 MiB | `315b9caa6e06a8c74c908560761511965eb49763be19d15ddd308f758eda9b59` |
+| `Resonance-0.6.5-release.apk` | 159.57 MiB | `b60217cd4fe5f9baf2eeed17fcc4f60daf2e75c026310f4ee896d58aef44aa4d` |
+| `Resonance-0.6.5.exe` | 307.48 MiB | `a2e93d12bdd846dbaf7168811a0936574cfb223500839e5047d029f1207c8384` |
 <!-- END-GENERATED-CHECKSUMS -->
 
 ## 升级与数据兼容性

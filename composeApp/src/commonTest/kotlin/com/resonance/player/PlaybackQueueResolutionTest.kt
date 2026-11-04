@@ -63,4 +63,37 @@ class PlaybackQueueResolutionTest {
         assertEquals(4, resolved.size)
         assertEquals(fullLibrary.map(Track::id), resolved.map(Track::id))
     }
+
+    @Test
+    fun selectedDownloadIsIncludedEvenBeforeLibraryReloadReachesTheUi() {
+        val restored = fullLibrary.first().copy(id = "new-download", sourceUri = "file:///restored.mp3")
+        val queue = resolveTrackPlaybackQueue(restored, classicalPlaylist)
+
+        assertEquals(listOf("classical-1", "classical-2", "new-download"), queue.map(Track::id))
+        assertEquals(restored, queue.single { it.id == restored.id })
+    }
+
+    @Test
+    fun nativeQueueUsesTheSelectedAudioInsteadOfAnOlderCopyWithTheSameId() {
+        val old = classicalPlaylist.first()
+        val restored = old.copy(sourceUri = "file:///new-location.mp3", title = "Restored title")
+        val queue = resolveTrackPlaybackQueue(restored, classicalPlaylist + old)
+
+        assertEquals(listOf("classical-1", "classical-2"), queue.map(Track::id))
+        assertEquals(restored, queue.first())
+    }
+
+    @Test
+    fun recommendationQueueKeepsItsOrderAndSkipsEntriesWithoutAudio() {
+        val chosen = classicalPlaylist.last()
+        val queue = resolveTrackPlaybackQueue(chosen, listOf(
+            chosen,
+            fullLibrary.first().copy(sourceUri = ""),
+            fullLibrary.last().copy(id = "missing", sourceUri = null),
+            classicalPlaylist.first(),
+        ))
+
+        assertEquals(listOf("classical-2", "classical-1"), queue.map(Track::id))
+        assertEquals(chosen, queue.first())
+    }
 }

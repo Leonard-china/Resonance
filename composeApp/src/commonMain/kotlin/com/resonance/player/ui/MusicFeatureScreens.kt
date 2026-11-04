@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import com.resonance.player.design.FrostedAlertDialog as AlertDialog
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,9 +13,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.resonance.player.design.glassControlSurface
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -25,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.model.*
 import com.resonance.player.tutorial.TutorialTarget
@@ -54,20 +60,23 @@ private fun ToggleSetting(title: String, checked: Boolean, modifier: Modifier = 
 }
 
 @Composable
-internal fun MusicFeatureSettingsSection() {
+internal fun MusicFeatureSettingsSection(section: SettingsSection) {
     val feature = LocalMusicFeatures.current ?: return
     val settings = feature.settings
-    var configureAi by rememberSaveable { mutableStateOf(false) }
+    var configureAi by rememberSaveable { mutableStateOf(section == SettingsSection.Ai) }
     val tutorial = LocalTutorial.current
     LaunchedEffect(tutorial?.step?.target) {
         if (tutorial?.step?.target in setOf(TutorialTarget.AiConfig, TutorialTarget.AiTest)) configureAi = true
     }
+    if (section == SettingsSection.Playback) {
     SectionHeader("播放")
     ToggleSetting("统一播放音量", feature.player.autoLoudnessEnabled) { feature.onToggleBalance() }
     SettingRow(Icons.Default.HelpOutline, "音量平衡使用说明", "了解自动分析、音量与原始文件", { feature.onNavigate(LibraryDestination.AudioHelp) })
+    }
+    if (section == SettingsSection.Lyrics) {
     ToggleSetting("桌面悬浮歌词", settings.floatingLyrics, Modifier.tutorialTarget(TutorialTarget.FloatingLyrics)) { feature.toggleFloatingLyrics() }
     if (settings.floatingLyrics) {
-        ToggleSetting("锁定歌词位置并允许点击穿透", settings.floatingLyricsLocked) { feature.save(settings.copy(floatingLyricsLocked = it)) }
+        ToggleSetting("锁定歌词位置（点击穿透取决于系统支持）", settings.floatingLyricsLocked) { feature.save(settings.copy(floatingLyricsLocked = it)) }
         Text("歌词字号 ${settings.floatingLyricsSize}", style = MaterialTheme.typography.labelMedium)
         Slider(settings.floatingLyricsSize.toFloat(), { feature.settings = feature.settings.copy(floatingLyricsSize = it.toInt()) }, onValueChangeFinished = { feature.save(feature.settings) }, valueRange = 14f..56f)
     }
@@ -78,6 +87,8 @@ internal fun MusicFeatureSettingsSection() {
             FilterChip(settings.lyricDisplay == mode, { feature.save(settings.copy(lyricDisplay = mode)) }, label = { Text(label) })
         }
     }
+    }
+    if (section == SettingsSection.Ai) {
     SectionHeader("音乐来源与助手")
     SettingRow(Icons.Default.LibraryMusic, "歌源", "导入源 · 搜索专辑单曲 · 音轨与封面来源", { feature.onNavigate(LibraryDestination.Sources) })
     SettingRow(Icons.Default.FolderOpen, "下载与空间", "临时空间上限 · 释放下载 · 检查重复文件", { feature.onNavigate(LibraryDestination.Storage) })
@@ -91,6 +102,8 @@ internal fun MusicFeatureSettingsSection() {
     Text(if (settings.screenshotRecognition == ScreenshotRecognition.LocalOcr) "图片在本机识别，无需 API Key；查找完整歌名和下载歌曲仍需联网。" else "图片发送给所选视觉 API，按服务商规则计费。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
     TextButton(onClick = { configureAi = !configureAi }) { Text(if (configureAi) "收起模型设置" else "配置模型与 API Key") }
     if (configureAi) AiConnectionEditor(feature)
+    }
+    if (section == SettingsSection.Recommendations) {
     SectionHeader("每日推荐")
     ToggleSetting("自动推荐并下载", settings.recommendationsEnabled, Modifier.tutorialTarget(TutorialTarget.RecommendationSettings)) { feature.save(settings.copy(recommendationsEnabled = it)) }
     if (settings.recommendationsEnabled) {
@@ -105,10 +118,10 @@ internal fun MusicFeatureSettingsSection() {
         TextButton(onClick = { feature.save(settings.copy(recommendationCooldownDays = cooldown.toIntOrNull()?.coerceIn(1, 365) ?: 7)); feature.message = "推荐冷却期已保存" }) { Text("保存冷却期") }
         ToggleSetting("允许后台定时生成", settings.backgroundRecommendations) { feature.save(settings.copy(backgroundRecommendations = it)) }
         ToggleSetting("仅在不计费网络自动下载", settings.recommendationsUnmeteredOnly) { feature.save(settings.copy(recommendationsUnmeteredOnly = it)) }
-        Text("Android 按系统 Wi-Fi／流量计费状态判断；Windows 按系统连接计费状态判断。手动更新推荐会立即联网。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+        Text("Android／Windows 按系统计费状态判断；Linux 使用 NetworkManager，无法确认时等待。手动更新推荐会立即联网。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         RecommendationScheduleStatus(feature)
         if (!settings.backgroundRecommendations) Text("打开应用时检查是否到期", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
-        else Text("Windows 在托盘运行；Android 按系统后台调度执行，错过时间后补生成。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+        else Text("桌面端需保持运行（支持时可收至托盘）；Android 按系统后台调度执行，错过时间后补生成。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         var hours by remember(settings.intervalHours) { mutableStateOf(settings.intervalHours.toString()) }
         var count by remember(settings.recommendationCount) { mutableStateOf(settings.recommendationCount.toString()) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -117,12 +130,16 @@ internal fun MusicFeatureSettingsSection() {
         }
         TextButton(onClick = { feature.save(settings.copy(intervalHours = hours.toIntOrNull()?.coerceIn(1, 168) ?: 24, recommendationCount = count.toIntOrNull()?.coerceIn(1, 30) ?: 5)); feature.message = "推荐计划已保存" }) { Text("保存推荐计划") }
     }
-    if (feature.services.supportsKeyboardShortcuts) {
+    }
+    if (section == SettingsSection.Playback && feature.services.supportsKeyboardShortcuts) {
         SectionHeader("键盘操作")
         Text("Ctrl+F 搜索 · 空格播放／暂停 · Ctrl+←／→ 切歌 · Esc 返回。输入文字时保留空格输入。", style = MaterialTheme.typography.bodySmall)
     }
+    if (section == SettingsSection.Ai) {
     SectionHeader("AI Token 使用")
     Text("已取消所有 Token 使用量限制，请求不设上限（仅在助手底部统计当月消耗）。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+    }
+    if (section == SettingsSection.Speech) {
     SectionHeader("同步歌词生成")
     Text("根据实际音频识别人声并生成时间轴。使用阿里云百炼 Paraformer，独立按音频时长计费，不计入聊天 Token。仅点击生成时上传音频，结果保存在本机。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted, modifier = Modifier.tutorialTarget(TutorialTarget.SpeechSettings))
     var speechKey by remember(settings.speechApiKey) { mutableStateOf(settings.speechApiKey) }
@@ -132,6 +149,8 @@ internal fun MusicFeatureSettingsSection() {
     OutlinedTextField(speechUrl, { speechUrl = it }, label = { Text("语音 WebSocket 地址（北京地域）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
     OutlinedTextField(speechMinutes, { speechMinutes = it.filter(Char::isDigit).take(5) }, label = { Text("每月语音处理上限（分钟）") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
     TextButton(onClick = { feature.save(feature.settings.copy(speechApiKey = speechKey.trim(), speechUrl = speechUrl.trim(), monthlySpeechSeconds = (speechMinutes.toIntOrNull() ?: 60).coerceIn(1, 6000) * 60)); feature.message = "语音配置已保存" }) { Text("保存语音配置") }
+    }
+    if (section == SettingsSection.Bilibili) {
     var cookie by remember(settings.bilibiliCookie) { mutableStateOf(settings.bilibiliCookie) }
     var showQrLogin by remember { mutableStateOf(false) }
     var showWebLogin by remember { mutableStateOf(false) }
@@ -197,8 +216,10 @@ internal fun MusicFeatureSettingsSection() {
             }
         }
     }
+    }
     if (feature.message.isNotBlank()) Text(feature.message, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
 }
+
 
 @Composable
 private fun AiConnectionEditor(feature: MusicFeatureController) {
@@ -206,10 +227,14 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
     var provider by rememberSaveable { mutableStateOf(settings.assistantProvider.name) }
     val selected = AiProvider.entries.first { it.name == provider }
     val initial = settings.connections.firstOrNull { it.provider == selected } ?: AiConnection(selected)
-    var url by remember(selected, initial.baseUrl) { mutableStateOf(initial.baseUrl) }
-    var model by remember(selected, initial.model) { mutableStateOf(initial.model) }
-    var key by remember(selected, initial.apiKey) { mutableStateOf(initial.apiKey) }
-    var vision by remember(selected, initial.vision) { mutableStateOf(initial.vision) }
+    val existingDraft = AiDraftStore.get(selected)
+    var url by remember(selected, initial.baseUrl) { mutableStateOf(existingDraft?.baseUrl ?: initial.baseUrl) }
+    var model by remember(selected, initial.model) { mutableStateOf(existingDraft?.model ?: initial.model) }
+    var key by remember(selected, initial.apiKey) { mutableStateOf(existingDraft?.apiKey ?: initial.apiKey) }
+    var vision by remember(selected, initial.vision) { mutableStateOf(existingDraft?.vision ?: initial.vision) }
+    fun syncDraft(newUrl: String = url, newModel: String = model, newKey: String = key, newVision: Boolean = vision) {
+        AiDraftStore.save(selected, AiConnectionDraft(newUrl, newModel, newKey, newVision))
+    }
 
     val defaultConnection = remember(selected) { AiConnection(selected) }
     val candidateModels = when (selected) {
@@ -226,8 +251,8 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
         ) {
             AiProvider.entries.forEach { p -> FilterChip(selected == p, { provider = p.name }, label = { Text(p.label) }) }
         }
-        OutlinedTextField(url, { url = it }, label = { Text("HTTPS API 地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        OutlinedTextField(model, { model = it }, label = { Text(if (selected == AiProvider.Doubao) "模型名称或推理接入点 ID" else "模型名称") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(url, { url = it; syncDraft(newUrl = it) }, label = { Text("HTTPS API 地址") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+        OutlinedTextField(model, { model = it; syncDraft(newModel = it) }, label = { Text(if (selected == AiProvider.Doubao) "模型名称或推理接入点 ID" else "模型名称") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Text("常用推荐模型（点击填入）：", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted)
         Row(
             modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -241,6 +266,7 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
                         if (candidate.contains("vl", ignoreCase = true) || candidate.contains("vision", ignoreCase = true)) {
                             vision = true
                         }
+                        syncDraft(newModel = candidate, newVision = if (candidate.contains("vl", ignoreCase = true) || candidate.contains("vision", ignoreCase = true)) true else vision)
                     },
                     label = { Text(candidate, style = MaterialTheme.typography.labelSmall) },
                 )
@@ -251,16 +277,19 @@ private fun AiConnectionEditor(feature: MusicFeatureController) {
                 url = defaultConnection.baseUrl
                 model = defaultConnection.model
                 vision = defaultConnection.vision
+                syncDraft(defaultConnection.baseUrl, defaultConnection.model, key, defaultConnection.vision)
             }) {
                 Text("恢复默认地址与模型")
             }
         }
-        OutlinedTextField(key, { key = it }, label = { Text("API Key") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
-        ToggleSetting("该模型支持图片输入", vision) { vision = it }
+        OutlinedTextField(key, { key = it; syncDraft(newKey = it) }, label = { Text("API Key") }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(), singleLine = true)
+        ToggleSetting("该模型支持图片输入", vision) { vision = it; syncDraft(newVision = it) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = {
                 val c = AiConnection(selected, url.trim(), model.trim(), key.trim(), vision)
-                feature.save(settings.copy(connections = settings.connections.filterNot { it.provider == selected } + c)); feature.message = "模型配置已保存"
+                feature.save(settings.copy(connections = settings.connections.filterNot { it.provider == selected } + c))
+                AiDraftStore.clear(selected)
+                feature.message = "模型配置已保存"
             }) { Text("保存") }
             TextButton(onClick = { feature.launch { feature.message = feature.assistant?.testConnection(AiConnection(selected, url.trim(), model.trim(), key.trim(), vision)).orEmpty() } }, enabled = key.isNotBlank() && model.isNotBlank(), modifier = Modifier.tutorialTarget(TutorialTarget.AiTest)) { Text("测试连接") }
         }
@@ -281,7 +310,7 @@ internal fun AudioBalanceHelpScreen(compact: Boolean, onBack: () -> Unit) {
             "音量仍由你决定" to "手机或电脑的系统音量决定设备输出大小，播放器音量控制整个应用。自动平衡只是补偿歌曲之间的差异，不会自动修改系统音量，也不再记忆每首歌不同的主音量。",
             "会不会修改音频文件" to "不会。分析和播放增益只在播放时使用，原文件及其标签保持原样。为保护峰值，一些很安静的歌曲不会被强行放大到完全一样响。",
             "为何开启后仍有差异" to "录音动态、乐器和人声的分布不同，感受也会不同。目标是减少切歌时明显的音量跳变，而非压平音乐的所有强弱。静音、损坏或不支持的文件不会写入成功分析缓存。",
-            "遇到异常怎么办" to "先关闭音量平衡比较。检查源文件是否完整、是否仍可访问；Windows 需要可用的 FFmpeg。分析失败时保留正常播放，并显示错误信息，不会改写音频。",
+            "遇到异常怎么办" to "先关闭音量平衡比较。检查源文件是否完整、是否仍可访问；Windows／Linux 需要可用的 FFmpeg。分析失败时保留正常播放，并显示错误信息，不会改写音频。",
         )
         sections.forEach { (title, body) -> SectionHeader(title); Text(body, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(vertical = 8.dp)) }
     }
@@ -301,9 +330,8 @@ private fun AssistantWelcome(onPrompt: (String) -> Unit) {
         }
         Spacer(Modifier.height(4.dp))
         listOf("找一些适合夜晚散步的歌", "看看我的音乐品味", "如何导入歌单截图？").forEachIndexed { index, prompt ->
-            Surface(onClick = { onPrompt(prompt) }, color = ResonanceColors.CanvasElevated,
-                shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, ResonanceColors.Divider)) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 16.dp, vertical = 12.dp),
+            Surface(onClick = { onPrompt(prompt) }, color = Color.Transparent, shape = MaterialTheme.shapes.medium) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(when (index) { 0 -> Icons.Default.NightsStay; 1 -> Icons.Default.FavoriteBorder; else -> Icons.Default.PhotoLibrary },
                         null, tint = ResonanceColors.Primary, modifier = Modifier.size(22.dp))
@@ -324,13 +352,13 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
     var input by rememberSaveable { mutableStateOf("") }
     var images by remember { mutableStateOf(emptyList<AiImage>()) }
     var showSessionsDialog by remember { mutableStateOf(false) }
+    var showActions by remember { mutableStateOf(false) }
     val inputInteraction = remember { MutableInteractionSource() }
-    val inputFocused by inputInteraction.collectIsFocusedAsState()
 
     val activeConnection = feature.settings.connections.firstOrNull { it.provider == feature.settings.assistantProvider }
     val activeModelName = activeConnection?.model?.ifBlank { null } ?: "默认模型"
-    val activeProviderName = feature.settings.assistantProvider.label
 
+    val byId = remember(feature.library) { feature.library.associateBy(Track::id) }
     val listState = rememberLazyListState()
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -338,7 +366,7 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
         }
     }
     val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
-    LaunchedEffect(imeBottom) {
+    LaunchedEffect(imeBottom > 0.dp) {
         if (state.messages.isNotEmpty()) {
             listState.animateScrollToItem(state.messages.size - 1)
         }
@@ -347,8 +375,8 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
     Column(
         Modifier.widthIn(max = 960.dp).fillMaxSize().padding(
-            start = if (compact) 16.dp else 28.dp,
-            end = if (compact) 16.dp else 28.dp,
+            start = if (compact) 20.dp else 40.dp,
+            end = if (compact) 20.dp else 40.dp,
             top = if (compact) 12.dp else 24.dp,
             bottom = if (compact) (if (imeBottom > 0.dp) 8.dp else 16.dp) else 28.dp,
         ),
@@ -368,46 +396,46 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             TextButton(onClick = { feature.onNavigate(LibraryDestination.Tasks) }) { Text("任务") }
             TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("设置") }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
+        Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text("音乐助手", style = MaterialTheme.typography.titleLarge, maxLines = 1,
+                Text("音乐助手", style = MaterialTheme.typography.headlineSmall, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.testTag("assistant-title"))
-                Text("$activeProviderName · $activeModelName", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (!compact) headerActions()
-        }
-        if (compact) {
-            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) { headerActions() }
+            if (!compact) headerActions() else {
+                IconButton(onClick = { feature.launch { assistant.createSession() } }, modifier = Modifier.glassControlSurface()) {
+                    Icon(Icons.Default.Add, "新对话")
+                }
+                Box {
+                    IconButton(onClick = { showActions = true }, modifier = Modifier.glassControlSurface()) { Icon(Icons.Default.MoreVert, "助手选项") }
+                    DropdownMenu(showActions, onDismissRequest = { showActions = false }) {
+                        DropdownMenuItem(text = { Text("对话历史") }, onClick = { showActions = false; showSessionsDialog = true })
+                        DropdownMenuItem(text = { Text("音乐任务") }, onClick = { showActions = false; feature.onNavigate(LibraryDestination.Tasks) })
+                        DropdownMenuItem(text = { Text("助手设置") }, onClick = { showActions = false; feature.onNavigate(LibraryDestination.Settings) })
+                    }
+                }
+            }
         }
         if (state.task.running) MusicTaskProgress(state.task.progress, assistant::cancel)
         LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (state.messages.isEmpty() && !state.task.running) item(key = "assistant-welcome") {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { AssistantWelcome { input = it } }
             }
-            items(state.messages.withIndex().toList(), key = { "chat-${it.index}" }) { (_, item) ->
-                Surface(
-                    color = if (item.role == "user") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
-                    shape = MaterialTheme.shapes.medium,
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp)) {
-                        val senderLabel = if (item.role == "user") {
-                            "你"
-                        } else {
-                            val replyModel = item.model?.takeIf(String::isNotBlank) ?: activeModelName
-                            "音乐助手 · 回复自 $replyModel"
-                        }
-                        Text(
-                            senderLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (item.role == "user") MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else ResonanceColors.Muted,
-                        )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            item.content,
-                            color = if (item.role == "user") MaterialTheme.colorScheme.onPrimaryContainer else ResonanceColors.TextPrimary,
-                        )
+            items(state.messages.withIndex().toList(), key = { "chat-${it.index}" }, contentType = { it.value.role }) { (_, item) ->
+                val user = item.role == "user"
+                val music = remember(item.content, byId, user) {
+                    if (user) AssistantMusicContent(item.content, emptyList()) else resolveAssistantMusic(item.content, byId)
+                }
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = if (user) Alignment.End else Alignment.Start) {
+                    Surface(color = if (user) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        shape = MaterialTheme.shapes.medium) {
+                        Text(music.text, Modifier.padding(horizontal = if (user) 14.dp else 0.dp, vertical = 10.dp),
+                            color = if (user) MaterialTheme.colorScheme.onPrimaryContainer else ResonanceColors.TextPrimary)
                     }
+                    if (music.tracks.isNotEmpty()) AssistantMusicAttachment(music.tracks,
+                        onPlay = { feature.playRecommendation(it, music.tracks) }, onAppend = feature.onAppendQueue)
+                    if (!user) Text("回复自 ${item.model?.takeIf(String::isNotBlank) ?: activeModelName}",
+                        style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted,
+                        modifier = Modifier.padding(top = 6.dp))
                 }
             }
             items(state.actions.filter { it.kind.startsWith("suggest_") }, key = AssistantAction::id) { action ->
@@ -420,22 +448,25 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             Text("已选择 ${images.size} 个截图片段 · ${feature.settings.screenshotRecognition.label}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { images = emptyList() }) { Text("移除图片") }
         }
-        Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large, color = ResonanceColors.CanvasElevated,
-            border = BorderStroke(if (inputFocused) 1.5.dp else 1.dp, if (inputFocused) ResonanceColors.Primary else ResonanceColors.Divider)) {
-            Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-                TextField(input, { input = it }, placeholder = { Text("想听什么，或想整理什么？") },
-                    modifier = Modifier.fillMaxWidth().testTag("assistant-input"), maxLines = 4, interactionSource = inputInteraction,
+        Surface(Modifier.fillMaxWidth().resonanceGlass(shape = RoundedCornerShape(20.dp), shadowElevation = 3.dp),
+            shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } },
+                    enabled = !state.task.running, modifier = Modifier.tutorialTarget(TutorialTarget.Screenshot)) {
+                    Icon(Icons.Default.AddPhotoAlternate, "歌单截图")
+                }
+                TextField(value = input, onValueChange = { input = it },
+                    modifier = Modifier.weight(1f).testTag("assistant-input"), interactionSource = inputInteraction,
+                    placeholder = { Text("聊聊音乐，或整理歌单", style = MaterialTheme.typography.bodyMedium) },
+                    minLines = 1, maxLines = 4,
                     colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
-                Row(Modifier.fillMaxWidth().tutorialTarget(TutorialTarget.AssistantSend),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TextButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } }, enabled = !state.task.running,
-                        modifier = Modifier.tutorialTarget(TutorialTarget.Screenshot)) {
-                        Icon(Icons.Default.AddPhotoAlternate, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("歌单截图")
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Button(onClick = { val text = input; val attachments = images; input = ""; images = emptyList(); feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) } },
-                        enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty()), modifier = Modifier.heightIn(min = 48.dp)) { Text("发送") }
+                IconButton(onClick = {
+                    val text = input; val attachments = images; input = ""; images = emptyList()
+                    feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) }
+                }, enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty()),
+                    modifier = Modifier.tutorialTarget(TutorialTarget.AssistantSend)) {
+                    Icon(Icons.AutoMirrored.Filled.Send, "发送", tint = if (input.isNotBlank() || images.isNotEmpty()) ResonanceColors.Notice else ResonanceColors.Muted)
                 }
             }
         }
@@ -550,7 +581,7 @@ internal fun MusicFeatureDialogs() {
     }
     if (feature.showGenerateLyrics) {
         val track = feature.player.currentTrack
-        AlertDialog(onDismissRequest = { feature.showGenerateLyrics = false }, title = { Text("生成同步歌词") }, text = {
+        AlertDialog(onDismissRequest = { feature.showGenerateLyrics = false }, title = { Text("根据音频生成同步歌词") }, text = {
             Text("将把「${track?.title.orEmpty()}」的音频发送给阿里云百炼语音识别，根据人声时间戳生成歌词。服务按音频时长收费，与聊天 Token 预算分开；本月已处理 ${feature.assistant?.state?.value?.speechSeconds ?: 0} 秒，上限 ${feature.settings.monthlySpeechSeconds} 秒。歌曲可能存在识别错误，原歌词会保留，结果缓存后无需重复付费。")
         }, confirmButton = { TextButton(onClick = { feature.showGenerateLyrics = false; feature.generateLyrics() }) { Text("开始生成") } }, dismissButton = { TextButton(onClick = { feature.showGenerateLyrics = false }) { Text("取消") } })
     }
@@ -597,10 +628,23 @@ private fun VideoImportDialog(feature: MusicFeatureController) {
 @Composable
 internal fun TranslationControls() {
     val feature = LocalMusicFeatures.current ?: return
-    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(onClick = { feature.showGenerateLyrics = true }, enabled = feature.player.currentTrack != null && !feature.generatingLyrics) { Text(if (feature.generatingLyrics) "正在生成…" else "生成同步歌词") }
-        TextButton(onClick = { feature.translate() }, enabled = !feature.translating && feature.lyrics is LyricsUiState.Ready) { Text(if (feature.translating) "正在翻译…" else "翻译为${feature.settings.translationLanguage}") }
-        if (feature.translated?.trackId == feature.player.currentTrack?.id) TextButton(onClick = { feature.translate(true) }, enabled = !feature.translating) { Text("重译") }
-        TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("语言与显示") }
+    Column {
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val localTrack = feature.player.currentTrack?.takeUnless { it.id.startsWith("together:") }
+            TextButton(onClick = feature::generateTextLyrics, enabled = localTrack != null && !feature.generatingTextLyrics && !feature.generatingLyrics) {
+                Text(if (feature.generatingTextLyrics) "AI 正在生成文本…" else "AI 生成歌词文本")
+            }
+            TextButton(onClick = { feature.showGenerateLyrics = true }, enabled = localTrack != null && !feature.generatingLyrics && !feature.generatingTextLyrics) {
+                Text(if (feature.generatingLyrics) "正在识别音频…" else "音频识别同步歌词")
+            }
+            TextButton(onClick = { feature.translate() }, enabled = !feature.translating && !feature.generatingTextLyrics && !feature.generatingLyrics && feature.lyrics is LyricsUiState.Ready) { Text(if (feature.translating) "正在翻译…" else "翻译为${feature.settings.translationLanguage.trim()}") }
+            if (feature.translated?.trackId == feature.player.currentTrack?.id) TextButton(onClick = { feature.translate(true) }, enabled = !feature.translating && !feature.generatingTextLyrics && !feature.generatingLyrics) { Text("重译") }
+            TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("语言与显示") }
+        }
+        Text("AI 文本可能缺失或不准确，会使用模型额度；音频识别需另行确认上传与计费。",
+            style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+        if (feature.textLyricsError.isNotBlank()) Text(feature.textLyricsError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+        if (feature.translationError.isNotBlank()) Text(feature.translationError, modifier = Modifier.testTag("lyrics-translation-error"),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     }
 }

@@ -32,8 +32,9 @@ class LrclibLyricsRepository(
         forceRefresh: Boolean = false,
         customLyricsFolder: String? = null,
         aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
+        sourceFallback: (suspend (Track) -> LyricsFetchResult)? = null,
     ): LyricsFetchResult {
-        val result = fetchOriginal(track, forceRefresh, customLyricsFolder, aiFallback)
+        val result = fetchOriginal(track, forceRefresh, customLyricsFolder, aiFallback, sourceFallback)
         return if (result is LyricsFetchResult.Found) LyricsFetchResult.Found(LyricOffsetStore.apply(cacheDirectory, track, result.lyrics)) else result
     }
     private suspend fun fetchOriginal(
@@ -41,6 +42,7 @@ class LrclibLyricsRepository(
         forceRefresh: Boolean = false,
         customLyricsFolder: String? = null,
         aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
+        sourceFallback: (suspend (Track) -> LyricsFetchResult)? = null,
     ): LyricsFetchResult = withContext(Dispatchers.IO) {
         if (!forceRefresh) GeneratedLyricsStore.read(cacheDirectory.parent.resolve("music-assistant/generated-lyrics"), track)?.let {
             return@withContext LyricsFetchResult.Found(it)
@@ -52,7 +54,12 @@ class LrclibLyricsRepository(
 
         // 2. 本地缓存
         if (!forceRefresh) {
-            readCache(track)?.let { return@withContext it }
+            readCache(track)?.let { cached ->
+                if (cached is LyricsFetchResult.Found || sourceFallback == null) return@withContext cached
+                val source = sourceFallback(track)
+                if (source is LyricsFetchResult.Found) { writeCache(track, source); return@withContext source }
+                return@withContext source
+            }
         }
 
         // 3. LRCLIB 远程检索
@@ -70,7 +77,12 @@ class LrclibLyricsRepository(
             )
         }
 
-        // 4. AI 备用检索/生成（若 LRCLIB 未找到且提供了 AI 回退）
+        if (result is LyricsFetchResult.Unavailable && sourceFallback != null) {
+            val source = sourceFallback(track)
+            if (source is LyricsFetchResult.Found) result = source
+            else if (!result.retryable) result = source
+        }
+        // AI is only used when explicitly supplied by the caller.
         if (result is LyricsFetchResult.Unavailable && aiFallback != null) {
             val aiResult = runCatching { aiFallback(track) }.getOrNull()
             if (aiResult is LyricsFetchResult.Found) {
@@ -202,7 +214,7 @@ class LrclibLyricsRepository(
     private fun fetchRemote(track: Track): LyricsFetchResult {
         val duration = durationTextToSeconds(track.durationText)
         var plainFallback: Lyrics? = null
-        if (duration > 0) {
+        if (duration in 1..3600 && !track.isMissingArtist) {
             when (val exact = request(
                 "/api/get",
                 mapOf(
@@ -216,7 +228,7 @@ class LrclibLyricsRepository(
                     if (it.synchronized || it.instrumental) return LyricsFetchResult.Found(it)
                     plainFallback = it
                 }
-                is HttpResult.Failure -> if (exact.code != HttpURLConnection.HTTP_NOT_FOUND) {
+                is HttpResult.Failure -> if (exact.code !in setOf(HttpURLConnection.HTTP_NOT_FOUND, HttpURLConnection.HTTP_BAD_REQUEST)) {
                     throw IllegalStateException("歌词服务返回 HTTP ${exact.code}")
                 }
             }
@@ -224,7 +236,7 @@ class LrclibLyricsRepository(
 
         val searchParameters = buildMap {
             put("track_name", track.title)
-            if (normalize(track.artist) != normalize("未知歌手")) put("artist_name", track.artist)
+            if (!track.isMissingArtist) put("artist_name", track.artist)
         }
         val search = try { request("/api/search", searchParameters) }
         catch (error: Exception) { return plainFallback?.let(LyricsFetchResult::Found) ?: throw error }
@@ -308,7 +320,7 @@ class LrclibLyricsRepository(
 
         val artist = normalize(candidate.optString("artistName"))
         val requestedArtist = normalize(track.artist)
-        val unknownArtist = requestedArtist.isBlank() || requestedArtist == normalize("未知歌手")
+        val unknownArtist = track.isMissingArtist
         if (!unknownArtist && artist != requestedArtist && !artist.contains(requestedArtist) && !requestedArtist.contains(artist)) {
             return Int.MIN_VALUE
         }

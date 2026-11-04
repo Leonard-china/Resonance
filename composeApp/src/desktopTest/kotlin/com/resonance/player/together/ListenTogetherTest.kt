@@ -64,7 +64,8 @@ class ListenTogetherTest {
             assertNotEquals(first.mediaId, second.mediaId)
             assertContentEquals(payloadB, Files.readAllBytes(java.nio.file.Path.of(second.track!!.sourceUri!!)))
             host.leave()
-            withTimeout(4_000) { guest.state.first { it.status == TogetherStatus.Error } }
+            withTimeout(4_000) { guest.state.first { it.status == TogetherStatus.Reconnecting } }
+            withTimeout(12_000) { guest.state.first { it.status == TogetherStatus.Error } }
             assertNull(guest.remotePlayback.value)
             assertTrue(stopped.get() > 0)
             guest.leave()
@@ -155,29 +156,72 @@ class ListenTogetherTest {
         } finally { guest.close(); host.close() }
     }
 
-    @Test fun secondGuestIsRejectedAndAnEndedInvitationCannotJoinANewRoom() = runBlocking<Unit> {
+    @Test fun roomCapacityRejectionAndEndedInvitationCannotJoinANewRoom() = runBlocking<Unit> {
         val directory = Files.createTempDirectory("together-membership-")
         val host = JvmListenTogetherService(directory.resolve("host"), { ByteArrayInputStream(byteArrayOf(1, 2, 3)) })
-        val first = JvmListenTogetherService(directory.resolve("first"), { error("Unused") })
-        val second = JvmListenTogetherService(directory.resolve("second"), { error("Unused") })
+        val guests = (1..7).map { JvmListenTogetherService(directory.resolve("guest-$it"), { error("Unused") }) }
+        val eighth = JvmListenTogetherService(directory.resolve("eighth"), { error("Unused") })
         try {
             host.publishPlayback(PlayerState(currentTrack = track()))
             host.host(0)
             val original = TogetherInvitation.parse(host.invitation("127.0.0.1"))
-            first.join(original.encode())
-            ready(first, track().title)
-            second.join(original.encode())
-            assertEquals(TogetherStatus.Error, second.state.value.status)
-            assertNotNull(first.remotePlayback.value?.track)
+            for (g in guests) {
+                g.join(original.encode())
+                ready(g, track().title)
+            }
+            eighth.join(original.encode())
+            assertEquals(TogetherStatus.Error, eighth.state.value.status)
+            assertNotNull(guests.first().remotePlayback.value?.track)
             host.leave()
             host.host(0)
             val fresh = TogetherInvitation.parse(host.invitation("127.0.0.1"))
             assertNotEquals(original.pin, fresh.pin)
             assertNotEquals(original.key, fresh.key)
-            second.join(original.copy(port = fresh.port).encode())
-            assertEquals(TogetherStatus.Error, second.state.value.status)
-            second.join(fresh.encode())
-            ready(second, track().title)
-        } finally { second.close(); first.close(); host.close() }
+            eighth.join(original.copy(port = fresh.port).encode())
+            assertEquals(TogetherStatus.Error, eighth.state.value.status)
+            eighth.join(fresh.encode())
+            ready(eighth, track().title)
+        } finally {
+            eighth.close()
+            guests.forEach { it.close() }
+            host.close()
+        }
+    }
+
+    @Test fun invitationSupportsMultipleCandidatesAndRoundTrips() {
+        val invite = TogetherInvitation(
+            "2409:8a00:1234::1",
+            45873,
+            "ab".repeat(32),
+            Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(32) { 7 }),
+            listOf("192.168.1.100", "192.168.43.1")
+        )
+        val encoded = invite.encode()
+        assertTrue(encoded.contains("cands=192.168.1.100,192.168.43.1"))
+        val parsed = TogetherInvitation.parse(encoded)
+        assertEquals(invite, parsed)
+        assertEquals(listOf("2409:8a00:1234::1", "192.168.1.100", "192.168.43.1"), parsed.allHosts)
+    }
+
+    @Test fun racedConnectionSuccessfullySelectsReachableCandidate() = runBlocking {
+        val directory = Files.createTempDirectory("together-race-test-")
+        val host = JvmListenTogetherService(directory.resolve("host"), { ByteArrayInputStream(byteArrayOf(1, 2, 3)) })
+        val guest = JvmListenTogetherService(directory.resolve("guest"), { error("Unused") })
+        try {
+            host.publishPlayback(PlayerState(currentTrack = track()))
+            host.host(0)
+            val realPort = host.state.value.port
+            val keys = TogetherInvitation.parse(host.invitation("127.0.0.1"))
+            // 包含一个不可达的保留地址 192.0.2.1 和真实的 127.0.0.1
+            val multiInvite = TogetherInvitation("192.0.2.1", realPort, keys.pin, keys.key, listOf("127.0.0.1"))
+            guest.join(multiInvite.encode())
+            val received = withTimeout(6_000) { guest.remotePlayback.first { it?.track != null } }
+            assertNotNull(received)
+            assertEquals("127.0.0.1", guest.state.value.peer)
+            assertEquals(TogetherStatus.Connected, guest.state.value.status)
+        } finally {
+            guest.close()
+            host.close()
+        }
     }
 }

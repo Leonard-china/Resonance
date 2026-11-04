@@ -26,6 +26,21 @@ data class AiConnection(
     val configured get() = apiKey.isNotBlank() && model.isNotBlank() && baseUrl.startsWith("https://")
 }
 
+data class AiConnectionDraft(
+    val baseUrl: String,
+    val model: String,
+    val apiKey: String,
+    val vision: Boolean,
+)
+
+object AiDraftStore {
+    private val drafts = java.util.concurrent.ConcurrentHashMap<AiProvider, AiConnectionDraft>()
+    fun get(provider: AiProvider): AiConnectionDraft? = drafts[provider]
+    fun save(provider: AiProvider, draft: AiConnectionDraft) { drafts[provider] = draft }
+    fun clear(provider: AiProvider) { drafts.remove(provider) }
+    fun clearAll() { drafts.clear() }
+}
+
 data class MusicFeatureSettings(
     val connections: List<AiConnection> = listOf(AiConnection(), AiConnection(AiProvider.DeepSeek), AiConnection(AiProvider.Doubao)),
     val assistantProvider: AiProvider = AiProvider.Qwen,
