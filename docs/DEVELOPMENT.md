@@ -1,4 +1,16 @@
-# 2026-11-03 — Resonance 详细开发说明：原生播放器与阿里云迁移
+# 2026-11-05 — Resonance 详细开发说明：应用会话、原生播放与平台边界
+
+2026-11-05 全功能测试核对：[191项功能清单与总报告](audit/2026-11-05/FEATURE-TEST-REPORT.md)基于当前未提交源码；手机重连后，Android 30类79项实测为62通过、10失败、7条件跳过，首轮异常组单独复测3项通过但原始异常保留。合并前轮本机结果为541通过、10失败、14跳过，另1个桌面批量截图方法超时；前轮12项问题（5 P1、7 P2）仍未修复。未改产品代码或断言，正式包未覆盖，独立包已移除。实际失败包含旧界面/转场契约与定位不符、尺寸和帧采样验收缺口，见[Android续测](audit/2026-11-05/ANDROID-DEVICE-REPORT.md)及[17号记录](changes/2026-11-05-17-android-device-functional-regression.md)；前轮编译/本机过程保留在[16号记录](changes/2026-11-05-16-comprehensive-feature-testing.md)。Windows、真实系统入口、付费/公网和长时验收仍未补齐。
+
+2026-11-05 最新手机安装：已在内存余量满足门槛后，从与当前 191 份 Android Release 源码一致的完整 class 打包，包含播放页动效与助手/下载修复；同签名 `install -r` 保留数据覆盖正式应用。设备实际 APK 与本轮新包均为 SHA-256 `dedb73d083d5fd111e121257ea44e341a82dcca73b7adfef308553a0b892a457`，更新时间 15:06:31；同一进程 15 秒、主 Activity、从真实播放条展开、短拉回弹、长拉收起和再次开合实机检查通过。版本仍为 0.6.6 / 40，未做长时播放/付费模型或本轮电脑安装。实际命令、资源完整性与限制见[手机动效安装记录](changes/2026-11-05-15-player-animation-phone-install.md)。下方同日较早的安装状态保留为历史，当前手机安装以本段为准。
+
+2026-11-05 手机最终安装核对：用户重连后已用同包名/同签名保留数据覆盖正式应用，设备实际 APK 与歌词修复最终包 SHA-256 `6923cb29e1b7495558b2e236eca0dd3532c7945c82dd393a35af7b429ab7af70` 一致；同一进程连续运行 15 秒，主 Activity 恢复，当前进程未见启动致命异常。电脑继续使用已更新的 `0.6.6-20261105-lyrics-fix/`。本次范围与限制见[手机完成记录](changes/2026-11-05-10-complete-phone-lyrics-fix-installation.md)，不将短时启动检查当作长时播放验收。
+
+2026-11-05 歌词修复安装核对：当前 Linux 正式入口已切换至 `0.6.6-20261105-lyrics-fix/`，完整 392 文件、1459 个应用编译条目与本次构建一致；旧进程已正常退出，新进程和原生窗口通过核对。Android 正式包构建、Linux 安装及手机当时断连状态见[前轮记录](changes/2026-11-05-09-install-lyrics-fix-on-phone-and-linux.md)；手机重连后的最终安装以上方 10 号记录为准。版本保持 0.6.6 / 40；以下较早的包与安装说明保留历史含义，当前安装以本记录为准。
+
+2026-11-05 核心架构核对：应用任务与退出事务、五类平台能力、导入/队列/歌词用例、顺序偏好写入/统计快照、桌面扫描/存储/输出边界已完成重构，继续 Kotlin / Compose 原生。完整桌面回归 388 通过/8 条件跳过，最终退出保护追加 55 项通过；Android 独立包三轮重建/关闭设备测试通过，Linux 完整 image 构建并已安装到 `0.6.6-20261105-stability-refactor/`，原入口正常退出旧实例后运行新版，392 文件校验一致。该轮包、手机与安装结果见[当轮记录](changes/2026-11-05-07-application-core-and-desktop-audio-refactor.md)，当前安装以上方歌词修复安装记录为准。版本保持 0.6.6 / 40，不沿用下方历史安装状态作为当前结论。
+
+2026-11-05 较早桌面安装：完整程序已安装为 `0.6.6-20261105-am-ui/`，本次包内392文件与原生事件验收 app image 一致，桌面/菜单 `current` 已切换；本次已通过应用托盘正常退出两个旧实例，启动最新版并确认进程目录、WM_CLASS 与可见窗口，见[桌面切换记录](changes/2026-11-05-03-desktop-latest-running-instance.md)。新导入和界面/本次验证见[导入记录](changes/2026-11-05-01-desktop-files-and-drop-import.md)、[UI/安装记录](changes/2026-11-05-02-am-reference-native-ui.md)。最终桌面364项：354通过/10跳过，Android与Linux构建通过，Android/Windows设备和真实文件管理器手动拖放边界分别保留。
 
 2026-11-04 定向审计核对：[Bug 与优化报告](audit/2026-11-04/BUG-AND-OPTIMIZATION-REPORT.md)记录当前未修复的导入提交、离线曲库、备份恢复、删除授权/版本去重与 UI 接线等 13 项问题及 9 项优化入口。本次只增加报告/隔离证据并勘误下方能力表；不代表已经修复，也不以历史测试代替本次结果。原生音频分析器/缓存目前没有生产调用点，本地意图搜索仅按元数据文本规则评分，BPM 只显示标签。
 
@@ -8,7 +20,7 @@
 
 2026-11-02 当前质量进度：第一批双主题/统计保护/默认 WSS、第二批原生统计/偏好顺序/错误归属、第三批全链路加载与缓冲状态已实现，并完成 MuMu 帧率实测与 Windows 真实桌面可见窗口验收；当前证据见 [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md) 和变更 01–07。公网中继已上线并通过双端原生复测；跨蜂窝网络真机、多人平权控制及 2 小时长时压力验收仍待后续环境具备。PRODUCT_AUDIT 保留修改前基线，下文历史发布结果不能替代当前验收。
 
-源码核对日期：2026-11-04（Asia/Shanghai）；用户本次明确要求三端发布，当前工作区显式设为 **`0.6.6 / 40`**。最新实现包含原生磨砂界面、歌词／歌源修复及通用音量弹窗窗口隔离。发布构建、测试、桌面安装和 GitHub 状态见[本轮独立记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)，不以历史验证代替本次结果。
+源码核对日期：2026-11-05（Asia/Shanghai）；本次为核心重构，当前工作区保留此前发布设定的 **`0.6.6 / 40`**。最新核心实现与本次限制以上方重构记录为准。此前发布构建、测试、桌面安装和 GitHub 状态见[本轮独立记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)，不以历史验证代替本次结果。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -90,14 +102,17 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 
 | 入口 | 关键符号/职责 |
 | --- | --- |
-| [C/App.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/App.kt) | 启动装配、曲库/歌单/播放与导航、持久队列、前台推荐、翻译/悬浮接线、重载 |
-| [C/platform/PlatformServices.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/platform/PlatformServices.kt) | 曲库、播放、权限、导入/导出、配置；musicAssistant、importProgress/cancelImport、图片选择、后台配置、悬浮歌词 |
+| [C/App.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/App.kt) | UI 状态与启动装配、导航/弹窗、前台推荐/翻译接线；导入/队列/歌词编排委托 application 用例 |
+| C/application/ApplicationTasks、ApplicationLifetime | 应用任务所有权、异常反馈、停止生产者/等待清理/排空写入/释放平台的退出事务 |
+| C/application/PlaybackSession、LyricsSession、LibraryImportUseCase、ApplicationPreferences | 播放命令与最新队列、带代次查词、导入屏障与重载、捕获值有序保存 |
+| [C/platform/PlatformServices.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/platform/PlatformServices.kt) | 兼容聚合接口，继承 PlaybackServices、LibraryServices、PreferenceServices、AppearanceServices、LyricsServices；保留助手/一起听/生命周期等平台装配入口 |
 | [C/platform/MusicAssistantServices.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/platform/MusicAssistantServices.kt) | 配置/连接测试、聊天、视频、翻译缓存、推荐/拒绝/原因、取消、后台快照 |
 | C/model/LibraryModels.kt、MusicFeatureModels.kt | Track/Playlist/Lyrics、报告、模型连接、设置、进度、Token、推荐 |
 | [C/playback/PlaybackStateStore.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/playback/PlaybackStateStore.kt) | 激活代次、准备任务取消、用户设置版本、全局音量/自动增益 |
 | [C/data/PersistenceQueue.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/data/PersistenceQueue.kt) | submit 顺序屏障、submitLatest 合并、run 等待落盘；退出排空 |
 | C/ui/LibraryShell.kt、LibraryDetailTransition.kt | 响应式曲库/搜索/详情、多选、封面和迷你播放器；标签单树轻量图层动画/独立滚动位置，详情独立过渡 |
 | C/ui/NowPlayingOverlay.kt | 完整播放器、歌词/队列、单个平衡开关、翻译/显示、悬浮开关与编辑信息 |
+| C/ui/PlayerExpansion.kt | 播放条/封面实测端点、固定尺寸播放页图层过渡、竖向跟手与释放回弹；不处理歌词滚动或 seek |
 | C/ui/MusicFeatureController.kt、MusicFeatureScreens.kt、BilibiliLoginDialogs.kt | 共享设置、助手、B 站扫码/Web登录与表单、音量帮助、任务进度、拒绝原因 |
 | C/ui/ToolsScreens.kt、SyncPackageDialog.kt、BatchEnrichDialog.kt | 导入、歌单文件、设置、导出范围、补全选项/报告 |
 | C/tutorial/TutorialCatalog.kt、ui/TutorialController.kt、ui/TutorialScreens.kt | 离线教程内容、首次选择、逐章进度、实际控件锚点/高亮、滚动定位与事件推进；J/features/TutorialProgressCodec.kt 编解码本地偏好 |
@@ -133,9 +148,13 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 
 ## 4. 启动、状态与并发
 
+2026-11-05 应用生命周期：`ApplicationTasks` 为 App 和天气效果统一持有可取消的 SupervisorJob，失败进入界面消息；`ApplicationLifetime` 幂等退出依次取消原生导入/播放请求与应用任务、等待应用任务取消清理、排空 App/功能设置/天气写入器，最后释放平台资源。桌面托盘等待 close().join() 后 exitApplication；Android 组合销毁启动相同清理事务，平台 MediaController/观察者释放切回主线程。任务取消清理允许在写入器关闭前提交最后保存；不得交换这几个阶段。
+
+2026-11-05 窗口边界核对：桌面在 `application` 层组合 `App(services, mainWindow)`；应用状态、任务、设置写入与 `FloatingLyricsHost` 位于主窗宿主外，主界面及相关弹窗由宿主创建主窗口。隐藏主窗不应挂起歌词小窗或应用会话。Android 使用默认内联宿主，系统悬浮歌词仍归 PlaybackService。Linux 歌词小窗改用不透明深色表面，避开本次黑框的透明显示路径；Windows 保留透明与锁定穿透。两项 opt-in `DesktopWindowLifecycleTest` 通过 `RESONANCE_DESKTOP_WINDOW_TEST=1` 在实际图形会话执行；离屏歌词算法测试不能替代。当前结果和限制见[窗口重构记录](changes/2026-11-05-06-desktop-lyrics-window-and-stability-boundaries.md)，后续语言/架构决策见[稳定性重构说明](ARCHITECTURE-STABILITY.md)。
+
 Android MainActivity 在 setContent 前创建平台服务，ActivityResult launcher 需早于 STARTED 注册；不要改成可能在 RESUMED 才执行的 Composable 懒创建。旧 resonance://sync filter/链接总线已移除。Windows 有托盘时关闭主窗隐藏，退出菜单才终止；无托盘环境关闭即退出。
 
-App 持有 UI 库/歌单/导航/队列/播放及弹窗；PlaybackStateStore 管理音频设置任务。启动加载全局音量、响度开关、模式、库/歌单、上次选单、歌词目录，恢复快照。原生后台仍播放则 attached，不重复暂停/重播。
+App 持有 UI 库/歌单/导航/队列/播放及弹窗，application 包负责业务编排；PlaybackStateStore 管理音频设置任务。启动加载全局音量、响度开关、模式、库/歌单、上次选单、歌词目录，恢复快照。原生后台仍播放则 attached，不重复暂停/重播。
 
 MusicFeatureController 装配共享新功能。设置通过独立 PersistenceQueue 合并保存；用户启动 AI 任务前等待设置及库写入屏障，避免尚未落盘的配置或旧 UI 写覆盖。任务结束重载原生库/歌单；不要只修改 UI 数组。App 将库快照交给后台桥接。
 
@@ -154,7 +173,7 @@ PersistenceQueue.submit 是顺序屏障，submitLatest 按键合并待写值，r
 | Lyrics / LyricLine | trackId、lines、synchronized、instrumental、source、fromCache；timestampMs 可空；新增 translation/translationLanguage |
 | ImportReport | tracks、skippedCount、warnings、cancelled；取消允许部分完成 |
 | MusicFeatureSettings | 连接列表/文本视觉角色、推荐开关/后台/间隔/数量、月预算、悬浮开关/锁/字号、翻译语言/显示、B 站 Cookie；screenshotRecognition（默认 LocalOcr，可选 CloudApi） |
-| MusicAssistantState | 最近 40 条消息、任务状态/进度、最近100条持久步骤、月输入/缓存/输出 Token、语音秒数、推荐批 |
+| MusicAssistantState | 最近40条消息、任务状态/进度、最近100条持久步骤、用量、推荐批；pendingAudioDeletion仅内存中的待确认提案 |
 | VideoImportRequest | link/title/artist/album/cover/playlistId；自定义字段写入新 MP3 |
 | RecommendationBatch | createdAt/trackIds/reasons；固定歌单 ID resonance-daily-recommendations |
 
@@ -166,9 +185,15 @@ PersistenceQueue.submit 是顺序屏障，submitLatest 按键合并待写值，r
 
 ## 6. 扫描、转换与歌单
 
+2026-11-05 质量修复核对：读取桌面/Android受管索引保留暂时不可用记录，编辑其他曲目不会借读取过滤丢失离线歌曲/收藏/关系。真实删除先确认物理操作结果；文件IO或提供者拒绝时保留可重试记录，批次通过 `DeleteTrackReport.removedTrackIds` 仅移除实际成功项。删除音频不再顺带删除共享/用户封面，可能留下未回收封面。见[离线记录](changes/2026-11-05-19-retain-unavailable-library-tracks.md)、[删除结果与封面](changes/2026-11-05-24-delete-failures-and-shared-artwork.md)。
+
+2026-11-05 歌单包补修核对：普通桌面选择器及 `DesktopMusicScanner.scan` 同时识别音频和 `.resonance`（忽略扩展名大小写），目录、单文件及窗口拖放复用真实路径去重。归档交给现有 `PlainSyncPackage.import` 校验和恢复，不参与 MP3 转换；坏包按文件隔离。`ImportReport.playlists/importedPackageCount` 仅是内存结果；`DesktopLibraryStore.mergeImported` 保存轨道和按 ID 合并歌单，`LibraryImportUseCase` 对包结果重载已合并歌单，防止旧 UI 列表覆盖，空歌单也刷新。详见[歌单包导入记录](changes/2026-11-05-04-linux-resonance-package-import.md)。
+
 Android loadLibrary 不主动弹权限：有音频权限合并 MediaStore 与托管索引，无权限只读托管。主动系统扫描按 API 33 分界申请音频/外部存储读取。选择目录经 SAF 授权，递归读普通音频、收集 KGMA 后逐个转换；KGG 立即给 Windows 转换提示。
 
-Windows JFileChooser → DesktopMusicScanner：先枚举候选，再逐文件解析/转换；勾选转换或遇加密扩展名调用 DesktopManagedMp3Converter。支持 MP3/FLAC/M4A/AAC/Ogg/Opus/WAV/WMA/APE 及实现的加密格式。
+2026-11-05 桌面导入核对：Linux/Windows 使用绑定主窗的多选 JFileChooser（文件与目录）或 `Main → DesktopMusicDropHost → externalMusicImports → App.runMusicImport → importMusicPaths` 整窗拖放。Java 文件列表及本机 URI 列表均支持；拒绝网络 URL，强制 Copy 语义保留源文件，进行中不接收第二批。启动/其他操作完成后处理，先等待已接收的持久化任务，再由 `LibraryImportUseCase` 重载曲库并匹配歌单。`DesktopMusicScanner` 递归目录、合并多根、按真实路径去重，目录/文件错误分别报告，空候选有说明；不追随子目录符号链接循环。原生验证范围见[桌面导入记录](changes/2026-11-05-01-desktop-files-and-drop-import.md)。
+
+桌面 DesktopMusicScanner：先枚举候选，再逐文件解析/转换；勾选转换或遇加密扩展名调用 DesktopManagedMp3Converter。支持 MP3/FLAC/M4A/AAC/Ogg/Opus/WAV/WMA/APE 及实现的加密格式。
 
 ImportProgress 经 StateFlow 提供阶段、文件、已完成/总量、比例/字节；未知总量用活动进度条。ImportControl 在遍历/文件/解密块检查取消；FFmpeg 进程/会话独立取消，单文件转码限 10 分钟。返回已完成曲目，清当前 staging/part，输入保持。
 
@@ -185,13 +210,17 @@ AndroidMusicAccess 共用 filesDir 锁，读取托管索引+App 曲库快照，�
 
 ## 7. 播放、音量平衡与恢复
 
+2026-11-05 播放用例：`PlaybackSession` 拥有待执行文件检查及请求代次；UI state bridge 每次读取最新有效队列。删除当前曲目直接把缩减后的队列交给下一请求，清空时取消文件检查并清 PlaybackStateStore，避免迟到请求复活已删除条目。一起听控制门禁仍由该用例遵守原房间角色规则。
+
+桌面 `DesktopPcmPlayer` 以请求会话持有解码器/输出，`DesktopAudioBackend` 分离 FFmpeg 与 JavaSound。play/pause/seek/close 不在调用线程访问 native 输出；worker 每轮检查暂停，写入最多 2048 字节并按 4 字节帧对齐，零写入退让 10ms，5 秒无进展报错；结束通过有界消费检查代替无期限 drain。首次真正 PCM/写入决定准备/缓冲状态，位置由 worker 缓存；旧会话不发布当前事件。最多两个 daemon worker、一个待执行任务和两个设备槽位，核心线程空闲回收；native 驱动永久阻塞仍需平台验收，不能承诺 JVM 强制中断。FFmpeg 错误提示仅读取日志的有界尾部，完成/清理有等待期限。
+
 PlaybackStateStore.activate 只加载 vol.global 和 gain.auto_enabled 下的缓存/分析增益；关闭平衡时自动增益为零。旧逐曲/歌单音量、手动增益、校准值留在存储以兼容，但正常激活不叠加。播放器/设置只露一个平衡开关，详细说明单独页面。
 
 整曲响度按真实峰值余量限制补偿，算法版本化缓存；先播放后完成分析，增益平滑更新；静音/失败不缓存成功。保留 generation、准备任务取消、用户修改版本和旧原生事件保护，不能缩减为仅按 trackId 触发的无版本协程。
 
 Android PlaybackService 无 Activity 也能随原生队列切歌加载全局/自动值；自定义命令和 PreampAudioProcessor 完成增益/限幅。Windows FFmpeg 输出 48k PCM、Java Sound 输出，变速 atempo；停止/删除当前音频前关闭解码进程释放文件。
 
-2026-11-03 播放并发核对：`PlaybackStateStore` 的显式切歌准备请求在 `onReady` 交给原生播放器前，不接受旧媒体的 `isPlaying` 回调改变播放意图；用户主动暂停继续经 `setUserPlayIntent` 生效，刷新音量保留待启动请求属性。`App.resolveTrackPlaybackQueue` 在启动前替换目标同 ID 的旧 Track，补入缺失目标、过滤空音频并去重；实际播放与快照使用同一队列。文件不可读后的恢复请求保留队列及随机模式。相关回归与设备边界见 [推荐播放修复](changes/2026-11-03-08-daily-recommendation-playback-selection.md)。
+2026-11-03 播放并发核对：`PlaybackStateStore` 的显式切歌准备请求在 `onReady` 交给原生播放器前，不接受旧媒体的 `isPlaying` 回调改变播放意图；用户主动暂停继续经 `setUserPlayIntent` 生效，刷新音量保留待启动请求属性。`PlaybackSession` 调用 `resolveTrackPlaybackQueue` 在启动前替换目标同 ID 的旧 Track，补入缺失目标、过滤空音频并去重；实际播放与快照使用同一队列。文件不可读后的恢复请求保留队列及随机模式。相关回归与设备边界见 [推荐播放修复](changes/2026-11-03-08-daily-recommendation-playback-selection.md)。
 
 PlaybackSnapshot 保存曲目、队列、进度、歌单。冷启动暂停恢复，后台会话存活则附着。Android activeMusicId 来自真实服务状态，不能拿上次快照判断“正在播放”，否则旧推荐永远被保留。
 
@@ -243,7 +272,13 @@ Android 通知和 Windows 托盘提醒仅为已接线且未构建验证的代码
 
 ## 8. 歌词、翻译和补全
 
+2026-11-05 歌词回归核对：本地/缓存/LRCLIB 的纯文本只作为兜底，继续寻找有效同步时间轴；LRCLIB 与最多八个歌源内均先校验歌名/歌手/版本/时长，再优先同步结果。同一歌源最多尝试两条匹配候选，后续失败或超时保留已取得的文本；没有同步结果仍显示纯文本，不猜测时间戳。同步本地/缓存与已生成同步歌词继续直接复用，偏移仍独立合并。旧纯文本缓存可自动升级，失败保留原文和偏移；仍只有纯文本的歌曲再次加载可能新增免费查询。窄屏封面恢复紧凑歌词预览，沉浸完整歌词恢复白字+淡底+细边，手动浏览清晰但仍保留焦点；字号/字重/行高固定。实际播放器离屏及手机回归入口为 `LyricsPlayerRegressionTest` / `LyricsPlayerRegressionDeviceTest`；本次结果与限制见[独立记录](changes/2026-11-05-08-restore-player-lyrics-and-synchronized-priority.md)。
+
+2026-11-05 查词用例：`LyricsSession` 管理自动查词、强制刷新和已接受偏移的代次，查词返回后校验协程取消及代次；A→B→A 也拒绝第一次 A 的迟到结果，偏移不会被旧结果重置。翻译控制器和一起听原歌词来源规则继续保留。
+
 2026-11-04 核对：自动加载与“查找歌词”按本地／缓存、LRCLIB、启用歌源依次查询；旧 LRCLIB 未命中缓存不会阻断新增歌源。`JvmMusicAssistant.findSourceLyrics` 等待内置源初始化后调用 `MusicSourceRegistry.findLyrics`，最多 8 源并发、单源 8 秒，严格匹配歌名／歌手／版本及合理时长，只取歌词，不下载或上传音频、不调用模型。异常结束加载态；刷新取消旧 AI 文本结果。空态只有一个查找按钮，歌词工具默认收起、展开后可滚动。模型拒绝明确解释“当前模型未能提供原曲歌词”，提示查找或音频识别；不能承诺重复生成成功。公网服务与本次验证限制见[独立记录](changes/2026-11-04-09-lyrics-source-recovery-and-compact-tools.md)。
+
+2026-11-05 桌面窗口核对：Linux 歌词未锁定时显式跟随全局指针位移并同步绝对窗口位置；锁定后仍保留“解锁位置”和关闭入口。Windows 沿用原生拖动及锁定穿透。隔离 X11 默认／两倍缩放输入回归通过，实际 Wayland 人工操作和 Windows 实机未验收，当前安装尚未替换。
 
 LrclibLyricsRepository 处理本地/同名 LRC/KRC、缓存和 LRCLIB；成功约 30 天、未找到约 24 小时缓存，强刷可绕过。source 实际来源保存，不再把 AI 缓存误标 LRCLIB。
 
@@ -269,6 +304,8 @@ LRCLIB 精确纯文本后继续搜索同步版本；时长偏差过大、仅0时
 
 ## 9. 歌单文件导出/导入
 
+2026-11-05 桌面入口核对：`.resonance` 除专用「导入歌单」外，也能通过「导入音乐」多选文件、扫描所在目录或直接拖入窗口恢复。专用包选择器绑定 `fileDialogOwner`，从 EDT 调用时直接执行。App 对普通导入和归档任务等待互斥，专用包导入前等待已接收的持久化写入；包导入完成后重载已合并歌单。包格式、安全校验和原子属性文件/备份规则不变，未新增多文件事务；现有单包解压需完成后才能响应下一次取消检查。验证边界见[补修记录](changes/2026-11-05-04-linux-resonance-package-import.md)。
+
 2026-11-04 导出反馈与命名核对：归档任务在 App 级记录运行及结果状态，开始后显示处理中提示，可关闭提示继续使用应用；任务完成后无论当前页面，都显示结果弹窗。单歌单默认 `歌单名.resonance`，全库为 `整个音乐库.resonance`，清理非法字符及重名追加序号。成功后展示 `SyncReport.exportedPackage` 的实际文件名／保存位置，可复制；Android 29+ 的「打开所在目录」以固定 content 文档 URI 和目录 VIEW 显式启动系统浏览器，使用新文档任务防止旧位置复用，直接定位 `Download/Resonance`，仅增加该 Intent 的包可见性查询；26–28 保留实际应用下载目录及复制位置。Windows／Linux 使用原生保存对话框和系统文件夹打开。显示位置与 `locationUri` 分离，无文件管理器时保留路径回退。处理中禁用重复归档，系统选择器取消通过 `SyncReport.cancelled` 区分；新字段仅属内存结果，不改变曲库或包格式。最终包已在原手机完成真实小歌单命名、旧文件保留及三轮目录实测；前轮反馈见[记录 18](changes/2026-11-04-18-export-location-feedback.md)，当前命名、目录行为和验证见[记录 19](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md)。
 
 2026-11-04 导出弹窗核对：`SyncScreen → App.syncAction → SyncPackageDialog` 打开时只修改 UI 状态，确认后才调用平台导出；Android `exportSyncPackage` 的加载／打包／下载目录写入在 `Dispatchers.IO`。选项正文改为最大 360dp 的 `LazyColumn`，说明和歌单一起滚动，按歌单 ID 复用，仅创建可见行；标题和导出／取消由 Material Dialog 保留。整行提供单选语义，默认全库，重新打开重置选择。共享 `FrostedAlertDialog` 保持窗口内 `LocalGlassState=null` 隔离。原手机较早 0.6.5 包已复现 Haze 主线程 ANR，隔离包在同机恢复响应；最终 0.6.6 / 40 已保留数据覆盖安装，13 项 JVM／3 项原生弹窗回归及正式包五轮真实曲库打开／选择／取消通过，未在手机实际打包用户音频。详见[导出弹窗记录](changes/2026-11-04-17-export-dialog-anr-and-lazy-scopes.md)。
@@ -277,11 +314,17 @@ LRCLIB 精确纯文本后继续搜索同步版本；时长偏差过大、仅0时
 
 .resonance 是标准 ZIP，含 manifest.properties、audio/、art/，可按歌单/全库导出可打开音频与元数据/关系；缺本地音频的目录条目不当可播放曲导出。不含 Key/Cookie、歌词/OCR 缓存、外观/天气/音量/快照。
 
-保留扩展名/MIME，FLAC 不再误标 MP3。导入先 staging，校验清单/音频 SHA-256/路径/大小再落盘合并。上限：单项 4 GiB、总量 512 GiB、200001 条目、曲目/歌单各 100000，另查可用空间。safeResolve 限制根内与允许目录，目标用安全 ID+扩展；已有同名目标允许替换，不能声称永不覆盖。明文文件按普通含音乐文件保管。
+保留扩展名/MIME，FLAC 不再误标 MP3。2026-11-05核对：导入在 staging 完整验证清单、音频 SHA-256、ID/目标唯一性、歌单和引用后才落盘；`onCommit` 包含平台库/歌单提交，`FileRollback` 在运行期异常/取消时恢复受保护文件及原有 `.bak`，恢复失败保留副本与路径清单。这不是断电/崩溃多文件事务。上限：单项4GiB、总量512GiB、200001条目、曲目/歌单各100000、清单16MiB、每歌单100000/总1000000引用；解压和覆盖备份分别检查可用空间并保留16MiB，复制/校验/引用/提交分段检查取消。Android暂存复制也检查空间和取消。`safeResolve` 限制根内与允许目录，目标用安全ID+扩展并拒绝符号链接；已有同名目标仍允许替换。超限包分批导出；明文文件按普通含音乐文件保管。见[导入回退与预算](changes/2026-11-05-18-sync-import-rollback-and-budgets.md)。
 
 <a id="storage"></a>
 
 ## 10. 持久化、配置与网络
+
+2026-11-05核对：桌面主题、模式、上次歌单、旧模型配置和歌词目录的专用读写也统一经 `AtomicPropertiesFile.read` 恢复有效备份，再保存且保留无关键。Android所有同步偏好写入核对commit结果；新增 `commitChecked` 对false抛错，保持原同步写入顺序，导入异常按类型尝试回退多个偏好存储，回退失败附带原错误。见[桌面专用偏好](changes/2026-11-05-20-recover-specialized-desktop-preferences.md)、[Android写入失败](changes/2026-11-05-25-android-preference-commit-errors.md)。
+
+2026-11-05 写入/快照边界：`ApplicationPreferences` 捕获主题/上次选单/歌词目录的操作值交给顺序队列；天气偏好也使用自己的 PersistenceQueue 并注册退出排空。`closeAndJoin` 等待已接收写入，单个动作的取消不会终止仍有效的独立 worker。原生 Store 锁/原子备份不变。
+
+`ListeningStatsRepository.snapshots` 在 IO 加载及计数接受后发布 `ListeningStatsSnapshot`（含 loaded/error），缓存 getter 不持 Store 磁盘锁。两平台暴露 StateFlow；播放器/画像/推荐状态使用 `rememberListeningStats` 观察，兼容适配器的同步 getter 在 IO 调用。快照不新增持久文件，统计文件/备份和 session 计数规则保持。
 
 Windows 数据根：系统属性 RESONANCE_DATA → 同名环境变量 → LOCALAPPDATA/Resonance（否则用户目录）；音乐根：RESONANCE_LIBRARY → 有 D 盘则 D:/Music/Resonance → 用户 Music/Resonance。测试需同时隔离两个目录。
 
@@ -330,6 +373,12 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 ## 11. UI、封面与悬浮歌词
 
+2026-11-05质量修复核对：封面页按真实可用高度限制同步歌词预览，正常高竖屏保留180dp封面验收；小窗/大字优先保证控制可达，完整歌词页与连续跟随保留。智能管家按完整版本歌名+歌手+时长找“疑似重复”，未知歌手不成组、默认不选删除；容器格式不等于音质。清理把整批明细送入一次批量确认，确认层在页面之后绘制，取消不删除。语义搜索解析BPM时明确“尚不支持BPM筛选”，现有结果仍是文字匹配，不宣称接通真实节拍分析。见[封面与预览](changes/2026-11-05-28-player-cover-preview-height-budget.md)、[清理](changes/2026-11-05-22-smart-cleanup-safe-batch.md)、[BPM边界](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md)。
+
+2026-11-05 播放页过渡核对：`LibraryShell` 通过 `PlayerExpansionLayout` 连接三种窗口布局的迷你播放条和 `NowPlayingOverlay`。展开/收起使用实际端点、独立封面图层、表面裁剪与同一个无回弹弹簧；正文尺寸固定，不在每帧重排。主壳最多缩小到 96%。顶栏和封面接入统一竖向手势：拖动期间实时更新位置，释放根据距离和速度投影决定回弹/收起，可中途反向；歌词列表和进度控件不接入该关闭手势。减少动态使用 90ms 静止淡变，键盘路径即时切换；两者不进行封面飞行/背景缩放。前置歌词可见性、同步优先、淡底焦点、播放和存储行为保留。参考 commit、实际验证与未打包/未安装范围见[本轮记录](changes/2026-11-05-11-apple-music-player-expansion.md)。本段只更新播放页过渡，不改变下方 AM++ 主题与自适应布局基线。
+
+2026-11-05 最新 AM++ 参考重构：用户明确指定 AM++ 源码/截图并确认 Android/Linux/Windows 三端一起改。`ResonanceTheme` 使用参考灰白/黑灰/玫红角色，保留冰蓝/天气选择；主壳为平整画布。`NowPlayingOverlay` 始终采用白色前景的封面透色背景（64dp 模糊）；宽屏左46%为封面/曲名/平直进度/播放/音量，右54%为歌词或队列，首次直接选择歌词；窄屏上下排列。手机迷你播放器和四项导航分成两个胶囊，导航选中面连续移动；桌面保留响应式 rail/侧栏。歌词稳定版式，当前句清晰白字与淡底细边，周边按距离轻微模糊；手动浏览或减少动态时清晰，焦点仍保留。窄屏封面保留紧凑歌词预览（2026-11-05 回归修正）。`SoftRefinedPlaybackScrubber(flat=true)` 复用松手提交的 seek，原波形默认仍兼容。设置白色分组行/玫红图标，原配置回调、返回、安全区和键盘保留。实现与验证见[本轮记录](changes/2026-11-05-02-am-reference-native-ui.md)；以下历史段落保留当时状态，颜色、结构冲突以本段和当前 Kotlin 为准。AM++ 未提供 Apple Music 全部宿主页面源码；本次独立实现视觉/结构，不复制 GPL 模块/专有资源，现有 Haze 不宣称等同其完整光学折射。
+
 2026-11-04 音量弹窗核对：`NowPlayingOverlay` 的“音量”与“播放设置 · 音量与速度”使用 `FrostedAlertDialog`。该通用封装现在在 `LocalGlassState provides null` 内构建表面及所有内容槽，通过 `resonanceGlass` 静态主题渐变回退隔离主窗口 Haze；宿主页面保留原采样状态。此规则同样覆盖歌曲信息、歌词工具等共用封装的原生窗口。打开不调用音量／倍速／平衡设置回调。回归、Android 包及原手机未连接的验证限制见[独立记录](changes/2026-11-04-15-volume-dialog-window-isolation.md)，跨窗口泄漏已确认，原手机卡死仍需实机复测。
 
 2026-11-04 补修：“我喜欢的音乐”固定入口副标题仅显示 `X 首`，见[数量文案记录](changes/2026-11-04-11-favorites-count-only.md)。音效原生 Dialog 使用独立静态主题底色，不继承宿主播放器的 Haze 采样；最大高度 560dp，预设列表使用剩余高度滚动并保留稳定 key，打开弹窗不调用预设回调。桌面原生语义／渲染回归覆盖打开、选择和关闭；原手机当前断开，跨窗口采样仍是已排除风险而非已证实唯一根因，不能宣称该手机卡死已验收解决，见[音效记录](changes/2026-11-04-10-audio-effect-dialog-window-isolation.md)。
@@ -345,9 +394,9 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 2026-11-04 设计提案核对：新增[双端浅色 UI 方案](../design-system/resonance/proposals/2026-11-04-light-glass/PLAN.md)、[78个页面/关键状态覆盖表](../design-system/resonance/proposals/2026-11-04-light-glass/COVERAGE.md)与[HTML原型](../design-system/resonance/proposals/2026-11-04-light-glass/index.html)。包含156张桌面/手机浏览器截图、播放器与歌词动效演示。该阶段尚未改变 Kotlin；用户随后确认，现已落地原生设置分组及共享主题，见本节顶部当前基线。LibraryDestination 不新增八个业务路由，分组由 SettingsScreen 内部管理。原型使用虚构数据，验证结果及限制见[独立记录](changes/2026-11-04-02-light-ui-proposal-and-html-prototype.md)。
 
 
-### 使用教程（2026-10-16 核对）
+### 使用教程（入口核对2026-11-05，进度格式沿用2026-10-16）
 
-`App` 加载 `PlatformServices.loadTutorialProgress` 后，在曲库初始加载完成时首次提示快速了解、跟着操作或跳过。选择后持久记住，不按普通版本更新重弹；旧安装没有教程键时在首次升级启动显示一次。设置顶部固定“使用教程”，`LibraryDestination.Tutorial` 属于工具子页，支持四页快速介绍、七章图文/操作教学和常见问题。
+`App` 加载 `PlatformServices.loadTutorialProgress` 后，在曲库初始加载完成时首次提示快速了解、跟着操作或跳过。选择后持久记住，不按普通版本更新重弹；旧安装没有教程键时在首次升级启动显示一次。设置索引下方“帮助”组提供“使用教程”，窄屏需滚动到该入口；`LibraryDestination.Tutorial` 属于工具子页，支持四页快速介绍、七章图文/操作教学和常见问题。
 
 `TutorialController` 导航到实际页面；`tutorialTarget` 记录控件窗口坐标并通过 BringIntoView 定位，图层入场完成后刷新实际坐标；`TutorialCoach` 绘制透空高亮及可收起/滚动说明，暂停按钮固定在顶部，实际控件仍接收点击。普通教程目录保留迷你播放器；快速浏览隐藏迷你播放器与手机底栏。导入、当前歌曲、收藏、歌单和配置按实际状态判断；播放器展开、歌词/队列等按实际事件推进。缺少歌曲先回曲库，错误事件不推进；完成、跳过分别保存，暂停后继续原步。系统选择器、登录弹窗仍由原平台处理。
 
@@ -369,7 +418,7 @@ LibraryShell（2026-11-03）：<720 dp 底栏、720–1099 rail、>=1100 侧栏�
 
 2026-11-03 前轮材质（由下文最新布局核对替代）：当时所有 `DestinationContent` 页面共用磨砂外层，主壳背景降低遮罩，推荐／任务／歌源／存储／搜索等中性列表表面透色；智能管理／品味雷达移除整页实色。`LocalGlassState` 提升到 App 级并由 LibraryShell 绘制采样源，`FrostedAlertDialog` 保留 Material 弹窗行为；自定义队列／截图核对／分享弹窗同样接入材质。列表不逐行增加背景模糊。当前歌词与封面预览共用 `LyricFocus.kt`，Notice 文字、淡底与细边只影响绘制，不改变行高；返回当前播放按钮使用 onPrimary。见 [全应用材质](changes/2026-11-03-09-app-wide-frosted-material.md) 和 [歌词焦点](changes/2026-11-03-10-restore-lyric-focus.md)。
 
-每日推荐始终为歌单网格首个跨列主卡，保留教程锚点；关闭时进入设置，开启时打开 RecommendationsScreen。大字号时主卡隐藏装饰封面，为文字留出空间。普通歌单保留原顺序、虚拟化与打开回调，封面增加静态透视。持久每日歌单按 DAILY_PLAYLIST_ID 去重。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
+2026-11-05核对：`PlaylistGrid` 首个跨列入口为收藏；每日推荐卡仅在已开启推荐或教程步骤进行中显示，保留教程锚点。关闭且无教程步骤时不显示卡片；教程中的关闭卡进入设置，开启卡打开 RecommendationsScreen。不能继续按旧“未开启时始终显示首张卡”的测试假设验收。普通歌单保留原顺序、虚拟化与打开回调，封面增加静态透视。持久每日歌单按 DAILY_PLAYLIST_ID 去重。MusicTasksScreen 汇总最近100个音乐处理步骤，支持取消和媒体步骤重试；聊天/删除工具不自动重放。
 
 专辑封面：AlbumCoverRepository 优先QQ音乐目录并回退MetadataEnricher的iTunes/酷狗公开目录源，严格验证歌名/歌手，再按专辑缓存；新 B 站音频自动匹配，未命中保留视频图。播放菜单单首强制匹配/自定义；任务页按 videoOrigins 批量处理既有下载，customCovers 标记保护手选封面。库覆盖值用于显示，既有音频不会因此重编码。
 
@@ -447,7 +496,7 @@ adb shell am instrument -w -r com.resonance.player.debug.test/androidx.test.runn
 Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装、构建和差异见 [Linux 说明](LINUX.md)，实际验证见 [Linux 记录](changes/2026-11-03-04-linux-desktop-support.md)。现有能力表的 Windows 列所列共享桌面逻辑亦用于 Linux，系统差异以本段为准，不能把 Windows 历史验收当成 Linux 已通过。
 
 - 构建：`scripts/build-linux.sh [deb|rpm|portable]`，默认桌面测试 + 便携 tar.gz + DEB；需要 JDK17–21、SDK36、FFmpeg，DEB 需 fakeroot/dpkg-deb，RPM 需 rpmbuild。Linux nativeDistributions 包含完整 Java 模块；不升版、不发布。打包任务必须在对应系统执行。
-- 安装：可使用系统 DEB，或将完整 app image 安装在 `~/.local/opt/resonance/<版本>/` 并创建用户级启动／应用菜单入口；后者不需要管理员权限，也不进入 apt/dpkg。2026-11-03 实际安装及 11 月 4 日首轮浅色 UI 更新保留为历史记录。本轮 `current` 已更新至 `0.6.6-20261104-release/`，原桌面／菜单入口启动后确认可见原生窗口；旧程序与数据保留，见[0.6.6 更新记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。本机本轮 Linux 发布产物为完整便携 tar.gz，不把旧 DEB 改名复用。
+- 安装：可使用系统 DEB，或将完整 app image 安装在 `~/.local/opt/resonance/<版本>/` 并创建用户级启动／应用菜单入口；后者不需要管理员权限，也不进入 apt/dpkg。2026-11-03 实际安装及 11 月 4 日首轮浅色 UI 更新保留为历史记录。当前安装以[核心重构记录](changes/2026-11-05-07-application-core-and-desktop-audio-refactor.md)为准；早前 `0.6.6-20261105-am-ui/` 的正常切换见[历史记录](changes/2026-11-05-03-desktop-latest-running-instance.md)。本机本轮 Linux 发布产物为完整便携 tar.gz，不把旧 DEB 改名复用。
 - 数据：默认 `${XDG_DATA_HOME:-~/.local/share}/resonance`（仅接受绝对 XDG 路径）；新目录不存在时兼容已有 `~/Resonance`；显式 RESONANCE_DATA 优先。音频仍由 RESONANCE_LIBRARY 或 `~/Music/Resonance` 管理，不迁移、不改同步格式。
 - 凭据：DesktopCredentialVault 绑定 library.appDirectory；Windows DPAPI 原前缀兼容，Linux AES-256-GCM 的私有目录为 credentials（0700），key.bin 为 0600；跨进程锁与原子写入保护初建密钥，缺钥／损坏／篡改拒绝解密。它不是系统钥匙串；同用户可读密钥，备份需一并保存。旧明文仍兼容，跨系统凭据需重填。
 - 系统能力：NetworkManager/nmcli 查询不计费状态，未知时等待；天气回退手动城市；托盘取决于桌面环境，无托盘时关闭即退出；透明置顶歌词取决于窗口管理器，Linux 锁定不提供鼠标穿透。KGG 需已有匹配数据库，可用 FLYINGMOUSE_KGG_DB_PATH 指定。
@@ -455,8 +504,14 @@ Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装
 
 ### 12.3 测试定位
 
+2026-11-05测试契约核对：转场像素检查透明混合/裁剪及终态，推荐关闭时卡片隐藏但设置可达；教程先滚动到入口，房间固定顶栏直接点击。`MusicStageFrameMetricsTest` 明确驱动80次进度变化后采集窗口FrameMetrics，不把静止时长换算FPS；只作Debug诊断。`UiVisualContractTest` 保留70场景渲染/尺寸检查，PNG及360帧媒体导出需 `RESONANCE_UI_ARTIFACTS=1`；逐方法隔离避免累计类超时。新增归档回退、离线记录、实际删除失败、偏好写失败和本机确认回归。本次真实结果及边界见[修复验收](audit/2026-11-05/FIX-VALIDATION.md)。
+
+2026-11-05 资源受限验证：在独立进程树上以同版本 Kotlin/Compose CLI 分别完整编译 C/J/D 和 C/J/A（含生成版本源码），随后完整编译/执行共享与桌面测试；打包仍通过 Gradle 资源/Manifest/D8/jpackage 任务，但由临时 init 接入上述完整 class 输出，避免同一服务内再次叠加 Kotlin 编译内存。不能只替换少数 class：能力接口拆分改变默认参数 helper 所属类，所有调用者必须重编译。该方法与普通默认 Gradle 编译区分记录，脚本/日志在本次忽略目录，准确命令及当前结果见[重构记录](changes/2026-11-05-07-application-core-and-desktop-audio-refactor.md)。常规开发命令不变。
+
 | 范围 | 当前测试文件（相对包根） | 关注场景 |
 | --- | --- | --- |
+| CT / DT | `ApplicationSessionTest`、`ApplicationUseCaseTest`、`PlaybackSessionTest`、`LyricsSessionTest` | 任务清理先于写入关闭、导入屏障、捕获值顺序、最新队列、迟到查词隔离 |
+| DT / AT | `audio/DesktopPcmPlayerSessionTest`、`audio/DesktopAudioOutputIntegrationTest`、`ui/DesktopWindowLifecycleTest`、`ApplicationLifecycleDeviceTest` | 零写入/暂停/native 清理、真实 FFmpeg/输出、主窗隐藏与歌词；设备生命周期测试必须显式启用且目标为独立验证包 |
 | CT | `PlaybackQueueResolutionTest`、`SelectedPlaylistStateTest`、`PersistenceQueueTest` | 队列范围、失效歌单回退、顺序/合并落盘 |
 | CT / DT / AT | `LyricScrollTest`、`ui/LyricsMotionTest`、`LyricsScrollDeviceTest`、`LyricsPreviewMotionDeviceTest` | 居中与双语换行；换句中间帧、稳定行身份／高度、快速反向定位、离屏 seek；手动浏览／返回／自动恢复、换歌与翻译、大字号／窗口及纯文本 |
 | DT / AT | `ui/LyricsTranslationControllerTest`、`LyricsTranslationDeviceTest` | 翻译失败提示与重试、原文模式切双语、语言空格、迟到缓存/切歌/换原词/换语言隔离、时间轴与偏移；设备用例需另在连接设备上执行 |
@@ -474,7 +529,7 @@ Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装
 | DT | `sync/CrossDeviceSyncFixtureTest` | 明文包夹具 |
 | AT | `AudioSessionIntegrationTest` | 自定义命令授权、无 Activity 切歌、PCM 单声道、FFmpegKit 整曲与 Android regex |
 | AT | `MusicFeaturesIntegrationTest` | MP3标签/封面、缩略图回退、长图、密钥加密、删除 |
-| AT | `LibraryNavigationTest` | 300首列表位置、助手保留迷你播放器且底座边界稳定、推荐卡片、播放器反复展开/关闭；本轮测试 APK 已编译，设备执行延期 |
+| AT | `LibraryNavigationTest` | 300首列表位置、助手/播放底座、卡片与反复开合；2026-11-05实机12项中11通过，未开启推荐卡旧显示断言1失败，详见Android续测 |
 | AT | `LibraryDetailTransitionTest` | 浅/深色、推入/返回/快速返回、减少动态效果的中途像素检查 |
 
 测试根目录：[commonTest](../composeApp/src/commonTest/kotlin/com/resonance/player)、[desktopTest](../composeApp/src/desktopTest/kotlin/com/resonance/player)、[androidInstrumentedTest](../composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player)。测试覆盖不等于所有外部接口在线有效；改网络匹配后还需说明是否做了真实服务检查。
@@ -532,10 +587,12 @@ DeepSeek 文本可配千问/豆包视觉；未配置视觉则提示，不把图�
 | add_to_playlist / remove_from_playlist | 成员关系 |
 | favorite_tracks | 设置/取消收藏 |
 | update_metadata | 曲库标题/歌手/专辑/封面；AI 封面只接受 B 站 HTTPS 图片 |
-| delete_tracks | 本轮用户明确要求删除音频才允许，删除文件及全部关系 |
+| delete_tracks | 仅明确执行意图可提出具体音频删除提案；awaiting_user_confirmation不代表已删。本机确认后才调用删除，逐项报告 |
 | find_and_download / search_bilibili / import_bilibili | 本地优先、原版候选、指定视频下载与自定义信息 |
 
-工具调用已取消 16 轮/步骤限制（使用循环持续执行直到任务完成），单轮最多 20 个工具，结果回传后再答复。无效 ID/工具报错，不伪称完成；否定删除、只删歌单等有回归。音乐任务可取消，已完成入库保留。MusicTaskEntry 可带 parentId，任务页按操作分组并汇总截图导入逐首进度；免费失败媒体步骤可批量重试，收费歌词仍单独确认。
+2026-11-05删除门禁核对：询问/解释/否定/只删歌单不授予音频删除。`AudioDeletionRequest` 仅保存在内存，含随机ID、最多300首曲目及sourceURI快照、会话、创建时间；`confirmAudioDeletion` 在10分钟内单次消费并复核当前会话与来源。新消息/新建/切换/清除对话使旧提案失效。本机弹窗展示具体歌名与文件名，确认不发模型请求，取消不删；不声称识别同一路径被外部替换的字节。见[助手删除确认](changes/2026-11-05-21-assistant-local-audio-delete-confirmation.md)。
+
+工具调用已取消 16 轮/步骤限制，单轮最多 20 个工具。2026-11-05 核对：`AssistantToolSession` 保留最近四个完整调用组（约 24K 字符）和完成动作概要，同任务同参数复用结果，连续六轮无新成功操作本地暂停；持续推进的任务无总轮数上限。长结果保持有效 JSON，歌单成员分页查询，源搜索 ID 保留至本次任务结束。无效 ID/工具报错，不伪称完成；否定删除、只删歌单等有回归。音乐任务可取消，已完成入库保留。MusicTaskEntry 可带 parentId，任务页按操作分组并汇总截图导入逐首进度；免费失败媒体步骤可批量重试，收费歌词仍单独确认。
 
 ### B 站链路
 
@@ -561,6 +618,8 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 
 2026-11-03 推荐播放核对：`RecommendationsScreen` → `MusicFeatureController.playRecommendation` → `onPlay(track, queue)` → `App.startTrack`，按当前推荐批次的 ID 顺序传递队列，上一首／下一首只在该队列的有效音频中切换。恢复下载时直接使用返回的新 Track，不等待 Compose 重组后的曲库回传；较旧恢复请求取消或迟到时不抢播。历史推荐页仍显式传入曲库队列。
 
+2026-11-05 核对：`recommendationLastAttemptAt` 在尝试前持久化，失败也按配置间隔冷却，手动刷新可立即重试。旧启用配置升级从当前时间进入冷却。月度 `usage.<month>.byOperation` 记录尝试／未返回用量失败及已知用量，字符诊断不是 token 估算；旧月度总量兼容。
+
 默认关闭，1–168小时/1–30首；前台到期生成或允许后台。recommendationsUnmeteredOnly 缺省 false，可限制自动下载仅在系统判定的不计费网络；设置显示预计到期和等待状态，手动更新仍会立即联网。Android WorkManager 受节电/网络调度限制，下载有 dataSync 前台通知；Windows 托盘每分钟检查，完全退出后不运行。
 
 2026-10-28工作区：每日推荐未听保护。自动推荐检查到期时，若当前批次推荐歌曲中存在未听过（播放时长与播放次数为 0、且无点赞/评论反馈）的歌曲，即使已达到设定的间隔时间，自动推荐亦不进行更换，完整保留上批推荐等待用户收听；设置中状态提示「本批推荐尚有歌曲未听过，保留不换」。手动点击「更新推荐」仍可强制换批。
@@ -577,9 +636,12 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 
 | 任务 | 先读 | 回归/检查 |
 | --- | --- | --- |
-| 音量、快速切歌竞争 | PlaybackStateStore、PlaybackService、平台响度 | PlaybackStateStoreTest、AudioSessionIntegrationTest |
-| 每日推荐播放错位／切歌跳出批次 | MusicTasksScreen.RecommendationsScreen、MusicFeatureController.playRecommendation、App.resolveTrackPlaybackQueue、PlaybackStateStore | RecommendationPlaybackTest、PlaybackQueueResolutionTest、PlaybackStateStoreTest；Android 真实播放需设备另验 |
+| 应用退出/设置写入/统计页面等待 | ApplicationTasks、ApplicationLifetime、ApplicationPreferences、PersistenceQueue、ListeningStatsRepository、ListeningStatsState | ApplicationSessionTest、ApplicationUseCaseTest、PersistenceQueueTest、ListeningStatsRepositoryTest |
+| 桌面音频高 CPU/暂停/设备卡住 | DesktopPcmPlayer、DesktopAudioBackend、DesktopAudioPlayer | DesktopPcmPlayerSessionTest、DesktopAudioOutputIntegrationTest，实际设备/CPU另验 |
+| 音量、快速切歌竞争 | PlaybackSession、PlaybackStateStore、PlaybackService、平台响度 | PlaybackSessionTest、PlaybackStateStoreTest、AudioSessionIntegrationTest |
+| 每日推荐播放错位／切歌跳出批次 | MusicTasksScreen.RecommendationsScreen、MusicFeatureController.playRecommendation、PlaybackSession / resolveTrackPlaybackQueue、PlaybackStateStore | RecommendationPlaybackTest、PlaybackQueueResolutionTest、PlaybackStateStoreTest；Android 真实播放需设备另验 |
 | 双人一起听/邀请/临时音频/同步 | ListenTogetherService、TogetherScreen、TogetherRoomComponents、TogetherPlaybackBinding、JvmListenTogetherService、TogetherTransport、两端 PlatformServices | ListenTogetherTest、TogetherConnectionDeviceTest、TogetherDeviceBridgeTest、TogetherUiDeviceTest；先读第 7.1 节与 2026-10-30 规划 |
+| 桌面选文件/拖入导入 | Main、DesktopMusicDrop、DesktopPlatformServices.importSelectedMusic、DesktopMusicScanner、LibraryImportUseCase | DesktopMusicImportTest、DesktopManagedMp3ConverterTest；Linux/Windows 原生文件管理器分别验收，Copy 语义/中文路径/重复目录/取消/源文件保留 |
 | 转换慢/取消 | ImportControl、Scanner/scanDocumentTree、两端 FFmpeg | DesktopManagedMp3ConverterTest，源文件/staging/阶段 |
 | 列表封面 | DynamicArtwork、audioArtwork、ArtworkMemoryCache、SyncArtwork | MusicFeaturesIntegrationTest、CatalogArtworkRematchTest |
 | 切标签/播放器掉帧 | LibraryShell、NowPlayingOverlay、MusicStage、AlbumVisuals、LibraryTabTransition、LibraryDetailTransition、FluidAmbientCanvas | UiVisualContractTest / LibraryNavigationTest / LibraryDetailTransitionTest；MusicStageFrameMetricsTest 支持 player/navigation 和 metricsWarmup 诊断，已取得两包配对样本，尚无 Release 性能结论 |
@@ -592,7 +654,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | 推荐误删/清理失败 | recommendInternal/pending、原生 delete/activeMusicId | rollover/failure/current-playing/dislike 回归 |
 | 翻译/时间轴/音频识别 | ParaformerLyricsClient、AudioLyricAlignment、GeneratedLyricsStore、原生positionMs | AudioLyricAlignmentTest / MusicAssistantTest / FloatingLyricsTest |
 | 任务重试/中断 | MusicTaskJournal、JvmMusicAssistant.step/retryTask | 持久恢复、封面重试、推荐pending取消回归 |
-| 后台歌词 | PlaybackService/AndroidLyricsOverlay、DesktopFloatingLyrics/Main | overlay权限/原生播放/进程/锁定/托盘 |
+| 后台歌词/桌面黑框 | PlaybackService/AndroidLyricsOverlay、App(mainWindow)、DesktopFloatingLyrics/Main | FloatingLyricsTest、DesktopWindowLifecycleTest（真实图形会话显式开启）；主窗隐藏/更新/锁定/关闭/重开、持久化与实屏分开验收 |
 | 数据恢复/旧值覆盖 | PersistenceQueue、Store锁、AtomicPropertiesFile、MusicJsonStore | PersistenceQueueTest、LibraryPersistenceTest、MusicJsonStoreTest |
 | 补全未命中 | MetadataEnricher、当前模型/公共源 | MetadataEnricherTest；未命中无常驻横幅 |
 | 构建/签名/FFmpeg/Linux | Gradle、version.properties、scripts/build-linux.sh、DesktopPaths、DesktopCredentialVault、FfmpegExecutable、CI | SDK/JDK/实际二进制/LinuxDesktopSupportTest/不自动升版 |
@@ -600,7 +662,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 
 当前网络 B 站公共 metadata 探测 HTTP 412；真实账号下载链未验通，没有用户 Key，未做付费 AI 服务实测。可注入音源/AI测试不等于服务商在线验证。
 
-Android 当前设备 API32，不能代表 API36 后台调度/节电或所有国产 ROM；系统周期不是精确闹钟。后台歌词使用现有译文缓存不自动付费；纯文本无可靠同步轴。桌面悬浮需要实际图形会话/进程存活。
+Android API32为历史测试环境；2026-11-05修复后在HONOR Android16/API36独立包执行84项，77通过/0失败/7跳过；原失败项已按新契约与尺寸修复复验，详见[本次验收](audit/2026-11-05/FIX-VALIDATION.md)。未完成所有ROM、锁屏节电或长时验收，不能把单设备结果外推；系统周期不是精确闹钟。后台歌词使用现有译文缓存不自动付费；纯文本无可靠同步轴。桌面悬浮需要实际图形会话/进程存活。
 
 AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件；新下载 MP3 转码时真实写标签。旧明文配置可能残留。睡眠定时已接入双端原生播放层；歌词偏移在本机缓存持久化，完整原文件写回 UI 仍有限。公开来源、OCR、AI事实准确性和B站源匹配仍需用户实际环境核对。
 
@@ -637,6 +699,8 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 <a id="website"></a>
 
 ## 16. 独立官网与匿名论坛（发布能力核对 2026-11-04）
+
+2026-11-05导航核对：`site.js` 每次navigate（含缓存/popstate）递增navigationGeneration，异步响应和ViewTransition提交前核对代次，只有当前导航能改DOM/history或触发原生回退；前进后退不pushState。执行 `node --test website/tests/test_navigation.cjs` 覆盖六种乱序/缓存/过渡/失败/点击当前页面场景，未发布现网。见[导航修复](changes/2026-11-05-26-website-latest-navigation-wins.md)。
 
 2026-11-03：用户指定迁往新购阿里云 Ubuntu 24.04 主机，目标 Nginx 直接 HTTPS＋官网／邮件／一起听三项 systemd；不再依赖翼龙启动器或 Cloudflare Tunnel。配置、源码白名单打包及保留真实数据的切换入口见 [阿里云部署](../services/deploy/aliyun/README.md)。新机已安装并恢复网站迁移副本，官网／中继 systemd 运行与重启、回环四页 200／两端 Range 206／WebSocket 配对验证通过；邮件 worker 未启动。公开切换尚未完成，原部署仍为公开入口；北京区续费备案、受信证书、最终数据同步及公网切换须后续完成。
 
@@ -753,7 +817,7 @@ composeApp/build.gradle.kts的generateAppVersion继续只从version.properties�
 
 ### 2026-10-31 AI 官方接口核对
 
-当前 DeepSeek 默认模型为 deepseek-flash；仅对 api.deepseek.com 上白名单 Flash/V4 模型显式传 thinking disabled，避免短任务依赖默认 high 思考在有限输出内返回最终 content。显式 reasoner 与其它兼容域名保持既有语义。实际凭据与宣传录制状态见独立记录，不将请求替身测试当作真实模型回答。
+当前 DeepSeek 默认模型为 deepseek-flash；仅对 api.deepseek.com 上白名单 Flash/V4 模型显式传 thinking disabled，避免短任务依赖默认 high 思考在有限输出内返回最终 content。2026-11-05 核对：仅官方域名的退役 deepseek-chat／deepseek-reasoner 在请求时映射 deepseek-flash，分别保留 disabled／enabled 思考语义，第三方地址不改。定长请求体避免隐式付费 POST 重放，断线不自动重试且明确用量未知。实际凭据与宣传录制状态见独立记录，不将请求替身测试当作真实模型回答。
 
 
 ## 2026-11-01 第一批质量优化核对

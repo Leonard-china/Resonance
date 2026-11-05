@@ -74,6 +74,20 @@ docs/changes/YYYY-MM-DD-NN-简要主题.md
 
 不同 AI 客户端对 `AGENTS.md` 的自动发现能力不同。仓库首页也链接了规则；在不自动读取规则的工具中，将“先读 AGENTS.md 与 docs/README.md，完成后按规则新增变更文档”作为该工具的项目指令。文档约定本身不是能够保证所有工具执行的程序校验器。
 
+<a id="本机资源预算"></a>
+
+## 7. 本机资源预算（2026-11-05）
+
+用户已反馈构建多次占满内存并导致桌面崩溃。本机是与用户共享的 Linux 桌面，不能按空闲 CI 机器使用；2026-11-05 内核记录了 Java 和 ChatGPT 的全机 OOM，项目原有 Gradle 4 GiB/Kotlin 3 GiB 堆上限还没有包含打包进程。运行前检查 `free -m`、相关残留进程和任务范围，同一时刻只运行一项重量级验证。不要在同一轮触发 Android 编译与桌面 ProGuard/Release 打包，也不同时启动多个 Gradle 实例。
+
+当前电脑使用独立 systemd 用户服务给**整个构建进程树**设置 `MemoryMax=2G`、`MemoryHigh=1536M`、`MemorySwapMax=0`。用 `systemd-run --user` 指定限额、工作目录、工具环境和实际 Wrapper 命令，随后通过 `systemctl --user show <unit> -p MemoryMax -p MemoryHigh -p MemorySwapMax` 确认生效；日志和资源峰值保留在本次忽略的验证目录。构建过程的子进程必须留在同一限额内，不复用限额外的常驻编译 daemon。
+
+2026-11-05 用户再次要求避免占满内存：启动前要求宿主机 `MemAvailable` 至少为本构建的实际 cgroup `MemoryMax` 加 **1536 MiB**；默认 2 GiB 上限须至少 3.5 GiB 可用，本轮 1.5 GiB 上限须至少 3 GiB 可用。运行中持续检查余量，低于 1536 MiB 则停止自己的构建进程树。可用不足时排队或记录环境受阻，不以提高总上限、关闭用户应用或改 swap 解决。当前两个对话共用 `build/resonance-heavy-validation.lock`；新构建须共用此锁并检查残留构建。详见[余量保护记录](changes/2026-11-05-14-reserve-host-memory-before-builds.md)。
+
+配合 `--max-workers=1 --no-daemon`、`-Pkotlin.compiler.execution.strategy=in-process`，用命令参数覆盖较小 JVM 堆和元空间（本次 Linux app image 使用 `-Xmx768m -XX:MaxMetaspaceSize=384m`）。这些参数不能替代进程树限额；仅 `--max-workers=1` 也不能保证编译 daemon 与打包子进程没有重叠。仓库 Wrapper 脚本含 CRLF 时可用配置好的 JDK 执行 `-classpath gradle/wrapper/gradle-wrapper.jar org.gradle.wrapper.GradleWrapperMain`，不要为一次验证重格式化用户文件。
+
+限额不能建立或构建超出预算时，停止这项验证并如实记录环境受阻；可使用已验证源码进行更轻量的本机验证，重量级目标移到具备预算的环境。不无上限重试，不自动提高限额，不关闭用户应用，不改系统 swap，也不隐式修改共享 Gradle 默认配置。用户可明确另行调整预算。采用普通 app image 替代 Release 构建时必须注明，不能称为已完成 ProGuard/Release。此次 2 GiB 限额的 Linux 完整 app image 构建通过，服务峰值 1.5 GiB；详见[资源修正记录](changes/2026-11-05-05-limit-local-build-memory.md)。
+
 ## 6. 官网与服务器数据（2026-10-16）
 
 `website/` 与原生播放器隔离。先确认运行目录和数据库，所有发帖、删除、上传、SMTP 回归使用临时库/模拟服务；不要连接用户音频或真实订阅者群发。发布替换只清理官网控制的安装包目录，不清理原工程 `release/`。

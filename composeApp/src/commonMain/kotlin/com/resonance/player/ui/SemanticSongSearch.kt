@@ -37,7 +37,7 @@ fun SemanticSongSearch(
                 Spacer(Modifier.height(12.dp))
                 Text("输入一句话意图找歌", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = ResonanceColors.TextPrimary)
                 Spacer(Modifier.height(6.dp))
-                Text("例如：“适合下雨天听的安静民谣”、“140 BPM 跑步燃歌”", fontSize = 13.sp, color = ResonanceColors.Dim)
+                Text("例如：“适合下雨天听的安静民谣”、“夜晚散步的轻音乐”", fontSize = 13.sp, color = ResonanceColors.Dim)
             }
         }
         return
@@ -119,6 +119,9 @@ fun SemanticSongSearch(
             }
         }
 
+        if (intent.bpmRange != null) Text(
+            "已识别节拍范围；本地目前仅按歌名、歌手、专辑文字匹配，尚不支持BPM筛选。请补充文字关键词。",
+            color = ResonanceColors.Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
         if (localMatches.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("本地曲库未命中符合该意图的歌曲，可切换“在线”在歌源中查找", color = ResonanceColors.Muted, fontSize = 13.sp)

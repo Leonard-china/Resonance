@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.cancel
@@ -43,6 +45,8 @@ import com.resonance.player.weather.AppearanceStorage
 import com.resonance.player.weather.WeatherClient
 
 class DesktopPlatformServices : PlatformServices {
+    private val closed = java.util.concurrent.atomic.AtomicBoolean(false)
+    var fileDialogOwner: java.awt.Component? = null
     override val listenTogether by lazy {
         com.resonance.player.together.JvmListenTogetherService(library.appDirectory.resolve("cache/together-audio"), { track ->
             val source = requireNotNull(track.sourceUri)
@@ -69,6 +73,16 @@ class DesktopPlatformServices : PlatformServices {
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     override val importProgress = MutableStateFlow<ImportProgress?>(null)
     override fun cancelImport() { currentImport.get()?.cancel() }
+    private val droppedMusic = kotlinx.coroutines.channels.Channel<List<String>>(1)
+    private val dropPending = java.util.concurrent.atomic.AtomicBoolean(false)
+    override val externalMusicImports = droppedMusic.receiveAsFlow()
+
+    fun offerDroppedMusic(paths: List<Path>): Boolean {
+        if (paths.isEmpty() || currentImport.get() != null || !dropPending.compareAndSet(false, true)) return false
+        if (droppedMusic.trySend(paths.map(Path::toString)).isSuccess) return true
+        dropPending.set(false)
+        return false
+    }
     private val loudnessAnalyzer = com.resonance.player.audio.DesktopLoudnessAnalyzer()
     override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
         com.resonance.player.playback.PlaybackSnapshotCodec.decode(library.readUiValue("playback.snapshot"))
@@ -88,7 +102,7 @@ class DesktopPlatformServices : PlatformServices {
         player.setVocalSuppression(enabled)
     }
     private val listeningStatsRepository by lazy { com.resonance.player.playback.ListeningStatsRepository.get(library.appDirectory) }
-    private val listeningStatsStore get() = listeningStatsRepository.store
+    override val listeningStats get() = listeningStatsRepository.snapshots
     private val _audioEffectPresetState = MutableStateFlow(com.resonance.player.model.AudioEffectPreset.Off)
     override val currentAudioEffectPreset: StateFlow<com.resonance.player.model.AudioEffectPreset> = _audioEffectPresetState
 
@@ -114,11 +128,11 @@ class DesktopPlatformServices : PlatformServices {
     override suspend fun flushListeningStats() = withContext(Dispatchers.IO) { listeningStatsRepository.flush() }
 
     override fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? {
-        return listeningStatsStore.getTrackStats(trackId)
+        return listeningStatsRepository.getTrackStats(trackId)
     }
 
     override fun getAllListeningStats(): com.resonance.player.model.AllListeningStats {
-        return listeningStatsStore.getAllStats()
+        return listeningStatsRepository.getAllStats()
     }
     override val systemReduceMotion: Boolean get() = java.awt.Toolkit.getDefaultToolkit()
         .getDesktopProperty("win.clientAreaAnimation") == false
@@ -519,21 +533,31 @@ class DesktopPlatformServices : PlatformServices {
 
     override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
         val source = chooseSyncPackageOnEdt(save = false) ?: return@withContext SyncReport(false, "已取消导入", cancelled = true)
-        val imported = PlainSyncPackage().import(source, library.managedMusicDirectory)
-        library.merge(imported.tracks)
-        val mergedPlaylists = (library.loadPlaylists() + imported.playlists).associateBy(Playlist::id).values.toList()
-        library.savePlaylists(mergedPlaylists)
+        val importContext = kotlin.coroutines.coroutineContext
+        val imported = PlainSyncPackage().import(source, library.managedMusicDirectory,
+            onCommit = { library.mergeImported(it.tracks, it.playlists) }, checkCancelled = { importContext.ensureActive() })
         SyncReport(true, "歌单文件导入完成", imported.tracks.size, imported.playlists.size)
     }
 
-    override suspend fun importMusic(convertToMp3: Boolean): ImportReport = withContext(Dispatchers.IO) {
+    override suspend fun importMusic(convertToMp3: Boolean): ImportReport =
+        importSelectedMusic(convertToMp3) { chooseMusicOnEdt() }
+
+    override suspend fun importMusicPaths(paths: List<String>, convertToMp3: Boolean): ImportReport {
+        try {
+            return importSelectedMusic(convertToMp3) { paths.map(Path::of) }
+        } finally { dropPending.set(false) }
+    }
+
+    private suspend fun importSelectedMusic(convertToMp3: Boolean, selection: () -> List<Path>): ImportReport = withContext(Dispatchers.IO) {
         val control = com.resonance.player.io.ImportControl()
         check(currentImport.compareAndSet(null, control)) { "已有导入任务正在运行" }
         try {
-            val folder = chooseFolderOnEdt() ?: return@withContext ImportReport(emptyList())
-            val report = DesktopMusicScanner(library.artworkDirectory, library.managedMusicDirectory)
-                .scan(folder, convertToMp3, control) { importProgress.value = it }
-            if (report.tracks.isNotEmpty()) library.merge(report.tracks)
+            val paths = selection()
+            if (paths.isEmpty()) return@withContext ImportReport(emptyList())
+            importProgress.value = ImportProgress("扫描文件", detail = "正在查找音频和歌单包…")
+            val report = DesktopMusicScanner(library.artworkDirectory, library.managedMusicDirectory) { library.mergeImported(it.tracks, it.playlists) }
+                .scan(paths, convertToMp3, control) { importProgress.value = it }
+            library.mergeImported(report.tracks, report.playlists)
             report
         } finally { currentImport.set(null); importProgress.value = null }
     }
@@ -564,33 +588,31 @@ class DesktopPlatformServices : PlatformServices {
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {
         if (playingMusicId == track.id) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) }
-        val rawSource = track.sourceUri ?: return@withContext DeleteTrackReport(false, false, "这首歌曲没有本地音频文件")
-        val source = Path.of(rawSource).toAbsolutePath().normalize()
-        val deleted = runCatching { Files.deleteIfExists(source) }.getOrDefault(false)
-        library.remove(track.id)
-        track.artworkPath?.let { runCatching { Files.deleteIfExists(Path.of(it)) } }
-        DeleteTrackReport(true, deleted, if (deleted) "已删除「${track.title}」的本地音频文件" else "已从音乐库移除「${track.title}」")
+        val deleted = try {
+            track.sourceUri?.takeIf(String::isNotBlank)?.let { raw ->
+                val source = if (raw.startsWith("file:")) Path.of(java.net.URI(raw)) else Path.of(raw)
+                Files.deleteIfExists(source)
+            } ?: false
+        } catch (error: Exception) {
+            return@withContext DeleteTrackReport(false, false, "未能删除「${track.title}」，曲库记录已保留：${error.message.orEmpty()}")
+        }
+        try { library.remove(track.id) }
+        catch (error: Exception) {
+            return@withContext DeleteTrackReport(false, deleted, "音频处理后曲库更新失败：${error.message.orEmpty()}")
+        }
+        // Artwork may be shared or user-owned. Audio deletion never implies artwork ownership.
+        DeleteTrackReport(true, deleted,
+            if (deleted) "已删除「${track.title}」的本地音频文件" else "音频已不存在，已移除「${track.title}」的曲库记录",
+            setOf(track.id))
     }
 
     override suspend fun batchDeleteTracks(tracks: List<Track>): DeleteTrackReport = withContext(Dispatchers.IO) {
-        if (tracks.isEmpty()) return@withContext DeleteTrackReport(true, false, "未选择任何歌曲")
-        var fileDeletedCount = 0
-        tracks.forEach { track ->
-            val rawSource = track.sourceUri
-            if (!rawSource.isNullOrBlank()) {
-                val source = Path.of(rawSource).toAbsolutePath().normalize()
-                if (runCatching { Files.deleteIfExists(source) }.getOrDefault(false)) {
-                    fileDeletedCount++
-                }
-            }
-            track.artworkPath?.let { runCatching { Files.deleteIfExists(Path.of(it)) } }
-        }
-        library.removeMultiple(tracks.map(Track::id).toSet())
-        DeleteTrackReport(
-            success = true,
-            fileDeleted = fileDeletedCount > 0,
-            message = "已批量删除 ${tracks.size} 首歌曲${if (fileDeletedCount > 0) "（含 $fileDeletedCount 首本地文件）" else ""}",
-        )
+        val reports = tracks.distinctBy(Track::id).map { deleteLocalTrack(it) }
+        val removed = reports.flatMap { it.removedTrackIds }.toSet()
+        val failed = reports.filterNot { it.success }
+        DeleteTrackReport(failed.isEmpty(), reports.any { it.fileDeleted },
+            "已移除 ${removed.size} 首" + if (failed.isEmpty()) "" else "；${failed.size} 首未完成：" + failed.take(5).joinToString("；") { it.message },
+            removed)
     }
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
@@ -673,6 +695,8 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
+        cancelImport()
         togetherDriver.close()
         togetherHostDriver.close()
         togetherPlaybackScope.cancel()
@@ -697,16 +721,27 @@ class DesktopPlatformServices : PlatformServices {
         return runCatching { Path.of(value) }.getOrNull()?.takeIf(Files::isRegularFile)?.let(Files::newInputStream)
     }
 
-    private fun chooseFolderOnEdt(): Path? {
-        if (SwingUtilities.isEventDispatchThread()) return chooseFolder()
-        val selection = AtomicReference<Path?>()
-        SwingUtilities.invokeAndWait { selection.set(chooseFolder()) }
+    private fun chooseMusicOnEdt(): List<Path> {
+        fun choose(): List<Path> {
+            val chooser = JFileChooser().apply {
+                dialogTitle = "选择音乐、歌单包或文件夹（可多选）"
+                fileSelectionMode = JFileChooser.FILES_AND_DIRECTORIES
+                isMultiSelectionEnabled = true
+                fileFilter = desktopMusicImportFilter()
+            }
+            return if (chooser.showOpenDialog(fileDialogOwner) == JFileChooser.APPROVE_OPTION)
+                chooser.selectedFiles.ifEmpty { listOfNotNull(chooser.selectedFile).toTypedArray() }.map(File::toPath)
+            else emptyList()
+        }
+        if (SwingUtilities.isEventDispatchThread()) return choose()
+        val selection = AtomicReference<List<Path>>(emptyList())
+        SwingUtilities.invokeAndWait { selection.set(choose()) }
         return selection.get()
     }
 
     private fun chooseSyncPackageOnEdt(save: Boolean, suggestedName: String = "整个音乐库.resonance"): Path? {
         val selection = AtomicReference<Path?>()
-        SwingUtilities.invokeAndWait {
+        fun choose(): Path? {
             val chooser = JFileChooser().apply {
                 dialogTitle = if (save) "导出歌单文件" else "导入歌单文件"
                 fileSelectionMode = JFileChooser.FILES_ONLY
@@ -719,557 +754,31 @@ class DesktopPlatformServices : PlatformServices {
                     selectedFile = parent.resolve(name).toFile()
                 }
             }
-            val result = if (save) chooser.showSaveDialog(null) else chooser.showOpenDialog(null)
+            val result = if (save) chooser.showSaveDialog(fileDialogOwner) else chooser.showOpenDialog(fileDialogOwner)
             if (result == JFileChooser.APPROVE_OPTION) {
                 var chosen = chooser.selectedFile.toPath()
                 if (save && !chosen.fileName.toString().endsWith(".resonance", ignoreCase = true)) {
                     chosen = chosen.resolveSibling("${chosen.fileName}.resonance")
                 }
                 if (save) chosen = chosen.resolveSibling(uniqueSyncPackageFileName(chosen.fileName.toString()) { Files.exists(chosen.resolveSibling(it)) })
-                selection.set(chosen)
+                return chosen
             }
+            return null
         }
+        if (SwingUtilities.isEventDispatchThread()) return choose()
+        SwingUtilities.invokeAndWait { selection.set(choose()) }
         return selection.get()
     }
 
-    private fun chooseFolder(): Path? {
-        val chooser = JFileChooser().apply {
-            dialogTitle = "选择要扫描的音乐文件夹"
-            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            isAcceptAllFileFilterUsed = false
-        }
-        return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFile.toPath() else null
-    }
 }
 
-internal class DesktopMusicScanner(
-    private val artworkDirectory: Path,
-    managedMusicDirectory: Path,
-) {
-    private val audioExtensions = setOf("mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape", "kgma", "kgm", "kgg")
-    private val converter = DesktopManagedMp3Converter(managedMusicDirectory)
+internal val DESKTOP_AUDIO_EXTENSIONS = setOf("mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape", "kgma", "kgm", "kgg")
 
-    fun scan(root: Path, convertToMp3: Boolean,
-        control: com.resonance.player.io.ImportControl = com.resonance.player.io.ImportControl(),
-        progress: (ImportProgress) -> Unit = {},
-    ): ImportReport {
-        val tracks = mutableListOf<Track>()
-        val warnings = mutableListOf<String>()
-        var skipped = 0
-        try {
-            val candidates = mutableListOf<Path>()
-            Files.walk(root).use { paths ->
-                val iterator = paths.iterator()
-                while (iterator.hasNext()) {
-                    control.check()
-                    val path = iterator.next()
-                    if (Files.isRegularFile(path) && path.fileName.toString().substringAfterLast('.', "").lowercase() in audioExtensions) candidates += listOf(path)
-                    if (candidates.size % 100 == 0) progress(ImportProgress("扫描目录", completed = candidates.size, detail = "已发现 ${candidates.size} 个音频文件"))
-                }
-            }
-            candidates.forEachIndexed { index, path ->
-                control.check()
-                val name = path.fileName.toString()
-                progress(ImportProgress("处理音频", name, index, candidates.size, index.toFloat() / candidates.size.coerceAtLeast(1)))
-                try {
-                    val ext = name.substringAfterLast('.', "").lowercase()
-                    val source = if (convertToMp3 || ext in listOf("kgma", "kgm", "kgg")) converter.importAsMp3(path, control) { done, total ->
-                        progress(ImportProgress("解密音频", name, index, candidates.size,
-                            (index + (if (total > 0) done.toFloat() / total * 0.7f else 0f)) / candidates.size.coerceAtLeast(1), "${done / 1024} / ${total / 1024} KB"))
-                    } else path
-                    control.check()
-                    tracks += readAudioTrack(source)
-                } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                catch (error: Exception) { skipped++; if (warnings.size < 10) warnings += "$name：${error.message.orEmpty()}" }
-                progress(ImportProgress("处理音频", name, index + 1, candidates.size, (index + 1f) / candidates.size.coerceAtLeast(1)))
-            }
-        } catch (cancelled: kotlinx.coroutines.CancellationException) { warnings += "已取消；已完成 ${tracks.size} 首，源文件保留" }
-        return ImportReport(tracks.sortedWith(compareBy(Track::artist, Track::title)), skipped, warnings, control.isCancelled)
-    }
-
-    fun readAudioTrack(path: Path): Track {
-        val file = AudioFileIO.read(path.toFile())
-        val tag = file.tag
-        val rawTitle = tag?.getFirst(FieldKey.TITLE)?.takeIf(String::isNotBlank)
-        val rawArtist = tag?.getFirst(FieldKey.ARTIST)?.takeIf(String::isNotBlank)
-        val rawAlbum = tag?.getFirst(FieldKey.ALBUM)?.takeIf(String::isNotBlank)
-
-        var title = rawTitle
-        var artist = rawArtist
-        val fileName = path.fileName.toString()
-        val cleanBaseName = fileName.substringBeforeLast('.').replace(Regex("""\s*\[[0-9a-fA-F]{10}\]$"""), "")
-        if (title == null || artist == null) {
-            if (cleanBaseName.contains(" - ")) {
-                val parsedArtist = cleanBaseName.substringBefore(" - ").trim()
-                val parsedTitle = cleanBaseName.substringAfter(" - ").trim()
-                if (artist == null && parsedArtist.isNotBlank()) artist = parsedArtist
-                if (title == null && parsedTitle.isNotBlank()) title = parsedTitle
-            } else if (title == null && cleanBaseName.isNotBlank()) {
-                title = cleanBaseName
-            }
-        }
-        val finalTitle = title ?: "未知歌曲"
-        val finalArtist = artist ?: "未知歌手"
-        val finalAlbum = rawAlbum ?: "本地音乐"
-
-        val durationSeconds = file.audioHeader.trackLength.coerceAtLeast(0)
-        val id = sha256File(path)
-        val artworkPath = tag?.firstArtwork?.binaryData?.takeIf { it.isNotEmpty() }?.let { bytes ->
-            Files.createDirectories(artworkDirectory)
-            val target = artworkDirectory.resolve("$id.cover")
-            Files.write(target, bytes)
-            target.toString()
-        }
-        val extension = path.fileName.toString().substringAfterLast('.', "").lowercase()
-        val mimeType = when (extension) {
-            "flac" -> "audio/flac"
-            "wav" -> "audio/wav"
-            "m4a", "aac" -> "audio/mp4"
-            "ogg", "opus" -> "audio/ogg"
-            else -> "audio/mpeg"
-        }
-        return Track(
-            id = id,
-            title = finalTitle,
-            artist = finalArtist,
-            album = finalAlbum,
-            durationText = "%d:%02d".format(durationSeconds / 60, durationSeconds % 60),
-            artworkSeed = (id.take(8).toLongOrNull(16)?.toInt() ?: id.hashCode()),
-            sourceUri = path.toAbsolutePath().normalize().toString(),
-            artworkPath = artworkPath,
-            mimeType = mimeType,
-        )
-    }
-}
-
-internal class DesktopLibraryStore(
-    val appDirectory: Path = DesktopPaths.dataDirectory(),
-) {
-    private val libraryFile = appDirectory.resolve("library.properties")
-    private val playlistFile = appDirectory.resolve("playlists.properties")
-    private val uiStateFile = appDirectory.resolve("ui-state.properties")
-    @Synchronized
-    fun readUiValue(key: String): String? {
-        return com.resonance.player.io.AtomicPropertiesFile.read(uiStateFile).getProperty(key)
-    }
-    @Synchronized
-    fun writeUiValue(key: String, value: String) {
-        Files.createDirectories(appDirectory)
-        val properties = com.resonance.player.io.AtomicPropertiesFile.read(uiStateFile)
-        properties.setProperty(key, value)
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-    @Synchronized
-    fun removeUiValue(key: String) {
-        Files.createDirectories(appDirectory)
-        val properties = com.resonance.player.io.AtomicPropertiesFile.read(uiStateFile)
-        properties.remove(key)
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-    val artworkDirectory: Path = appDirectory.resolve("artwork")
-    val lyricsCacheDirectory: Path = appDirectory.resolve("lyrics-cache")
-    val managedMusicDirectory: Path = preferredManagedMusicDirectory()
-
-    @Synchronized
-    fun installationId(): String {
-        Files.createDirectories(appDirectory)
-        val target = appDirectory.resolve("installation.id")
-        if (Files.isRegularFile(target)) {
-            Files.readString(target, StandardCharsets.UTF_8).trim().takeIf(String::isNotBlank)?.let { return it }
-        }
-        val created = java.util.UUID.randomUUID().toString()
-        Files.writeString(target, created, StandardCharsets.UTF_8)
-        return created
-    }
-
-    @Synchronized
-    fun load(): List<Track> {
-        val properties = com.resonance.player.io.AtomicPropertiesFile.read(libraryFile) {
-            com.resonance.player.io.AtomicPropertiesFile.validIndexed(it, "track", "source")
-        }
-        val count = properties.getProperty("count")?.toIntOrNull() ?: return emptyList()
-        val usesContentIds = properties.getProperty("id.format") == "sha256-audio-v1"
-        return (0 until count).mapNotNull { index ->
-            val prefix = "track.$index."
-            val source = properties.getProperty(prefix + "source") ?: return@mapNotNull null
-            if (source.isBlank() && properties.getProperty(prefix + "id").isNullOrBlank()) return@mapNotNull null
-            if (source.isNotBlank() && !Files.isRegularFile(Path.of(source))) return@mapNotNull null
-            Track(
-                id = if (usesContentIds || source.isBlank()) {
-                    properties.getProperty(prefix + "id") ?: sha256File(Path.of(source))
-                } else {
-                    sha256File(Path.of(source))
-                },
-                title = properties.getProperty(prefix + "title") ?: File(source).nameWithoutExtension,
-                artist = properties.getProperty(prefix + "artist") ?: "未知歌手",
-                album = properties.getProperty(prefix + "album") ?: "未知专辑",
-                durationText = properties.getProperty(prefix + "duration") ?: "0:00",
-                artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: source.hashCode(),
-                isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
-                sourceUri = source.takeIf(String::isNotBlank),
-                artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
-                mimeType = properties.getProperty(prefix + "mime") ?: "audio/mpeg",
-            )
-        }.associateBy(Track::id).values.toList()
-    }
-
-    @Synchronized
-    fun save(tracks: List<Track>) {
-        Files.createDirectories(appDirectory)
-        val properties = Properties().apply {
-            setProperty("count", tracks.size.toString())
-            setProperty("id.format", "sha256-audio-v1")
-        }
-        tracks.forEachIndexed { index, track ->
-            val prefix = "track.$index."
-            properties.setProperty(prefix + "id", track.id)
-            properties.setProperty(prefix + "title", track.title)
-            properties.setProperty(prefix + "artist", track.artist)
-            properties.setProperty(prefix + "album", track.album)
-            properties.setProperty(prefix + "duration", track.durationText)
-            properties.setProperty(prefix + "seed", track.artworkSeed.toString())
-            properties.setProperty(prefix + "favorite", track.isFavorite.toString())
-            properties.setProperty(prefix + "source", track.sourceUri.orEmpty())
-            properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
-            properties.setProperty(prefix + "mime", track.mimeType)
-        }
-        writePropertiesAtomically(libraryFile, properties, "Resonance music library")
-    }
-
-    @Synchronized
-    fun merge(imported: List<Track>) {
-        val merged = (load() + imported).associateBy(Track::id).values.toList()
-        save(merged)
-    }
-
-    /** Relinking must reinsert the old identity even when load() excludes its missing file. */
-    @Synchronized
-    fun replaceAudio(track: Track) {
-        save(load().filterNot { it.id == track.id } + track)
-        savePlaylists(loadPlaylists().map { playlist -> playlist.copy(tracks = playlist.tracks.map { if (it.id == track.id) track else it }) })
-    }
-
-    @Synchronized
-    fun updateTracks(updated: List<Track>) {
-        val updatedById = updated.associateBy(Track::id)
-        val currentLibrary = load().map { current -> updatedById[current.id] ?: current }
-        save(currentLibrary)
-        val currentPlaylists = loadPlaylists().map { playlist ->
-            playlist.copy(
-                tracks = playlist.tracks.map { track ->
-                    updatedById[track.id]?.let { u ->
-                        track.copy(
-                            title = u.title,
-                            artist = u.artist,
-                            album = u.album,
-                            sourceUri = u.sourceUri,
-                            artworkPath = u.artworkPath ?: track.artworkPath,
-                            artworkSeed = if (u.artworkPath != null) u.artworkSeed else track.artworkSeed,
-                        )
-                    } ?: track
-                }
-            )
-        }
-        savePlaylists(currentPlaylists)
-    }
-
-    @Synchronized
-    fun removeMultiple(trackIds: Set<String>) {
-        save(load().filterNot { it.id in trackIds })
-        savePlaylists(loadPlaylists().map { playlist -> playlist.copy(tracks = playlist.tracks.filterNot { it.id in trackIds }) })
-    }
-
-    @Synchronized
-    fun remove(trackId: String) {
-        removeMultiple(setOf(trackId))
-    }
-
-    @Synchronized
-    fun setFavorite(trackId: String, favorite: Boolean) {
-        save(load().map { track -> if (track.id == trackId) track.copy(isFavorite = favorite) else track })
-        savePlaylists(loadPlaylists().map { playlist ->
-            playlist.copy(tracks = playlist.tracks.map { track ->
-                if (track.id == trackId) track.copy(isFavorite = favorite) else track
-            })
-        })
-    }
-
-    @Synchronized
-    fun loadPlaylists(): List<Playlist> {
-        val properties = com.resonance.player.io.AtomicPropertiesFile.read(playlistFile) {
-            com.resonance.player.io.AtomicPropertiesFile.validIndexed(it, "playlist", "id")
-        }
-        val tracksById = load().associateBy(Track::id)
-        val count = properties.getProperty("count")?.toIntOrNull() ?: return emptyList()
-        return (0 until count).mapNotNull { index ->
-            val prefix = "playlist.$index."
-            val id = properties.getProperty(prefix + "id") ?: return@mapNotNull null
-            val trackIds = properties.getProperty(prefix + "tracks").orEmpty().split(',').filter(String::isNotBlank)
-            Playlist(
-                id = id,
-                name = properties.getProperty(prefix + "name") ?: "未命名歌单",
-                subtitle = properties.getProperty(prefix + "subtitle") ?: "${trackIds.size} 首",
-                tracks = trackIds.mapIndexedNotNull { trackIndex, trackId ->
-                    val snapshot = readCatalogTrack(properties, prefix, trackIndex, trackId)
-                    tracksById[trackId]?.let { local ->
-                        local.copy(
-                            artworkPath = local.artworkPath ?: snapshot?.artworkPath,
-                            artworkSeed = if (local.artworkPath == null && snapshot != null) snapshot.artworkSeed else local.artworkSeed,
-                        )
-                    } ?: snapshot
-                },
-                artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: id.hashCode(),
-            )
-        }
-    }
-
-    @Synchronized
-    fun savePlaylists(playlists: List<Playlist>) {
-        Files.createDirectories(appDirectory)
-        val properties = Properties().apply { setProperty("count", playlists.size.toString()) }
-        playlists.forEachIndexed { index, playlist ->
-            val prefix = "playlist.$index."
-            properties.setProperty(prefix + "id", playlist.id)
-            properties.setProperty(prefix + "name", playlist.name)
-            properties.setProperty(prefix + "subtitle", playlist.subtitle)
-            properties.setProperty(prefix + "seed", playlist.artworkSeed.toString())
-            properties.setProperty(prefix + "tracks", playlist.tracks.joinToString(",", transform = Track::id))
-            playlist.tracks.forEachIndexed { trackIndex, track -> writeCatalogTrack(properties, prefix, trackIndex, track) }
-        }
-        writePropertiesAtomically(playlistFile, properties, "Resonance playlists")
-    }
-
-    @Synchronized
-    fun loadLastSelectedPlaylistId(): String? {
-        if (!Files.isRegularFile(uiStateFile)) return null
-        val properties = Properties()
-        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
-        return properties.getProperty("library.selectedPlaylistId")?.takeIf(String::isNotBlank)
-    }
-
-    @Synchronized
-    fun saveLastSelectedPlaylistId(playlistId: String?) {
-        Files.createDirectories(appDirectory)
-        val properties = if (Files.isRegularFile(uiStateFile)) {
-            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
-        } else {
-            Properties()
-        }
-        if (playlistId.isNullOrBlank()) {
-            properties.remove("library.selectedPlaylistId")
-        } else {
-            properties.setProperty("library.selectedPlaylistId", playlistId)
-        }
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-
-    @Synchronized
-    fun loadThemeMode(): com.resonance.player.model.ThemeMode {
-        if (!Files.isRegularFile(uiStateFile)) return com.resonance.player.model.ThemeMode.Light
-        val properties = Properties()
-        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
-        return when (properties.getProperty("app.themeMode")) {
-            "Dark" -> com.resonance.player.model.ThemeMode.Dark
-            "Light" -> com.resonance.player.model.ThemeMode.Light
-            "System" -> com.resonance.player.model.ThemeMode.System
-            else -> com.resonance.player.model.ThemeMode.Light
-        }
-    }
-
-    @Synchronized
-    fun saveThemeMode(mode: com.resonance.player.model.ThemeMode) {
-        Files.createDirectories(appDirectory)
-        val properties = if (Files.isRegularFile(uiStateFile)) {
-            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
-        } else {
-            Properties()
-        }
-        properties.setProperty("app.themeMode", mode.name)
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-
-    @Synchronized
-    fun loadPlaybackMode(): PlaybackModePreference {
-        if (!Files.isRegularFile(uiStateFile)) return PlaybackModePreference()
-        val properties = Properties()
-        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
-        val shuffle = properties.getProperty("playback.shuffleEnabled")?.toBooleanStrictOrNull() ?: false
-        val repeatMode = when (properties.getProperty("playback.repeatMode")) {
-            "All" -> RepeatMode.All
-            "One" -> RepeatMode.One
-            else -> RepeatMode.Off
-        }
-        return PlaybackModePreference(shuffleEnabled = shuffle, repeatMode = repeatMode)
-    }
-
-    @Synchronized
-    fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
-        Files.createDirectories(appDirectory)
-        val properties = if (Files.isRegularFile(uiStateFile)) {
-            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
-        } else {
-            Properties()
-        }
-        properties.setProperty("playback.shuffleEnabled", shuffle.toString())
-        properties.setProperty("playback.repeatMode", repeatMode.name)
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-
-    @Synchronized
-    fun loadDeepSeekConfig(): DeepSeekConfig {
-        if (!Files.isRegularFile(uiStateFile)) return DeepSeekConfig()
-        val properties = Properties()
-        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
-        return DeepSeekConfig(
-            apiKey = properties.getProperty("deepseek.apiKey", ""),
-            baseUrl = properties.getProperty("deepseek.baseUrl", "https://api.deepseek.com/v1"),
-            model = properties.getProperty("deepseek.model", "deepseek-chat"),
-            enabled = properties.getProperty("deepseek.enabled", "true").toBoolean(),
-        )
-    }
-
-    @Synchronized
-    fun saveDeepSeekConfig(config: DeepSeekConfig) {
-        Files.createDirectories(appDirectory)
-        val properties = if (Files.isRegularFile(uiStateFile)) {
-            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
-        } else {
-            Properties()
-        }
-        properties.setProperty("deepseek.apiKey", config.apiKey)
-        properties.setProperty("deepseek.baseUrl", config.baseUrl)
-        properties.setProperty("deepseek.model", config.model)
-        properties.setProperty("deepseek.enabled", config.enabled.toString())
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-
-    @Synchronized
-    fun loadCustomLyricsFolder(): String? {
-        if (!Files.isRegularFile(uiStateFile)) return null
-        val properties = Properties()
-        Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(properties::load)
-        return properties.getProperty("lyrics.customFolder")?.takeIf(String::isNotBlank)
-    }
-
-    @Synchronized
-    fun saveCustomLyricsFolder(folder: String?) {
-        Files.createDirectories(appDirectory)
-        val properties = if (Files.isRegularFile(uiStateFile)) {
-            Properties().apply { Files.newBufferedReader(uiStateFile, StandardCharsets.UTF_8).use(::load) }
-        } else {
-            Properties()
-        }
-        if (folder.isNullOrBlank()) {
-            properties.remove("lyrics.customFolder")
-        } else {
-            properties.setProperty("lyrics.customFolder", folder)
-        }
-        writePropertiesAtomically(uiStateFile, properties, "Resonance UI state")
-    }
-
-    private fun readCatalogTrack(properties: Properties, playlistPrefix: String, trackIndex: Int, id: String): Track? {
-        val prefix = "${playlistPrefix}catalog.$trackIndex."
-        val title = properties.getProperty(prefix + "title") ?: return null
-        return Track(
-            id = id,
-            title = title,
-            artist = properties.getProperty(prefix + "artist") ?: "未知歌手",
-            album = properties.getProperty(prefix + "album") ?: "未知专辑",
-            durationText = properties.getProperty(prefix + "duration") ?: "0:00",
-            artworkSeed = properties.getProperty(prefix + "seed")?.toIntOrNull() ?: id.hashCode(),
-            isFavorite = properties.getProperty(prefix + "favorite").toBoolean(),
-            artworkPath = properties.getProperty(prefix + "artwork")?.takeIf(String::isNotBlank),
-            mimeType = properties.getProperty(prefix + "mime") ?: "application/vnd.resonance.catalog+audio",
-        )
-    }
-
-    private fun writeCatalogTrack(properties: Properties, playlistPrefix: String, trackIndex: Int, track: Track) {
-        val prefix = "${playlistPrefix}catalog.$trackIndex."
-        properties.setProperty(prefix + "title", track.title)
-        properties.setProperty(prefix + "artist", track.artist)
-        properties.setProperty(prefix + "album", track.album)
-        properties.setProperty(prefix + "duration", track.durationText)
-        properties.setProperty(prefix + "seed", track.artworkSeed.toString())
-        properties.setProperty(prefix + "favorite", track.isFavorite.toString())
-        properties.setProperty(prefix + "artwork", track.artworkPath.orEmpty())
-        properties.setProperty(prefix + "mime", track.mimeType)
-    }
-
-    private fun writePropertiesAtomically(target: Path, properties: Properties, comment: String) {
-        com.resonance.player.io.AtomicPropertiesFile.write(target, properties, comment)
-    }
-
-    private fun preferredManagedMusicDirectory(): Path {
-        System.getenv("RESONANCE_LIBRARY")?.takeIf(String::isNotBlank)?.let { return Path.of(it) }
-        val dDrive = Path.of("D:\\")
-        return if (System.getProperty("os.name").startsWith("Windows", true) && Files.isDirectory(dDrive)) dDrive.resolve("Music").resolve("Resonance")
-        else Path.of(System.getProperty("user.home"), "Music", "Resonance")
-    }
-}
-
-private class DesktopAudioPlayer(
-    private val onEnded: () -> Unit,
-    private val onProgress: (Float) -> Unit,
-    private val onPlayingChanged: (Boolean) -> Unit,
-    private val onBufferingChanged: (Boolean) -> Unit,
-    private val onError: (PlaybackIssue) -> Unit,
-    private val stats: com.resonance.player.playback.ListeningStatsRecorder,
-) {
-    private val backend: com.resonance.player.audio.DesktopPcmPlayer =
-        com.resonance.player.audio.DesktopPcmPlayer({}, {}, {}, {}, ::event)
-    val currentRequestId: Long? get() = backend.currentRequestId
-    @Synchronized private fun event(event: com.resonance.player.audio.DesktopPlaybackEvent) {
-        if (event.requestId != backend.currentRequestId) return
-        sample(event.snapshot)
-        when (event.kind) {
-            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Buffering -> onBufferingChanged(true)
-            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Playing -> {
-                onBufferingChanged(false)
-                onPlayingChanged(event.snapshot.isPlaying)
-            }
-            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Progress -> onProgress(event.snapshot.progress)
-            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Ended -> { onBufferingChanged(false); stats.finish(); onProgress(1f); onEnded() }
-            com.resonance.player.audio.DesktopPlaybackEvent.Kind.Error -> {
-                onBufferingChanged(false)
-                onPlayingChanged(false)
-                onError(PlaybackIssue(event.message,
-                    trackId = event.snapshot.currentTrack?.id, requestId = event.requestId))
-            }
-        }
-    }
-    private fun sample(state: PlayerState = backend.snapshot(), discontinuity: Boolean = false) {
-        stats.sample(state.currentTrack?.id, state.positionMs ?: 0L,
-            state.currentTrack?.durationText?.let { durationTextToSeconds(it) * 1000L } ?: 0L,
-            state.isPlaying, state.playbackSpeed, discontinuity)
-    }
-    val positionMs: Long? get() = backend.positionMs
-    fun isPrepared(trackId: String): Boolean = backend.isPrepared(trackId)
-    fun snapshot(): PlayerState = backend.snapshot()
-    val playWhenReady: Boolean get() = backend.playWhenReady
-    @Synchronized fun play(track: Track, autoPlay: Boolean = true, initialProgress: Float = 0f) {
-        sample(); stats.start(track.id, (durationTextToSeconds(track.durationText) * 1000L * initialProgress).toLong())
-        backend.play(track, autoPlay, initialProgress)
-    }
-    @Synchronized fun setPlaying(isPlaying: Boolean) {
-        sample()
-        if (!isPlaying) onBufferingChanged(false)
-        if (isPlaying && backend.sessionClosed) stats.start(backend.snapshot().currentTrack?.id)
-        backend.setPlaying(isPlaying)
-    }
-    fun setVolume(volume: Float) = backend.setVolume(volume)
-    fun setTrackGain(gainDb: Float) = backend.setTrackGain(gainDb)
-    @Synchronized fun setPlaybackSpeed(speed: Float) { sample(); backend.setPlaybackSpeed(speed); sample(discontinuity = true) }
-    fun setVocalSuppression(enabled: Boolean) = backend.setVocalSuppression(enabled)
-    fun setPreset(preset: com.resonance.player.model.AudioEffectPreset) = backend.setPreset(preset)
-    @Synchronized fun seekTo(fraction: Float) { sample(); backend.seekTo(fraction); sample(discontinuity = true) }
-    @Synchronized fun close() { sample(); onBufferingChanged(false); backend.close(); stats.flushSoon() }
-}
-
-private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
+internal fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
     .digest(value.toByteArray(StandardCharsets.UTF_8))
     .joinToString("") { "%02x".format(it) }
 
-private fun sha256File(path: Path): String {
+internal fun sha256File(path: Path): String {
     val digest = MessageDigest.getInstance("SHA-256")
     Files.newInputStream(path).buffered().use { input ->
         val buffer = ByteArray(256 * 1024)

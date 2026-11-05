@@ -1,0 +1,152 @@
+[
+  {
+    "class": "com.resonance.player.AssistantDeletionConfirmationDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "concreteFilesAreShownAndNoOperationOccursUntilExplicitConfirmation",
+        "class": "com.resonance.player.AssistantDeletionConfirmationDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "rapidPageChangesKeepTopEdgeCoveredInDarkMode",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "libraryBoundarySwipeOpensAssistant",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantExampleFillsDraftWithoutSendingRequest",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "librarySwipesSelectTabsBeforeMainNavigationAndRetainListPosition",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantKeepsPlayerAndDockBoundsStable",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidPageChangesKeepTopEdgeCoveredInLightMode",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "enteringSongsDoesNotJumpToPlayingTrackAndTabScrollPositionIsRetained",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantHeaderKeepsTitleOnOneLineAndActionsVisible",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "enabledRecommendationCardOpensItsOwnPlaylistPage",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "playerCanExpandAndCloseRepeatedlyWithoutLeavingAnOverlay",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "aboutShowsHighlightsForInstalledVersion",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "disabledRecommendationsStayHiddenAndRemainConfigurableFromSettings",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.SmartCleanupConfirmationDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "selectedGroupsProduceOneBatchAfterConfirmationAndCancelProducesNone",
+        "class": "com.resonance.player.SmartCleanupConfirmationDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "settingsOpensQuickGuideAndAllFourPagesCanBeRead",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseAndResumeRetainStepAndDoNotEnableRecommendations",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "quickGuideRemainsNavigableWithLargeTextAndShortViewport",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "offscreenSettingsTargetIsBroughtIntoView",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "welcomeCanBeSkippedAndIsNotOfferedAgain",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "spotlightPassesRealClicksAndAdvancesThroughPlayerTabs",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "tabsExposeSelectionAndKeepTouchTargetsInReducedMotion",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "seekAndVolumeExposeNativeProgressActionsAndFreshCallbacks",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "albumAtmosphereCanReadNativeArtworkPixels",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      }
+    ]
+  }
+]

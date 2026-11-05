@@ -170,6 +170,7 @@ internal class MusicSourceRegistry(
         val duration = durationTextToSeconds(track.durationText)
         val candidates = list().filter { it.enabled && "search" in it.capabilities && "getLyric" in it.capabilities }.take(8)
         val results = candidates.map { source -> async {
+            var plainFallback: Lyrics? = null
             try {
                 withTimeoutOrNull(8_000) {
                     val songs = parseSongs(source.id, call(source.id, "search", JSONArray().put("${track.title} ${track.artist}".take(180)).put(1).put("music")))
@@ -182,14 +183,18 @@ internal class MusicSourceRegistry(
                         val synchronized = usableTimeline(lrc, duration)
                         val lines = if (lrc.isNotEmpty()) lrc.map { if (synchronized) it else it.copy(timestampMs = null) }
                             else raw.lineSequence().map(String::trim).filter { it.isNotEmpty() && !it.startsWith("[") }.map { LyricLine(null, it) }.toList()
-                        if (lines.isNotEmpty()) return@withTimeoutOrNull Lyrics(track.id, lines, synchronized, false, "歌源 · ${source.name}")
+                        if (lines.isNotEmpty()) {
+                            val lyrics = Lyrics(track.id, lines, synchronized, false, "歌源 · ${source.name}")
+                            if (synchronized) return@withTimeoutOrNull lyrics
+                            if (plainFallback == null) plainFallback = lyrics
+                        }
                     }
-                    null
-                }
+                    plainFallback
+                } ?: plainFallback
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: Exception) { null }
+            catch (_: Exception) { plainFallback }
         } }.awaitAll()
-        results.firstOrNull { it != null }?.let { LyricsFetchResult.Found(it) }
+        (results.firstOrNull { it?.synchronized == true } ?: results.firstOrNull { it != null })?.let { LyricsFetchResult.Found(it) }
             ?: LyricsFetchResult.Unavailable("已查询歌词库和可用歌源，暂未找到匹配此歌手与版本的歌词", true)
     }
     suspend fun call(id: String, method: String, args: JSONArray): Any? {

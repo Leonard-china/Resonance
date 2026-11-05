@@ -47,12 +47,14 @@ internal fun SyncedLyricsPreview(
     stage: Boolean,
     compact: Boolean,
     modifier: Modifier = Modifier,
+    maximumHeight: androidx.compose.ui.unit.Dp? = null,
 ) {
     val target = activeIndex + 1 // The first item is the instrumental intro label.
     val listState = rememberLyricListState(lyrics.trackId, lyrics.lines, target)
     val reducedMotion = LocalReducedMotion.current
     val fontScale = LocalDensity.current.fontScale
-    val viewportHeight = (if (stage) 264.dp else if (compact) 88.dp else 112.dp) * fontScale
+    val preferredHeight = (if (stage) 264.dp else if (compact) 88.dp else 112.dp) * fontScale
+    val viewportHeight = maximumHeight?.let { minOf(preferredHeight, it) } ?: preferredHeight
     FollowLyric(listState, target, true, reducedMotion, listOf(display, fontScale, stage, compact, lyrics.lines))
     LazyColumn(
         state = listState,

@@ -73,9 +73,9 @@ class TogetherUiDeviceTest {
         ui.onNodeWithText("加密连接并跟听").performScrollTo().performClick()
         ui.runOnIdle { assertEquals(0, room.joins) }
         ui.onNodeWithText("确认加入").performClick()
-        ui.onNodeWithText("跟听中 · 由房主控制播放").assertExists()
+        ui.onNodeWithText("已连接，播放已暂停").assertExists()
         ui.runOnIdle { assertEquals(1, room.joins) }
-        ui.onNodeWithText("退出一起听").performScrollTo().performClick()
+        ui.onNodeWithText("退出一起听").performClick()
         ui.runOnIdle { assertEquals(1, room.leaves) }
     }
 
@@ -86,17 +86,17 @@ class TogetherUiDeviceTest {
         ui.runOnIdle { assertEquals(null, room.approval) }
         ui.onNodeWithText("同意加入").performScrollTo().performClick()
         ui.runOnIdle { assertEquals(true, room.approval) }
-        ui.onNodeWithText("结束房间").performScrollTo().performClick()
+        ui.onNodeWithText("结束房间").performClick()
         ui.runOnIdle { assertEquals(1, room.leaves) }
     }
 
     @Test fun roomCreationAndClosureUseExplicitActionsAndKeepPortVisible() {
         val room = Room(); show(room)
         ui.runOnIdle { assertEquals(0, room.hosts) }
-        ui.onNodeWithText("创建双人房间").performScrollTo().performClick()
-        ui.onNodeWithText("复制加密邀请").performScrollTo().assertIsDisplayed()
+        ui.onNodeWithText("创建房间").performScrollTo().performClick()
+        ui.onNodeWithText("复制邀请链接").assertIsDisplayed()
         ui.runOnIdle { assertEquals(1, room.hosts); assertEquals(45873, room.state.value.port) }
-        ui.onNodeWithText("结束房间").performScrollTo().performClick()
+        ui.onNodeWithText("结束房间").performClick()
         ui.runOnIdle { assertEquals(1, room.leaves) }
     }
 }

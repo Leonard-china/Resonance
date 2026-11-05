@@ -104,12 +104,15 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
                 else -> false
             }
         }
+        if (!deleted && !track.sourceUri.isNullOrBlank()) return DeleteTrackReport(false, false, "存储提供方未批准删除；曲库记录已保留")
         synchronized(lock(context)) {
             writeManaged(context, readManaged(context).filterNot { it.id == track.id })
+            val favorites = context.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE)
+            check(favorites.edit().putStringSet("ids", favorites.getStringSet("ids", emptySet()).orEmpty() - track.id).commit()) { "收藏更新失败" }
             savePlaylistsNow(playlistsNow().map { it.copy(tracks = it.tracks.filterNot { t -> t.id == track.id }) })
             json.update { root -> val a = root.optJSONArray("removedIds") ?: org.json.JSONArray(); val ids = (0 until a.length()).map(a::getString).toMutableSet(); ids += track.id; root.put("removedIds", org.json.JSONArray(ids.toList())) }
         }
-        return DeleteTrackReport(true, deleted, if (deleted) "音频已删除" else "未能删除音频")
+        return DeleteTrackReport(true, deleted, if (deleted) "音频已删除" else "已移除离线记录", setOf(track.id))
     }
     override suspend fun importAudio(path: Path, request: VideoImportRequest, cover: Path?): Track = withContext(Dispatchers.IO) {
         Files.createDirectories(musicDirectory)
@@ -199,7 +202,6 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
             (0 until (props.getProperty("count")?.toIntOrNull() ?: 0)).mapNotNull { n ->
                 val p = "track.$n."; val id = props.getProperty(p + "id") ?: return@mapNotNull null
                 val source = props.getProperty(p + "source") ?: return@mapNotNull null
-                if (source.startsWith("file:") && !Files.isRegularFile(java.nio.file.Paths.get(java.net.URI(source)))) return@mapNotNull null
                 Track(id, props.getProperty(p + "title", "未知歌曲"), props.getProperty(p + "artist", "未知歌手"), props.getProperty(p + "album", "本地音乐"), props.getProperty(p + "duration", "0:00"), props.getProperty(p + "seed", "0").toIntOrNull() ?: 0, props.getProperty(p + "favorite", "false").toBoolean(), source.takeIf(String::isNotBlank), props.getProperty(p + "artwork")?.takeIf(String::isNotBlank), props.getProperty(p + "mime", "audio/mpeg"))
             }
         }

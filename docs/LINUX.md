@@ -1,4 +1,4 @@
-# 2026-11-04 — Linux 桌面版使用与构建
+# 2026-11-05 — Linux 桌面版使用与构建
 
 Linux 版复用原生 Compose Desktop 界面、FFmpeg 解码及 Java Sound 播放，不需要浏览器。当前 0.6.6 / 40 面向 x86_64，版本来自 `version.properties`。本轮完整便携包与桌面更新见 [0.6.6 发布记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)；最初的适配与 DEB 兼容边界见 [Linux 支持记录](changes/2026-11-03-04-linux-desktop-support.md)。
 
@@ -33,7 +33,17 @@ tar -xzf Resonance-0.6.6-linux-x86_64.tar.gz
 
 2026-11-04 后续已更新为 0.6.6：`current` 当时指向 `0.6.6-20261104-release/`，从原桌面快捷方式启动后确认新版进程、Normal 状态和 IsViewable 原生窗口。两个旧程序目录和入口备份保留，应用数据与音乐目录继续沿用原位置；见[本次更新与发布记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)。
 
-2026-11-04 最终导出修复：按用户要求优先重建并安装本轮完整便携包，`current` 现指向 `0.6.6-20261104-export-fix/`，沿用原桌面／菜单入口，直接启动后确认新版 Normal／IsViewable 原生窗口。较早程序和真实数据均保留；包校验及启动过程见[最终安装记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。
+2026-11-04 最终导出修复：按用户要求优先重建并安装本轮完整便携包，`current` 当时指向 `0.6.6-20261104-export-fix/`，沿用原桌面／菜单入口，直接启动后确认新版 Normal／IsViewable 原生窗口。较早程序和真实数据均保留；包校验及启动过程见[最终安装记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。
+
+2026-11-05 较早 AM++ 界面安装：本次完整包已安装到 `0.6.6-20261105-am-ui/`，392 文件与本次验收的 app image 比对通过，`current` 原子切换，旧程序保留。前轮保留的旧播放器在本次已通过托盘「退出」正常结束，现已运行最新版并确认可见原生窗口；见[桌面切换记录](changes/2026-11-05-03-desktop-latest-running-instance.md)。完整结果与验证边界见[AM++ 原生 UI 记录](changes/2026-11-05-02-am-reference-native-ui.md)。
+
+2026-11-05 当前本机入口：歌词修复版完整程序已安装到 `0.6.6-20261105-lyrics-fix/`，本次 392 个程序文件和 1459 个编译输出条目核对一致；`current` 已原子切换，旧实例经托盘正常退出，原桌面／菜单启动器已运行新版并确认可见原生窗口、事件线程响应及组合器错误为空。保留此前 stability-refactor 等安装目录及原资料位置；本次使用普通完整 app image，非 ProGuard Release。见[本轮手机／电脑安装记录](changes/2026-11-05-09-install-lyrics-fix-on-phone-and-linux.md)。
+
+## 导入音乐（2026-11-05 核对）
+
+`.resonance` 歌单包现在也可在「导入音乐」中直接选择、扫描所在文件夹，或从文件管理器拖入应用窗口；会校验并恢复歌曲、封面、收藏及歌单关系。包内音频保留原格式，输入包保留；也可继续从「歌单导入与导出 → 导入歌单」选择。此次修复及本机验证见[歌单包导入记录](changes/2026-11-05-04-linux-resonance-package-import.md)。
+
+在「工具 → 导入音乐」选择一个或多个音乐文件/文件夹，或直接将文件管理器中的音乐拖入应用窗口，看到「松开以导入音乐」后释放。文件夹递归扫描，重叠选择的真实路径只处理一次；坏文件隔离报告，没有可用音频时说明原因。原音频继续引用原位置；转换生成托管 MP3，保留输入，不将拖入操作当作移动文件。导入进度可取消，已有任务期间先完成或取消再拖入。实际验证与 Windows 限制见[本轮记录](changes/2026-11-05-01-desktop-files-and-drop-import.md)。
 
 ## 文件与平台差异
 

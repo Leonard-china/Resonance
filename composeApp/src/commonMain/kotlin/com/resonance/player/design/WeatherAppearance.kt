@@ -24,7 +24,10 @@ val LocalReducedMotion = staticCompositionLocalOf { false }
 val LocalAppForeground = staticCompositionLocalOf { true }
 
 @Composable
-fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode, content: @Composable () -> Unit) {
+fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode,
+    lifetime: com.resonance.player.application.ApplicationLifetime? = null,
+    applicationScope: kotlinx.coroutines.CoroutineScope? = null,
+    content: @Composable () -> Unit) {
     var preferences by remember(services) { mutableStateOf(AppearancePreferences()) }
     var snapshot by remember(services) { mutableStateOf<WeatherSnapshot?>(null) }
     var loaded by remember(services) { mutableStateOf(false) }
@@ -34,7 +37,18 @@ fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode, con
     var requestPermission by remember { mutableStateOf(false) }
     val foreground by services.foreground.collectAsState()
 
-    LaunchedEffect(services) {
+    val localScope = rememberCoroutineScope()
+    val scope = applicationScope ?: localScope
+    val writer = remember(services) { com.resonance.player.data.PersistenceQueue(scope) { status = "外观设置未能保存，请稍后重试" } }
+    DisposableEffect(lifetime, writer) {
+        lifetime?.register("appearance.preferences") { writer.closeAndJoin() }
+        onDispose { writer.close() }
+    }
+    fun updatePreferences(next: AppearancePreferences) {
+        preferences = next
+        writer.submitLatest("appearance.preferences") { services.saveAppearance(next) }
+    }
+    com.resonance.player.application.ApplicationEffect(scope, services) {
         try {
             preferences = services.loadAppearance()
             snapshot = services.loadWeatherSnapshot()
@@ -43,18 +57,15 @@ fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode, con
             status = "外观设置暂时无法读取"
         } finally { loaded = true }
     }
-    LaunchedEffect(preferences, loaded) {
-        if (!loaded) return@LaunchedEffect
-        delay(150)
-        try { services.saveAppearance(preferences) }
-        catch (error: Exception) {
-            if (error is CancellationException) throw error
-            status = "外观设置未能保存，请稍后重试"
+    com.resonance.player.application.ApplicationEffect(scope, loaded) {
+        if (loaded) {
+            val value = preferences
+            writer.submitLatest("appearance.preferences") { services.saveAppearance(value) }
         }
     }
 
-    LaunchedEffect(loaded, foreground, preferences.accentMode, preferences.fallbackCity, refresh) {
-        if (!loaded || !foreground || preferences.accentMode != AccentMode.Weather) return@LaunchedEffect
+    com.resonance.player.application.ApplicationEffect(scope, loaded, foreground, preferences.accentMode, preferences.fallbackCity, refresh) {
+        if (!loaded || !foreground || preferences.accentMode != AccentMode.Weather) return@ApplicationEffect
         while (isActive) {
             val age = snapshot?.let { services.currentTimeMillis() - it.updatedAtMillis }
             val cachedCityMatches = preferences.fallbackCity == null || snapshot?.locationLabel == "当前位置" ||
@@ -73,7 +84,7 @@ fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode, con
                         val result = services.fetchWeather(location, preferences.retainedPalette)
                         services.saveWeatherSnapshot(result)
                         snapshot = result
-                        preferences = preferences.copy(retainedPalette = result.palette)
+                        updatePreferences(preferences.copy(retainedPalette = result.palette))
                         status = if (deviceLocation == null) "正在使用兜底城市" else "已使用设备大致位置"
                     }
                 } catch (error: Exception) {
@@ -97,11 +108,11 @@ fun WeatherAppearanceTheme(services: PlatformServices, themeMode: ThemeMode, con
                     requestPermission = true
                     refresh++
                 }
-                preferences = next.copy(retainedPalette = when (next.accentMode) {
+                updatePreferences(next.copy(retainedPalette = when (next.accentMode) {
                     AccentMode.Sage -> WeatherPalette.Sage
                     AccentMode.IceBlue -> WeatherPalette.IceBlue
                     AccentMode.Weather -> palette
-                })
+                }))
             },
             onRefresh = { ask -> requestPermission = ask; refresh++ },
             searchCities = services::searchWeatherCities,

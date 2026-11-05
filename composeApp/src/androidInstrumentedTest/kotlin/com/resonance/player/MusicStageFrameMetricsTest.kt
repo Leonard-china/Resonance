@@ -131,11 +131,16 @@ class MusicStageFrameMetricsTest {
             if (navigation) {
                 navigateJourney()
             } else {
-                Thread.sleep(3_000)
-                instrumentation.runOnMainSync { state.value = state.value.copy(currentTrack = tracks.last()) }
-                Thread.sleep(3_000)
-                instrumentation.runOnMainSync { state.value = state.value.copy(progress = .65f) }
-                Thread.sleep(2_000)
+                // Idle UI renders on demand. Drive explicit progress changes instead of assuming
+                // a decorative infinite animation exists and mistaking idle time for dropped frames.
+                repeat(80) { index ->
+                    instrumentation.runOnMainSync {
+                        state.value = state.value.copy(progress = .1f + index * .009f,
+                            positionMs = 24_000L + index * 2_160L,
+                            currentTrack = if (index < 40) tracks.first() else tracks.last())
+                    }
+                    Thread.sleep(100)
+                }
             }
             collect.set(false)
             collectedMillis = android.os.SystemClock.elapsedRealtime() - started
@@ -152,6 +157,7 @@ class MusicStageFrameMetricsTest {
         val deadlines = samples.filter { it.deadline > 0 }
         val report = JSONObject().put("label", label).put("sdk", Build.VERSION.SDK_INT).put("refreshRate", refreshRate)
             .put("scenario", if (navigation) "navigation" else "player")
+            .put("stimulus", if (navigation) "page journey" else "80 explicit progress updates at 100ms intervals")
             .put("warmNavigation", warmNavigation)
             .put("collectionMillis", collectedMillis)
             .put("frames", samples.size).put("p50Ms", percentile(.5)).put("p95Ms", percentile(.95)).put("p99Ms", percentile(.99))

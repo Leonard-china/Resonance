@@ -1,0 +1,50 @@
+[
+  {
+    "ignored": 0,
+    "milliseconds": 40110,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "renderFrostedDestinationsThroughTheRealShell",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 14191,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "shortLandscapeRetainsCollectionViewportAndTransport",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1092,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "nativePagesReverseWithoutRecreatingTheDepartingContent",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  }
+]

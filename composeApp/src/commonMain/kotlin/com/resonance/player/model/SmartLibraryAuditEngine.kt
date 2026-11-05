@@ -3,8 +3,9 @@ package com.resonance.player.model
 object SmartLibraryAuditEngine {
 
     private val trashPatterns = listOf(
-        Regex("^\\[[^\\]]+\\]\\s*"), // [mqms2], [320k]
-        Regex("^【[^】]+】\\s*"),     // 【无损音质】
+        // Strip only known quality labels; arbitrary brackets can identify a recording version.
+        Regex("^\\[(?:mqms2|[0-9]{2,4}k(?:bps)?|flac|sq|hq|无损(?:音质)?|高品质|高音质)\\]\\s*", RegexOption.IGNORE_CASE),
+        Regex("^【(?:mqms2|[0-9]{2,4}k(?:bps)?|flac|sq|hq|无损(?:音质)?|高品质|高音质)】\\s*", RegexOption.IGNORE_CASE),
         Regex("^(kw|kg|wy|tx|128k|320k|flac|sq|hq)_+", RegexOption.IGNORE_CASE),
         Regex("\\.(mp3|flac|m4a|wav|aac|ogg|opus)$", RegexOption.IGNORE_CASE),
         Regex("_+(128|320)k$", RegexOption.IGNORE_CASE),
@@ -69,8 +70,10 @@ object SmartLibraryAuditEngine {
             }
 
             // Group for duplicate check
-            val normKey = normalizeTrackKey(cleanArtist, cleanTitle)
-            groupedByKey.getOrPut(normKey) { mutableListOf() }.add(track)
+            if (!track.isMissingArtist && cleanTitle.isNotBlank()) {
+                val normKey = normalizeTrackKey(cleanArtist, cleanTitle) + "::" + track.durationText
+                groupedByKey.getOrPut(normKey) { mutableListOf() }.add(track)
+            }
         }
 
         // Duplicate groups
@@ -85,7 +88,8 @@ object SmartLibraryAuditEngine {
                         .thenByDescending { !it.isMissingAlbum }
                 )
                 val keepId = sorted.first().id
-                val toClean = sorted.drop(1).map { it.id }.toSet()
+                // Metadata similarity is not evidence that two recordings are interchangeable.
+                val toClean = emptySet<String>()
                 duplicateGroups.add(
                     DuplicateGroup(
                         key = key,
@@ -108,7 +112,7 @@ object SmartLibraryAuditEngine {
 
     private fun normalizeTrackKey(artist: String, title: String): String {
         val a = artist.lowercase().replace(Regex("[^\\p{L}\\p{N}]"), "")
-        val t = title.lowercase().replace(Regex("\\(.*?\\)|（.*?）|\\[.*?\\]"), "").replace(Regex("[^\\p{L}\\p{N}]"), "")
+        val t = title.lowercase().replace(Regex("[^\\p{L}\\p{N}]"), "")
         return "$a::$t"
     }
 }

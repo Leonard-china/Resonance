@@ -19,11 +19,12 @@ internal interface SourceNetwork {
 }
 
 /** Plugins receive this public HTTP/HTTPS transport, never JVM objects, files, cookies or AI keys. */
-internal class PublicSourceNetwork : SourceNetwork {
-    private val client = OkHttpClient.Builder()
+internal class PublicSourceNetwork(private val client: OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS).readTimeout(20, TimeUnit.SECONDS)
         .callTimeout(40, TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false)
-        .dns(PublicSourceDns()).build()
+        .dns(PublicSourceDns()).build()) : SourceNetwork {
+    // Metadata requests and a progressing full song have different lifetime requirements.
+    private val downloadClient = client.newBuilder().callTimeout(10, TimeUnit.MINUTES).build()
 
     override suspend fun request(options: JSONObject): JSONObject = withContext(Dispatchers.IO) {
         val method = options.optString("method", "GET").uppercase()
@@ -68,7 +69,7 @@ internal class PublicSourceNetwork : SourceNetwork {
         repeat(5) {
             val builder = Request.Builder().url(current)
             applyHeaders(builder, currentHeaders)
-            val result = execute(builder.build()) { response ->
+            val result = execute(builder.build(), downloadClient) { response ->
                 if (response.isRedirect) {
                     val location = response.header("Location") ?: error("下载跳转缺少地址")
                     val next = try {
@@ -106,8 +107,8 @@ internal class PublicSourceNetwork : SourceNetwork {
         error("歌源下载跳转次数过多")
     }
 
-    private suspend fun <T> execute(request: Request, block: suspend (Response) -> T): T = coroutineScope {
-        val call = client.newCall(request)
+    private suspend fun <T> execute(request: Request, transport: OkHttpClient = client, block: suspend (Response) -> T): T = coroutineScope {
+        val call = transport.newCall(request)
         val watchdog = launch(Dispatchers.Default) { try { awaitCancellation() } finally { call.cancel() } }
         try { call.execute().use { block(it) } } finally { watchdog.cancel() }
     }

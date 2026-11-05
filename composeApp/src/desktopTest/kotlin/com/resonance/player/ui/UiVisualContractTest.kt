@@ -131,10 +131,11 @@ class UiVisualContractTest {
 
     @Test fun draggingProgressCommitsOnlyOnceOnRelease() {
         SwingUtilities.invokeAndWait {
+            for (flat in listOf(false, true)) {
             val seeks = mutableListOf<Float>()
             ImageComposeScene(400, 100) {
                 ResonanceTheme(reducedMotion = true) {
-                    SoftRefinedPlaybackScrubber(.2f, "4:00", { seeks += it }, { _, _ -> "0:48" })
+                    SoftRefinedPlaybackScrubber(.2f, "4:00", { seeks += it }, { _, _ -> "0:48" }, flat = flat)
                 }
             }.rendering { scene ->
                 scene.render(0).close()
@@ -151,22 +152,33 @@ class UiVisualContractTest {
                 assertEquals(1, seeks.size)
                 assertTrue(seeks.single() > .7f)
             }
+            }
         }
     }
 
     @Test fun songInformationRemainsReachableFromPlayerMenu() {
         SwingUtilities.invokeAndWait {
+            for (mode in listOf(ThemeMode.Light, ThemeMode.Dark)) {
             ImageComposeScene(360, 800) {
-                ResonanceTheme(reducedMotion = true) { FixturePlayer() }
+                ResonanceTheme(mode, reducedMotion = true) { FixturePlayer() }
             }.rendering { scene ->
-                scene.render(0).close()
+                var time = 0L
+                fun settle() { repeat(40) { time += 16_666_667; scene.render(time).close() } }
+                fun capture(name: String) {
+                    settle()
+                    val output = Path.of("build/am-reference-ui/dialogs/$name-${mode.name}.png")
+                    Files.createDirectories(output.parent)
+                    scene.render(time).use { bitmap ->
+                        assertNotNull(bitmap.encodeToData()).use { Files.write(output, it.bytes) }
+                    }
+                }
+                settle()
                 assertNotNull(scene.node("播放选项").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
-                scene.render(100_000_000).close()
-                scene.render(500_000_000).close()
+                capture("playback-menu")
                 assertNotNull(scene.node("歌曲与来源").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
-                scene.render(600_000_000).close()
-                scene.render(1_000_000_000).close()
+                capture("track-info")
                 assertNotNull(scene.node("关闭").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+            }
             }
         }
     }
@@ -298,6 +310,7 @@ class UiVisualContractTest {
                     "getTogetherNotificationsBlocked" -> MutableStateFlow(false)
                     "requestTogetherNotifications" -> Unit
                     "getImportProgress" -> MutableStateFlow<ImportProgress?>(null)
+                    "getListeningStats" -> MutableStateFlow(ListeningStatsSnapshot(loaded = true))
                     "getAllListeningStats" -> AllListeningStats()
                     "getForeground" -> MutableStateFlow(true)
                     "audioFileAvailable" -> true
@@ -447,6 +460,7 @@ class UiVisualContractTest {
     }
 
     @Test fun renderNativeMotionPreviewFrames() {
+        org.junit.Assume.assumeTrue("Enable RESONANCE_UI_ARTIFACTS for 360-frame media export", System.getenv("RESONANCE_UI_ARTIFACTS") == "1")
         SwingUtilities.invokeAndWait {
             val output = Path.of("build/ui-stage-motion/frames")
             Files.createDirectories(output)
@@ -580,9 +594,13 @@ class UiVisualContractTest {
                         }.rendering { scene ->
                             scene.render(0).close()
                             scene.render(500_000_000).use { image ->
-                                val png = assertNotNull(image.encodeToData())
-                                val suffix = if (scale > 1f) "-large-text" else if (height == 360) "-landscape" else ""
-                                png.use { Files.write(output.resolve("$page-${mode.name.lowercase()}-$width$suffix.png"), it.bytes) }
+                                // Keep the full 70-scene render/dimension matrix in normal regression.
+                                // PNG export is optional evidence, not an assertion, and is CPU-expensive.
+                                if (System.getenv("RESONANCE_UI_ARTIFACTS") == "1") {
+                                    val png = assertNotNull(image.encodeToData())
+                                    val suffix = if (scale > 1f) "-large-text" else if (height == 360) "-landscape" else ""
+                                    png.use { Files.write(output.resolve("$page-${mode.name.lowercase()}-$width$suffix.png"), it.bytes) }
+                                }
                                 assertEquals(width, image.width)
                                 assertEquals(height, image.height)
                             }

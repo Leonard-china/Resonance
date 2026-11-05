@@ -19,6 +19,12 @@
 - 版本唯一来源是 `version.properties`；普通开发和构建不自动升版，不手写生成的 `BuildVersion.kt`。
 - 官网任务先读 `website/README.md`；真实 `.env`、作者入口/密码、数据库、收款码和上传图片只放忽略的运行数据目录。单改官网运行网站测试，不把未执行的 Kotlin 回归或 Ubuntu/SMTP 部署写成已验证。
 
+## 本机构建资源
+
+- 共享桌面上先检查可用内存和残留构建，同一时刻只运行一项重量级验证；不要将 Android 编译与桌面 ProGuard/Release 打包合并执行。
+- 当前 Linux 电脑的 Gradle/Kotlin/打包验证须限制整个进程树，默认 `MemoryMax=2G`、`MemoryHigh=1536M`、`MemorySwapMax=0`，并使用单 worker、短生命周期 Gradle 及进程内 Kotlin 编译。分别设置 JVM 堆上限不等于总内存限额。具体方式见 [协作流程](docs/AI-WORKFLOW.md#本机资源预算)。
+- 达到限额时记录构建受阻，保留日志并调整验证范围；不得无上限重试、自动放宽总内存或关闭用户应用腾内存。普通构建不改系统 swap、仓库或全局 Gradle 默认配置。
+
 ## 每次功能开发或 Bug 修复的交付要求
 
 1. **必须新增一份独立变更文档**，不可只改 README、只追加一句日志或覆盖以前的记录。

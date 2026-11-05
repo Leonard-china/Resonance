@@ -79,6 +79,73 @@ class MusicAssistantTest {
         } finally { Files.walk(root).use { files -> files.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) } }
     }
 
+    @Test fun failedAutomaticRecommendationDoesNotPayAgainEachMinuteOrAfterRestart() = runBlocking {
+        fixture { runtime, library, videos, ai, store ->
+            videos.unavailable = true
+            ai.songs("Missing")
+            assertFailsWith<IllegalStateException> { runtime.recommend(false) }
+            repeat(3) { runtime.recommend(false) }
+            assertEquals(1, ai.requests.size)
+            val restarted = JvmMusicAssistant(store, store.directory.parent, library, client = ai, videoSource = videos)
+            restarted.recommend(false)
+            assertEquals(1, ai.requests.size)
+            assertEquals(1L, store.read().getJSONObject("usage.${java.time.YearMonth.now()}").getJSONObject("byOperation").getJSONObject("recommendation").getLong("attempts"))
+            ai.songs("Still Missing")
+            assertFailsWith<IllegalStateException> { runtime.recommend(true) }
+            assertEquals(2, ai.requests.size, "Explicit refresh may retry immediately")
+        }
+    }
+
+    @Test fun oldAutomaticAiSettingsEnterCooldownWithoutCallingTheModelOnUpgrade() = runBlocking {
+        fixture { _, library, videos, ai, store ->
+            store.update { it.remove("recommendationLastAttemptAt") }
+            val restarted = JvmMusicAssistant(store, store.directory.parent, library, client = ai, videoSource = videos)
+            restarted.recommend(false)
+            assertTrue(ai.requests.isEmpty())
+            assertTrue(store.read().getLong("recommendationLastAttemptAt") > 0)
+        }
+    }
+
+    @Test fun failedRepeatedToolsStopLocallyWithoutCallingTheModelForever() = runBlocking {
+        fixture { runtime, _, _, ai, _ ->
+            repeat(10) { ai.call("not_a_tool", JSONObject().put("attempt", it)) }
+            val error = assertFailsWith<IllegalStateException> { runtime.chat("给我推荐几首类似的歌曲", emptyList()) }
+            assertTrue(error.message.orEmpty().contains("6"))
+            assertEquals(6, ai.requests.size)
+            assertTrue(runtime.state.value.messages.last().content.contains("暂停"))
+        }
+    }
+
+    @Test fun laterSearchKeepsPreviouslyReturnedSourceIdsAvailableForDownload() = runBlocking {
+        fixture { runtime, _, _, ai, store ->
+            val registry = com.resonance.player.sources.MusicSourceRegistry(store)
+            val source = registry.install("""module.exports={platform:'下载ID夹具',search:async q=>[{id:q,title:'Fixture Song',artist:'Artist',duration:180}],getMediaSource:async()=>{throw new Error('fixture media unavailable')}};""")
+            ai.call("search_sources", JSONObject().put("query", "first"))
+            ai.call("search_sources", JSONObject().put("query", "second"))
+            ai.call("download_source", JSONObject().put("source_id", source.id).put("id", "first"))
+            ai.content("源暂不可用，未下载")
+            runtime.chat("找两首歌曲并下载第一首", emptyList())
+            val request = ai.requests.last()
+            val result = (0 until request.length()).map(request::getJSONObject).last { it.optString("role") == "tool" }.getString("content")
+            assertTrue(result.contains("fixture media unavailable"), result)
+            assertFalse(result.contains("请先搜索"), result)
+        }
+    }
+
+    @Test fun sourceDownloadFailureRemainsVisibleWhenBilibiliFallbackAlsoFails() = runBlocking {
+        fixture { runtime, _, videos, ai, store ->
+            videos.unavailable = true
+            com.resonance.player.sources.MusicSourceRegistry(store).install("""module.exports={platform:'下载错误夹具',search:async()=>[{id:'fixture',title:'Fixture Song',artist:'Artist',duration:180}],getMediaSource:async()=>{throw new Error('fixture media unavailable')}};""")
+            ai.call("find_and_download", JSONObject().put("title", "Fixture Song").put("artist", "Artist"))
+            ai.content("来源不可用，未下载")
+            runtime.chat("下载 Fixture Song", emptyList())
+            val request = ai.requests.last()
+            val result = (0 until request.length()).map(request::getJSONObject).last { it.optString("role") == "tool" }.getString("content")
+            assertContains(result, "fixture media unavailable")
+            assertContains(result, "没有找到可信")
+        }
+    }
+
     @Test fun libraryToolReturnsPlayableLinksWithoutExposingFileLocations() = runBlocking {
         fixture { runtime, library, _, ai, _ ->
             val song = Track("local / 中文", "Evening", "Artist", "Album", "3:00", 1,
@@ -215,7 +282,7 @@ class MusicAssistantTest {
             assertEquals(1, library.lists.single().tracks.size)
         }
     }
-    @Test fun unsolicitedDeleteToolIsRejectedButExplicitDeleteRuns() = runBlocking {
+    @Test fun unsolicitedDeleteToolIsRejectedAndExplicitDeleteStillNeedsLocalConfirmation() = runBlocking {
         fixture { runtime, library, _, ai, _ ->
             val path = Files.createTempFile("assistant-owned-", ".mp3")
             try {
@@ -224,9 +291,11 @@ class MusicAssistantTest {
                 ai.call("delete_tracks", args); ai.content("完成")
                 runtime.chat("整理一下歌单")
                 assertTrue(Files.exists(path)); assertTrue(library.deleted.isEmpty())
-                assertTrue(ai.requests.last().toString().contains("只有用户本轮明确要求"))
+                assertTrue(ai.requests.last().toString().contains("本轮不是明确的音频删除指令"))
                 ai.call("delete_tracks", args); ai.content("已删除")
                 runtime.chat("删除这首音频")
+                assertTrue(Files.exists(path)); assertTrue(library.deleted.isEmpty())
+                runtime.confirmAudioDeletion(assertNotNull(runtime.state.value.pendingAudioDeletion).id, true)
                 assertFalse(Files.exists(path)); assertEquals(listOf("t"), library.deleted)
             } finally { Files.deleteIfExists(path) }
         }
@@ -253,7 +322,46 @@ class MusicAssistantTest {
         assertFalse(JvmMusicAssistant.allowsAudioDeletion("删除这个歌单"))
         assertFalse(JvmMusicAssistant.allowsAudioDeletion("Please do not delete my audio files"))
         assertTrue(JvmMusicAssistant.allowsAudioDeletion("删除这首歌曲的音频文件"))
+        listOf("如何删除歌曲？", "解释一下删除音频有什么风险", "只删除歌单里的歌曲，不删除音频文件",
+            "删除歌单，不删音频", "How do I delete songs?", "Remove the playlist without deleting audio").forEach {
+            assertFalse(JvmMusicAssistant.allowsAudioDeletion(it), it)
+        }
     }
+    @Test fun modelDeletionRequiresAnExactLocalSingleUseConfirmation() = runBlocking {
+        fixture { runtime, library, _, ai, store ->
+            val track = Track("delete-me", "Generated", "Fixture", "", "1:00", 0, sourceUri = Files.writeString(store.directory.resolve("generated.mp3"), "fixture").toString())
+            library.songs[track.id] = track
+            ai.call("delete_tracks", JSONObject().put("ids", JSONArray().put(track.id))); ai.content("等待本机确认")
+            runtime.chat("删除这首歌曲的音频文件")
+            assertTrue(library.deleted.isEmpty())
+            val request = assertNotNull(runtime.state.value.pendingAudioDeletion)
+            assertEquals(listOf(track), request.tracks)
+            val requests = ai.requests.size
+            runtime.confirmAudioDeletion(request.id, true)
+            assertEquals(listOf(track.id), library.deleted)
+            assertEquals(requests, ai.requests.size)
+            assertNull(runtime.state.value.pendingAudioDeletion)
+            assertFails { runtime.confirmAudioDeletion(request.id, true) }
+        }
+    }
+
+    @Test fun changedAudioOrCancelledProposalCannotDeleteAnything() = runBlocking {
+        fixture { runtime, library, _, ai, store ->
+            val track = Track("keep-me", "Generated", "Fixture", "", "1:00", 0, sourceUri = Files.writeString(store.directory.resolve("generated.mp3"), "fixture").toString())
+            library.songs[track.id] = track
+            ai.call("delete_tracks", JSONObject().put("ids", JSONArray().put(track.id))); ai.content("等待确认")
+            runtime.chat("删除这首歌曲的音频文件")
+            val request = assertNotNull(runtime.state.value.pendingAudioDeletion)
+            library.songs[track.id] = track.copy(sourceUri = Files.writeString(store.directory.resolve("replacement.mp3"), "replacement").toString())
+            assertFails { runtime.confirmAudioDeletion(request.id, true) }
+            assertTrue(library.deleted.isEmpty())
+            ai.call("delete_tracks", JSONObject().put("ids", JSONArray().put(track.id))); ai.content("等待确认")
+            runtime.chat("删除这首歌曲的音频文件")
+            runtime.confirmAudioDeletion(assertNotNull(runtime.state.value.pendingAudioDeletion).id, false)
+            assertTrue(library.deleted.isEmpty())
+        }
+    }
+
     @Test fun playlistManagementToolsNeverDeleteAudioAndSnapshotPrefixStaysStable() = runBlocking {
         fixture { runtime, library, _, ai, _ ->
             val track = Track("keep", "Kept", "Artist", "Album", "1:00", 0)
@@ -630,7 +738,7 @@ class MusicAssistantTest {
             val first = library.songs.values.single()
             // Simulate that interval has passed (createdAt is 48 hours in the past)
             val pastTime = System.currentTimeMillis() - 48 * 3_600_000L
-            store.update { it.put("recommendations", it.getJSONObject("recommendations").put("createdAt", pastTime)) }
+            store.update { it.put("recommendations", it.getJSONObject("recommendations").put("createdAt", pastTime)).put("recommendationLastAttemptAt", pastTime) }
             runtime.settings() // reload
             ai.songs("SecondBatch")
             // Automatic recommend() (force = false): since first song hasn't been listened to, recommendation is retained!

@@ -49,7 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.resonance.player.model.ThemeMode
 
 /**
- * Approved frosted glass palette with mineral sage and ice blue accents; weather preferences seamlessly switch palettes.
+ * Native color roles matched to the AM++ reference palette; existing weather preferences stay selectable.
  */
 data class ResonanceColorTokens(
     val isDark: Boolean,
@@ -88,30 +88,30 @@ private fun colors(dark: Boolean, palette: WeatherPalette): ResonanceColorTokens
     val blue = palette == WeatherPalette.IceBlue
     val primary = Color(
         if (dark) {
-            if (blue) 0xFFA9C5FF else 0xFF8CD0BC
+            if (blue) 0xFFA9C5FF else 0xFFFF6B83
         } else {
-            if (blue) 0xFF2563EB else 0xFF1E7B68
+            if (blue) 0xFF2563EB else 0xFFC91D40
         }
     )
     return ResonanceColorTokens(
         isDark = dark,
-        Canvas = Color(if (dark) 0xFF182027 else 0xFFF3F5F8),
-        CanvasElevated = Color(if (dark) 0xFF242D35 else 0xFFF9FAFC),
-        Raised = Color(if (dark) 0xFF303A44 else 0xFFFFFFFF),
-        Soft = Color(if (dark) 0xFF303A44 else 0xFFE9EDF2),
-        SurfaceSubtle = Color(if (dark) 0xFF303A44 else 0xFFE9EDF2),
-        Glass = Color(if (dark) 0xA82B3540 else 0xD9FFFFFF),
-        GlassLight = Color(if (dark) 0x8C35414D else 0x9EFFFFFF),
-        GlassUltra = Color(if (dark) 0xE6242D35 else 0xEBF8FAFC),
+        Canvas = Color(if (dark) 0xFF0B0B0C else 0xFFF2F2F7),
+        CanvasElevated = Color(if (dark) 0xFF1C1C1E else 0xFFFFFFFF),
+        Raised = Color(if (dark) 0xFF2C2C2E else 0xFFFFFFFF),
+        Soft = Color(if (dark) 0xFF2C2C2E else 0xFFF5F5F8),
+        SurfaceSubtle = Color(if (dark) 0xFF2C2C2E else 0xFFF5F5F8),
+        Glass = Color(if (dark) 0xB81C1C1E else 0xD9FFFFFF),
+        GlassLight = Color(if (dark) 0xA62C2C2E else 0xC7FFFFFF),
+        GlassUltra = Color(if (dark) 0xE61C1C1E else 0xEBFFFFFF),
         GlassBorder = Color(if (dark) 0x38FFFFFF else 0xDDFFFFFF),
         GlassBorderSubtle = Color(if (dark) 0x20FFFFFF else 0x90FFFFFF),
         GlassBorderGlow = primary.copy(alpha = 0.20f),
-        Divider = Color(if (dark) 0x24FFFFFF else 0x20465365),
-        DividerStrong = Color(if (dark) 0x40FFFFFF else 0x30465365),
-        TextPrimary = Color(if (dark) 0xFFF1F3F5 else 0xFF25303C),
-        Muted = Color(if (dark) 0xFFC1CAD3 else 0xFF5C6572),
-        Dim = Color(if (dark) 0xFFB9C4CF else 0xFF5C6572),
-        Dimmer = Color(if (dark) 0xFFB9C4CF else 0xFF5C6572),
+        Divider = Color(if (dark) 0x24FFFFFF else 0xFFD1D1D6),
+        DividerStrong = Color(if (dark) 0x40FFFFFF else 0xFFB5B5BE),
+        TextPrimary = Color(if (dark) 0xFFF5F5F7 else 0xFF1C1C1E),
+        Muted = Color(if (dark) 0xFFB7B7BF else 0xFF55555D),
+        Dim = Color(if (dark) 0xFF9999A2 else 0xFF55555D),
+        Dimmer = Color(if (dark) 0xFF9999A2 else 0xFF55555D),
         Primary = primary,
         PrimaryGlow = primary,
         PrimarySoft = primary.copy(alpha = if (dark) 0.16f else 0.10f),
@@ -129,6 +129,13 @@ private fun colors(dark: Boolean, palette: WeatherPalette): ResonanceColorTokens
 
 val DarkResonanceColors = colors(true, WeatherPalette.Sage)
 val LightResonanceColors = colors(false, WeatherPalette.Sage)
+/** White-on-album player surface, independent of the library's light/dark preference. */
+val ImmersivePlayerColors = DarkResonanceColors.copy(
+    Canvas = Color(0xFF262126), TextPrimary = Color.White, Muted = Color(0xFFDED9DD),
+    Dim = Color(0xFFDED9DD), Dimmer = Color(0xFFDED9DD), Primary = Color.White,
+    Notice = Color.White, PrimarySoft = Color.White.copy(alpha = .12f),
+    Secondary = Color.White, Divider = Color.White.copy(alpha = .18f),
+)
 val LocalGlassState = staticCompositionLocalOf<HazeState?> { null }
 
 @Composable
@@ -149,7 +156,10 @@ object ResonanceMotionTokens {
     const val StateDuration = 160
     const val TabDuration = 220
     const val ReducedDuration = 90
-    val PlayerSpec: FiniteAnimationSpec<Float> = tween(280, easing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f))
+    // Shared by presentation, drag release and reversal; no bounce at the screen edges.
+    val PlayerSpec: FiniteAnimationSpec<Float> = spring(
+        dampingRatio = 1f, stiffness = Spring.StiffnessMediumLow,
+    )
     // Keep high-frequency page changes brief and interruptible, with no bounce.
     val PageEasing = CubicBezierEasing(0.32f, 0.72f, 0f, 1f)
     const val PageDuration = 280

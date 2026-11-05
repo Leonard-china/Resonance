@@ -1,0 +1,354 @@
+[
+  {
+    "ignored": 0,
+    "milliseconds": 3033,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "galleryPlayerKeepsTransportReachableWithLargeTextInShortWindow",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 2276,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "playbackErrorOffersRetryInBothThemes",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 4452,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "bufferingAndLoadingStatesRenderDistinctVisualFeedbackInDarkAndLight",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1560,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "draggingProgressCommitsOnlyOnceOnRelease",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 9432,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "songInformationRemainsReachableFromPlayerMenu",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 2903,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "wideStageKeepsLyricsQueueAndTransportConnected",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 636,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "stageBackdropRemainsStableAcrossPlaybackAndAccessibilityStates",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 3852,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "shortLandscapeKeepsPaneTabsAndTransportInsideViewport",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1432,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "nativeSlidersAndTabsExposeWorkingActionsAndMinimumTargets",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 2595,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "compactAssistantKeepsTitleOnOneLineWithLargeText",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 196,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "albumAtmosphereFollowsColoredArtworkAndIgnoresTransparentArt",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 2267,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "emptyLibraryKeepsEntryActionsUsableWithLargeText",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1091,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "playbackWaveMovesOnlyWhilePlayingAndKeepsNativeSeek",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 925,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "switchingThemeKeepsFirstFrameReadable",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 2019,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "textAndSelectedRolesStayReadableAcrossAllThemes",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 89341,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "renderPhoneDesktopPlayerAndToolsWithFixtureData",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 39649,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "renderFrostedDestinationsThroughTheRealShell",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1824,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "assistantAttachmentsOnlyActOnExplicitClicks",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 26770,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "renderApprovedPlayerPanes",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 23720,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "renderApprovedLightNativePagesAndSettings",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 13710,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "shortLandscapeRetainsCollectionViewportAndTransport",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1091,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "nativePagesReverseWithoutRecreatingTheDepartingContent",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "assumptions": 0,
+    "exit": 0
+  }
+]

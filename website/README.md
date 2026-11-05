@@ -21,6 +21,10 @@
 
 没有默认作者密码，公共页面、源码中的公共资源、robots.txt 均不包含实际作者地址。收款码未提供时展示「收款码待添加」；SMTP 未配置时订阅明确关闭，不假装成功。
 
+## 导航回归（2026-11-05）
+
+客户端切页按最后一次导航意图提交，覆盖乱序响应、缓存、前进后退与延迟ViewTransition回调。执行 `node --test website/tests/test_navigation.cjs`（Node内置测试，无额外npm依赖），并执行 `python -m unittest discover -s website/tests -p 'test_*.py' -v`（从仓库根目录）。这轮修改未部署现网；具体结果见[独立修复记录](../docs/changes/2026-11-05-26-website-latest-navigation-wins.md)。
+
 ## 本地运行
 
 需要 Python 3.10 或更高版本（本次验证为 3.12.14）。Windows 使用 `python`；Ubuntu 通常使用 `python3`。

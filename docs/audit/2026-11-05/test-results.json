@@ -1,0 +1,3416 @@
+[
+  {
+    "name": "shutdownStopsProducersThenDrainsEveryWriterBeforeReleasingPlatform",
+    "class": "com.resonance.player.ApplicationSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellingOneQueuedOperationDoesNotStrandAnOrderedBarrier",
+    "class": "com.resonance.player.ApplicationSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellationCleanupCanCommitBeforeTheWritersAreClosed",
+    "class": "com.resonance.player.ApplicationSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failingTaskIsObservableAndDoesNotCancelOtherApplicationWork",
+    "class": "com.resonance.player.ApplicationSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "oneFailedDrainDoesNotSkipOtherWritersOrNativeCleanup",
+    "class": "com.resonance.player.ApplicationSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancelledEmptyImportDoesNotReloadOrCommitAnOlderUiCatalog",
+    "class": "com.resonance.player.ApplicationUseCaseTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "importingPackageReloadsCommittedPlaylistsAfterTheWriteBarrier",
+    "class": "com.resonance.player.ApplicationUseCaseTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "preferenceChangesShareOneCapturedOrderedTransactionStream",
+    "class": "com.resonance.player.ApplicationUseCaseTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "staleAndMalformedIdsRemainReadableWithoutInventingTracks",
+    "class": "com.resonance.player.AssistantMusicLinksTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "attachmentsAreBoundedAndQueueKeepsExistingOrder",
+    "class": "com.resonance.player.AssistantMusicLinksTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "duplicateLinksCollapseButPlainNamesAndExternalLinksNeverBecomePlayable",
+    "class": "com.resonance.player.AssistantMusicLinksTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "encodedIdsResolveToCurrentLibraryMetadataInReplyOrder",
+    "class": "com.resonance.player.AssistantMusicLinksTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "matchedLocalTrackKeepsCatalogArtworkWhenLocalArtworkIsMissing",
+    "class": "com.resonance.player.CatalogArtworkRematchTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "nativePositionInPlayerStateOverridesMissingMetadataDuration",
+    "class": "com.resonance.player.FloatingLyricsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "unavailableTranslationNeverMakesOriginalLyricsDisappear",
+    "class": "com.resonance.player.FloatingLyricsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "translatedAndOriginalLinesShareTheOriginalTimeAxis",
+    "class": "com.resonance.player.FloatingLyricsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "nativePositionKeepsBackgroundLyricsMovingWhenTrackDurationIsNotReady",
+    "class": "com.resonance.player.FloatingLyricsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "realConversionProblemIsReportedAsNotProcessed",
+    "class": "com.resonance.player.ImportReportMessageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyPlaylistPackageHasVisibleSuccessMessage",
+    "class": "com.resonance.player.ImportReportMessageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "packageImportReportsPlaylistsAndDoesNotClaimAudioWasConverted",
+    "class": "com.resonance.player.ImportReportMessageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fullSuccessReportsConvertedCount",
+    "class": "com.resonance.player.ImportReportMessageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "searchesTenThousandTracksWithAReusableIndex",
+    "class": "com.resonance.player.LibrarySearchIndexTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "indexedSearchPreservesChineseInitialsAndPunctuationMatching",
+    "class": "com.resonance.player.LibrarySearchIndexTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "jitterBetweenWallClockAndAudioClockDoesNotLoseTimeOnEveryTick",
+    "class": "com.resonance.player.ListeningSessionTrackerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "bufferingSeekSpeedAndRemoteAudioDoNotInflateDuration",
+    "class": "com.resonance.player.ListeningSessionTrackerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pauseNearEndDoesNotCompleteAgainAndRepeatStartsAnotherPass",
+    "class": "com.resonance.player.ListeningSessionTrackerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "quarterSecondNativeUpdatesAccumulateAcrossPauseWithoutUiTimer",
+    "class": "com.resonance.player.ListeningSessionTrackerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "oversizedLinesKeepTheirBeginningReadable",
+    "class": "com.resonance.player.LyricScrollTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "measuredBilingualAndWrappedRowsShareTheSameCenter",
+    "class": "com.resonance.player.LyricScrollTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "usesTheViewportCoordinateSystemIncludingTopPadding",
+    "class": "com.resonance.player.LyricScrollTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancelledLookupCannotPublishAfterSelectingTheSameTrackAgain",
+    "class": "com.resonance.player.LyricsSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "acceptedOffsetEditInvalidatesAnInFlightLookup",
+    "class": "com.resonance.player.LyricsSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "manualRefreshWinsOverAnOlderAutomaticLookup",
+    "class": "com.resonance.player.LyricsSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "orphanAndCyclicHistoricalParentsDoNotLoopOrLoseEntries",
+    "class": "com.resonance.player.MusicTaskGroupsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "groupsNestedStagesWithoutCombiningSeparateImports",
+    "class": "com.resonance.player.MusicTaskGroupsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "successfulSongHidesRecoveredSourceAttemptButKeepsFailedCoverRetry",
+    "class": "com.resonance.player.MusicTaskGroupsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "coalescedWritesDoNotJumpAcrossOrderedActions",
+    "class": "com.resonance.player.PersistenceQueueTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rapidSliderChangesKeepLatestValuesForEachTrackAndGlobalVolume",
+    "class": "com.resonance.player.PersistenceQueueTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "diskWritesStayOrderedAndFailureDoesNotDropFollowingActions",
+    "class": "com.resonance.player.PersistenceQueueTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "disposingTheUiFinishesAcceptedWrites",
+    "class": "com.resonance.player.PersistenceQueueTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "oldSameTrackAttemptIsRejectedAfterAtoBtoA",
+    "class": "com.resonance.player.PlaybackIssueTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "previewAndStorageFailureNeverInterruptMainPlayback",
+    "class": "com.resonance.player.PlaybackIssueTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "desktopPlatformServicesPersistsAndLoadsPlaybackMode",
+    "class": "com.resonance.player.PlaybackModePersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "defaultPlaybackModePreferenceIsDisabledAndRepeatOff",
+    "class": "com.resonance.player.PlaybackModePersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playerStatePreservesPlaybackModeWhenResettingCurrentTrack",
+    "class": "com.resonance.player.PlaybackModePersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "blockedOldWriteCannotOverwriteLastActionAndCloseDrains",
+    "class": "com.resonance.player.PlaybackModeWriterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fallsBackToFullLibraryWhenCustomQueueIsNull",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "selectedDownloadIsIncludedEvenBeforeLibraryReloadReachesTheUi",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "nativeQueueUsesTheSelectedAudioInsteadOfAnOlderCopyWithTheSameId",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "scopesPlaybackToSpecificPlaylist",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fallsBackToFullLibraryWhenAllCustomTracksAreUnplayable",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "filtersOutUnplayableTracksInCustomQueue",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationQueueKeepsItsOrderAndSkipsEntriesWithoutAudio",
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "clearingAnEmptyQueueCancelsAFileCheckThatFinishesLate",
+    "class": "com.resonance.player.PlaybackSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "consecutiveQueueCommandsReadTheCommittedInMemoryState",
+    "class": "com.resonance.player.PlaybackSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rapidRequestsRejectAnObsoleteNonCancellableFileCheck",
+    "class": "com.resonance.player.PlaybackSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "removingCurrentTrackCannotRestoreItThroughTheOldCapturedQueue",
+    "class": "com.resonance.player.PlaybackSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "restoresExistingPlaylist",
+    "class": "com.resonance.player.SelectedPlaylistStateTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "returnsNullForEmptyLibrary",
+    "class": "com.resonance.player.SelectedPlaylistStateTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fallsBackToFirstPlaylistWhenStoredIdIsMissing",
+    "class": "com.resonance.player.SelectedPlaylistStateTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "doesNotRestoreRemovedLocalLibraryCard",
+    "class": "com.resonance.player.SelectedPlaylistStateTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "draftStoreKeepsIndependentDraftsPerProvider",
+    "class": "com.resonance.player.StatePreservationTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "draftStorePreservesUnsavedInputAcrossRecreationWithoutBundleSerialization",
+    "class": "com.resonance.player.StatePreservationTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rapidReplacementNeverStartsOrAcknowledgesAnOldPreparedTrack",
+    "class": "com.resonance.player.TogetherPlaybackDriverTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "localAudioInterruptionKeepsRoomButNeverAutoplaysUntilExplicitResume",
+    "class": "com.resonance.player.TogetherPlaybackDriverTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "interruptionWhilePreparingNeverResumesOrAcknowledgesTheOldAudio",
+    "class": "com.resonance.player.TogetherPlaybackDriverTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "smallTimingNoiseDoesNotSeekAndLargeCorrectionsHaveHysteresis",
+    "class": "com.resonance.player.TogetherPlaybackDriverTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "malformedInventedAndDuplicateCandidatesAreRejected",
+    "class": "com.resonance.player.TogetherSuggestionsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "indicesReferOnlyToTheCapturedCandidateList",
+    "class": "com.resonance.player.TogetherSuggestionsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rainSnowAndStormsUseBlue",
+    "class": "com.resonance.player.WeatherPaletteTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "invalidLocationsCannotBeUsed",
+    "class": "com.resonance.player.WeatherPaletteTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "ambiguousWeatherPreservesLastPalette",
+    "class": "com.resonance.player.WeatherPaletteTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "clearWeatherUsesSage",
+    "class": "com.resonance.player.WeatherPaletteTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cleansAndParsesAiGeneratedLrcContent",
+    "class": "com.resonance.player.ai.DeepSeekClientTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "shortOrSilenceAudioReturnsDefaults",
+    "class": "com.resonance.player.audio.AudioFeatureAnalyzerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "syntheticBeatsAt120BpmAreAccuratelyDetected",
+    "class": "com.resonance.player.audio.AudioFeatureAnalyzerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "preparedPausedPlaybackWaitsForResumeAndIsNotAStalledDevice",
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "outputThatMakesNoProgressBacksOffAndReportsOneBoundedFailure",
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "nativeCleanupDoesNotBlockStopOrTheNextPlayCommand",
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pausingDuringAPartialWriteStopsRetriesUntilResume",
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "replacementRejectsAnOldDecoderWhichFinishesAfterTheNewRequest",
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "bufferingEndsOnlyWhenPcmArrivesRatherThanWhenDeviceOpens",
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wholeTrackAnalyzerDistinguishesWeakAndLoudAudio",
+    "class": "com.resonance.player.audio.FfmpegLoudnessIntegrationTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "weakTrackUsesTruePeakHeadroom",
+    "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wholeTrackAnalysisDoesNotSeekOrLimitDuration",
+    "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "loudTrackIsAttenuatedAndVeryWeakGainIsBounded",
+    "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "silenceAndIncompleteOutputAreNotCached",
+    "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "newGainRampsInsteadOfJumping",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "largeGainNeverWrapsOrClipsAbruptly",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playbackTempoRemainsWithinFfmpegFilterRange",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "masterMuteProducesSilence",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "surroundPresetWidensStereoSpread",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "vocalSuppressionSuppressesCenterChannelWhileRetainingStereo",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "positiveDigitalPreampActuallyAmplifiesPcm",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "allAudioEffectPresetsProcessPcmSafely",
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellingDecryptionPreservesSourceAndRemovesPartialOutput",
+    "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "convertsFlacInsideKgmaToManagedMp3AndCleansStaging",
+    "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "convertsWavToManaged320kMp3WithoutChangingSource",
+    "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parsesKggV5HeaderCorrectly",
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "decryptStreamWorksCorrectly",
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "detectsAudioFormatsCorrectly",
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testKuGouKeyDatabaseLoadsWhenPresent",
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "qmc2Rc4IsSelfInvertingAcrossMultipleSegments",
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "qmc2MapIsSelfInverting",
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "audioSignaturesAreDetected",
+    "class": "com.resonance.player.conversion.KgmaCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "decryptingEncryptedBytesRestoresOriginal",
+    "class": "com.resonance.player.conversion.KgmaCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "littleEndianHeaderFieldsAreDecoded",
+    "class": "com.resonance.player.conversion.KgmaCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "chunkedDecryptionMatchesSinglePass",
+    "class": "com.resonance.player.conversion.KgmaCipherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "writesSmallFixtureForAndroidConversionSmokeTest",
+    "class": "com.resonance.player.conversion.KgmaDeviceFixtureTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "catalogRejectsCoversAndLiveVersionsAndPrefersRequestedAlbum",
+    "class": "com.resonance.player.enrich.AlbumCoverRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cleansTrackTitleProperly",
+    "class": "com.resonance.player.enrich.MetadataEnricherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "detectMissingMetadataHelpers",
+    "class": "com.resonance.player.enrich.MetadataEnricherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "publicCatalogMatchingRejectsWrongSongsAndAllowsUnknownArtist",
+    "class": "com.resonance.player.enrich.MetadataEnricherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "skipsAlreadyCompleteTrackWhenNotForceRefresh",
+    "class": "com.resonance.player.enrich.MetadataEnricherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pngAndWebpCoversAreSupportedWithoutKeepingFullResolution",
+    "class": "com.resonance.player.features.ArtworkDecodeTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "compactionKeepsJsonAndWholeIdsInsteadOfCuttingArrays",
+    "class": "com.resonance.player.features.AssistantToolSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "identicalMutationsRunOnceEvenAfterManySuccessfulRoundsAndArgumentReordering",
+    "class": "com.resonance.player.features.AssistantToolSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failedDuplicateRunsOnceAndStopsWithoutAnotherRequestAfterSixIdleRounds",
+    "class": "com.resonance.player.features.AssistantToolSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "archiveListsIndividualPublicTracksAndSkipsRestrictedItems",
+    "class": "com.resonance.player.features.BuiltinMusicSourcesTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "qqResolvesFreeMediaAndLyricsButNeverRequestsPaidMedia",
+    "class": "com.resonance.player.features.BuiltinMusicSourcesTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "swipePageTargetRejectsAtBoundariesWithoutWrapping",
+    "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "appVersionAndHighlightsGeneratedFromReleaseNotes",
+    "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "swipePageTargetRejectsSubThresholdOrZeroThreshold",
+    "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "swipePageTargetSupportsFlingVelocityWhenDistanceIsSubThreshold",
+    "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "swipePageTargetAdvancesToNextOnLeftSwipeAndPreviousOnRightSwipe",
+    "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "brokenConnectionIsNotReplayedAndReportsUnknownUsage",
+    "class": "com.resonance.player.features.MusicAiWireTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "officialFlashRequestsFinalContentWhileGenericEndpointsAndReasonersKeepTheirContract",
+    "class": "com.resonance.player.features.MusicAiWireTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "unavailableNewBatchKeepsPreviousAudioAndTimestamp",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "localRecognitionFailureNeverFallsBackToPaidApi",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playingOldRecommendationIsDeferredInsteadOfDeletingAnOpenFile",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationRetainedWhenUnlistenedEvenIfIntervalExpired",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recentlyRemovedRecommendationIsNotDownloadedAgain",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "negatedAndPlaylistOnlyRequestsCannotDeleteAudio",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "sourceDownloadFailureRemainsVisibleWhenBilibiliFallbackAlsoFails",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyOrNonJsonTranslationReturnsUsefulErrorWithoutCaching",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wrongTranslationLineCountDoesNotCacheOrModifyOriginal",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "unsolicitedDeleteToolIsRejectedButExplicitDeleteRuns",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "tokenUsageRestrictionsAreCancelledAndDoNotRejectRequests",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "oldAutomaticAiSettingsEnterCooldownWithoutCallingTheModelOnUpgrade",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationVotesAndCommentsDoNotFavoriteOrDeleteAudioOrCallModel",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "laterSearchKeepsPreviouslyReturnedSourceIdsAvailableForDownload",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cleanupProtectsSavedAndPlayingAudio",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playlistManagementToolsNeverDeleteAudioAndSnapshotPrefixStaysStable",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellationAfterAudioImportKeepsItInPendingRecommendationCleanup",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "screenshotSelectionCanBeEditedAndDiscardedWithoutDownloading",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "saveRecommendationToNewPlaylistSurvivesRolloverAndReload",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failedRepeatedToolsStopLocallyWithoutCallingTheModelForever",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "retryCoverDoesNotDownloadAudioAgainAndHistorySurvivesRestart",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "automaticRecommendationWaitsForNetworkButManualRequestCanProceed",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "localScreenshotImportNeedsNoApiKeyAndCompletesTitlesBeforeDownload",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "chatWithMultipleSessionsMaintainsIsolationAndAttribution",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "feedbackSurvivesRolloverCleanupAndIsPassedToNextAiRecommendation",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "chatToolExecutionExceeds16StepsWithoutLimit",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "dislikeDeletesEvenFavoriteAndEveryPlaylistMembership",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "translationCachesPerTextAndTargetAndPreservesTimestamps",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "originalCandidatesBeatLiveCoverAndUnrelatedArtist",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failedAutomaticRecommendationDoesNotPayAgainEachMinuteOrAfterRestart",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "translationCacheNormalizesTargetLanguageLikeFreshRequests",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cleanupReleasesOnlyOwnedTemporaryAudioAndCanRestoreIt",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "screenshotRecognitionIsCachedAndExistingSongsAreNotDownloadedAgain",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "sourcePreviewUsesBoundedTemporaryFileWithoutImportingOrCallingAi",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "interruptedTaskIsRecoveredAndSpeechBudgetRejectsBeforeUpload",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "generatedLyricsUseAudioTimestampsAndCacheWithoutChargingTwice",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "localAudioOutsideManagedRootCannotBecomeCleanupTarget",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationRolloverDeletesOnlyUnsavedDownloads",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "builtInHelpDoesNotSendAnyModelRequest",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "networkSettingRoundTripsAndLegacySettingsKeepPreviousBehavior",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "libraryToolReturnsPlayableLinksWithoutExposingFileLocations",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "batchRetryNeverRunsPaidLyricsAndUndoClearsOldRejection",
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "twoCorruptCopiesStopInsteadOfSilentlyResettingSettingsAndHistory",
+    "class": "com.resonance.player.features.MusicJsonStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "corruptPrimaryRecoversWithoutOverwritingGoodBackupOnNextWrite",
+    "class": "com.resonance.player.features.MusicJsonStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "searchLimitLeavesRoomForAlternativeSources",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "realQuickJsRunsAsyncMusicFreeCoreAndPersistsInstallation",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "invalidReplacementAndUnsupportedDependencyKeepInstalledSource",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "builtinSourcesInstalledSuccessfullyAndExposeCoreCapabilities",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "runtimeSupportsCryptoJsWithoutExposingHostClasses",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationsWithEmptyArtistsUsesDefaultPopularSeeds",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "publicTransportRejectsLocalAddressesAndCredentialUrls",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "builtinUpgradeAddsSourcesOnceWithoutRestoringRemovedOrEnablingDisabledSources",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellationInterruptsInfiniteScriptAndRuntimeCanBeUsedAgain",
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "flacAudioKeepsEncodingExtensionMimeAndArtwork",
+    "class": "com.resonance.player.features.PlaylistArchiveFormatTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "privateAndLiteralTargetsCannotUseVpnFallback",
+    "class": "com.resonance.player.features.PublicSourceDnsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fakeIpUsesVerifiedPublicDestinationsAndCachesOnlySuccessfulResults",
+    "class": "com.resonance.player.features.PublicSourceDnsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "ordinaryPublicDnsDoesNotContactAnotherResolver",
+    "class": "com.resonance.player.features.PublicSourceDnsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fallbackResponsesStillRejectPrivateFakeOrMixedAddresses",
+    "class": "com.resonance.player.features.PublicSourceDnsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "feedbackUsesMusicalIdentityAndRemovingVoteKeepsComment",
+    "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "likesAndNegativeCommentsChangeCandidateRankingWithoutBanningAnArtist",
+    "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "favoritesHaveMoreSeedWeightThanLikesAndAiSummaryIsBounded",
+    "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "reasonsOnlyUseRealSavedEvidence",
+    "class": "com.resonance.player.features.RecommendationPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "legacySettingsDefaultToSourceModeAndRoundTripNewControls",
+    "class": "com.resonance.player.features.RecommendationPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cooldownSurvivesFileRemovalAndUsesRollingDays",
+    "class": "com.resonance.player.features.RecommendationPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "duplicateFilesCountOnceAndVersionsRemainSeparate",
+    "class": "com.resonance.player.features.RecommendationPolicyTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "truncatedSongIsCompletedOnlyFromUnambiguousMatchingEvidence",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "headerAndCreatorAbovePlaybackToolbarAreNotImportedAsMusic",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "numericSongTitlesArePreservedWhileRankingColumnIsIgnored",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "publicCatalogParsingAndRelaxedSearchStillRequireTheVisibleTitleAndArtist",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recognitionModeDefaultsLocallyAndRoundTripsWithoutCredentials",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "bundledModelsActuallyReadChineseAndEnglishScreenshot",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parserPairsSongsAndSkipsControlsBadgesAndOverlappingRows",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parserDoesNotInventArtistsFromEmptyOrUnpairedText",
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "lyricOffsetStoreDirectionAndPersistence",
+    "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "assistantPlaybackAndNavigationActionsExecuteAndRejectInvalid",
+    "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cleanupRollsBackWhenFileDeleteFails",
+    "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationHistoryPersistsAcrossRestartAndEnforcesRollingDays",
+    "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wrongEventsCannotCompleteStepsAndSkippingDoesNotPretendSuccess",
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "invalidAndFutureProgressCannotEscapeKnownChapterBounds",
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "welcomeIsOnlyOfferedUntilDismissedAndSurvivesRestart",
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "missingTrackRoutesToLibraryWithoutExecutingAnOperation",
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pauseRestoresExactStepAndOtherChaptersRemainIndependent",
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "tutorialPreferenceUsesAtomicUiStoreAndPreservesPlaybackSettings",
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "unrelatedLyricsNeverReceiveInventedTimestamps",
+    "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "partialSpeechEventsAreIgnoredAndFinalWordTimesArePreserved",
+    "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "zeroOnlyAndOutOfDurationLrcAreNotSynchronized",
+    "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "alignsRepeatedChorusesToTheirActualAudioOccurrences",
+    "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "decodesValidKrcData",
+    "class": "com.resonance.player.lyrics.KrcDecoderTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "exactPlainLyricsContinueSearchingForSynchronizedVersion",
+    "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parsesMultipleTimestampsAndFractions",
+    "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fetchesExactLyricsAndUsesPersistentCache",
+    "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "modelTextNeverCreatesASynchronizedTimeline",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failedOrPlainSourcePreservesCachedTextAndOffsetAndCancellationPropagates",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "sourceLyricsMatchRecordingAndNeverFetchAudio",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "synchronizedSearchCandidateWinsOverHigherScoringPlainOrInvalidTimeline",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "sourceKeepsUsablePlainLyricsWhenLaterMatchingCandidateFails",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "publicSourceFindsUserReportedRecordingWhenExplicitlyEnabled",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "sourcesPreferSynchronizedLyricsAcrossSourcesAndWithinMatchingCandidates",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "freshAndCachedPlainLyricsContinueToSynchronizedSource",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "publicSynchronizedLyricsReplaceReportedRecordingsPlainCacheWhenExplicitlyEnabled",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cachedPlainLyricsCanRecoverFromLrclibWithoutInstalledSources",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "localPlainLyricsDoNotBlockSynchronizedSourceOrLoseTextOnFailure",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "modelUnavailableIsNotReportedAsANetworkOrSearchFailure",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cachedLrclibMissDoesNotBlockSourceFallbackAndSuccessPersists",
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testExtractAndMergeCookies",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testPollQrStatusSuccessWithCookies",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testCreateQrSessionSuccess",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testPollQrStatusWaiting",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testCreateQrSessionFailure",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testPollQrStatusScanned",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testPollQrStatusExpired",
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parseRunningAndBpmQuery",
+    "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parseRainyHealingAcousticQuery",
+    "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "parseSlowBalladQuery",
+    "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "auditCleansGarbagePrefixAndParsesArtistFromTitle",
+    "class": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "auditIdentifiesDuplicatesAndRecommendsBestQuality",
+    "class": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "namesAreSinglePortableComponentsIncludingWindowsReservedNames",
+    "class": "com.resonance.player.model.SyncPackageNamingTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playlistTitleIsTheFilenameWithoutTimestampsAndLibraryHasAClearName",
+    "class": "com.resonance.player.model.SyncPackageNamingTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "longUnicodeNamesStayWithinFilenameLimitsWithoutCuttingEmojiInHalf",
+    "class": "com.resonance.player.model.SyncPackageNamingTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "repeatedExportsKeepExistingFilesAndUseTheNextFreeSuffix",
+    "class": "com.resonance.player.model.SyncPackageNamingTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "tracksWithEmotionalKeywordsProduceNostalgicOrDreamerPersona",
+    "class": "com.resonance.player.model.TasteAnalyticsEngineTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyTracksReturnsDefaultPersona",
+    "class": "com.resonance.player.model.TasteAnalyticsEngineTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "badInputsDoNotPreventHealthyFilesFromImporting",
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "oversizedUriPayloadIsRejected",
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellationDuringEnumerationKeepsSourceUntouched",
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "mixedFilesAndOverlappingFoldersImportOnceAndPreserveSources",
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "unsupportedSelectionExplainsWhyNothingWasImported",
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "fileManagerPayloadsHandleUnicodeSpacesAndUriEscapes",
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "selectingPackageRestoresMetadataAndPlaylistsAcrossRestart",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "folderAndUriDropFindUppercasePackageAndDeduplicateSelection",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "maliciousPackageCannotEscapeManagedDirectory",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pickerIncludesPackagesAndAudioWithoutExposingUnrelatedFiles",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "corruptedPackageDoesNotBlockHealthyPackageOrCommitBadAudio",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyPlaylistPackageIsStillReportedAndSaved",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "cancellingBetweenPackagesRetainsCompletedPlaylistAndSource",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "conversionSelectionKeepsPackagedAudioFormatAndBytes",
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "unreadableUiSettingsRecoverTheBackupBeforeTheNextWrite",
+    "class": "com.resonance.player.platform.LibraryPersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "concurrentMergesAndFavoritesPreserveEveryTrack",
+    "class": "com.resonance.player.platform.LibraryPersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "corruptedPrimaryRecoversThePreviousValidRevision",
+    "class": "com.resonance.player.platform.LibraryPersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "relinkingMissingAudioPreservesIdentityFavoriteAndPlaylistAfterRestart",
+    "class": "com.resonance.player.platform.LibraryPersistenceTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "linuxCredentialsRejectSymlinkedKeyAndDirectory",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "linuxNetworkCostOnlyAcceptsConnectedUnmeteredInterfaces",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "ffmpegUsesHostNameAndPackagedOrExplicitExecutable",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "dataPathsRespectXdgOverridesAndWindowsLayout",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "existingLinuxLibraryIsKeptUntilXdgDirectoryExists",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "linuxCredentialsRejectTamperingWrongDirectoryAndMissingKey",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "linuxCredentialsSurviveRestartAndUsePrivatePermissions",
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "platformRecordsWithoutComposeAndDeduplicatesNearEndPauseResume",
+    "class": "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pauseSeekSpeedAndRapidReplacementReachRealAudioOutput",
+    "class": "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "actualDecoderFailuresCarryOriginAndRequestAcrossAtoBtoA",
+    "class": "com.resonance.player.playback.DesktopPlaybackFailureTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "serviceAndRecreatedUiShareOneStoreAndCannotOverwriteEachOther",
+    "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "writeFailureIsVisibleAndAcceptedIncrementIsNotDuplicatedOnFlushRetry",
+    "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "uiSnapshotDoesNotWaitForTheDiskStoresMonitor",
+    "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "formatsListeningSecondsNicely",
+    "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recordsPlaybackSecondsAndSavesAtomically",
+    "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "batchedWritesFlushWithoutLosingAcceptedSecondsAndReportFailures",
+    "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "audioEffectPresetFromIdWorks",
+    "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "corruptHistoryIsPreservedAndValidBackupRecovers",
+    "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testFilterAndSortTracks_sortDuration",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testBuildPlayNextQueue_movesExistingTrackWithoutDuplicate",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testFilterAndSortTracks_missingCoverAndMetadata",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testBuildPlayNextQueue_ignoresUnplayableOrCurrentTrack",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testBuildPlayNextQueue_insertsAfterCurrentTrack",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testFilterAndSortTracks_filterQuery",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testFilterAndSortTracks_losslessAndQuality",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testBuildPlayNextQueue_insertsAtBeginningWhenCurrentTrackNull",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testBuildReorderedQueue",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testBuildRemoveFromQueue",
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "countdownUsesDeadlineAndExpiresOnlyOnce",
+    "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "replacingAndCancellingTimersNeverPausesFromOldDeadline",
+    "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "endOfTrackStopsOnceWithoutStartingAnotherQueueItem",
+    "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "persistsCurrentTrackQueuePositionAndPlaylist",
+    "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "malformedSnapshotDoesNotPreventStartup",
+    "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "disposedStateRejectsLateAudioResults",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rapidSwitchIgnoresLegacyCalibrationAndAppliesOnlyLatestBalancedGain",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "lateAnalysisCannotOverwriteNewSong",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "volumeAndCachedGainAreAppliedBeforePlaybackStarts",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "clearingTemporaryPlaybackCancelsAStartThatFinishesAfterLeavingTheRoom",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "manualVolumeAndGainWinOverPendingReadsAndAnalysis",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "previousNativePauseCannotCancelASingleTrackSelection",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "pauseWhilePreparingPreventsPlaybackStartOnReady",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "bufferingTransitionsReflectInPlayerStateAndClearOnPlayback",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failureExitsPreparingAndBufferingStates",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "switchingDuringQueuePreparationCannotStartThePreviousTrack",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "oldNativeTrackEventsCannotCancelTheLatestPlaybackRequest",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "refreshingAudioWhileLoadingKeepsThePendingPlaybackRequest",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "audioRefreshPreservesProtectionFromPreviousNativeStatus",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "previousNativePlayingCannotUndoAnExplicitPauseDuringPreparation",
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "progressingAudioOutlivesMetadataDeadlineWithoutChangingPublicAddressGuards",
+    "class": "com.resonance.player.sources.SourceDownloadTimeoutTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "createsAndroidImportFixtureWithArtwork",
+    "class": "com.resonance.player.sync.CrossDeviceSyncFixtureTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rejectsCorruptedAudio",
+    "class": "com.resonance.player.sync.PlainSyncPackageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "exportAndImportSucceedWhenArtworkIsMissing",
+    "class": "com.resonance.player.sync.PlainSyncPackageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rejectsLegacyEncryptedPackage",
+    "class": "com.resonance.player.sync.PlainSyncPackageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "roundTripPreservesMetadataAudioAndArtwork",
+    "class": "com.resonance.player.sync.PlainSyncPackageTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "protocolRejectsDeepJsonDuplicateKeysAndMalformedUtf8",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "invitationRoundTripsIpv6AndRejectsAmbiguousCapabilities",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "racedConnectionSuccessfullySelectsReachableCandidate",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "malformedAuthenticatedFramesNeverBecomePlayableFiles",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "ipv6LoopbackCanCarryTheEncryptedSession",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wrongPinAndWrongKeyCannotReadAudioOrOccupyTheRoom",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "roomCapacityRejectionAndEndedInvitationCannotJoinANewRoom",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "authenticatedAudioPauseSeekAndNextTrackStayWithinTemporaryCache",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "leavingAndImmediatelyRejoiningDoesNotDeleteNewSessionMedia",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "invitationSupportsMultipleCandidatesAndRoundTrips",
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "captureRealAssistantAnswerWhenConfigured",
+    "class": "com.resonance.player.together.PromoAssistantProbeTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "legacyAnonymousRoomsRemainCompatibleBothWays",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "incomingMessageEventFiresAfterPersistenceButNotForReplayOrClearedHistory",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "boundedPendingQueueNeverSilentlyDropsUndeliveredMessages",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "firstLaunchDoesNotListenUntilRoomActionButRememberedPartnersCanReceiveInvites",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "realTlsChatPairingLocalClearAndStableDeviceIdentityAcrossNewRooms",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "rememberedPartnerInviteRequiresAcceptanceAndRemovalRevokesOffers",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "encryptedIdentityAndHistorySurviveRestartAndClearDoesNotReplay",
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "leavingDuringParallelTlsHandshakesClosesAllAttemptsPromptly",
+    "class": "com.resonance.player.together.TogetherConnectionBoundsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "candidateCountAndEveryAddressAreValidatedBeforeConnecting",
+    "class": "com.resonance.player.together.TogetherConnectionBoundsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "windowsHostForPhysicalAndroidPeer",
+    "class": "com.resonance.player.together.TogetherDeviceBridgeTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "windowsNativeHostForMuMu",
+    "class": "com.resonance.player.together.TogetherNativeBridgeTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "networkChangeOrExplicitDisableRetiresPartialPrefetchWithoutDroppingCurrentSong",
+    "class": "com.resonance.player.together.TogetherPrefetchCancellationTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "productionUrlsRequireHttpsWithoutCredentialsQueriesOrFragments",
+    "class": "com.resonance.player.together.TogetherRendezvousTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "javaSignaturesInteroperateAndChangedPartnerEndpointCanBeInvited",
+    "class": "com.resonance.player.together.TogetherRendezvousTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "windowsNativeGuestFollowsMuMuHost",
+    "class": "com.resonance.player.together.TogetherReverseNativeBridgeTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "serverRoomDoesNotPublishPeerNetworkAddresses",
+    "class": "com.resonance.player.together.TogetherServerRoutingTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "serverFailureDoesNotDialReachablePeerAddress",
+    "class": "com.resonance.player.together.TogetherServerRoutingTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "sharedQueueUsesOpaqueIdsAndMembersCanControlWithoutApproval",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "dynamicMeteredNetworkPreventsAndCancelsPrefetch",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "invitationInspectionAndQrAreLocalStrictAndRoundTrip",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "refreshedAndExpiredInvitationsCannotStartTransfers",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "prefetchedNextTrackIsVerifiedAndReusedWithoutAnotherRead",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "thirtyJoinLeaveCyclesRetireOwnedFilesAndPreserveOtherCacheFiles",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "evictedPreviousTrackIsRequestedAgainWithoutLosingCurrentAudio",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "lyricsArriveBoundedWithoutExposingHostTrackIdsOrPaths",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "hostApprovalPrecedesAnyAudioReadAndCanReject",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "temporaryNetworkBreakRecoversWithSeparateCredential",
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "endpointRejectsInsecureOrAmbiguousTargets",
+    "class": "com.resonance.player.together.TogetherWebSocketTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "reason": "got: <false>, expected: is <true>",
+    "name": "deployedPinnedTlsRoundTripOverWebSocket",
+    "class": "com.resonance.player.together.TogetherWebSocketTest",
+    "status": "skipped",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "defaultsRespectSavedOptOutAndCustomServer",
+    "class": "com.resonance.player.together.TogetherWebSocketTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "realPinnedTlsRoundTripOverWebSocket",
+    "class": "com.resonance.player.together.TogetherWebSocketTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "lyricsUpdateLockCloseAndReopenWhileMainWindowIsHidden",
+    "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "linuxLyricsCanBeDraggedUnlockedAndStayInPlaceDuringUpdates",
+    "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "productionAppCanCloseLyricsWithoutShowingMainWindow",
+    "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wrappedLineMovesThroughIntermediatePositionsWithoutReflow",
+    "class": "com.resonance.player.ui.LyricsMotionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "previewReusesTheSameLineWhileItSlidesIntoFocus",
+    "class": "com.resonance.player.ui.LyricsMotionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "focusBandAndSelectedLineMoveTogetherInBothThemes",
+    "class": "com.resonance.player.ui.LyricsMotionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "reducedMotionSeeksImmediatelyAndTranslationArrivalPreservesListIdentity",
+    "class": "com.resonance.player.ui.LyricsMotionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "coverPreviewAndImmersiveFocusFollowNativePositionAtAllWindowSizes",
+    "class": "com.resonance.player.ui.LyricsPlayerRegressionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "trimmedLanguageAndOriginalOnlyModeShowTranslationWithoutChangingTimeline",
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "trackChangeRetiresOldRequestAndAllowsImmediateTranslationOfNewSong",
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "languageChangeAndReplacedSourceRejectOldResult",
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "blankLanguageAndUnavailableServiceReportAnActionableFailure",
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "slowCacheMissCannotEraseANewManualTranslation",
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failedRetranslationKeepsPreviousTranslationAndCanBeRetried",
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "volumeOpensAdjustsAndClosesWithPlaybackControlsStillResponsive",
+    "class": "com.resonance.player.ui.PlaybackSettingsDialogTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "dialogIsolatesEveryContentSlotFromHostGlassWithoutChangingHostState",
+    "class": "com.resonance.player.ui.PlaybackSettingsDialogTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "verticalDragTracksThePointerShortPullReturnsAndLongPullDismisses",
+    "class": "com.resonance.player.ui.PlayerExpansionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "realShellConnectsItsMiniPlayerAtEveryWindowClass",
+    "class": "com.resonance.player.ui.PlayerExpansionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "coverConnectsMeasuredEndpointsAndRapidReversalKeepsItsPosition",
+    "class": "com.resonance.player.ui.PlayerExpansionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "upwardReversalAndLyricsScrollingKeepThePlayerOpen",
+    "class": "com.resonance.player.ui.PlayerExpansionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "reducedMotionAndKeyboardKeepTheCoverStationaryAndVisible",
+    "class": "com.resonance.player.ui.PlayerExpansionTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "favoriteCardOnlyShowsSongCount",
+    "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "audioDialogHasBoundedListAndSelectionDoesNotInvokePlaybackWorkUntilChosen",
+    "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyLyricsHaveOneSearchActionAndReachableToolsWithLargeText",
+    "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failedRestoreKeepsPlaybackAndAllowsRetry",
+    "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "restoredAudioIsPlayableBeforeTheUiLibrarySnapshotUpdates",
+    "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "lateRestoreCannotOverrideANewerRecommendationClick",
+    "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "recommendationPlaybackUsesBatchOrderAndExcludesUnrelatedLibraryTracks",
+    "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "lastPlaylistRemainsSelectableAndActionsFitShortLargeTextWindows",
+    "class": "com.resonance.player.ui.SyncPackageDialogTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyLibraryAndImportPreserveNullScopeAndDoNoWorkBeforeConfirmation",
+    "class": "com.resonance.player.ui.SyncPackageDialogTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "openingLargeCatalogOnlyComposesVisiblePlaylistOptions",
+    "class": "com.resonance.player.ui.SyncPackageDialogTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "progressCanBeDismissedAndBusyScreenCannotStartAnotherArchive",
+    "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "completedExportShowsActualLocationAndLongFilenameWithReachableActions",
+    "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "failureNeverDisplaysSuccessOrLocationActions",
+    "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testGetCharInitial",
+    "class": "com.resonance.player.util.PinyinUtilsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testToPinyinInitials",
+    "class": "com.resonance.player.util.PinyinUtilsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "testMatches",
+    "class": "com.resonance.player.util.PinyinUtilsTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "galleryPlayerKeepsTransportReachableWithLargeTextInShortWindow",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playbackErrorOffersRetryInBothThemes",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "bufferingAndLoadingStatesRenderDistinctVisualFeedbackInDarkAndLight",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "draggingProgressCommitsOnlyOnceOnRelease",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "songInformationRemainsReachableFromPlayerMenu",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "wideStageKeepsLyricsQueueAndTransportConnected",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "stageBackdropRemainsStableAcrossPlaybackAndAccessibilityStates",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "shortLandscapeKeepsPaneTabsAndTransportInsideViewport",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "nativeSlidersAndTabsExposeWorkingActionsAndMinimumTargets",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "compactAssistantKeepsTitleOnOneLineWithLargeText",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "albumAtmosphereFollowsColoredArtworkAndIgnoresTransparentArt",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "emptyLibraryKeepsEntryActionsUsableWithLargeText",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "playbackWaveMovesOnlyWhilePlayingAndKeepsNativeSeek",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "switchingThemeKeepsFirstFrameReadable",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "textAndSelectedRolesStayReadableAcrossAllThemes",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "renderFrostedDestinationsThroughTheRealShell",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "assistantAttachmentsOnlyActOnExplicitClicks",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "renderApprovedPlayerPanes",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "renderApprovedLightNativePagesAndSettings",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "shortLandscapeRetainsCollectionViewportAndTransport",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "nativePagesReverseWithoutRecreatingTheDepartingContent",
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "status": "passed",
+    "platform": "共享/桌面JVM"
+  },
+  {
+    "name": "directoryUriTargetsTheExportSubfolderAndOtherLocationsAreRejected",
+    "class": "com.resonance.player.AndroidExportLocationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "folderLaunchUsesAFreshDocumentTaskAndCarriesNoStorageGrant",
+    "class": "com.resonance.player.AndroidExportLocationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "repeatedRecreationAndShutdownKeepTheMainLooperResponsive",
+    "class": "com.resonance.player.ApplicationLifecycleDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "revokedGainDefersUntilGrantedAndDisposedActivityCannotChangeNewController",
+    "class": "com.resonance.player.AudioControllerLifecycleDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "r128JsonIsParsedOnTheAndroidRegexEngine",
+    "class": "com.resonance.player.AudioSessionIntegrationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "processorAmplifiesActualPcmAndSupportsMono",
+    "class": "com.resonance.player.AudioSessionIntegrationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "commandsAreGrantedAndBackgroundTrackChangesUseOnlyGlobalVolume",
+    "class": "com.resonance.player.AudioSessionIntegrationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "bundledFfmpegMeasuresAndCachesWholeTrackLoudness",
+    "class": "com.resonance.player.AudioSessionIntegrationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "horizontalSwipesChangeOnePageAndDoNotWrapAtEdges",
+    "class": "com.resonance.player.HorizontalPageSwipeTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "verticalScrollAndSliderDragDoNotChangePage",
+    "class": "com.resonance.player.HorizontalPageSwipeTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "openingCoversTheListAndClipsAtTheViewport",
+    "class": "com.resonance.player.LibraryDetailTransitionTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: expected=Color(0.9490196, 0.9490196, 0.96862745, 1.0, sRGB IEC61966-2.1) actual=Color(0.2627451, 0.0, 0.0, 1.0, sRGB IEC61966-2.1) marker=Rect.fromLTRB(11.0, 0.0, 95.0, 84.0) expected:<0.9490196> but was:<0.2627451>\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat org.junit.Assert.failNotEquals(Assert.java:835)\n\tat org.junit.Assert.assertEquals(Assert.java:577)\n\tat com.resonance.player.LibraryDetailTransitionTest.assertColor--OWjLjI(LibraryDetailTransitionTest.kt:68)\n\tat com.resonance.player.LibraryDetailTransitionTest.openingCoversTheListAndClipsAtTheViewport(LibraryDetailTransitionTest.kt:83)\n\nError in openingCoversTheListAndClipsAtTheViewport(com.resonance.player.LibraryDetailTransitionTest):\njava.lang.AssertionError: expected=Color(0.9490196, 0.9490196, 0.96862745, 1.0, sRGB IEC61966-2.1) actual=Color(0.2627451, 0.0, 0.0, 1.0, sRGB IEC61966-2.1) marker=Rect.fromLTRB(11.0, 0.0, 95.0, 84.0) expected:<0.9490196> but was:<0.2627451>\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat org.junit.Assert.failNotEquals(Assert.java:835)\n\tat org.junit.Assert.assertEquals(Assert.java:577)\n\tat com.resonance.player.LibraryDetailTransitionTest.assertColor--OWjLjI(LibraryDetailTransitionTest.kt:68)\n\tat com.resonance.player.LibraryDetailTransitionTest.openingCoversTheListAndClipsAtTheViewport(LibraryDetailTransitionTest.kt:83)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "returningKeepsTheDetailAboveTheListInDarkMode",
+    "class": "com.resonance.player.LibraryDetailTransitionTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: expected=Color(0.043137256, 0.043137256, 0.047058824, 1.0, sRGB IEC61966-2.1) actual=Color(0.31764707, 0.0, 0.0, 1.0, sRGB IEC61966-2.1) marker=null expected:<0.043137256> but was:<0.31764707>\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat org.junit.Assert.failNotEquals(Assert.java:835)\n\tat org.junit.Assert.assertEquals(Assert.java:577)\n\tat com.resonance.player.LibraryDetailTransitionTest.assertColor--OWjLjI(LibraryDetailTransitionTest.kt:68)\n\tat com.resonance.player.LibraryDetailTransitionTest.returningKeepsTheDetailAboveTheListInDarkMode(LibraryDetailTransitionTest.kt:101)\n\nError in returningKeepsTheDetailAboveTheListInDarkMode(com.resonance.player.LibraryDetailTransitionTest):\njava.lang.AssertionError: expected=Color(0.043137256, 0.043137256, 0.047058824, 1.0, sRGB IEC61966-2.1) actual=Color(0.31764707, 0.0, 0.0, 1.0, sRGB IEC61966-2.1) marker=null expected:<0.043137256> but was:<0.31764707>\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat org.junit.Assert.failNotEquals(Assert.java:835)\n\tat org.junit.Assert.assertEquals(Assert.java:577)\n\tat com.resonance.player.LibraryDetailTransitionTest.assertColor--OWjLjI(LibraryDetailTransitionTest.kt:68)\n\tat com.resonance.player.LibraryDetailTransitionTest.returningKeepsTheDetailAboveTheListInDarkMode(LibraryDetailTransitionTest.kt:101)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "immediateBackInterruptsTheOpeningWithoutLeavingAStaleLayer",
+    "class": "com.resonance.player.LibraryDetailTransitionTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "reducedMotionDoesNotCrossfadeBothPagesTogether",
+    "class": "com.resonance.player.LibraryDetailTransitionTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "rapidPageChangesKeepTopEdgeCoveredInDarkMode",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "libraryBoundarySwipeOpensAssistant",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "disabledRecommendationCardAppearsBeforeUserPlaylistsAndOpensSettings",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Failed: assertExists.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '每日推荐' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode$default(SemanticsNodeInteraction.kt:83)\n\tat com.resonance.player.LibraryNavigationTest.disabledRecommendationCardAppearsBeforeUserPlaylistsAndOpensSettings(LibraryNavigationTest.kt:161)\n\nError in disabledRecommendationCardAppearsBeforeUserPlaylistsAndOpensSettings(com.resonance.player.LibraryNavigationTest):\njava.lang.AssertionError: Failed: assertExists.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '每日推荐' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode$default(SemanticsNodeInteraction.kt:83)\n\tat com.resonance.player.LibraryNavigationTest.disabledRecommendationCardAppearsBeforeUserPlaylistsAndOpensSettings(LibraryNavigationTest.kt:161)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "assistantExampleFillsDraftWithoutSendingRequest",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "librarySwipesSelectTabsBeforeMainNavigationAndRetainListPosition",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "assistantKeepsPlayerAndDockBoundsStable",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "rapidPageChangesKeepTopEdgeCoveredInLightMode",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "enteringSongsDoesNotJumpToPlayingTrackAndTabScrollPositionIsRetained",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "assistantHeaderKeepsTitleOnOneLineAndActionsVisible",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "enabledRecommendationCardOpensItsOwnPlaylistPage",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "playerCanExpandAndCloseRepeatedlyWithoutLeavingAnOverlay",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "aboutShowsHighlightsForInstalledVersion",
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "activityRecreationBackgroundPauseSeekAndNativeRepeatKeepAccurateStats",
+    "class": "com.resonance.player.ListeningSessionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "bundledOfflineOcrReadsBilingualPlaylistAndReleasesSessions",
+    "class": "com.resonance.player.LocalScreenshotOcrTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "wideScreenshotsUseRealDecoderScaleWithinSliceBounds",
+    "class": "com.resonance.player.LocalScreenshotOcrTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "coverAndFullLyricsFollowNativePositionWithVisibleHighlight",
+    "class": "com.resonance.player.LyricsPlayerRegressionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "largeTextKeepsCoverPreviewAndTransportReachable",
+    "class": "com.resonance.player.LyricsPlayerRegressionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "onePersistentRowSlidesIntoFocusAcrossSeveralFrames",
+    "class": "com.resonance.player.LyricsPreviewMotionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "reducedMotionAndBackwardSeekKeepTheSameFocus",
+    "class": "com.resonance.player.LyricsPreviewMotionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "returnButtonImmediatelyRecentersEvenWhilePaused",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "seekingToAnOffscreenLineStartsByScrollingTheExistingRows",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "plainTextBrowsingDoesNotSeekOrShowFollowControls",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "rapidlyReversingTheTargetDoesNotReplayOrSnap",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "firstLastResizeAndLargeTextStayCenteredWithReducedMotion",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "initialAndWrappedBilingualLinesAreCentered",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "nextLinePassesThroughIntermediatePositionsWithoutChangingRowHeight",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "tappingUsesOffsetAndClampsSeekToTheAudioRange",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "changingTracksWithTheSameLinesAndTimestampStillCentersTheNewList",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "browsingWaitsThenResumesWithoutANewLyricTimestamp",
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "failedRequestShowsErrorBesideControlsAndAllowsRetry",
+    "class": "com.resonance.player.LyricsTranslationDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "clickingTranslateShowsBilingualLyricsFromOriginalOnlyMode",
+    "class": "com.resonance.player.LyricsTranslationDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "importedAudioHasEditableTagsAndCoverAndDislikeCanPhysicallyDeleteIt",
+    "class": "com.resonance.player.MusicFeaturesIntegrationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "longScreenshotsAreSplitAndCredentialsAreEncrypted",
+    "class": "com.resonance.player.MusicFeaturesIntegrationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "lyricsQueueSeekAndDismissUseRealControls",
+    "class": "com.resonance.player.MusicStageDeviceTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Actual width is 151.42856.dp, expected at least 180.0.dp (tolerance: 0.5.dp)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertIsAtLeast-cWfXhoU(BoundsAssertions.kt:342)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertIsAtLeast-cWfXhoU$default(BoundsAssertions.kt:339)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertWidthIsAtLeast_3ABfNKs$lambda$0(BoundsAssertions.kt:86)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.$r8$lambda$cgvqaRpJ7xpvqBAVX5Gx6ZfTQKM(Unknown Source:0)\n\tat androidx.compose.ui.test.BoundsAssertionsKt$$ExternalSyntheticLambda7.invoke(D8$$SyntheticClass:0)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.withUnclippedBoundsInRoot(BoundsAssertions.kt:266)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertWidthIsAtLeast-3ABfNKs(BoundsAssertions.kt:86)\n\tat com.resonance.player.MusicStageDeviceTest.lyricsQueueSeekAndDismissUseRealControls(MusicStageDeviceTest.kt:101)\n\nError in lyricsQueueSeekAndDismissUseRealControls(com.resonance.player.MusicStageDeviceTest):\njava.lang.AssertionError: Actual width is 151.42856.dp, expected at least 180.0.dp (tolerance: 0.5.dp)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertIsAtLeast-cWfXhoU(BoundsAssertions.kt:342)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertIsAtLeast-cWfXhoU$default(BoundsAssertions.kt:339)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertWidthIsAtLeast_3ABfNKs$lambda$0(BoundsAssertions.kt:86)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.$r8$lambda$cgvqaRpJ7xpvqBAVX5Gx6ZfTQKM(Unknown Source:0)\n\tat androidx.compose.ui.test.BoundsAssertionsKt$$ExternalSyntheticLambda7.invoke(D8$$SyntheticClass:0)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.withUnclippedBoundsInRoot(BoundsAssertions.kt:266)\n\tat androidx.compose.ui.test.BoundsAssertionsKt.assertWidthIsAtLeast-3ABfNKs(BoundsAssertions.kt:86)\n\tat com.resonance.player.MusicStageDeviceTest.lyricsQueueSeekAndDismissUseRealControls(MusicStageDeviceTest.kt:101)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "playingAtmosphereAndNextTrackRemainInteractive",
+    "class": "com.resonance.player.MusicStageDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "largeTextKeepsTransportAndPlaybackSettingsReachable",
+    "class": "com.resonance.player.MusicStageDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "playingStageReportsActualWindowFrameDurations",
+    "class": "com.resonance.player.MusicStageFrameMetricsTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Expected real animated frames, got 15\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat org.junit.Assert.assertTrue(Assert.java:42)\n\tat com.resonance.player.MusicStageFrameMetricsTest.playingStageReportsActualWindowFrameDurations(MusicStageFrameMetricsTest.kt:149)\n\nError in playingStageReportsActualWindowFrameDurations(com.resonance.player.MusicStageFrameMetricsTest):\njava.lang.AssertionError: Expected real animated frames, got 15\n\tat org.junit.Assert.fail(Assert.java:89)\n\tat org.junit.Assert.assertTrue(Assert.java:42)\n\tat com.resonance.player.MusicStageFrameMetricsTest.playingStageReportsActualWindowFrameDurations(MusicStageFrameMetricsTest.kt:149)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "volumeOpensAdjustsReopensAndLeavesPlaybackResponsive",
+    "class": "com.resonance.player.PlaybackSettingsDialogDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "audioEffectsOpenSelectAndCloseWithoutStoppingPlayerControls",
+    "class": "com.resonance.player.PlayerDialogsDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "configurePrivateCameraThroughEphemeralSocket",
+    "class": "com.resonance.player.PromoAiSetupDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.PromoAiSetupDeviceTest$configurePrivateCameraThroughEphemeralSocket$1.invokeSuspend(PromoAiSetupDeviceTest.kt:16)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.PromoAiSetupDeviceTest.configurePrivateCameraThroughEphemeralSocket(PromoAiSetupDeviceTest.kt:14)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.PromoAiSetupDeviceTest:",
+    "platform": "Android设备"
+  },
+  {
+    "name": "recordNativePlayerStory",
+    "class": "com.resonance.player.PromoCaptureDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: Pass -e capturePromo true to record\n\tat org.junit.Assume.assumeTrue(Assume.java:68)\n\tat com.resonance.player.PromoCaptureDeviceTest.recordNativePlayerStory(PromoCaptureDeviceTest.kt:79)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$testWithDisposal$1.evaluate(AndroidComposeTestRule.android.kt:418)\n\tat org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invokeSuspend(AndroidComposeTestRule.android.kt:438)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:4)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invokeSuspend(ComposeUiTest.android.kt:682)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:2)\n\tat androidx.compose.ui.test.EspressoLink.withStrategy(EspressoLink.android.kt:69)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invokeSuspend(ComposeUiTest.android.kt:679)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:4)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$1.invokeSuspend(TestBuilders.kt:317)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.test.TestDispatcher.processEvent$kotlinx_coroutines_test(TestDispatcher.kt:24)\n\tat kotlinx.coroutines.test.TestCoroutineScheduler.tryRunNextTaskUnless$kotlinx_coroutines_test(TestCoroutineScheduler.kt:98)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$workRunner$1.invokeSuspend(TestBuilders.kt:326)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat kotlinx.coroutines.test.TestBuildersJvmKt.createTestResult(TestBuildersJvm.kt:10)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:309)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:167)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment.runTest(ComposeUiTest.android.kt:658)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1.evaluate(AndroidComposeTestRule.android.kt:438)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.PromoCaptureDeviceTest:",
+    "platform": "Android设备"
+  },
+  {
+    "name": "recordAssistantEntryAndRealEncryptedRoom",
+    "class": "com.resonance.player.PromoFeaturesCaptureDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.PromoFeaturesCaptureDeviceTest$recordAssistantEntryAndRealEncryptedRoom$1.invokeSuspend(PromoFeaturesCaptureDeviceTest.kt:33)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.PromoFeaturesCaptureDeviceTest.recordAssistantEntryAndRealEncryptedRoom(PromoFeaturesCaptureDeviceTest.kt:31)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$testWithDisposal$1.evaluate(AndroidComposeTestRule.android.kt:418)\n\tat org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invokeSuspend(AndroidComposeTestRule.android.kt:438)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:4)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invokeSuspend(ComposeUiTest.android.kt:682)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:2)\n\tat androidx.compose.ui.test.EspressoLink.withStrategy(EspressoLink.android.kt:69)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invokeSuspend(ComposeUiTest.android.kt:679)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:4)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$1.invokeSuspend(TestBuilders.kt:317)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.test.TestDispatcher.processEvent$kotlinx_coroutines_test(TestDispatcher.kt:24)\n\tat kotlinx.coroutines.test.TestCoroutineScheduler.tryRunNextTaskUnless$kotlinx_coroutines_test(TestCoroutineScheduler.kt:98)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$workRunner$1.invokeSuspend(TestBuilders.kt:326)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat kotlinx.coroutines.test.TestBuildersJvmKt.createTestResult(TestBuildersJvm.kt:10)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:309)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:167)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment.runTest(ComposeUiTest.android.kt:658)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1.evaluate(AndroidComposeTestRule.android.kt:438)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.PromoFeaturesCaptureDeviceTest:",
+    "platform": "Android设备"
+  },
+  {
+    "name": "exportScopesScrollConfirmCancelAndReopenWithoutFreezingHost",
+    "class": "com.resonance.player.SyncPackageDialogDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "completionKeepsLocationVisibleWhenFileManagerCannotOpen",
+    "class": "com.resonance.player.SyncPackageFeedbackDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "androidKeystoreMutualTlsChatPairAndDirectInvite",
+    "class": "com.resonance.player.TogetherCompanionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "failedLocalSaveKeepsDraftAndClearRequiresConfirmation",
+    "class": "com.resonance.player.TogetherCompanionUiDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "pairedInvitationDoesNotJoinUntilRecipientAccepts",
+    "class": "com.resonance.player.TogetherCompanionUiDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "physicalAndroidFollowsWindowsAudioPauseSeekAndReplacement",
+    "class": "com.resonance.player.TogetherConnectionDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherConnectionDeviceTest$physicalAndroidFollowsWindowsAudioPauseSeekAndReplacement$1.invokeSuspend(TogetherConnectionDeviceTest.kt:39)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherConnectionDeviceTest.physicalAndroidFollowsWindowsAudioPauseSeekAndReplacement(TogetherConnectionDeviceTest.kt:36)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.TogetherConnectionDeviceTest:",
+    "platform": "Android设备"
+  },
+  {
+    "name": "androidPeersCanCreateAndValidateEphemeralTlsCertificates",
+    "class": "com.resonance.player.TogetherConnectionDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "mumuNativeHostKeepsPublishingAfterActivityGoesIntoBackground",
+    "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest$mumuNativeHostKeepsPublishingAfterActivityGoesIntoBackground$1.invokeSuspend(TogetherNativePlaybackDeviceTest.kt:20)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest.mumuNativeHostKeepsPublishingAfterActivityGoesIntoBackground(TogetherNativePlaybackDeviceTest.kt:19)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.TogetherNativePlaybackDeviceTest:",
+    "platform": "Android设备"
+  },
+  {
+    "name": "servicePlayerFollowsWindowsAfterActivityGoesIntoBackground",
+    "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest$servicePlayerFollowsWindowsAfterActivityGoesIntoBackground$1.invokeSuspend(TogetherNativePlaybackDeviceTest.kt:76)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest.servicePlayerFollowsWindowsAfterActivityGoesIntoBackground(TogetherNativePlaybackDeviceTest.kt:74)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "checkAssistantAvailabilityForPromoWithoutExportingCredentials",
+    "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+    "status": "skipped",
+    "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest$checkAssistantAvailabilityForPromoWithoutExportingCredentials$1.invokeSuspend(TogetherNativePlaybackDeviceTest.kt:68)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest.checkAssistantAvailabilityForPromoWithoutExportingCredentials(TogetherNativePlaybackDeviceTest.kt:67)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "roomCreationAndClosureUseExplicitActionsAndKeepPortVisible",
+    "class": "com.resonance.player.TogetherUiDeviceTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Action performScrollTo() failed.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '创建双人房间' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\n\tat androidx.compose.ui.test.ActionsKt.performScrollTo(Actions.kt:80)\n\tat com.resonance.player.TogetherUiDeviceTest.roomCreationAndClosureUseExplicitActionsAndKeepPortVisible(TogetherUiDeviceTest.kt:96)\n\nError in roomCreationAndClosureUseExplicitActionsAndKeepPortVisible(com.resonance.player.TogetherUiDeviceTest):\njava.lang.AssertionError: Action performScrollTo() failed.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '创建双人房间' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\n\tat androidx.compose.ui.test.ActionsKt.performScrollTo(Actions.kt:80)\n\tat com.resonance.player.TogetherUiDeviceTest.roomCreationAndClosureUseExplicitActionsAndKeepPortVisible(TogetherUiDeviceTest.kt:96)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "openingOrPastingAnInvitationDoesNotConnectUntilExplicitJoin",
+    "class": "com.resonance.player.TogetherUiDeviceTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Failed: assertExists.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '跟听中 · 由房主控制播放' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.assertExists(SemanticsNodeInteraction.kt:125)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.assertExists$default(SemanticsNodeInteraction.kt:124)\n\tat com.resonance.player.TogetherUiDeviceTest.openingOrPastingAnInvitationDoesNotConnectUntilExplicitJoin(TogetherUiDeviceTest.kt:76)\n\nError in openingOrPastingAnInvitationDoesNotConnectUntilExplicitJoin(com.resonance.player.TogetherUiDeviceTest):\njava.lang.AssertionError: Failed: assertExists.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '跟听中 · 由房主控制播放' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.assertExists(SemanticsNodeInteraction.kt:125)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.assertExists$default(SemanticsNodeInteraction.kt:124)\n\tat com.resonance.player.TogetherUiDeviceTest.openingOrPastingAnInvitationDoesNotConnectUntilExplicitJoin(TogetherUiDeviceTest.kt:76)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "externalInvitationShowsAddressWithoutAutomaticallyConnecting",
+    "class": "com.resonance.player.TogetherUiDeviceTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "incomingFriendMustBeApprovedAndControlsRemainAccessible",
+    "class": "com.resonance.player.TogetherUiDeviceTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Semantic Node has no parent layout with a Scroll SemanticsAction\n\tat androidx.compose.ui.test.ActionsKt.scrollToNode(Actions.kt:96)\n\tat androidx.compose.ui.test.ActionsKt.performScrollTo(Actions.kt:81)\n\tat com.resonance.player.TogetherUiDeviceTest.incomingFriendMustBeApprovedAndControlsRemainAccessible(TogetherUiDeviceTest.kt:89)\n\nError in incomingFriendMustBeApprovedAndControlsRemainAccessible(com.resonance.player.TogetherUiDeviceTest):\njava.lang.AssertionError: Semantic Node has no parent layout with a Scroll SemanticsAction\n\tat androidx.compose.ui.test.ActionsKt.scrollToNode(Actions.kt:96)\n\tat androidx.compose.ui.test.ActionsKt.performScrollTo(Actions.kt:81)\n\tat com.resonance.player.TogetherUiDeviceTest.incomingFriendMustBeApprovedAndControlsRemainAccessible(TogetherUiDeviceTest.kt:89)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "settingsOpensQuickGuideAndAllFourPagesCanBeRead",
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Failed to inject touch input.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '开始浏览' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\n\tat androidx.compose.ui.test.ActionsKt.performTouchInput(Actions.kt:401)\n\tat androidx.compose.ui.test.AndroidActions.performClickImpl(Actions.android.kt:23)\n\tat androidx.compose.ui.test.ActionsKt.performClick(Actions.kt:59)\n\tat com.resonance.player.TutorialNavigationTest.settingsOpensQuickGuideAndAllFourPagesCanBeRead(TutorialNavigationTest.kt:86)\n\nError in settingsOpensQuickGuideAndAllFourPagesCanBeRead(com.resonance.player.TutorialNavigationTest):\njava.lang.AssertionError: Failed to inject touch input.\nReason: Expected exactly '1' node but could not find any node that satisfies: (Text + InputText + EditableText contains '开始浏览' (ignoreCase: false))\n\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow(SemanticsNodeInteraction.kt:178)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchOneOrThrow$default(SemanticsNodeInteraction.kt:150)\n\tat androidx.compose.ui.test.SemanticsNodeInteraction.fetchSemanticsNode(SemanticsNodeInteraction.kt:84)\n\tat androidx.compose.ui.test.ActionsKt.performTouchInput(Actions.kt:401)\n\tat androidx.compose.ui.test.AndroidActions.performClickImpl(Actions.android.kt:23)\n\tat androidx.compose.ui.test.ActionsKt.performClick(Actions.kt:59)\n\tat com.resonance.player.TutorialNavigationTest.settingsOpensQuickGuideAndAllFourPagesCanBeRead(TutorialNavigationTest.kt:86)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "pauseAndResumeRetainStepAndDoNotEnableRecommendations",
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "quickGuideRemainsNavigableWithLargeTextAndShortViewport",
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "offscreenSettingsTargetIsBroughtIntoView",
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "welcomeCanBeSkippedAndIsNotOfferedAgain",
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "status": "failed",
+    "stack": "java.lang.AssertionError: Assert failed: The component with Text + InputText + EditableText contains '使用教程' (ignoreCase: false) is not displayed!\n\tat androidx.compose.ui.test.AssertionsKt.assertIsDisplayed(Assertions.kt:34)\n\tat com.resonance.player.TutorialNavigationTest.welcomeCanBeSkippedAndIsNotOfferedAgain(TutorialNavigationTest.kt:80)\n\nError in welcomeCanBeSkippedAndIsNotOfferedAgain(com.resonance.player.TutorialNavigationTest):\njava.lang.AssertionError: Assert failed: The component with Text + InputText + EditableText contains '使用教程' (ignoreCase: false) is not displayed!\n\tat androidx.compose.ui.test.AssertionsKt.assertIsDisplayed(Assertions.kt:34)\n\tat com.resonance.player.TutorialNavigationTest.welcomeCanBeSkippedAndIsNotOfferedAgain(TutorialNavigationTest.kt:80)\n",
+    "platform": "Android设备"
+  },
+  {
+    "name": "spotlightPassesRealClicksAndAdvancesThroughPlayerTabs",
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "tabsExposeSelectionAndKeepTouchTargetsInReducedMotion",
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "seekAndVolumeExposeNativeProgressActionsAndFreshCallbacks",
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "albumAtmosphereCanReadNativeArtworkPixels",
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "status": "passed",
+    "platform": "Android设备"
+  },
+  {
+    "name": "test_checked_in_public_content_matches_release_and_explains_network_boundary",
+    "class": "website.test_announcements.AnnouncementTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_direct_download_urls_change_with_release_to_avoid_old_cached_installer",
+    "class": "website.test_announcements.AnnouncementTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_publication_only_updates_announcement_and_does_not_send_mail",
+    "class": "website.test_announcements.AnnouncementTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_wrong_release_and_invalid_body_preserve_previous_announcement",
+    "class": "website.test_announcements.AnnouncementTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_anonymous_post_reply_and_xss_are_safe",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_asset_version_matches_bytes_and_changes_with_content",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_author_campaign_requires_explicit_confirmation",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_author_can_participate_and_replies_are_pinned_for_every_reader",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_author_deletion_is_protected_and_cascades",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_author_forms_render_and_announcement_is_escaped",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_author_release_route_requires_both_correctly_named_packages",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_cleanup_never_deletes_outside_its_owned_directory",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_confirmation_is_bound_to_the_selected_preferences",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_csrf_protects_public_and_author_mutations",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_existing_author_replies_stay_pinned_after_restart",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_failed_upload_preserves_active_release_and_cleans_staging",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_fake_svg_image_is_rejected",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_home_and_forum_announcement_link_and_content",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_invalid_linux_asset_cannot_switch_any_platform_or_remove_the_previous_release",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_large_author_upload_uses_the_release_limit_not_public_limit",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_latest_downloads_and_range_requests",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_login_throttle_persists_and_does_not_store_plain_ip",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_low_disk_space_keeps_the_previous_release",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_no_smtp_means_no_false_subscription_success",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_one_click_unsubscribe_uses_a_valid_capability_token",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_owner_can_atomically_publish_three_platforms_and_reject_wrong_linux_version",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_owner_can_create_topic_and_delete_empty_topic_with_guard",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_owner_can_pin_and_unpin_post",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_owner_dashboard_stats_and_post_search",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_owner_quick_delete_post_and_reply_by_query",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_password_change_revokes_existing_author_session",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_post_survives_application_restart",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_promotion_campaign_only_includes_explicit_opt_in",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_public_pages_have_no_author_entry_or_old_slogan",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_public_upload_is_verified_and_reencoded_and_removed_with_post",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_release_switch_removes_old_packages_but_keeps_history",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_response_headers_and_owner_robots",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_subscription_needs_email_confirmation",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_three_platform_release_includes_linux_with_correct_links_hash_and_range",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_topic_request_is_private_until_approved",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_unsubscribe_cancels_pending_mail_and_old_confirm_link",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_unversioned_or_wrong_asset_versions_do_not_get_immutable_cache",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_versioned_public_assets_cache_without_cookies",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_worker_persists_attempts_and_retries_without_real_mail",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_worker_rechecks_opt_out_before_connecting_to_smtp",
+    "class": "website.test_site.SiteTest",
+    "status": "passed",
+    "platform": "Python/website"
+  },
+  {
+    "name": "test_crashing_real_child_stops_at_budget",
+    "class": "relay.test_supervise.SupervisorTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_missing_executable_does_not_retry_forever",
+    "class": "relay.test_supervise.SupervisorTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_parent_retirement_terminates_live_child",
+    "class": "relay.test_supervise.SupervisorTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_capacity_rejects_without_success",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_corrupt_budget_is_preserved_and_refuses_startup",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_default_does_not_trust_client_ip_headers",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_durable_budget_cannot_reset_on_restart",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_invalid_hello_and_wait_timeout_release_slots",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_nginx_clients_have_separate_ip_budgets",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_pair_bidirectional_bytes_and_cleanup",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_session_limit_closes_both_peers",
+    "class": "relay.test_websocket_server.RelayTest",
+    "status": "passed",
+    "platform": "Python/relay"
+  },
+  {
+    "name": "test_http_roundtrip_duplicate_keys_and_body_limits",
+    "class": "rendezvous.test_server.HttpTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_capacity_and_rate_limits_bound_memory",
+    "class": "rendezvous.test_server.RegistryTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_concurrent_challenges_do_not_invalidate_each_other",
+    "class": "rendezvous.test_server.RegistryTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_expiration_removal_and_withdraw_are_not_online_status_oracles",
+    "class": "rendezvous.test_server.RegistryTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_only_mutually_authorized_online_partners_can_lookup",
+    "class": "rendezvous.test_server.RegistryTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_private_content_unknown_fields_and_unbounded_addresses_are_rejected",
+    "class": "rendezvous.test_server.RegistryTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_replay_tamper_expired_challenge_and_cross_action_signature_fail",
+    "class": "rendezvous.test_server.RegistryTest",
+    "status": "passed",
+    "platform": "Python/rendezvous"
+  },
+  {
+    "name": "test_failed_requests_are_counted_and_not_reported_as_success",
+    "class": "deployment.test_benchmark.BenchmarkTest",
+    "status": "passed",
+    "platform": "Python/deployment"
+  },
+  {
+    "name": "test_memory_guard_prevents_network_load",
+    "class": "deployment.test_benchmark.BenchmarkTest",
+    "status": "passed",
+    "platform": "Python/deployment"
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "clickOrder": [
+    "/forum",
+    "/downloads"
+  ],
+  "applied": [
+    "/downloads",
+    "/forum"
+  ],
+  "finalPage": "/forum",
+  "pushed": [
+    "https://audit.invalid/downloads",
+    "https://audit.invalid/forum"
+  ]
+}

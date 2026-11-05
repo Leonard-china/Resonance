@@ -539,17 +539,22 @@ internal fun ImportScreen(
             val progress by features.services.importProgress.collectAsState()
             progress?.let { MusicTaskProgress(it, features.services::cancelImport) }
         }
+        if (LocalMusicFeatures.current?.services?.supportsKeyboardShortcuts == true) {
+            Text("也可以将音乐、.resonance 歌单包或文件夹直接拖入窗口", style = MaterialTheme.typography.bodyLarge,
+                color = ResonanceColors.Muted, modifier = Modifier.padding(vertical = 16.dp))
+        }
         SectionHeader("来源")
         SettingRow(
             icon = Icons.Default.Headphones,
-            title = "扫描本机音乐",
-            subtitle = "自动查找 MP3 / FLAC / M4A 等音频文件",
+            title = if (LocalMusicFeatures.current?.services?.supportsKeyboardShortcuts == true) "选择音乐文件或文件夹" else "扫描本机音乐",
+            subtitle = if (LocalMusicFeatures.current?.services?.supportsKeyboardShortcuts == true)
+                "导入 MP3 / FLAC / M4A 等音频或 .resonance 歌单包" else "导入 MP3 / FLAC / M4A 等音频文件",
             onClick = onImport,
             modifier = Modifier.tutorialTarget(TutorialTarget.LocalImport),
         )
         SettingRow(
             icon = Icons.Default.FolderOpen,
-            title = if (LocalMusicFeatures.current?.services?.supportsKgg == true) "选择文件夹并转换 KGMA/KGG" else "选择文件夹并转换 KGMA",
+            title = if (LocalMusicFeatures.current?.services?.supportsKgg == true) "选择文件并转换 KGMA/KGG" else "选择文件夹并转换 KGMA",
             subtitle = "递归转换为 320 kbps MP3，保留源文件",
             onClick = onConvert,
         )
@@ -820,16 +825,16 @@ internal fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCl
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val background by animateColorAsState(if (focused || hovered) ResonanceColors.Soft else ResonanceColors.GlassLight,
+    val background by animateColorAsState(if (focused || hovered) ResonanceColors.Soft else ResonanceColors.Raised,
         tween(motionDuration(160)), label = "settingRowBackground")
-    Column(modifier.padding(bottom = 6.dp)) {
+    Column(modifier.padding(bottom = 2.dp)) {
         Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(background)
             .then(if (onClick != null) Modifier.clickable(interactionSource = interaction, indication = ripple(),
                 role = Role.Button, onClick = onClick) else Modifier)
             .border(1.5.dp, if (focused) ResonanceColors.Primary else Color.Transparent, RoundedCornerShape(14.dp))
-            .heightIn(min = 72.dp).padding(horizontal = 10.dp, vertical = 14.dp),
+            .heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = ResonanceColors.Muted, modifier = Modifier.size(24.dp))
+            Icon(icon, null, tint = ResonanceColors.Primary, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.TextPrimary)

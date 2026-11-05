@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -266,9 +267,11 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
     private val lyricsRepository = LrclibLyricsRepository(activity.filesDir.toPath().resolve("lyrics-cache"))
     private val deepSeekClient = com.resonance.player.ai.DeepSeekClient { messages, tokens -> musicAssistant.completeText(messages.map { AssistantMessage(it.getValue("role"), it.getValue("content")) }, tokens) }
+    // The connection can outlive Activity destruction while accepted writes are draining.
+    // An Activity context is automatically unbound by Android before deferred release.
     private val controllerFuture = MediaController.Builder(
-        activity,
-        SessionToken(activity, ComponentName(activity, PlaybackService::class.java)),
+        activity.applicationContext,
+        SessionToken(activity.applicationContext, ComponentName(activity, PlaybackService::class.java)),
     ).setListener(object : MediaController.Listener {
         override fun onAvailableSessionCommandsChanged(controller: MediaController, commands: androidx.media3.session.SessionCommands) {
             flushAudioCommands(controller)
@@ -350,7 +353,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         com.resonance.player.PlaybackService.setVocalSuppression(enabled)
     }
     private val listeningStatsRepository by lazy { com.resonance.player.playback.ListeningStatsRepository.get(activity.filesDir.toPath()) }
-    private val listeningStatsStore get() = listeningStatsRepository.store
+    override val listeningStats get() = listeningStatsRepository.snapshots
     override val currentAudioEffectPreset get() = com.resonance.player.PlaybackService.audioEffectPresetState
 
     override fun setAudioEffectPreset(preset: com.resonance.player.model.AudioEffectPreset) {
@@ -373,11 +376,11 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override suspend fun flushListeningStats() = withContext(Dispatchers.IO) { listeningStatsRepository.flush() }
 
     override fun getTrackListeningStats(trackId: String): com.resonance.player.model.TrackListeningStats? {
-        return listeningStatsStore.getTrackStats(trackId)
+        return listeningStatsRepository.getTrackStats(trackId)
     }
 
     override fun getAllListeningStats(): com.resonance.player.model.AllListeningStats {
-        return listeningStatsStore.getAllStats()
+        return listeningStatsRepository.getAllStats()
     }
     override suspend fun saveReplacementAudio(track: Track): Unit = withContext(Dispatchers.IO) {
         check(audioFileAvailable(track)) { "所选音频已不可读取，未替换来源" }
@@ -614,7 +617,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val editor = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE).edit()
         if (playlistId.isNullOrBlank()) editor.remove("library.selectedPlaylistId")
         else editor.putString("library.selectedPlaylistId", playlistId)
-        editor.commit()
+        editor.commitChecked("无法保存上次歌单")
         Unit
     }
 
@@ -633,7 +636,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE)
             .edit()
             .putString("app.themeMode", mode.name)
-            .commit()
+            .commitChecked("主题保存失败")
         Unit
     }
 
@@ -666,7 +669,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .edit()
             .putBoolean("playback.shuffleEnabled", shuffle)
             .putString("playback.repeatMode", repeatMode.name)
-            .commit()
+            .commitChecked("设置保存失败")
         check(saved) { "播放模式未能保存，请检查存储空间" }
     }
 
@@ -866,14 +869,14 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         AppearanceStorage.preferences(appearancePreferences.getString("app.appearance", null))
     }
     override suspend fun saveAppearance(preferences: AppearancePreferences): Unit = withContext(Dispatchers.IO) {
-        appearancePreferences.edit().putString("app.appearance", AppearanceStorage.encode(preferences)).commit()
+        appearancePreferences.edit().putString("app.appearance", AppearanceStorage.encode(preferences)).commitChecked("外观保存失败")
         Unit
     }
     override suspend fun loadWeatherSnapshot(): WeatherSnapshot? = withContext(Dispatchers.IO) {
         AppearanceStorage.snapshot(appearancePreferences.getString("app.weather", null))
     }
     override suspend fun saveWeatherSnapshot(snapshot: WeatherSnapshot): Unit = withContext(Dispatchers.IO) {
-        appearancePreferences.edit().putString("app.weather", AppearanceStorage.encode(snapshot)).commit()
+        appearancePreferences.edit().putString("app.weather", AppearanceStorage.encode(snapshot)).commitChecked("天气缓存保存失败")
         Unit
     }
     override suspend fun searchWeatherCities(query: String) = WeatherClient.cities(query)
@@ -994,7 +997,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             .putString("baseUrl", config.baseUrl)
             .putString("model", config.model)
             .putBoolean("enabled", config.enabled)
-            .commit()
+            .commitChecked("设置保存失败")
         Unit
     }
 
@@ -1011,7 +1014,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val editor = activity.getSharedPreferences("resonance_ui_state", android.content.Context.MODE_PRIVATE).edit()
         if (folder.isNullOrBlank()) editor.remove("lyrics.customFolder")
         else editor.putString("lyrics.customFolder", folder)
-        editor.commit()
+        editor.commitChecked("歌词目录保存失败")
         Unit
     }
 
@@ -1080,22 +1083,46 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         val temporary = activity.cacheDir.toPath().resolve("Resonance-Import.resonance")
         val sourceUri = pickSyncPackage() ?: return@withContext SyncReport(false, "已取消导入", cancelled = true)
         val sourceName = sourceUri.lastPathSegment?.substringAfterLast('/') ?: "歌单文件"
-        activity.contentResolver.openInputStream(sourceUri).use { input ->
-            requireNotNull(input) { "无法读取所选歌单文件" }
-            Files.newOutputStream(temporary).use(input::copyTo)
-        }
+        val importContext = kotlin.coroutines.coroutineContext
         try {
+            activity.contentResolver.openInputStream(sourceUri).use { input ->
+                requireNotNull(input) { "无法读取所选歌单文件" }
+                Files.newOutputStream(temporary).use { output ->
+                    val buffer = ByteArray(256 * 1024)
+                    var copied = 0L
+                    while (true) {
+                        importContext.ensureActive()
+                        val count = input.read(buffer)
+                        if (count < 0) break
+                        copied += count
+                        require(copied <= 512L * 1024 * 1024 * 1024) { "歌单文件过大" }
+                        if (copied % (4 * 1024 * 1024) < count) {
+                            require(Files.getFileStore(temporary).usableSpace >= 16L * 1024 * 1024 + count) { "空间不足，无法暂存歌单文件" }
+                        }
+                        output.write(buffer, 0, count)
+                    }
+                }
+            }
             val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
                 .toPath().resolve("Resonance")
-            val imported = PlainSyncPackage().import(temporary, managed)
-            val androidTracks = imported.tracks.map { track ->
-                track.copy(sourceUri = Paths.get(track.sourceUri!!).toUri().toString())
+            val imported = synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
+                val previousCache = cachedTracks
+                try {
+                    PlainSyncPackage().import(temporary, managed, onCommit = { archive ->
+                        val managedIndex = activity.filesDir.toPath().resolve("synced-library.properties")
+                        val metadata = listOf(managedIndex, managedIndex.resolveSibling("${managedIndex.fileName}.bak"))
+                        com.resonance.player.io.FileRollback.run(metadata) {
+                            withPreferenceRollback(listOf("resonance_playlists", "resonance_playlists_backup").map {
+                                activity.getSharedPreferences(it, Context.MODE_PRIVATE)
+                            }) {
+                                mergeSyncedTracks(archive.tracks.map { it.copy(sourceUri = Paths.get(it.sourceUri!!).toUri().toString()) })
+                                mergeSyncedPlaylists(archive.playlists)
+                            }
+                        }
+                    }, checkCancelled = { importContext.ensureActive() })
+                } catch (error: Throwable) { cachedTracks = previousCache; throw error }
             }
-            synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
-                mergeSyncedTracks(androidTracks)
-                mergeSyncedPlaylists(imported.playlists)
-            }
-            SyncReport(true, "已导入 $sourceName", androidTracks.size, imported.playlists.size)
+            SyncReport(true, "已导入 $sourceName", imported.tracks.size, imported.playlists.size)
         } finally {
             Files.deleteIfExists(temporary)
         }
@@ -1134,44 +1161,42 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {
-        val rawSource = track.sourceUri ?: return@withContext DeleteTrackReport(false, false, "这首歌曲没有本地音频文件")
-        val source = Uri.parse(rawSource)
-        val fileDeleted = when (source.scheme?.lowercase()) {
-            "content" -> if (Build.VERSION.SDK_INT >= 29) deleteContentUriWithRecovery(source, track) else deleteContentUri(source)
-            "file" -> {
-                val path = source.path?.let(Paths::get) ?: error("本地文件路径无效")
-                val deleted = runCatching { Files.deleteIfExists(path) }.getOrDefault(false)
-                runCatching {
-                    activity.contentResolver.delete(
-                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                        "${MediaStore.Audio.Media.DATA} = ?",
-                        arrayOf(path.toAbsolutePath().toString()),
-                    )
+        val fileDeleted = try {
+            val raw = track.sourceUri?.takeIf(String::isNotBlank)
+            if (raw == null) false else {
+                val uri = Uri.parse(raw)
+                when (uri.scheme?.lowercase()) {
+                    "content" -> {
+                        val deleted = if (Build.VERSION.SDK_INT >= 29) deleteContentUriWithRecovery(uri, track) else deleteContentUri(uri)
+                        check(deleted) { "文件删除未获确认或提供方拒绝删除" }
+                        true
+                    }
+                    "file", null -> {
+                        val path = if (uri.scheme == "file") Paths.get(requireNotNull(uri.path)) else Paths.get(raw)
+                        val deleted = Files.deleteIfExists(path)
+                        runCatching { activity.contentResolver.delete(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                            "${MediaStore.Audio.Media.DATA} = ?", arrayOf(path.toAbsolutePath().toString())) }
+                        deleted
+                    }
+                    else -> error("不支持删除该存储位置")
                 }
-                deleted
             }
-            null -> {
-                val path = Paths.get(rawSource)
-                val deleted = runCatching { Files.deleteIfExists(path) }.getOrDefault(false)
-                runCatching {
-                    activity.contentResolver.delete(
-                        MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                        "${MediaStore.Audio.Media.DATA} = ?",
-                        arrayOf(path.toAbsolutePath().toString()),
-                    )
-                }
-                deleted
+        } catch (error: Exception) {
+            return@withContext DeleteTrackReport(false, false, "未能删除「${track.title}」，曲库记录已保留：${error.message.orEmpty()}")
+        }
+        try {
+            synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
+                saveSyncedTracks(loadSyncedTracks().filterNot { it.id == track.id })
+                cachedTracks = cachedTracks.filterNot { it.id == track.id }
+                savePlaylistsNow(loadPlaylistsNow().map { it.copy(tracks = it.tracks.filterNot { t -> t.id == track.id }) })
+                val prefs = activity.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE)
+                prefs.edit().putStringSet("ids", prefs.getStringSet("ids", emptySet()).orEmpty() - track.id).commitChecked("收藏更新失败")
             }
-            else -> error("不支持删除该存储位置")
+        } catch (error: Exception) {
+            return@withContext DeleteTrackReport(false, fileDeleted, "音频处理后曲库更新失败：${error.message.orEmpty()}")
         }
-        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
-            saveSyncedTracks(loadSyncedTracks().filterNot { it.id == track.id })
-            cachedTracks = cachedTracks.filterNot { it.id == track.id }
-        }
-        track.artworkPath?.takeIf { !it.startsWith("content://") && !it.startsWith("http") }?.let { artwork ->
-            runCatching { Files.deleteIfExists(Paths.get(artwork)) }
-        }
-        DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地音频文件" else "已从音乐库移除「${track.title}」")
+        // Shared directory artwork and user-selected images are retained; no ownership inference.
+        DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地音频文件" else "音频已不存在，已移除曲库记录", setOf(track.id))
     }
 
     private val enricher by lazy {
@@ -1223,17 +1248,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun batchDeleteTracks(tracks: List<Track>): DeleteTrackReport = withContext(Dispatchers.IO) {
-        if (tracks.isEmpty()) return@withContext DeleteTrackReport(true, false, "未选择任何歌曲")
-        var fileDeletedCount = 0
-        tracks.forEach { track ->
-            val report = deleteLocalTrack(track)
-            if (report.fileDeleted) fileDeletedCount++
-        }
-        DeleteTrackReport(
-            success = true,
-            fileDeleted = fileDeletedCount > 0,
-            message = "已批量删除 ${tracks.size} 首歌曲${if (fileDeletedCount > 0) "（含 $fileDeletedCount 首本地文件）" else ""}",
-        )
+        val reports = tracks.distinctBy(Track::id).map { deleteLocalTrack(it) }
+        val removed = reports.flatMap { it.removedTrackIds }.toSet()
+        val failed = reports.filterNot { it.success }
+        DeleteTrackReport(failed.isEmpty(), reports.any { it.fileDeleted },
+            "已移除 ${removed.size} 首" + if (failed.isEmpty()) "" else "；${failed.size} 首未完成：" + failed.take(5).joinToString("；") { it.message },
+            removed)
     }
 
     private suspend fun deleteContentUri(uri: Uri): Boolean {
@@ -1437,6 +1457,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override fun close() {
+        // Application shutdown drains IO writers off-thread; Android controller and lifecycle
+        // teardown still belongs to the Activity's main looper.
+        if (android.os.Looper.myLooper() != android.os.Looper.getMainLooper()) {
+            activity.runOnUiThread { close() }
+            return
+        }
         if (disposed) return
         disposed = true
         synchronized(pendingPlayerActions) { pendingPlayerActions.clear() }

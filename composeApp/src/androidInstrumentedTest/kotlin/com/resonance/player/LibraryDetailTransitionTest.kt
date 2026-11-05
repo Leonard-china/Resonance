@@ -70,7 +70,7 @@ class LibraryDetailTransitionTest {
         assertEquals(expected.blue, actual.blue, 0.02f)
     }
 
-    @Test fun openingCoversTheListAndClipsAtTheViewport() {
+    @Test fun openingCrossfadesBothPagesAndClipsAtTheViewport() {
         show()
         ui.runOnIdle { detail.value = "playlist" }
         ui.mainClock.advanceTimeByFrame()
@@ -80,25 +80,31 @@ class LibraryDetailTransitionTest {
         val incoming = ui.onNodeWithTag("detail-marker").fetchSemanticsNode().boundsInRoot
         assertTrue("Incoming detail must already be visible", incoming.width > 0 && incoming.left < viewport.right)
         val insideIncoming = ((incoming.left + viewport.right) / 2 - viewport.left) / viewport.width
-        assertColor(canvas, color("viewport", insideIncoming, 0.8f))
+        val blended = color("viewport", insideIncoming, 0.8f)
+        assertTrue("Old page should be fading: $blended", blended.red in 0.01f..0.99f)
+        assertEquals(0f, blended.green, 0.02f)
+        assertEquals(0f, blended.blue, 0.02f)
         val evidence = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.cacheDir.resolve("detail-transition-verified.png")
         evidence.outputStream().use { ui.onNodeWithTag("root").captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
         assertColor(Color.Black, color("root", 0.95f, 0.8f))
         settleTransition()
-        // The opaque transition background must disappear so the ambient canvas returns.
+        // After both moving layers settle, the transparent detail exposes its parent canvas.
         assertColor(Color.Black, color("viewport", 0.5f, 0.8f))
         val settled = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.cacheDir.resolve("detail-transition-settled.png")
         settled.outputStream().use { ui.onNodeWithTag("root").captureToImage().asAndroidBitmap().compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
 
-    @Test fun returningKeepsTheDetailAboveTheListInDarkMode() {
+    @Test fun returningCrossfadeSettlesToTheListInDarkMode() {
         show(ThemeMode.Dark)
         ui.runOnIdle { detail.value = "playlist" }
         settleTransition()
         ui.runOnIdle { detail.value = null }
         ui.mainClock.advanceTimeByFrame()
         ui.mainClock.advanceTimeBy(48)
-        assertColor(canvas, color("viewport", 0.9f, 0.8f))
+        val blended = color("viewport", 0.9f, 0.8f)
+        assertTrue("Returning list should be entering: $blended", blended.red in 0.01f..0.99f)
+        assertEquals(0f, blended.green, 0.02f)
+        assertEquals(0f, blended.blue, 0.02f)
         settleTransition()
         assertColor(Color.Red, color("viewport", 0.5f, 0.8f))
     }

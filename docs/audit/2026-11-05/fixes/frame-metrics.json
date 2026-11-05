@@ -1,0 +1,20 @@
+[
+  {
+    "label": "sample",
+    "sdk": 36,
+    "refreshRate": 120.00001,
+    "scenario": "player",
+    "stimulus": "80 explicit progress updates at 100ms intervals",
+    "warmNavigation": false,
+    "collectionMillis": 8315,
+    "frames": 144,
+    "p50Ms": 44.51409,
+    "p95Ms": 83.86827,
+    "p99Ms": 109.769715,
+    "maxMs": 113.459613,
+    "deadlineSamples": 144,
+    "missedDeadlines": 89,
+    "metricsCallbacksDropped": 0,
+    "note": "Debug-only synthetic playback UI sample, not a release benchmark or an audio test"
+  }
+]

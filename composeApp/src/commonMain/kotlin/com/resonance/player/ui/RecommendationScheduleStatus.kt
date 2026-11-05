@@ -18,14 +18,17 @@ internal fun RecommendationScheduleStatus(feature: MusicFeatureController) {
         }
     }
     val due = state.recommendations.createdAt + feature.settings.intervalHours * 3_600_000L
-    val listeningStatus = remember(state.recommendations.trackIds, now) { runCatching {
-        val stats = feature.services
+    val snapshot = rememberListeningStats(feature.services)
+    val listeningStatus = remember(state.recommendations.trackIds, now, snapshot) { runCatching {
+        check(snapshot.loaded && snapshot.error == null)
+        val stats = snapshot.stats
         state.recommendations.trackIds.any { id ->
-            val s = stats.getTrackListeningStats(id)
+            val s = stats.trackStats[id]
             (s == null || (s.totalSeconds <= 0 && s.playCount <= 0))
         }
     } }
     val next = when {
+        !snapshot.loaded && snapshot.error == null -> "正在读取听歌记录"
         listeningStatus.isFailure -> "听歌记录暂不可用，暂时保留本批推荐"
         networkAllowed == false -> "等待符合设置的网络"
         state.task.running -> "音乐任务处理中，完成后再检查"

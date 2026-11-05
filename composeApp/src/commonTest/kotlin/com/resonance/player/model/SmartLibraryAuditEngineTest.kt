@@ -27,7 +27,7 @@ class SmartLibraryAuditEngineTest {
     }
 
     @Test
-    fun auditIdentifiesDuplicatesAndRecommendsBestQuality() {
+    fun auditSuggestsReviewWithoutPreselectingDestructiveActions() {
         val tracks = listOf(
             Track("1", "七里香", "周杰伦", "七里香", "4:59", 1, mimeType = "audio/mpeg"),
             Track("2", "七里香", "周杰伦", "七里香", "4:59", 2, mimeType = "audio/flac", isFavorite = true),
@@ -37,6 +37,18 @@ class SmartLibraryAuditEngineTest {
         val group = report.duplicateGroups.first()
         // ID 2 is flac and favorite, should be kept
         assertEquals("2", group.recommendedToKeepId)
-        assertTrue("1" in group.selectedToCleanIds)
+        assertTrue(group.selectedToCleanIds.isEmpty())
     }
+    @Test fun recordingVersionsDurationsAndUnknownArtistsAreNotInterchangeable() {
+        val base = Track("studio", "Song", "Artist", "Album", "3:00", 0)
+        val distinct = listOf(base, base.copy(id = "live", title = "Song (Live)", durationText = "8:00"),
+            base.copy(id = "remix", title = "Song (Remix)"),
+            base.copy(id = "bracket-live", title = "[Live] Song"), base.copy(id = "karaoke", title = "【伴奏】Song"),
+            base.copy(id = "cover", title = "Song (翻唱)"), base.copy(id = "long", durationText = "5:00"),
+            base.copy(id = "unknown-a", artist = "未知歌手"), base.copy(id = "unknown-b", artist = "未知歌手"))
+        val report = SmartLibraryAuditEngine.audit(distinct)
+        assertTrue(report.duplicateGroups.isEmpty())
+        assertTrue(report.tagDrafts.none { it.suggestedTitle == "Song" && it.trackId in setOf("bracket-live", "karaoke") })
+    }
+
 }

@@ -57,6 +57,7 @@ class MusicFeatureController(val services: PlatformServices, private val scope: 
         catch (error: Exception) { message = error.message ?: "操作失败" }
     }
     suspend fun load() { settings = assistant?.settings() ?: MusicFeatureSettings(); loaded = true; services.configureBackgroundRecommendations(settings) }
+    suspend fun finishPersistence() { settingsWriter.closeAndJoin() }
     fun save(value: MusicFeatureSettings) {
         settings = value
         settingsWriter.submitLatest("music.settings") { assistant?.saveSettings(value); services.configureBackgroundRecommendations(value) }

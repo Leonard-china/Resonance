@@ -11,6 +11,7 @@ interface MusicAssistantServices {
     suspend fun completeText(messages: List<AssistantMessage>, maxTokens: Int): String
     suspend fun cachedTranslation(lyrics: Lyrics, language: String): Lyrics?
     suspend fun chat(message: String, images: List<AiImage> = emptyList())
+    suspend fun confirmAudioDeletion(requestId: String, confirmed: Boolean) { error("当前助手不支持音频删除确认") }
     suspend fun confirmScreenshotImport(draftId: String, playlists: List<ScreenshotPlaylistDraft>)
     suspend fun discardScreenshotImport()
     suspend fun inspectVideo(link: String): BilibiliVideo

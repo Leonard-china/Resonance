@@ -122,9 +122,9 @@ fun TasteRadarScreen(
                     Spacer(Modifier.height(16.dp))
 
                     val feature = LocalMusicFeatures.current
-                    val statsResult = remember { runCatching { feature?.services?.getAllListeningStats() } }
-                    val stats = statsResult.getOrNull()
-                    if (statsResult.isFailure) Text("听歌记录暂不可用，原有记录已保留", color = MaterialTheme.colorScheme.error)
+                    val statsSnapshot = rememberListeningStats(feature?.services)
+                    val stats = statsSnapshot.stats.takeIf { statsSnapshot.loaded }
+                    if (statsSnapshot.error != null) Text("听歌记录暂不可用，原有记录已保留", color = MaterialTheme.colorScheme.error)
                     if (stats != null && stats.totalSeconds > 0) {
                         Row(
                             modifier = Modifier

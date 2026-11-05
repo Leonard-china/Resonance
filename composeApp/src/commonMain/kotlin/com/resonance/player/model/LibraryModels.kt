@@ -30,12 +30,17 @@ data class ImportReport(
     val skippedCount: Int = 0,
     val warnings: List<String> = emptyList(),
     val cancelled: Boolean = false,
+    /** Playlists restored from archives during this import; not a persisted report. */
+    val playlists: List<Playlist> = emptyList(),
+    val importedPackageCount: Int = 0,
 )
 
 data class DeleteTrackReport(
     val success: Boolean,
     val fileDeleted: Boolean,
     val message: String,
+    /** Catalog entries actually removed, including a successful subset of a batch. Not persisted. */
+    val removedTrackIds: Set<String> = emptySet(),
 )
 
 data class SyncReport(

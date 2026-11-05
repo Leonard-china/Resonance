@@ -1,0 +1,1721 @@
+[
+  {
+    "id": "F001",
+    "category": "启动、教程与导航",
+    "name": "首次启动选择",
+    "check": "快速图文/跟着操作/跳过；升级后不重复弹出",
+    "evidence": "TutorialProgressTest,TutorialNavigationTest",
+    "limit": "独立测试包已实机执行；首次教程的2项UI断言失败，见Android续测报告",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F002",
+    "category": "启动、教程与导航",
+    "name": "七章使用教程与常见问题",
+    "check": "逐章打开、完成、跳过、重新练习",
+    "evidence": "TutorialProgressTest,TutorialNavigationTest",
+    "limit": "正文逐句准确性未人工审稿",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F003",
+    "category": "启动、教程与导航",
+    "name": "操作教学高亮与定位",
+    "check": "滚动到真实控件、点击推进、错误事件不推进",
+    "evidence": "TutorialNavigationTest",
+    "limit": "设备操作教学主路径通过；设置教程入口定位相关断言仍失败",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F004",
+    "category": "启动、教程与导航",
+    "name": "教程暂停和继续",
+    "check": "暂停后保留步骤，重启恢复已保存进度",
+    "evidence": "TutorialProgressTest,TutorialNavigationTest",
+    "limit": "不能代替每个章节实机走通",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F005",
+    "category": "启动、教程与导航",
+    "name": "四项主导航",
+    "check": "音乐库/音乐助手/一起听/工具来回切换",
+    "evidence": "LibraryNavigationTest,StatePreservationTest",
+    "limit": "跨页保留滚动和播放器分别核对",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F006",
+    "category": "启动、教程与导航",
+    "name": "返回与键盘快捷键",
+    "check": "返回关闭最上层；Ctrl+F、空格、Ctrl+方向键",
+    "evidence": "StatePreservationTest",
+    "limit": "真实输入法/全部快捷键未逐键验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F007",
+    "category": "启动、教程与导航",
+    "name": "小屏、横屏、宽屏布局",
+    "check": "底栏/导航轨/侧栏切换，大字体控件可达",
+    "evidence": "UiVisualContractTest,LibraryDetailTransitionTest,MusicStageDeviceTest",
+    "limit": "Windows/折叠屏/屏幕阅读器未验收",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F008",
+    "category": "启动、教程与导航",
+    "name": "页面横向滑动",
+    "check": "方向/距离阈值、首末页、子控件与多选冲突",
+    "evidence": "HorizontalPageSwipeUnitTest,HorizontalPageSwipeTest",
+    "limit": "系统边缘手势仍需不同设备验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F009",
+    "category": "启动、教程与导航",
+    "name": "页面与详情连续切换",
+    "check": "快速反向返回、减少动态、旧页不可交互",
+    "evidence": "LibraryDetailTransitionTest,UiVisualContractTest",
+    "limit": "断言通过不代表满帧",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F010",
+    "category": "启动、教程与导航",
+    "name": "应用退出与任务清理",
+    "check": "停止生产者、等待最后写入、释放音频与平台资源",
+    "evidence": "ApplicationSessionTest,ApplicationUseCaseTest,ApplicationLifecycleDeviceTest",
+    "limit": "断电/强杀时多文件一致性另列风险",
+    "status": "局部通过"
+  },
+  {
+    "id": "F011",
+    "category": "曲库与歌单",
+    "name": "本地曲库加载",
+    "check": "空库/已有库/托管与系统扫描数据合并",
+    "evidence": "LibraryPersistenceTest,DesktopMusicImportTest",
+    "limit": "离线文件丢记录见Q02",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F012",
+    "category": "曲库与歌单",
+    "name": "歌曲、歌单、专辑和歌手视图",
+    "check": "分组浏览、点开详情、返回保留位置",
+    "evidence": "LibraryNavigationTest,LibraryDetailTransitionTest",
+    "limit": "每种混合语言排序未全量覆盖",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F013",
+    "category": "曲库与歌单",
+    "name": "歌名/歌手/专辑文本搜索",
+    "check": "大小写、空输入、中文、万首索引复用",
+    "evidence": "LibrarySearchIndexTest",
+    "limit": "首屏真实性不依赖联网",
+    "status": "局部通过"
+  },
+  {
+    "id": "F014",
+    "category": "曲库与歌单",
+    "name": "拼音首字母搜索",
+    "check": "中文转写、首字母、非中文混合输入",
+    "evidence": "LibrarySearchIndexTest,PinyinUtilsTest",
+    "limit": "多音字非穷举",
+    "status": "局部通过"
+  },
+  {
+    "id": "F015",
+    "category": "曲库与歌单",
+    "name": "自然语言意图找歌",
+    "check": "场景/情绪/曲风/关键词按元数据评分",
+    "evidence": "SemanticSearchIntentParserTest",
+    "limit": "仅文本规则；不是音频理解模型",
+    "status": "局部通过"
+  },
+  {
+    "id": "F016",
+    "category": "曲库与歌单",
+    "name": "BPM意图筛选",
+    "check": "输入140 BPM应按节拍范围匹配曲目",
+    "evidence": "SemanticSearchIntentParserTest",
+    "limit": "Q07：只显示标签，未接筛选",
+    "status": "源码确认缺口"
+  },
+  {
+    "id": "F017",
+    "category": "曲库与歌单",
+    "name": "歌曲排序",
+    "check": "默认/标题/歌手/专辑/时长升降序",
+    "evidence": "PlaybackQueueAndFilterTest",
+    "limit": "字符串与异常时长边界见测试清单",
+    "status": "局部通过"
+  },
+  {
+    "id": "F018",
+    "category": "曲库与歌单",
+    "name": "曲库筛选",
+    "check": "FLAC/高品质/缺封面/缺歌词/缺元数据",
+    "evidence": "PlaybackQueueAndFilterTest",
+    "limit": "品质条件不等于测量真实母带",
+    "status": "局部通过"
+  },
+  {
+    "id": "F019",
+    "category": "曲库与歌单",
+    "name": "收藏和取消收藏",
+    "check": "相同ID变更收藏，列表数量与歌单快照一致",
+    "evidence": "LibraryPersistenceTest,MusicFeaturesIntegrationTest",
+    "limit": "收藏与推荐点赞独立",
+    "status": "局部通过"
+  },
+  {
+    "id": "F020",
+    "category": "曲库与歌单",
+    "name": "新建自建歌单",
+    "check": "命名、空歌单、保存后重新读取",
+    "evidence": "MusicAssistantTest,LibraryPersistenceTest",
+    "limit": "系统文件选择不是该项测试范围",
+    "status": "局部通过"
+  },
+  {
+    "id": "F021",
+    "category": "曲库与歌单",
+    "name": "重命名和删除歌单",
+    "check": "只改关系与名称，删除歌单不删音频",
+    "evidence": "MusicAssistantTest",
+    "limit": "AI工具与手工入口分别看覆盖",
+    "status": "局部通过"
+  },
+  {
+    "id": "F022",
+    "category": "曲库与歌单",
+    "name": "添加和移出歌单成员",
+    "check": "保序、去重、跨重启恢复成员",
+    "evidence": "MusicAssistantTest,ApplicationUseCaseTest",
+    "limit": "多文件落盘没有整库事务",
+    "status": "局部通过"
+  },
+  {
+    "id": "F023",
+    "category": "曲库与歌单",
+    "name": "多选、全选与批量操作",
+    "check": "选中歌曲后收藏/加歌单/删除确认",
+    "evidence": "LibraryNavigationTest",
+    "limit": "系统删除授权弹窗未全覆盖",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F024",
+    "category": "曲库与歌单",
+    "name": "歌曲信息与来源详情",
+    "check": "显示元数据、真实码率/来源/听歌统计",
+    "evidence": "UiVisualContractTest,ListeningStatsRepositoryTest",
+    "limit": "不能仅凭标题认证无损",
+    "status": "局部通过"
+  },
+  {
+    "id": "F025",
+    "category": "曲库与歌单",
+    "name": "标题、歌手、专辑编辑",
+    "check": "编辑后曲库与歌单快照一致",
+    "evidence": "MusicFeaturesIntegrationTest,LibraryPersistenceTest",
+    "limit": "旧文件真实标签写回按平台区分",
+    "status": "局部通过"
+  },
+  {
+    "id": "F026",
+    "category": "曲库与歌单",
+    "name": "单曲与批量真实删除",
+    "check": "确认后删文件及关系；失败应保留明确原因",
+    "evidence": "MusicFeaturesIntegrationTest",
+    "limit": "Q09共享封面、Q11失败仍移除记录",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F027",
+    "category": "曲库与歌单",
+    "name": "临时离线与外部磁盘恢复",
+    "check": "断盘时修改另一歌曲；重连保留原ID/收藏",
+    "evidence": "LibraryPersistenceTest",
+    "limit": "Q02隔离场景失败",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F028",
+    "category": "导入与格式转换",
+    "name": "Android媒体扫描和权限",
+    "check": "未授权只读托管；主动扫描才申请权限",
+    "evidence": "MusicFeaturesIntegrationTest",
+    "limit": "系统权限拒绝/撤销/重新授权未逐步实测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F029",
+    "category": "导入与格式转换",
+    "name": "Android SAF递归目录导入",
+    "check": "读取授权目录、保留输入、显示进度",
+    "evidence": "-",
+    "limit": "系统目录选择器未人工操作",
+    "status": "未执行专门验收"
+  },
+  {
+    "id": "F030",
+    "category": "导入与格式转换",
+    "name": "桌面多选文件与目录",
+    "check": "混合根目录、中文路径、错误文件隔离",
+    "evidence": "DesktopMusicImportTest",
+    "limit": "JFileChooser真实点击未逐项执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F031",
+    "category": "导入与格式转换",
+    "name": "桌面整窗拖入",
+    "check": "文件列表/URI列表、拒绝URL、Copy语义",
+    "evidence": "DesktopMusicImportTest",
+    "limit": "真实文件管理器拖放与Wayland未人工验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F032",
+    "category": "导入与格式转换",
+    "name": "递归扫描与真实路径去重",
+    "check": "重复根/符号链接/坏路径不重复入库或死循环",
+    "evidence": "DesktopMusicImportTest",
+    "limit": "共享JVM实现不代替Windows系统验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F033",
+    "category": "导入与格式转换",
+    "name": "普通音频导入",
+    "check": "MP3/FLAC/M4A/AAC/Ogg/Opus/WAV/WMA/APE",
+    "evidence": "DesktopMusicImportTest,DesktopManagedMp3ConverterTest",
+    "limit": "没有为每种容器每种编码制作全矩阵",
+    "status": "局部通过"
+  },
+  {
+    "id": "F034",
+    "category": "导入与格式转换",
+    "name": "可选转换MP3与保留原音轨",
+    "check": "兼容音轨保留格式；转换不覆盖原文件",
+    "evidence": "DesktopManagedMp3ConverterTest,MusicFeaturesIntegrationTest",
+    "limit": "生成音频夹具，未读取用户歌曲",
+    "status": "局部通过"
+  },
+  {
+    "id": "F035",
+    "category": "导入与格式转换",
+    "name": "KGMA v3/slot1解密",
+    "check": "MP3载荷、非MP3载荷转换与异常头",
+    "evidence": "KgmaCipherTest,DesktopManagedMp3ConverterTest",
+    "limit": "其他KGMA版本不支持",
+    "status": "局部通过"
+  },
+  {
+    "id": "F036",
+    "category": "导入与格式转换",
+    "name": "KGG v5解密",
+    "check": "匹配密钥/缺密钥/异常数据",
+    "evidence": "KggCipherTest",
+    "limit": "Windows酷狗数据库真实密钥环境未执行；Android不支持",
+    "status": "局部通过"
+  },
+  {
+    "id": "F037",
+    "category": "导入与格式转换",
+    "name": "导入进度、取消与残留清理",
+    "check": "已完成曲目保留，取消停止当前转码并清part",
+    "evidence": "DesktopManagedMp3ConverterTest,DesktopMusicImportTest",
+    "limit": "单包解压内取消粒度受限",
+    "status": "局部通过"
+  },
+  {
+    "id": "F038",
+    "category": "导入与格式转换",
+    "name": "重复导入与内容ID",
+    "check": "内容hash复用，路径去重，不重复创建音频",
+    "evidence": "DesktopMusicImportTest,MusicAssistantTest",
+    "limit": "跨来源相同录音身份并非声学识别",
+    "status": "局部通过"
+  },
+  {
+    "id": "F039",
+    "category": "导入与格式转换",
+    "name": "导入与偏好/歌单并发屏障",
+    "check": "等已接收写入后重载，避免旧UI覆盖新歌单",
+    "evidence": "ApplicationUseCaseTest,DesktopSyncPackageImportTest",
+    "limit": "崩溃中的跨文件提交没有回滚保证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F040",
+    "category": "播放与音效",
+    "name": "播放、暂停和继续",
+    "check": "真实PCM推进；暂停后位置停止、继续可推进",
+    "evidence": "DesktopAudioOutputIntegrationTest,AudioSessionIntegrationTest",
+    "limit": "Linux静音输出与Android生成静音夹具",
+    "status": "局部通过"
+  },
+  {
+    "id": "F041",
+    "category": "播放与音效",
+    "name": "上一首与下一首",
+    "check": "只在有效当前队列切换，错误音频有反馈",
+    "evidence": "PlaybackQueueResolutionTest,PlaybackStateStoreTest",
+    "limit": "真实蓝牙耳机按键未操作",
+    "status": "局部通过"
+  },
+  {
+    "id": "F042",
+    "category": "播放与音效",
+    "name": "队列选择、追加和去重",
+    "check": "按顺序追加，不自动开播；过滤缺音源ID",
+    "evidence": "PlaybackQueueResolutionTest,AssistantMusicLinksTest",
+    "limit": "一起听中使用房间队列",
+    "status": "局部通过"
+  },
+  {
+    "id": "F043",
+    "category": "播放与音效",
+    "name": "随机、顺序和单曲/列表循环",
+    "check": "模式组合持久化，重启恢复设置",
+    "evidence": "PlaybackModePersistenceTest,PlaybackQueueAndFilterTest",
+    "limit": "设备长时随机播放未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F044",
+    "category": "播放与音效",
+    "name": "拖动进度和歌词seek",
+    "check": "松手提交、原生跳转到指定位置",
+    "evidence": "DesktopAudioOutputIntegrationTest,UiInteractionContractTest",
+    "limit": "暂停/后台seek另外有服务测试",
+    "status": "局部通过"
+  },
+  {
+    "id": "F045",
+    "category": "播放与音效",
+    "name": "播放倍速",
+    "check": "新解码器就绪，状态与实际输出继续推进",
+    "evidence": "DesktopAudioOutputIntegrationTest,PlaybackSettingsDialogTest",
+    "limit": "音质听感未盲测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F046",
+    "category": "播放与音效",
+    "name": "全局音量",
+    "check": "持久化并跨曲生效，不叠加旧逐曲音量",
+    "evidence": "PlaybackStateStoreTest,AudioSessionIntegrationTest",
+    "limit": "系统音量与蓝牙硬件音量未全组合",
+    "status": "局部通过"
+  },
+  {
+    "id": "F047",
+    "category": "播放与音效",
+    "name": "自动音量平衡",
+    "check": "整曲响度、峰值余量、缓存、关闭归零",
+    "evidence": "LoudnessAnalysisTest,FfmpegLoudnessIntegrationTest,AudioSessionIntegrationTest",
+    "limit": "听感一致性未做主观评审",
+    "status": "局部通过"
+  },
+  {
+    "id": "F048",
+    "category": "播放与音效",
+    "name": "PCM增益与限幅平滑",
+    "check": "正/负增益、单声道、渐变和防削波",
+    "evidence": "PcmGainProcessorTest,AudioSessionIntegrationTest",
+    "limit": "无专用音频分析仪验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F049",
+    "category": "播放与音效",
+    "name": "七类音效预设和伴奏消音",
+    "check": "打开不改值，选择后关闭并继续操作播放",
+    "evidence": "UiVisualContractTest,PlayerDialogsDeviceTest",
+    "limit": "预设DSP频响与人声消除效果未逐个量化",
+    "status": "局部通过"
+  },
+  {
+    "id": "F050",
+    "category": "播放与音效",
+    "name": "加载、缓冲和播放错误",
+    "check": "首段PCM之前保持缓冲；旧任务错误不污染新曲",
+    "evidence": "DesktopPcmPlayerSessionTest,DesktopPlaybackFailureTest",
+    "limit": "极端native驱动永久阻塞仍有限制",
+    "status": "局部通过"
+  },
+  {
+    "id": "F051",
+    "category": "播放与音效",
+    "name": "快速A-B-A切歌竞争",
+    "check": "旧解码/响度/文件检查不能复活过期歌曲",
+    "evidence": "PlaybackStateStoreTest,PlaybackSessionTest,DesktopPcmPlayerSessionTest",
+    "limit": "短回归不能代替长时压力",
+    "status": "局部通过"
+  },
+  {
+    "id": "F052",
+    "category": "播放与音效",
+    "name": "暂停恢复快照",
+    "check": "冷启动暂停恢复曲目/进度/队列，后台服务存活时附着",
+    "evidence": "PlaybackSnapshotTest,PlaybackSessionTest",
+    "limit": "跨版本真实升级资料未迁移试验",
+    "status": "局部通过"
+  },
+  {
+    "id": "F053",
+    "category": "播放与音效",
+    "name": "后台服务与生命周期",
+    "check": "无Activity切歌、重建后命令归属与退出排空",
+    "evidence": "AudioControllerLifecycleDeviceTest,ApplicationLifecycleDeviceTest",
+    "limit": "各厂商省电策略与锁屏长时未验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F054",
+    "category": "播放与音效",
+    "name": "睡眠定时",
+    "check": "15/30/45/60分钟/曲终；单调时钟、暂停仍计时",
+    "evidence": "PlaybackSleepTimerTest",
+    "limit": "整小时墙钟测试未等待；退出不恢复",
+    "status": "局部通过"
+  },
+  {
+    "id": "F055",
+    "category": "播放与音效",
+    "name": "播放页展开收起和拖动回弹",
+    "check": "短拉回弹、长拉收起、反向操作、减少动态",
+    "evidence": "PlayerExpansionTest,LibraryNavigationTest",
+    "limit": "Debug帧数据不代表Release性能",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F056",
+    "category": "播放与音效",
+    "name": "听歌时长、次数和最后收听",
+    "check": "后台原生计数、95%完播只计一次、暂停不累计",
+    "evidence": "ListeningStatsStoreTest,ListeningStatsRepositoryTest,ListeningSessionDeviceTest",
+    "limit": "两小时持续计数未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F057",
+    "category": "播放与音效",
+    "name": "统计坏文件和备份恢复",
+    "check": "损坏不覆盖原始数据，UI读取内存错误快照",
+    "evidence": "ListeningStatsRepositoryTest,ListeningStatsStoreTest",
+    "limit": "历史底层抛错不再直接等同现行UI崩溃",
+    "status": "局部通过"
+  },
+  {
+    "id": "F058",
+    "category": "歌词与翻译",
+    "name": "本地LRC多时间戳解析",
+    "check": "空文件、偏移、重复时间、多时间戳",
+    "evidence": "LrclibLyricsRepositoryTest,FloatingLyricsTest",
+    "limit": "未穷举各编辑器的私有格式",
+    "status": "局部通过"
+  },
+  {
+    "id": "F059",
+    "category": "歌词与翻译",
+    "name": "本地KRC解码",
+    "check": "解压、字词时间、异常数据",
+    "evidence": "KrcDecoderTest",
+    "limit": "非KRC格式按未支持处理",
+    "status": "局部通过"
+  },
+  {
+    "id": "F060",
+    "category": "歌词与翻译",
+    "name": "自定义歌词目录",
+    "check": "保存目录、扫描同名歌词、取消选择",
+    "evidence": "LrclibLyricsRepositoryTest",
+    "limit": "系统目录选择器与长期授权未实测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F061",
+    "category": "歌词与翻译",
+    "name": "LRCLIB自动查词和缓存",
+    "check": "标题/歌手/版本/时长校验，正负缓存与强刷",
+    "evidence": "LrclibLyricsRepositoryTest,LyricsAcquisitionTest",
+    "limit": "公网查词opt-in未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F062",
+    "category": "歌词与翻译",
+    "name": "歌源歌词回退",
+    "check": "最多8源、单源超时、纯文本兜底保留",
+    "evidence": "LyricsAcquisitionTest,MusicSourceRegistryTest",
+    "limit": "真实公开服务可用率未在线测量",
+    "status": "局部通过"
+  },
+  {
+    "id": "F063",
+    "category": "歌词与翻译",
+    "name": "同步歌词优先",
+    "check": "纯文本缓存不能阻断后续有效同步轴",
+    "evidence": "LyricsAcquisitionTest,LyricsPlayerRegressionTest",
+    "limit": "零轴/超曲长不伪称同步",
+    "status": "局部通过"
+  },
+  {
+    "id": "F064",
+    "category": "歌词与翻译",
+    "name": "切歌与偏移代次保护",
+    "check": "A-B-A迟到结果拒绝；偏移不被旧请求重置",
+    "evidence": "LyricsSessionTest",
+    "limit": "翻译另有独立代次",
+    "status": "局部通过"
+  },
+  {
+    "id": "F065",
+    "category": "歌词与翻译",
+    "name": "封面歌词预览和当前句高亮",
+    "check": "预览可见、当前句淡底细边、稳定行高",
+    "evidence": "LyricsPlayerRegressionTest,LyricsPlayerRegressionDeviceTest",
+    "limit": "截图断言不是视觉逐像素金标",
+    "status": "局部通过"
+  },
+  {
+    "id": "F066",
+    "category": "歌词与翻译",
+    "name": "连续滚动和手动浏览恢复",
+    "check": "居中、离屏seek、手动暂停跟随、5秒恢复、回当前句",
+    "evidence": "LyricScrollTest,LyricsMotionTest,LyricsScrollDeviceTest,LyricsPreviewMotionDeviceTest",
+    "limit": "原生手势延迟受设备与负载影响",
+    "status": "局部通过"
+  },
+  {
+    "id": "F067",
+    "category": "歌词与翻译",
+    "name": "纯文本歌词与大字体",
+    "check": "无时间轴不假同步，长行和双语仍可浏览",
+    "evidence": "LyricsPlayerRegressionTest,LyricsScrollDeviceTest",
+    "limit": "全部语言字体回退未穷举",
+    "status": "局部通过"
+  },
+  {
+    "id": "F068",
+    "category": "歌词与翻译",
+    "name": "原文/译文/双语模式",
+    "check": "换模式保留时间轴与列表身份",
+    "evidence": "LyricsTranslationControllerTest,LyricsTranslationDeviceTest",
+    "limit": "翻译语义质量未人工评审",
+    "status": "局部通过"
+  },
+  {
+    "id": "F069",
+    "category": "歌词与翻译",
+    "name": "目标语言翻译与缓存",
+    "check": "每批50行、等长JSON、文本hash+语言复用",
+    "evidence": "MusicAssistantTest,LyricsTranslationControllerTest",
+    "limit": "真实付费模型未调用",
+    "status": "局部通过"
+  },
+  {
+    "id": "F070",
+    "category": "歌词与翻译",
+    "name": "翻译失败重试与迟到隔离",
+    "check": "保留原词/已有译文；切歌/换语言取消旧结果",
+    "evidence": "LyricsTranslationControllerTest,LyricsTranslationDeviceTest",
+    "limit": "使用假AI服务验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F071",
+    "category": "歌词与翻译",
+    "name": "显式AI生成歌词文本",
+    "check": "不自动付费、不传音频、去掉模型伪时间戳",
+    "evidence": "DeepSeekClientTest,MusicAssistantTest",
+    "limit": "真实原曲歌词准确性未验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F072",
+    "category": "歌词与翻译",
+    "name": "音频识别同步歌词",
+    "check": "16k单声道PCM、真实识别时间对齐、失败保留原词",
+    "evidence": "AudioLyricAlignmentTest,MusicFeaturesIntegrationTest",
+    "limit": "收费WSS服务未调用，使用假识别结果",
+    "status": "局部通过"
+  },
+  {
+    "id": "F073",
+    "category": "歌词与翻译",
+    "name": "语音时长预算与原文备份",
+    "check": "预留整曲时长、失败保守计入、缓存与清理",
+    "evidence": "MusicAssistantTest,AudioLyricAlignmentTest",
+    "limit": "供应商账单未在线核对",
+    "status": "局部通过"
+  },
+  {
+    "id": "F074",
+    "category": "歌词与翻译",
+    "name": "单曲整体偏移",
+    "check": "正负调整与±600000ms范围，独立持久化",
+    "evidence": "StorageAndAssistantExtraTest",
+    "limit": "无法校正不同剪辑版的渐进漂移",
+    "status": "局部通过"
+  },
+  {
+    "id": "F075",
+    "category": "歌词与翻译",
+    "name": "原文件歌词写回",
+    "check": "界面应明确平台是否支持实际写标签",
+    "evidence": "-",
+    "limit": "能力有限，未执行真实原文件写回",
+    "status": "未执行专门验收"
+  },
+  {
+    "id": "F076",
+    "category": "歌词与翻译",
+    "name": "Android系统悬浮歌词",
+    "check": "权限引导、后台切句、锁定/拖动/字号",
+    "evidence": "FloatingLyricsTest",
+    "limit": "系统悬浮权限/跨应用实操未授权测试包，未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F077",
+    "category": "歌词与翻译",
+    "name": "桌面悬浮歌词窗口",
+    "check": "主窗隐藏后更新，拖动/锁定/解锁/关闭/重开",
+    "evidence": "DesktopWindowLifecycleTest",
+    "limit": "隔离X11通过；Wayland和Windows实窗未人工验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F078",
+    "category": "元数据与封面",
+    "name": "公共元数据补全",
+    "check": "标题歌手严格匹配，只改缺失字段",
+    "evidence": "MetadataEnricherTest",
+    "limit": "公开目录在线命中率未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F079",
+    "category": "元数据与封面",
+    "name": "批量补全与逐曲保存",
+    "check": "取消边界、单曲失败隔离、checkpoint与报告",
+    "evidence": "MetadataEnricherTest",
+    "limit": "断电恢复未实际断电验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F080",
+    "category": "元数据与封面",
+    "name": "明确允许AI兜底",
+    "check": "公共来源未命中且选项允许才使用模型",
+    "evidence": "MetadataEnricherTest,MusicAssistantTest",
+    "limit": "AI输出事实准确性未实测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F081",
+    "category": "元数据与封面",
+    "name": "真实专辑封面匹配",
+    "check": "QQ/iTunes/酷狗目录校验、按专辑缓存",
+    "evidence": "AlbumCoverRepositoryTest",
+    "limit": "具体再版/合辑版本无法保证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F082",
+    "category": "元数据与封面",
+    "name": "自选封面与批量缺图匹配",
+    "check": "保护手选图，不被后续自动任务覆盖",
+    "evidence": "MusicAssistantTest",
+    "limit": "原生图片选择器未逐项点击",
+    "status": "局部通过"
+  },
+  {
+    "id": "F083",
+    "category": "元数据与封面",
+    "name": "封面解码、回退和内存缓存",
+    "check": "内嵌封面回退、并发合并、清缓存后旧结果拒绝",
+    "evidence": "ArtworkDecodeTest,CatalogArtworkRematchTest,MusicFeaturesIntegrationTest",
+    "limit": "共享封面删除风险见Q09",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F084",
+    "category": "歌单包",
+    "name": "单歌单和全库导出",
+    "check": "音频/封面/元数据/关系往返，缺音频不导出为可播放",
+    "evidence": "PlainSyncPackageTest,PlaylistArchiveFormatTest",
+    "limit": "真实用户大库未打包",
+    "status": "局部通过"
+  },
+  {
+    "id": "F085",
+    "category": "歌单包",
+    "name": "导出范围弹窗",
+    "check": "默认全库、长歌单滚动、取消不导出、重开重置",
+    "evidence": "SyncPackageDialogTest,SyncPackageDialogDeviceTest",
+    "limit": "真实系统保存选择器另验",
+    "status": "局部通过"
+  },
+  {
+    "id": "F086",
+    "category": "歌单包",
+    "name": "导出命名与重名序号",
+    "check": "歌单名/整个音乐库、非法字符清理、不覆盖已有导出包",
+    "evidence": "SyncPackageNamingTest",
+    "limit": "Windows路径实际保存未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F087",
+    "category": "歌单包",
+    "name": "处理中、完成位置和复制",
+    "check": "任务跨页继续；结果显示实际位置与文件名",
+    "evidence": "SyncPackageFeedbackTest,SyncPackageFeedbackDeviceTest",
+    "limit": "系统剪贴板交互不等于文件已写入",
+    "status": "局部通过"
+  },
+  {
+    "id": "F088",
+    "category": "歌单包",
+    "name": "打开导出目录",
+    "check": "Android文档URI、新任务、无文件管理器回退",
+    "evidence": "AndroidExportLocationTest,SyncPackageFeedbackTest",
+    "limit": "真实Downloads目录点击未在本轮手工验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F089",
+    "category": "歌单包",
+    "name": "专用导入、普通导入和拖入包",
+    "check": "单包/混合目录/空歌单/坏包隔离后刷新歌单",
+    "evidence": "DesktopSyncPackageImportTest,ApplicationUseCaseTest",
+    "limit": "Windows系统文件关联未验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F090",
+    "category": "歌单包",
+    "name": "包格式安全校验",
+    "check": "SHA-256、白名单目录、路径逃逸、大小、旧加密包拒绝",
+    "evidence": "PlainSyncPackageTest,PlaylistArchiveFormatTest",
+    "limit": "Q01提交时序、Q08引用数预算失败",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F091",
+    "category": "歌单包",
+    "name": "导入失败回滚",
+    "check": "歌单清单错误/后续文件失败时原音频应不变",
+    "evidence": "-",
+    "limit": "Q01：隔离实测失败，现有实现无整包事务",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F092",
+    "category": "歌源与下载",
+    "name": "五个内置歌源和增量迁移",
+    "check": "网易/酷我/酷狗/QQ/Archive，保留旧停用和移除状态",
+    "evidence": "BuiltinMusicSourcesTest,MusicSourceRegistryTest",
+    "limit": "内置资源测试不代表公网每首可下载",
+    "status": "局部通过"
+  },
+  {
+    "id": "F093",
+    "category": "歌源与下载",
+    "name": "恢复内置、启停与卸载",
+    "check": "20源上限、卸载不删音频、主动恢复重新启用",
+    "evidence": "MusicSourceRegistryTest,BuiltinMusicSourcesTest",
+    "limit": "真实第三方脚本兼容面有限",
+    "status": "局部通过"
+  },
+  {
+    "id": "F094",
+    "category": "歌源与下载",
+    "name": "本地JS、URL和订阅安装",
+    "check": "格式检查、安装时禁止联网、无效条目报错",
+    "evidence": "MusicSourceRegistryTest",
+    "limit": "原生文件选择器未手工选择",
+    "status": "局部通过"
+  },
+  {
+    "id": "F095",
+    "category": "歌源与下载",
+    "name": "脚本沙箱与执行预算",
+    "check": "禁宿主反射/文件/API凭据，内存/栈/时限生效",
+    "evidence": "MusicSourceRegistryTest",
+    "limit": "不是完整QuickJS安全审计",
+    "status": "局部通过"
+  },
+  {
+    "id": "F096",
+    "category": "歌源与下载",
+    "name": "公网请求和重定向边界",
+    "check": "拒绝内网/混合IP/用户信息，跨域不转发请求头",
+    "evidence": "MusicSourceRegistryTest,PublicSourceDnsTest",
+    "limit": "公网DNS重绑定长期对抗未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F097",
+    "category": "歌源与下载",
+    "name": "VPN Fake-IP兼容",
+    "check": "仅全198.18/15时固定HTTPS DNS回退，仍校验公网IP",
+    "evidence": "PublicSourceDnsTest",
+    "limit": "真实VPN网络切换未操作",
+    "status": "局部通过"
+  },
+  {
+    "id": "F098",
+    "category": "歌源与下载",
+    "name": "统一在线搜索和分页条目ID",
+    "check": "并发3源交错、保留多次搜索ID、下载只用真实返回ID",
+    "evidence": "MusicSourceRegistryTest,MusicAssistantTest",
+    "limit": "公开接口实时成功率未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F099",
+    "category": "歌源与下载",
+    "name": "30秒试听与离页释放",
+    "check": "64MiB限制，暂停主播放，离页清临时音频",
+    "evidence": "MusicAssistantTest",
+    "limit": "两端实际试听听感与音频焦点未端到端验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F100",
+    "category": "歌源与下载",
+    "name": "原版候选与试听片段过滤",
+    "check": "过滤MV/现场/翻唱/异常时长；失败尝试下一源",
+    "evidence": "MusicAssistantTest,RecommendationPolicyTest",
+    "limit": "元数据规则不是录音真伪认证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F101",
+    "category": "歌源与下载",
+    "name": "来源下载与目标歌单入库",
+    "check": "保留兼容编码、真实格式、登记来源与ownedAudio",
+    "evidence": "MusicAssistantTest,SourceDownloadTimeoutTest",
+    "limit": "真实公网下载未调用",
+    "status": "局部通过"
+  },
+  {
+    "id": "F102",
+    "category": "歌源与下载",
+    "name": "下载取消、超时和失败汇总",
+    "check": "区分响应超时/总时限、清临时文件、报告所有来源原因",
+    "evidence": "SourceDownloadTimeoutTest,MusicAssistantTest",
+    "limit": "极慢/断续移动网络未实测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F103",
+    "category": "B站",
+    "name": "链接、BV、短链接和分P检查",
+    "check": "解析视频/分P信息，拒绝不支持地址",
+    "evidence": "MusicAssistantTest",
+    "limit": "真实B站metadata/账号环境未请求",
+    "status": "局部通过"
+  },
+  {
+    "id": "F104",
+    "category": "B站",
+    "name": "导入前编辑信息和封面",
+    "check": "编辑歌名歌手专辑/封面/歌单，MP3真实写标签",
+    "evidence": "MusicAssistantTest,MusicFeaturesIntegrationTest",
+    "limit": "真实账号下载未验通",
+    "status": "局部通过"
+  },
+  {
+    "id": "F105",
+    "category": "B站",
+    "name": "音频/CDN回退与视频来源去重",
+    "check": "DASH/fallback、来源bvid:cid复用、原输入保留",
+    "evidence": "MusicAssistantTest",
+    "limit": "未在线调用B站CDN",
+    "status": "局部通过"
+  },
+  {
+    "id": "F106",
+    "category": "B站",
+    "name": "扫码、网页登录和手动Cookie",
+    "check": "扫码轮询状态、Cookie合并、412真实错误",
+    "evidence": "BilibiliLoginServiceTest",
+    "limit": "真实扫码/WebView登录未执行，不读取已有Cookie",
+    "status": "局部通过"
+  },
+  {
+    "id": "F107",
+    "category": "AI助手",
+    "name": "模型连接与独立视觉设置",
+    "check": "千问/DeepSeek/豆包/自定义HTTPS、模型切换与预设",
+    "evidence": "MusicAiWireTest,MusicAssistantTest",
+    "limit": "真实供应商/Key未调用",
+    "status": "局部通过"
+  },
+  {
+    "id": "F108",
+    "category": "AI助手",
+    "name": "HTTPS协议、取消与用量",
+    "check": "tools/图片/响应解析、错误、超时、连接取消",
+    "evidence": "MusicAiWireTest,MusicAssistantTest",
+    "limit": "假传输；不证明供应商现网在线",
+    "status": "局部通过"
+  },
+  {
+    "id": "F109",
+    "category": "AI助手",
+    "name": "多会话创建切换删除清空",
+    "check": "最多30会话、当前会话16条、无跨会话上下文",
+    "evidence": "MusicAssistantTest",
+    "limit": "界面全部会话管理按钮未逐一人工操作",
+    "status": "局部通过"
+  },
+  {
+    "id": "F110",
+    "category": "AI助手",
+    "name": "真实曲库查询与歌单工具",
+    "check": "按真实ID查询、分页、建立/重命名/删关系",
+    "evidence": "MusicAssistantTest,AssistantToolSessionTest",
+    "limit": "不把工具requested误写为操作完成",
+    "status": "局部通过"
+  },
+  {
+    "id": "F111",
+    "category": "AI助手",
+    "name": "收藏和元数据工具",
+    "check": "只对真实ID执行，输出不泄漏本地路径",
+    "evidence": "MusicAssistantTest",
+    "limit": "不等于所有平台真实标签写回",
+    "status": "局部通过"
+  },
+  {
+    "id": "F112",
+    "category": "AI助手",
+    "name": "音频删除授权",
+    "check": "问法/解释/否定/只删歌单不能获得delete_tracks能力",
+    "evidence": "MusicAssistantTest",
+    "limit": "Q04：三种非执行/否定语句仍放行",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F113",
+    "category": "AI助手",
+    "name": "播放、暂停、seek和翻页动作",
+    "check": "内存队列交前台确认，重启不重放",
+    "evidence": "StorageAndAssistantExtraTest,MusicAssistantTest",
+    "limit": "前台缺音源恢复需端到端复核",
+    "status": "局部通过"
+  },
+  {
+    "id": "F114",
+    "category": "AI助手",
+    "name": "本地帮助与教程工具",
+    "check": "真实入口检索、不使用模型、提供可点教程",
+    "evidence": "StorageAndAssistantExtraTest,MusicAssistantTest",
+    "limit": "教程锚点按设备结果判定",
+    "status": "局部通过"
+  },
+  {
+    "id": "F115",
+    "category": "AI助手",
+    "name": "音乐链接附件与追加队列",
+    "check": "只解析明确resonance链接，未知ID不猜配",
+    "evidence": "AssistantMusicLinksTest,UiVisualContractTest",
+    "limit": "外部URL不当作本地曲目",
+    "status": "局部通过"
+  },
+  {
+    "id": "F116",
+    "category": "AI助手",
+    "name": "搜索和下载工具",
+    "check": "保留多次搜索ID，未知ID失败，不伪称完成",
+    "evidence": "MusicAssistantTest",
+    "limit": "真实歌曲版权/在线可用率不在夹具结果内",
+    "status": "局部通过"
+  },
+  {
+    "id": "F117",
+    "category": "AI助手",
+    "name": "重复工具、上下文压缩和无进展暂停",
+    "check": "相同参数复用；最近4组/有效JSON；连续6轮无进展停止",
+    "evidence": "AssistantToolSessionTest,MusicAssistantTest",
+    "limit": "供应商实际成本账单未重建",
+    "status": "局部通过"
+  },
+  {
+    "id": "F118",
+    "category": "AI助手",
+    "name": "长任务、取消、任务重试",
+    "check": "持续有新成功动作不限总轮数；取消保留已入库",
+    "evidence": "AssistantToolSessionTest,MusicAssistantTest",
+    "limit": "不自动重放聊天/删除/收费识别",
+    "status": "局部通过"
+  },
+  {
+    "id": "F119",
+    "category": "AI助手",
+    "name": "月用量和操作分类统计",
+    "check": "已知tokens/未返回用量失败分开，旧月度字段兼容",
+    "evidence": "MusicAssistantTest",
+    "limit": "字符诊断不是token估算；无实际账单核对",
+    "status": "局部通过"
+  },
+  {
+    "id": "F120",
+    "category": "截图识别",
+    "name": "内置离线OCR模型",
+    "check": "中英合成截图实际推理，无Key/不上传图片",
+    "evidence": "ScreenshotOcrTest,LocalScreenshotOcrTest",
+    "limit": "复杂旋转照片和任意排版未保证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F121",
+    "category": "截图识别",
+    "name": "长图分片和像素上限",
+    "check": "宽1600/片高1800/重叠120，40片/30MB上限",
+    "evidence": "ArtworkDecodeTest,LocalScreenshotOcrTest,MusicFeaturesIntegrationTest",
+    "limit": "超过上限应提示分批",
+    "status": "局部通过"
+  },
+  {
+    "id": "F122",
+    "category": "截图识别",
+    "name": "歌单布局解析",
+    "check": "标题/歌手配对、数值曲名、排名/UI控件过滤、重叠去重",
+    "evidence": "ScreenshotOcrTest",
+    "limit": "真实用户截图库准确率未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F123",
+    "category": "截图识别",
+    "name": "截断名称证据核对",
+    "check": "本地/公开目录/有证据B站标题；歧义不编造",
+    "evidence": "ScreenshotOcrTest",
+    "limit": "真实公开目录在线命中未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F124",
+    "category": "截图识别",
+    "name": "本地/云端后端与缓存隔离",
+    "check": "后端/备注/图摘要不同不误用缓存，不偷偷云端兜底",
+    "evidence": "ScreenshotOcrTest,MusicAssistantTest",
+    "limit": "视觉API未真实调用",
+    "status": "局部通过"
+  },
+  {
+    "id": "F125",
+    "category": "截图识别",
+    "name": "识别预览、勾选与编辑确认",
+    "check": "取消不下载；编辑歌单和歌曲；草稿消费一次",
+    "evidence": "MusicAssistantTest",
+    "limit": "进程终止仅保留OCR缓存，不保留草稿",
+    "status": "局部通过"
+  },
+  {
+    "id": "F126",
+    "category": "截图识别",
+    "name": "确认后逐首导入与失败明细",
+    "check": "先本地匹配，再来源下载，300首/20歌单边界",
+    "evidence": "MusicAssistantTest",
+    "limit": "真实300首大任务未端到端执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F127",
+    "category": "每日推荐与反馈",
+    "name": "默认关闭、数量和间隔",
+    "check": "1-168小时/1-30首配置往返、手动刷新",
+    "evidence": "RecommendationPolicyTest,MusicAssistantTest",
+    "limit": "系统后台周期不是精确定时",
+    "status": "局部通过"
+  },
+  {
+    "id": "F128",
+    "category": "每日推荐与反馈",
+    "name": "歌源模式与AI模式",
+    "check": "歌源不调用模型；AI模式使用显式连接",
+    "evidence": "MusicAssistantTest,RecommendationFeedbackPolicyTest",
+    "limit": "未实测模型推荐质量",
+    "status": "局部通过"
+  },
+  {
+    "id": "F129",
+    "category": "每日推荐与反馈",
+    "name": "未听保护与到期状态",
+    "check": "未听批次不自动换；手动可换；设置显示等待原因",
+    "evidence": "RecommendationPolicyTest,MusicAssistantTest",
+    "limit": "通知与所有时区边界未穷举",
+    "status": "局部通过"
+  },
+  {
+    "id": "F130",
+    "category": "每日推荐与反馈",
+    "name": "失败冷却和旧配置升级",
+    "check": "尝试前落盘，失败也等待间隔；手动立即重试",
+    "evidence": "MusicAssistantTest",
+    "limit": "使用假时钟/假AI，不产生费用",
+    "status": "局部通过"
+  },
+  {
+    "id": "F131",
+    "category": "每日推荐与反馈",
+    "name": "不计费网络和后台调度",
+    "check": "自动等待允许网络；手动刷新显式联网",
+    "evidence": "RecommendationPolicyTest",
+    "limit": "真实计费切换、WorkManager节电未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F132",
+    "category": "每日推荐与反馈",
+    "name": "历史去重与拒绝过滤",
+    "check": "NFKC歌曲身份、7天冷却、365天历史",
+    "evidence": "RecommendationPolicyTest,RecommendationFeedbackPolicyTest",
+    "limit": "不能识别所有相同/不同录音",
+    "status": "局部通过"
+  },
+  {
+    "id": "F133",
+    "category": "每日推荐与反馈",
+    "name": "推荐队列点播与缺音源恢复",
+    "check": "只在本批有效音频切歌；恢复迟到不抢播",
+    "evidence": "RecommendationPlaybackTest,PlaybackQueueResolutionTest",
+    "limit": "真实公网恢复未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F134",
+    "category": "每日推荐与反馈",
+    "name": "新批提交、pending和中断恢复",
+    "check": "至少一首成功才替换；全失败保留旧批；逐首pending",
+    "evidence": "MusicAssistantTest",
+    "limit": "断电/硬盘故障未注入",
+    "status": "局部通过"
+  },
+  {
+    "id": "F135",
+    "category": "每日推荐与反馈",
+    "name": "临时旧曲清理保护",
+    "check": "收藏/自建歌单/当前播放/共享路径不误删",
+    "evidence": "MusicAssistantTest,RecommendationPolicyTest",
+    "limit": "仅应用托管临时音频夹具",
+    "status": "局部通过"
+  },
+  {
+    "id": "F136",
+    "category": "每日推荐与反馈",
+    "name": "单首/多首/全批保存歌单",
+    "check": "已有或新歌单，保留顺序和去重",
+    "evidence": "MusicAssistantTest",
+    "limit": "旧批次边界见自动化清单",
+    "status": "局部通过"
+  },
+  {
+    "id": "F137",
+    "category": "每日推荐与反馈",
+    "name": "点赞/踩互斥及撤销",
+    "check": "不等于收藏，踩不删文件，撤销解除旧拒绝",
+    "evidence": "RecommendationFeedbackPolicyTest,MusicAssistantTest",
+    "limit": "本地偏好，不是公共社交评论",
+    "status": "局部通过"
+  },
+  {
+    "id": "F138",
+    "category": "每日推荐与反馈",
+    "name": "评论编辑清空和历史反馈",
+    "check": "500字上限、与投票独立、换批后保留",
+    "evidence": "MusicAssistantTest,RecommendationFeedbackPolicyTest",
+    "limit": "任意自然语言语义不保证理解",
+    "status": "局部通过"
+  },
+  {
+    "id": "F139",
+    "category": "每日推荐与反馈",
+    "name": "不喜欢并删除与原因",
+    "check": "显式删除音频/关系，原因进入后续推荐",
+    "evidence": "MusicAssistantTest",
+    "limit": "底层删除失败语义另见Q11",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F140",
+    "category": "下载与空间",
+    "name": "托管音频统计和精确重复",
+    "check": "容量/保存状态/可选SHA，路径边界校验",
+    "evidence": "StorageAndAssistantExtraTest,MusicAssistantTest",
+    "limit": "大库hash性能未压力测量",
+    "status": "局部通过"
+  },
+  {
+    "id": "F141",
+    "category": "下载与空间",
+    "name": "清理预览与保存保护",
+    "check": "默认保护永久保存/收藏/歌单/正在播放/共享文件",
+    "evidence": "MusicAssistantTest",
+    "limit": "外部用户歌曲不作为测试材料",
+    "status": "局部通过"
+  },
+  {
+    "id": "F142",
+    "category": "下载与空间",
+    "name": "显式释放已保存音频",
+    "check": "删除托管文件，保留ID/收藏/歌单并置空来源",
+    "evidence": "MusicAssistantTest",
+    "limit": "跨文件元数据失败非事务",
+    "status": "局部通过"
+  },
+  {
+    "id": "F143",
+    "category": "下载与空间",
+    "name": "按来源重新下载恢复",
+    "check": "沿用旧ID/关系，更新歌单sourceUri",
+    "evidence": "MusicAssistantTest",
+    "limit": "原歌源不可用时可失败，公网未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F144",
+    "category": "下载与空间",
+    "name": "手动选择替代音频",
+    "check": "取消不改数据；替换保留ID/收藏/关系",
+    "evidence": "ApplicationUseCaseTest",
+    "limit": "Android/桌面系统选择器本轮未点击",
+    "status": "局部通过"
+  },
+  {
+    "id": "F145",
+    "category": "下载与空间",
+    "name": "临时空间预算",
+    "check": "64-8192MB配置，超限停止，不清已保存文件",
+    "evidence": "StorageAndAssistantExtraTest",
+    "limit": "下载后才检查预算；真实磁盘满未模拟",
+    "status": "局部通过"
+  },
+  {
+    "id": "F146",
+    "category": "下载与空间",
+    "name": "来源与封面溯源",
+    "check": "区分目录图/歌源标注/视频图/自选与未知",
+    "evidence": "MusicAssistantTest,AlbumCoverRepositoryTest",
+    "limit": "来源证据不认证母带",
+    "status": "局部通过"
+  },
+  {
+    "id": "F147",
+    "category": "智能管家与画像",
+    "name": "曲库体检和垃圾标签清理",
+    "check": "去前后缀/扩展名、拆歌手、规范未知专辑",
+    "evidence": "SmartLibraryAuditEngineTest",
+    "limit": "默认建议仍需用户审阅",
+    "status": "局部通过"
+  },
+  {
+    "id": "F148",
+    "category": "智能管家与画像",
+    "name": "多版本去重与保留建议",
+    "check": "Studio/Live/Remix不得默认互删",
+    "evidence": "SmartLibraryAuditEngineTest",
+    "limit": "Q05：现场版仍被预选清理",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F149",
+    "category": "智能管家与画像",
+    "name": "智能管家批量清理接线",
+    "check": "选多首应完整确认并报告逐首结果",
+    "evidence": "-",
+    "limit": "Q06：循环覆盖单曲确认，仅最后一首",
+    "status": "源码确认缺口"
+  },
+  {
+    "id": "F150",
+    "category": "智能管家与画像",
+    "name": "六维品味雷达与性格评语",
+    "check": "空库/关键词样本、歌手分布和比例边界",
+    "evidence": "TasteAnalyticsEngineTest",
+    "limit": "基于元数据规则，不是音频分析结果",
+    "status": "局部通过"
+  },
+  {
+    "id": "F151",
+    "category": "智能管家与画像",
+    "name": "听歌时长胶囊和分享卡片",
+    "check": "统计快照可用，海报内容/复制文案",
+    "evidence": "ListeningStatsRepositoryTest",
+    "limit": "海报导出/系统分享未实际执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F152",
+    "category": "智能管家与画像",
+    "name": "本地音频特征提取",
+    "check": "节拍/声学分析算法与缓存",
+    "evidence": "AudioFeatureAnalyzerTest",
+    "limit": "算法单测通过；未接生产解码/搜索链，不能当可用功能",
+    "status": "算法通过；产品未接入"
+  },
+  {
+    "id": "F153",
+    "category": "一起听",
+    "name": "创建房间和邀请查看",
+    "check": "明确创建，随机凭据、邀请过期/刷新",
+    "evidence": "ListenTogetherTest,TogetherSessionTest,TogetherUiDeviceTest",
+    "limit": "真实公网房间未创建",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F154",
+    "category": "一起听",
+    "name": "粘贴邀请和外部邀请确认",
+    "check": "展示预览，确认前不联网，取消不加入",
+    "evidence": "TogetherUiDeviceTest,TogetherConnectionBoundsTest",
+    "limit": "真实操作系统分享/深链未逐项实测",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F155",
+    "category": "一起听",
+    "name": "房主审批与拒绝成员",
+    "check": "未批准不进入，拒绝/超时清理连接",
+    "evidence": "ListenTogetherTest,TogetherCompanionTest,TogetherCompanionUiDeviceTest",
+    "limit": "跨公网并发加入未测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F156",
+    "category": "一起听",
+    "name": "TLS证书和加密音频传输",
+    "check": "证书固定、摘要校验、临时音频边界",
+    "evidence": "ListenTogetherTest,TogetherConnectionDeviceTest",
+    "limit": "本地回环；不是互联网渗透测试",
+    "status": "局部通过"
+  },
+  {
+    "id": "F157",
+    "category": "一起听",
+    "name": "共享队列和点歌审批",
+    "check": "显式队列、候选、批准/拒绝、预取取消",
+    "evidence": "TogetherSessionTest,TogetherSuggestionsTest,TogetherPrefetchCancellationTest",
+    "limit": "多人真实解码与听感同步未验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F158",
+    "category": "一起听",
+    "name": "播放/暂停/seek/切歌同步",
+    "check": "角色门禁、远端状态、准备确认与驱动器",
+    "evidence": "TogetherPlaybackDriverTest,TogetherSessionTest",
+    "limit": "未做Windows+手机实际双设备播放",
+    "status": "局部通过"
+  },
+  {
+    "id": "F159",
+    "category": "一起听",
+    "name": "同步歌词与AI候选",
+    "check": "同步原歌词来源，候选不越过房主审批",
+    "evidence": "TogetherSuggestionsTest,ListenTogetherTest",
+    "limit": "真实模型未调用",
+    "status": "局部通过"
+  },
+  {
+    "id": "F160",
+    "category": "一起听",
+    "name": "聊天投递、记录与清空",
+    "check": "本机留存、消息边界、并发清理和重连语义",
+    "evidence": "TogetherCompanionTest",
+    "limit": "跨设备离线长时记录未验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F161",
+    "category": "一起听",
+    "name": "常听伙伴、配对和撤销",
+    "check": "配对/撤销/邀请与资料边界",
+    "evidence": "TogetherCompanionTest,TogetherCompanionDeviceTest",
+    "limit": "进程停止时没有离线推送",
+    "status": "局部通过"
+  },
+  {
+    "id": "F162",
+    "category": "一起听",
+    "name": "有限断线恢复与邀请刷新",
+    "check": "过期拒绝、按成员路由恢复、连接数量限制",
+    "evidence": "TogetherConnectionBoundsTest,TogetherSessionTest",
+    "limit": "真实网络抖动/蜂窝切换未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F163",
+    "category": "一起听",
+    "name": "服务器路由与旧直连兼容",
+    "check": "带服务器邀请只走服务器，不退回直连暴露设备地址",
+    "evidence": "TogetherServerRoutingTest",
+    "limit": "真实公开服务与证书未探测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F164",
+    "category": "一起听",
+    "name": "WSS中继和寻址协议",
+    "check": "回环WebSocket/TLS往返、签名发布/查询",
+    "evidence": "TogetherWebSocketTest,TogetherRendezvousTest",
+    "limit": "生产地址验收跳过；回环不是跨网验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F165",
+    "category": "一起听",
+    "name": "Android后台锁与通知/桌面托盘",
+    "check": "后台连接存活，锁有界续期与通知权限",
+    "evidence": "-",
+    "limit": "真实锁屏/省电/通知/两小时房间未执行",
+    "status": "未执行专门验收"
+  },
+  {
+    "id": "F166",
+    "category": "一起听",
+    "name": "邀请复制与分享固定入口",
+    "check": "滚动后仍能找到邀请和退出，队列首页限制",
+    "evidence": "TogetherUiDeviceTest,TogetherCompanionUiDeviceTest",
+    "limit": "系统分享目标未逐项点击",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F167",
+    "category": "设置、天气与系统",
+    "name": "深色/浅色/跟随系统主题",
+    "check": "设置往返、弹窗可读、窗口背景一致",
+    "evidence": "WeatherPaletteTest,UiVisualContractTest,LibraryDetailTransitionTest",
+    "limit": "坏主设置恢复失败见Q03",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F168",
+    "category": "设置、天气与系统",
+    "name": "天气配色、城市搜索和定位",
+    "check": "天气码映射与缓存，定位失败可手选城市",
+    "evidence": "WeatherPaletteTest",
+    "limit": "真实城市/定位权限/天气服务请求未执行",
+    "status": "局部通过"
+  },
+  {
+    "id": "F169",
+    "category": "设置、天气与系统",
+    "name": "减少动态与系统动态偏好",
+    "check": "键盘/减少动态即时或短淡变，不做封面飞行",
+    "evidence": "UiVisualContractTest,PlayerExpansionTest",
+    "limit": "系统级动态设置切换未逐项实测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F170",
+    "category": "设置、天气与系统",
+    "name": "八组设置子页和帮助",
+    "check": "打开/返回/滚动、保留实际配置回调",
+    "evidence": "UiVisualContractTest,TutorialNavigationTest",
+    "limit": "本轮实机结果按测试明细判断",
+    "status": "相关回归有失败"
+  },
+  {
+    "id": "F171",
+    "category": "设置、天气与系统",
+    "name": "桌面窗口、托盘与完全退出",
+    "check": "隐藏主窗继续歌词，完全退出排空和释放",
+    "evidence": "DesktopWindowLifecycleTest,ApplicationSessionTest",
+    "limit": "桌面托盘真实菜单/Windows未操作",
+    "status": "局部通过"
+  },
+  {
+    "id": "F172",
+    "category": "设置、天气与系统",
+    "name": "凭据加密和资料目录隔离",
+    "check": "Linux AES-GCM/AndroidKeyStore、无效数据恢复",
+    "evidence": "LinuxDesktopSupportTest,MusicFeaturesIntegrationTest",
+    "limit": "Windows DPAPI真实环境未执行；未读取用户Key",
+    "status": "局部通过"
+  },
+  {
+    "id": "F173",
+    "category": "设置、天气与系统",
+    "name": "偏好顺序写入和备份恢复",
+    "check": "捕获操作值、submitLatest、取消不破坏worker",
+    "evidence": "PersistenceQueueTest,ApplicationUseCaseTest,MusicJsonStoreTest",
+    "limit": "部分专用设置入口仍绕过恢复Q03",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F174",
+    "category": "设置、天气与系统",
+    "name": "Android设置写盘失败反馈",
+    "check": "commit=false应向界面报告保存失败",
+    "evidence": "-",
+    "limit": "Q10：部分入口忽略返回值，仅源码确认",
+    "status": "源码确认缺口"
+  },
+  {
+    "id": "F175",
+    "category": "设置、天气与系统",
+    "name": "关于、版本与更新说明",
+    "check": "版本来自version.properties，离线展示对应发布内容",
+    "evidence": "HorizontalPageSwipeUnitTest",
+    "limit": "未检查GitHub发布链接在线状态",
+    "status": "局部通过"
+  },
+  {
+    "id": "F176",
+    "category": "独立官网与服务",
+    "name": "首页/下载/论坛/支持导航",
+    "check": "公共页返回成功，无作者入口或过时内容泄漏",
+    "evidence": "PY:website",
+    "limit": "Flask客户端测试；真实浏览器布局未验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F177",
+    "category": "独立官网与服务",
+    "name": "安装包直链与加速、Range和缓存",
+    "check": "实际大小/hash、Range/ETag、无会话Cookie",
+    "evidence": "PY:website",
+    "limit": "微型安装包夹具；CDN生产缓存未探测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F178",
+    "category": "独立官网与服务",
+    "name": "作者上传版本与旧包清理",
+    "check": "拒绝降版/格式错误，失败保留旧版，事务切换后清理",
+    "evidence": "PY:website",
+    "limit": "使用临时数据；未发布实际版本",
+    "status": "局部通过"
+  },
+  {
+    "id": "F179",
+    "category": "独立官网与服务",
+    "name": "匿名帖子、回复、昵称和截图",
+    "check": "创建/查看、XSS转义、CSRF、上传边界",
+    "evidence": "PY:website",
+    "limit": "未向真实论坛发帖",
+    "status": "局部通过"
+  },
+  {
+    "id": "F180",
+    "category": "独立官网与服务",
+    "name": "话题申请、审批和排序删除",
+    "check": "未审批不公开，只能删除空话题",
+    "evidence": "PY:website",
+    "limit": "后台真实账户未登录",
+    "status": "局部通过"
+  },
+  {
+    "id": "F181",
+    "category": "独立官网与服务",
+    "name": "作者登录、会话和看板",
+    "check": "密码/会话过期、无默认密码、权限边界",
+    "evidence": "PY:website",
+    "limit": "作者私有地址/真实密码未读取",
+    "status": "局部通过"
+  },
+  {
+    "id": "F182",
+    "category": "独立官网与服务",
+    "name": "作者标记、置顶和精准删帖",
+    "check": "作者回复优先、按ID/URL定位、关键词搜索",
+    "evidence": "PY:website",
+    "limit": "仅临时数据库",
+    "status": "局部通过"
+  },
+  {
+    "id": "F183",
+    "category": "独立官网与服务",
+    "name": "公告和版本介绍发布",
+    "check": "校验版本后同事务更新，无效内容不覆盖",
+    "evidence": "PY:website",
+    "limit": "不真实群发邮件",
+    "status": "局部通过"
+  },
+  {
+    "id": "F184",
+    "category": "独立官网与服务",
+    "name": "订阅确认、推广选择和退订",
+    "check": "推广默认关闭；确认链接/退订与CSRF",
+    "evidence": "PY:website",
+    "limit": "模拟SMTP；真实邮件送达未验证",
+    "status": "局部通过"
+  },
+  {
+    "id": "F185",
+    "category": "独立官网与服务",
+    "name": "持久邮件队列、失败重试和收款码",
+    "check": "队列重试、受众过滤、图片上传校验",
+    "evidence": "PY:website",
+    "limit": "未接真实订阅者/收款资料",
+    "status": "局部通过"
+  },
+  {
+    "id": "F186",
+    "category": "独立官网与服务",
+    "name": "连续导航的最后点击优先",
+    "check": "先论坛后下载，迟到论坛不能覆盖下载",
+    "evidence": "-",
+    "limit": "Q12：实际site.js函数隔离复现失败",
+    "status": "发现缺陷（隔离复现）"
+  },
+  {
+    "id": "F187",
+    "category": "独立官网与服务",
+    "name": "响应式、减少动态和无缝切页视觉",
+    "check": "320/390/768/1440宽度、返回与加载反馈",
+    "evidence": "-",
+    "limit": "本轮未使用真实浏览器做视觉和可访问性验收",
+    "status": "未执行专门验收"
+  },
+  {
+    "id": "F188",
+    "category": "独立官网与服务",
+    "name": "中继配对、容量和流量限制",
+    "check": "双向字节、无效hello/等待超时清理、并发和日预算",
+    "evidence": "PY:relay",
+    "limit": "回环测试；不是公网压测",
+    "status": "局部通过"
+  },
+  {
+    "id": "F189",
+    "category": "独立官网与服务",
+    "name": "中继守护进程",
+    "check": "启动/退出/失败恢复与资源清理",
+    "evidence": "PY:relay",
+    "limit": "未修改生产守护进程",
+    "status": "局部通过"
+  },
+  {
+    "id": "F190",
+    "category": "独立官网与服务",
+    "name": "签名寻址服务",
+    "check": "签名/过期/速率/资料边界",
+    "evidence": "PY:rendezvous",
+    "limit": "可选旧架构；不是生产公网验收",
+    "status": "局部通过"
+  },
+  {
+    "id": "F191",
+    "category": "独立官网与服务",
+    "name": "部署性能工具",
+    "check": "本地基准参数、统计与错误处理",
+    "evidence": "PY:deployment",
+    "limit": "未运行服务器迁移/Ubuntu部署/生产压测",
+    "status": "局部通过"
+  }
+]

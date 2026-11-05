@@ -47,23 +47,26 @@ class LrclibLyricsRepository(
         if (!forceRefresh) GeneratedLyricsStore.read(cacheDirectory.parent.resolve("music-assistant/generated-lyrics"), track)?.let {
             return@withContext LyricsFetchResult.Found(it)
         }
-        // 1. 本地歌词文件（同级目录、Lyrics 目录、用户自定义歌词目录）
+        // Keep readable text while looking for a real timeline. A plain-text hit is not a sync hit.
+        var plainFallback: LyricsFetchResult.Found? = null
         if (!forceRefresh) {
-            findLocalLyrics(track, customLyricsFolder)?.let { return@withContext it }
-        }
-
-        // 2. 本地缓存
-        if (!forceRefresh) {
+            findLocalLyrics(track, customLyricsFolder)?.let { local ->
+                if (local.lyrics.synchronized || local.lyrics.instrumental) return@withContext local
+                plainFallback = local
+            }
             readCache(track)?.let { cached ->
-                if (cached is LyricsFetchResult.Found || sourceFallback == null) return@withContext cached
-                val source = sourceFallback(track)
-                if (source is LyricsFetchResult.Found) { writeCache(track, source); return@withContext source }
-                return@withContext source
+                if (cached is LyricsFetchResult.Found) {
+                    if (cached.lyrics.synchronized || cached.lyrics.instrumental) return@withContext cached
+                    if (plainFallback == null) plainFallback = cached
+                } else if (plainFallback == null) {
+                    val result = preferSynchronizedSource(track, cached, sourceFallback)
+                    if (result is LyricsFetchResult.Found) writeCache(track, result)
+                    return@withContext result
+                }
             }
         }
 
-        // 3. LRCLIB 远程检索
-        var result: LyricsFetchResult = try {
+        val remote: LyricsFetchResult = try {
             fetchRemote(track)
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
@@ -76,12 +79,10 @@ class LrclibLyricsRepository(
                 retryable = true,
             )
         }
-
-        if (result is LyricsFetchResult.Unavailable && sourceFallback != null) {
-            val source = sourceFallback(track)
-            if (source is LyricsFetchResult.Found) result = source
-            else if (!result.retryable) result = source
-        }
+        val best = if (remote is LyricsFetchResult.Found && (remote.lyrics.synchronized || remote.lyrics.instrumental)) {
+            remote
+        } else plainFallback ?: remote
+        var result = preferSynchronizedSource(track, best, sourceFallback)
         // AI is only used when explicitly supplied by the caller.
         if (result is LyricsFetchResult.Unavailable && aiFallback != null) {
             val aiResult = runCatching { aiFallback(track) }.getOrNull()
@@ -94,6 +95,26 @@ class LrclibLyricsRepository(
             writeCache(track, result)
         }
         result
+    }
+
+    private suspend fun preferSynchronizedSource(
+        track: Track,
+        fallback: LyricsFetchResult,
+        sourceFallback: (suspend (Track) -> LyricsFetchResult)?,
+    ): LyricsFetchResult {
+        if (sourceFallback == null || (fallback is LyricsFetchResult.Found &&
+                (fallback.lyrics.synchronized || fallback.lyrics.instrumental))) return fallback
+        val source = try {
+            sourceFallback(track)
+        } catch (cancelled: kotlinx.coroutines.CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            return fallback
+        }
+        return when (source) {
+            is LyricsFetchResult.Found -> if (source.lyrics.synchronized || source.lyrics.instrumental || fallback !is LyricsFetchResult.Found) source else fallback
+            is LyricsFetchResult.Unavailable -> if (fallback is LyricsFetchResult.Unavailable && !fallback.retryable) source else fallback
+        }
     }
 
     fun findLocalLyrics(track: Track, customLyricsFolder: String? = null): LyricsFetchResult.Found? {
@@ -250,15 +271,16 @@ class LrclibLyricsRepository(
         val candidates = JSONArray((search as HttpResult.Success).body)
         val best = (0 until candidates.length())
             .mapNotNull(candidates::optJSONObject)
-            .map { it to score(it, track, duration) }
-            .filter { it.second >= MINIMUM_MATCH_SCORE }
-            .maxByOrNull { it.second }
+            .mapNotNull { candidate ->
+                val score = score(candidate, track, duration)
+                if (score < MINIMUM_MATCH_SCORE) null
+                else parseRecord(candidate.toString(), track, fromCache = false)?.let { it to score }
+            }
+            .maxWithOrNull(compareBy<Pair<Lyrics, Int>> { it.first.synchronized || it.first.instrumental }.thenBy { it.second })
             ?.first
             ?: return plainFallback?.let(LyricsFetchResult::Found) ?: LyricsFetchResult.Unavailable("暂未找到匹配的歌词", retryable = false)
 
-        return parseRecord(best.toString(), track, fromCache = false)
-            ?.let(LyricsFetchResult::Found)
-            ?: LyricsFetchResult.Unavailable("歌词记录为空", retryable = false)
+        return LyricsFetchResult.Found(best)
     }
 
     private fun request(path: String, parameters: Map<String, String>): HttpResult {

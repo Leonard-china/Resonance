@@ -103,11 +103,11 @@ class MusicStageDeviceTest {
         capture("cover")
         ui.onNodeWithContentDescription("播放进度").performSemanticsAction(SemanticsActions.SetProgress) { it(.45f) }
         ui.runOnIdle { assertEquals(.45f, seek, .001f) }
-        ui.onNodeWithText("歌词", useUnmergedTree = true).performClick()
+        ui.onNodeWithContentDescription("歌词").performClick()
         ui.mainClock.advanceTimeBy(500)
         ui.onNodeWithText("把此刻交给旋律").assertIsDisplayed()
         capture("lyrics")
-        ui.onNodeWithText("队列", useUnmergedTree = true).performClick()
+        ui.onNodeWithContentDescription("队列").performClick()
         ui.mainClock.advanceTimeBy(500)
         capture("queue")
         ui.onNodeWithText(tracks.last().title).performClick()

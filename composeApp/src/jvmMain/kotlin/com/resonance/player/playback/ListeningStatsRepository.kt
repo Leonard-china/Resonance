@@ -13,11 +13,14 @@ class ListeningStatsRepository private constructor(directory: Path) {
         data class Flush(val finished: CompletableDeferred<Unit>? = null) : Write
     }
     val errors = MutableStateFlow<String?>(null)
+    private val snapshotState = MutableStateFlow(com.resonance.player.model.ListeningStatsSnapshot())
+    val snapshots: kotlinx.coroutines.flow.StateFlow<com.resonance.player.model.ListeningStatsSnapshot> get() = snapshotState
     val store by lazy { ListeningStatsStore(directory, flushIntervalMillis = 10_000) }
     private val writes = Channel<Write>(Channel.UNLIMITED)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     init {
         scope.launch {
+            publishSnapshot()
             for (write in writes) {
                 try {
                     when (write) {
@@ -25,15 +28,28 @@ class ListeningStatsRepository private constructor(directory: Path) {
                         is Write.Flush -> store.flush()
                     }
                     if (!store.hasPendingWrites) errors.value = null
+                    publishSnapshot()
                     (write as? Write.Flush)?.finished?.complete(Unit)
                 } catch (cancelled: CancellationException) { throw cancelled }
                 catch (failure: Exception) {
                     errors.value = "听歌记录未能保存，请检查存储空间；原有记录已保留"
                     (write as? Write.Flush)?.finished?.completeExceptionally(failure)
-                }
+                } finally { publishSnapshot() }
             }
         }
     }
+    private fun publishSnapshot() {
+        try { snapshotState.value = com.resonance.player.model.ListeningStatsSnapshot(store.getAllStats(), true, errors.value) }
+        catch (_: Exception) {
+            errors.value = "听歌记录暂不可用，原有记录已保留"
+            snapshotState.value = snapshots.value.copy(error = errors.value)
+        }
+    }
+    fun getAllStats(): com.resonance.player.model.AllListeningStats {
+        snapshots.value.error?.let { error(it) }
+        return snapshots.value.stats
+    }
+    fun getTrackStats(id: String): com.resonance.player.model.TrackListeningStats? = getAllStats().trackStats[id]
     fun record(id: String, seconds: Int, completed: Boolean) {
         check(writes.trySend(Write.Record(id, seconds, completed)).isSuccess)
     }

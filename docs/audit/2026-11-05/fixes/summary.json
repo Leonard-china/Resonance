@@ -1,0 +1,42 @@
+{
+  "version": "0.6.6 / 40",
+  "head": "846aa16",
+  "workingTreeUncommitted": true,
+  "jvm": {
+    "passed": 427,
+    "failed": 0,
+    "skipped": 7,
+    "ignored": 0,
+    "total": 434
+  },
+  "android": {
+    "passed": 77,
+    "failed": 0,
+    "skipped": 7,
+    "ignored": 0,
+    "total": 84
+  },
+  "python": {
+    "website": 45,
+    "relay": 11,
+    "rendezvous": 7,
+    "deployment": 2
+  },
+  "node": {
+    "passed": 6
+  },
+  "total": 589,
+  "passed": 575,
+  "failed": 0,
+  "skipped": 14,
+  "mainSources": {
+    "desktop": 202,
+    "android": 195
+  },
+  "testSources": {
+    "commonAndDesktop": 100,
+    "android": 34
+  },
+  "qaPackage": "com.resonance.player.validation.quality.validation20261105refactor",
+  "formalPackageVersionAndUpdateUnchanged": true
+}

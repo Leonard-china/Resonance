@@ -278,48 +278,36 @@ initInteractive(document);
     updateHeaderScroll();
   }
 
-  // 4. 即时跳转导航
+  // 4. 即时跳转导航。请求和延迟的视图提交均只接受最后一次用户意图。
+  let navigationGeneration = 0;
+  let activeViewTransition = null;
   async function navigate(url, push = true) {
+    const generation = ++navigationGeneration;
+    activeViewTransition?.skipTransition();
     const key = url.pathname + url.search;
     let data = cache.get(key);
-
     if (!data || Date.now() - data.time >= CACHE_TTL) {
       showProgress();
       data = await fetchPage(url, 'high');
-      hideProgress();
     }
-
+    if (generation !== navigationGeneration) return;
+    hideProgress();
     if (!data || !data.mainHtml) {
-      // 容错降级：走原生传统跳转
       window.location.href = url.href;
       return;
     }
-
-    if (push) {
-      history.pushState({ key, href: url.href }, '', url.href);
-    }
-
-    if (document.startViewTransition) {
-      document.startViewTransition(() => applyPage(data, url));
-    } else {
+    const commit = () => {
+      if (generation !== navigationGeneration) return;
+      if (push) history.pushState({ key, href: url.href }, '', url.href);
       applyPage(data, url);
-    }
+    };
+    if (document.startViewTransition) activeViewTransition = document.startViewTransition(commit);
+    else commit();
   }
 
-  // 5. 监听浏览器前进/后退 (瞬间呈现历史页面)
-  window.addEventListener('popstate', (event) => {
-    const currentUrl = new URL(window.location.href);
-    const key = currentUrl.pathname + currentUrl.search;
-    const cached = cache.get(key);
-    if (cached) {
-      if (document.startViewTransition) {
-        document.startViewTransition(() => applyPage(cached, currentUrl));
-      } else {
-        applyPage(cached, currentUrl);
-      }
-    } else {
-      navigate(currentUrl, false);
-    }
+  // 5. 前进/后退也必须使旧网络响应和旧过渡提交失效，包括缓存命中。
+  window.addEventListener('popstate', () => {
+    navigate(new URL(window.location.href), false);
   });
 
   // 6. 全局拦截同源超链接点击
@@ -339,6 +327,10 @@ initInteractive(document);
       const url = new URL(href, window.location.origin);
       if (!isSafePageUrl(url)) return;
       if (url.pathname === window.location.pathname && url.search === window.location.search) {
+        // Staying on the current page is also a newer intent than an in-flight navigation.
+        ++navigationGeneration;
+        activeViewTransition?.skipTransition();
+        hideProgress();
         // 同一页面直接平滑滚动到顶部或对应锚点
         if (!url.hash) {
           event.preventDefault();

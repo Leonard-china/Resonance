@@ -1,0 +1,15 @@
+{
+  "failedDeleteRemovesRecord": {
+    "reportedSuccess": true,
+    "fileDeleted": false,
+    "message": "已从音乐库移除「C」",
+    "trackStillInLibrary": false,
+    "originalAudioStillExists": true
+  },
+  "sharedArtworkDeletion": {
+    "deleteSucceeded": true,
+    "remainingAudioExists": true,
+    "sharedArtworkExists": false,
+    "remainingTrackStillReferencesArtwork": true
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "passed": 62,
+  "failed": 10,
+  "skipped": 7,
+  "classes": 30,
+  "incomplete": 0,
+  "recoveredClass": "com.resonance.player.UiInteractionContractTest"
+}

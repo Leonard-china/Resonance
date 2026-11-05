@@ -32,6 +32,11 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.blur
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import com.resonance.player.design.ResonanceMotionTokens
 import com.resonance.player.ui.common.SoftHeroPlayButton
 import com.resonance.player.ui.common.SoftSkipButton
@@ -40,6 +45,7 @@ import com.resonance.player.ui.common.SoftRefinedPlaybackScrubber
 import com.resonance.player.ui.common.SoftRefinedVolumeSlider
 import com.resonance.player.ui.common.SoftNeumorphicTokens
 import com.resonance.player.ui.common.softConvexDisc
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -77,6 +83,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeMute
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Tune
@@ -120,8 +127,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import com.resonance.player.model.CalibrationStatus
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -141,6 +146,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.draw.clipToBounds
@@ -162,8 +168,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.border
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.FrostedBackdrop
@@ -185,8 +189,6 @@ import dev.chrisbanes.haze.*
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.contentDescription
 import com.resonance.player.design.ResonanceShapes
 import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
@@ -251,15 +253,12 @@ internal fun NowPlayingOverlay(
     val track = playerState.currentTrack ?: return
     val atmosphere = rememberAlbumAtmosphere(track.artworkSeed, track.artworkPath, track.sourceUri)
     val glassState = rememberHazeState()
-    var paneName by rememberSaveable { mutableStateOf(PlayerPane.Cover.name) }
+    var paneName by rememberSaveable { mutableStateOf<String?>(null) }
     var playbackSettings by remember { mutableStateOf(false) }
     var audioEffects by remember { mutableStateOf(false) }
     val pane = PlayerPane.entries.firstOrNull { it.name == paneName } ?: PlayerPane.Cover
     val tutorial = LocalTutorial.current
-    LaunchedEffect(pane, tutorial?.step?.id) {
-        if (pane == PlayerPane.Lyrics) tutorial?.event(TutorialCompletion.LyricsViewed)
-        if (pane == PlayerPane.Queue) tutorial?.event(TutorialCompletion.QueueViewed)
-    }
+
 
     ResonanceBackHandler(enabled = true, onBack = onDismiss)
     if (audioEffects) AudioEffectDialog(currentPreset = playerState.audioEffectPreset,
@@ -275,6 +274,17 @@ internal fun NowPlayingOverlay(
                 compact = true)
         } }, confirmButton = { TextButton(onClick = { playbackSettings = false }) { Text("完成") } })
 
+    CompositionLocalProvider(com.resonance.player.design.LocalResonanceColors provides com.resonance.player.design.ImmersivePlayerColors,
+        LocalLyricStage provides true) {
+    MaterialTheme(colorScheme = androidx.compose.material3.darkColorScheme(
+        primary = Color.White, onPrimary = Color(0xFF1C1C1E), secondary = Color.White,
+        primaryContainer = Color.White.copy(alpha = .15f), onPrimaryContainer = Color.White,
+        surface = Color(0xFF262126), onSurface = Color.White, onSurfaceVariant = Color(0xFFE4DDE0),
+        background = Color(0xFF262126), onBackground = Color.White,
+        surfaceContainerLowest = Color(0xFF0B0B0C), surfaceContainerLow = Color(0xFF1C1C1E),
+        surfaceContainer = Color(0xFF2C2C2E), surfaceContainerHigh = Color(0xFF3A3A3C),
+        surfaceContainerHighest = Color(0xFF444448),
+    )) {
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -290,10 +300,16 @@ internal fun NowPlayingOverlay(
                 onClick = {},
             ),
         color = ResonanceColors.Canvas,
+        contentColor = Color.White,
     ) {
         CompositionLocalProvider(LocalGlassState provides glassState, LocalAlbumAtmosphere provides atmosphere) {
             BoxWithConstraints(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                 val wide = maxWidth >= 720.dp || maxWidth > maxHeight * 1.35f
+                val effectivePane = if (wide && paneName == null) PlayerPane.Lyrics else pane
+                LaunchedEffect(effectivePane, tutorial?.step?.id) {
+                    if (effectivePane == PlayerPane.Lyrics) tutorial?.event(TutorialCompletion.LyricsViewed)
+                    if (effectivePane == PlayerPane.Queue) tutorial?.event(TutorialCompletion.QueueViewed)
+                }
                 val short = maxHeight < 560.dp || (LocalDensity.current.fontScale > 1.2f && maxHeight < 840.dp)
                 FrostedBackdrop(track, Modifier.matchParentSize().hazeSource(glassState), immersive = true)
                 val statusText = if (playerState.isBuffering) "正在缓冲…" else if (playerState.isPreparing) "正在准备…" else null
@@ -313,108 +329,59 @@ internal fun NowPlayingOverlay(
                         onOpenPlaybackSettings = { playbackSettings = true },
                         onAudioEffectPresetChange = onAudioEffectPresetChange,
                     )
-                    if (wide && !short) {
-                        Box(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 420.dp).fillMaxWidth()) {
-                            PaneSwitcher(pane, onSelect = { paneName = it.name })
-                        }
-                        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(40.dp),
+                    if (wide) {
+                        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(56.dp),
                             verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(.43f).fillMaxHeight().padding(vertical = 20.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                                ArtworkPane(track, Modifier.weight(1f), onDismiss)
-                                Spacer(Modifier.height(20.dp))
-                                TrackIdentity(track, statusText = statusText)
-                                Spacer(Modifier.height(12.dp))
+                            Column(Modifier.weight(.46f).fillMaxHeight().padding(bottom = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally) {
+                                ArtworkPane(track, Modifier.weight(1f).fillMaxWidth())
+                                Spacer(Modifier.height(if (short) 4.dp else 20.dp))
+                                TrackIdentity(track, compact = short, statusText = statusText)
+                                PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
+                                PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                                PlayerVolume(playerState.volume, onVolumeChange)
+                                if (!short) PlayerQuickActions({ playbackSettings = true }, { audioEffects = true }, onOpenSleepTimer)
                             }
-                            Column(Modifier.weight(.57f).fillMaxHeight().padding(vertical = 16.dp)) {
+                            Column(Modifier.weight(.54f).fillMaxHeight()) {
                                 CompositionLocalProvider(LocalLyricStage provides true) {
-                                    PaneContent(pane, { paneName = it.name }, track, playerState, lyricsState, queue,
+                                    PaneContent(effectivePane, { paneName = it.name }, track, playerState, lyricsState, queue,
                                         onSeek, onTrackSelected, onRefreshLyrics, onRequestAiLyrics,
                                         onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
                                         onAdjustOffset = onAdjustLyricsOffset, onEmbedLyrics = onEmbedLyrics,
-                                        onDismiss = onDismiss, showArtwork = false, modifier = Modifier.weight(1f),
+                                        showArtwork = false, modifier = Modifier.weight(1f),
                                         onPlayNext = onPlayNext, onRemoveFromQueue = onRemoveFromQueue,
                                         onClearQueue = onClearQueue, onMoveInQueueOrder = onMoveInQueueOrder)
                                 }
-                            }
-                        }
-                        Column(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 820.dp).fillMaxWidth()
-                            .musicDock().padding(horizontal = 28.dp, vertical = 8.dp)) {
-                            PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
-                            PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                                TextButton(onClick = { playbackSettings = true }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音量") }
-                                TextButton(onClick = { audioEffects = true }) { Icon(Icons.Default.Tune, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音效") }
-                                if (onOpenSleepTimer != null) TextButton(onClick = onOpenSleepTimer) { Icon(Icons.Default.Timer, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("定时") }
-                            }
-                        }
-                        Spacer(Modifier.height(12.dp))
-                    } else if (wide) {
-                        Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f).fillMaxHeight()) {
-                                PaneContent(pane, { paneName = it.name }, track, playerState, lyricsState, queue,
-                                    onSeek, onTrackSelected, onRefreshLyrics, onRequestAiLyrics,
-                                    onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
-                                    onAdjustOffset = onAdjustLyricsOffset, onEmbedLyrics = onEmbedLyrics,
-                                    onDismiss = onDismiss, modifier = Modifier.weight(1f),
-                                    onPlayNext = onPlayNext, onRemoveFromQueue = onRemoveFromQueue,
-                                    onClearQueue = onClearQueue, onMoveInQueueOrder = onMoveInQueueOrder)
-                                TrackIdentity(track, compact = true, singleLine = true, statusText = statusText)
-                            }
-                            Column(Modifier.weight(1f).fillMaxHeight().musicDock().padding(12.dp), verticalArrangement = Arrangement.Center) {
-                                PaneSwitcher(pane, onSelect = { paneName = it.name })
-                                PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
-                                PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                                PaneSwitcher(effectivePane, onSelect = { paneName = it.name })
                             }
                         }
                     } else {
-                        PaneSwitcher(pane, onSelect = { paneName = it.name })
-                        Spacer(Modifier.height(8.dp))
-                        if (pane != PlayerPane.Cover) TrackIdentity(track, compact = true, statusText = statusText)
                         PaneContent(
-                            pane = pane,
-                            onPaneChange = { paneName = it.name },
-                            track = track,
-                            playerState = playerState,
-                            lyricsState = lyricsState,
-                            queue = queue,
-                            onSeek = onSeek,
-                            onTrackSelected = onTrackSelected,
-                            onRefreshLyrics = onRefreshLyrics,
-                            onRequestAiLyrics = onRequestAiLyrics,
+                            effectivePane, { paneName = it.name }, track, playerState, lyricsState, queue,
+                            onSeek, onTrackSelected, onRefreshLyrics, onRequestAiLyrics,
                             onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name },
-                            onAdjustOffset = onAdjustLyricsOffset,
-                            onEmbedLyrics = onEmbedLyrics,
-                            onDismiss = onDismiss,
+                            onAdjustOffset = onAdjustLyricsOffset, onEmbedLyrics = onEmbedLyrics,
                             modifier = Modifier.weight(1f),
-                            onPlayNext = onPlayNext,
-                            onRemoveFromQueue = onRemoveFromQueue,
-                            onClearQueue = onClearQueue,
-                            onMoveInQueueOrder = onMoveInQueueOrder,
+                            onPlayNext = onPlayNext, onRemoveFromQueue = onRemoveFromQueue,
+                            onClearQueue = onClearQueue, onMoveInQueueOrder = onMoveInQueueOrder,
                         )
-                        Spacer(Modifier.height(8.dp))
-                        if (pane == PlayerPane.Cover) TrackIdentity(track, compact = short, statusText = statusText)
-                        if (pane == PlayerPane.Cover) {
-                            HeroSyncedLyricsPreview(track, playerState.progress, playerState.positionMs, lyricsState,
-                                onOpenFullLyrics = { paneName = PlayerPane.Lyrics.name }, modifier = Modifier.fillMaxWidth())
+                        Spacer(Modifier.height(if (short) 4.dp else 20.dp))
+                        TrackIdentity(track, compact = short, singleLine = short, statusText = statusText)
+                        PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
+                        PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
+                        if (!short) {
+                            PlayerVolume(playerState.volume, onVolumeChange)
+                            PlayerQuickActions({ playbackSettings = true }, { audioEffects = true }, onOpenSleepTimer)
                         }
-                        Spacer(Modifier.height(10.dp))
-                        Column(Modifier.fillMaxWidth().musicDock().padding(horizontal = 12.dp, vertical = 8.dp)) {
-                            PlaybackProgress(track, playerState.progress, onSeek, playerState.isPlaying)
-                            PlaybackControls(playerState, onTogglePlay, onPrevious, onNext, onToggleShuffle, onCycleRepeat)
-                            if (!short) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                TextButton(onClick = { playbackSettings = true }) { Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音量") }
-                                TextButton(onClick = { audioEffects = true }) { Icon(Icons.Default.Tune, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("音效") }
-                                if (onOpenSleepTimer != null) TextButton(onClick = onOpenSleepTimer) { Icon(Icons.Default.Timer, null, Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("定时") }
-                            }
-                        }
+                        PaneSwitcher(effectivePane, onSelect = { paneName = it.name })
                         Spacer(Modifier.height(4.dp))
                     }
                 }
             }
         }
     }
+}
+}
 }
 
 /** Native stage lighting; the atmosphere is decorative, never presented as an audio spectrum. */
@@ -471,7 +438,7 @@ private fun NowPlayingTopBar(
     if (showTrackInfo) {
         val feature = LocalMusicFeatures.current
         val state = feature?.assistant?.state?.collectAsState()?.value
-        val stats = remember(track.id) { feature?.services?.getTrackListeningStats(track.id) }
+        val stats = rememberListeningStats(feature?.services).stats.trackStats[track.id]
         AlertDialog(onDismissRequest = { showTrackInfo = false }, title = { Text("歌曲与来源") },
             text = { Column(Modifier.verticalScroll(rememberScrollState())) { TrackSourceDetails(track, state?.origins?.get(track.id), stats, playerState.audioEffectPreset) } },
             confirmButton = { TextButton(onClick = { showTrackInfo = false }) { Text("关闭") } })
@@ -479,22 +446,13 @@ private fun NowPlayingTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(Unit) {
-                var dragDistY = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { dragDistY = 0f },
-                    onDragEnd = {
-                        if (dragDistY > 50f) onDismiss()
-                        dragDistY = 0f
-                    },
-                    onDragCancel = { dragDistY = 0f },
-                    onVerticalDrag = { _, dragAmount ->
-                        dragDistY += dragAmount
-                        if (dragDistY > 100f) {
-                            onDismiss()
-                        }
-                    }
-                )
+            .testTag("player-drag-handle")
+            .then(playerDismissGestureModifier())
+            .drawBehind {
+                drawRoundRect(Color.White.copy(alpha = .28f),
+                    androidx.compose.ui.geometry.Offset(size.width / 2f - 18.dp.toPx(), 0f),
+                    androidx.compose.ui.geometry.Size(36.dp.toPx(), 3.dp.toPx()),
+                    androidx.compose.ui.geometry.CornerRadius(1.5.dp.toPx()))
             }
     ) {
         Row(
@@ -597,14 +555,26 @@ private fun NowPlayingTopBar(
 /** One quiet segmented dock; tabs keep their native selection and keyboard semantics. */
 @Composable
 private fun PaneSwitcher(selected: PlayerPane, onSelect: (PlayerPane) -> Unit) {
-    com.resonance.player.design.GlassSegmentedControl(PlayerPane.entries.map { it.label }, selected.ordinal,
-        { onSelect(PlayerPane.entries[it]) }, tabModifier = { index ->
-            when (PlayerPane.entries[index]) {
+    Row(Modifier.fillMaxWidth().selectableGroup(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        PlayerPane.entries.forEach { entry ->
+            val icon = when (entry) {
+                PlayerPane.Cover -> Icons.Default.Album
+                PlayerPane.Lyrics -> Icons.Default.Subtitles
+                PlayerPane.Queue -> Icons.AutoMirrored.Filled.QueueMusic
+            }
+            val target = when (entry) {
                 PlayerPane.Lyrics -> Modifier.tutorialTarget(TutorialTarget.PlayerLyrics)
                 PlayerPane.Queue -> Modifier.tutorialTarget(TutorialTarget.PlayerQueue)
-                PlayerPane.Cover -> Modifier
+                else -> Modifier
             }
-        })
+            Box(Modifier.size(48.dp).then(target).clip(RoundedCornerShape(12.dp))
+                .background(if (entry == selected) Color.White.copy(alpha = .18f) else Color.Transparent)
+                .selectable(entry == selected, role = Role.Tab, onClick = { onSelect(entry) })
+                .semantics { contentDescription = entry.label }, contentAlignment = Alignment.Center) {
+                Icon(icon, null, Modifier.size(24.dp), tint = Color.White.copy(alpha = if (entry == selected) 1f else .65f))
+            }
+        }
+    }
 }
 
 @Composable
@@ -622,7 +592,6 @@ private fun PaneContent(
     onOpenFullLyrics: () -> Unit,
     onAdjustOffset: ((Long) -> Unit)? = null,
     onEmbedLyrics: (() -> Unit)? = null,
-    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     showArtwork: Boolean = true,
     onPlayNext: ((Track) -> Unit)? = null,
@@ -643,22 +612,26 @@ private fun PaneContent(
         direction = { from, to -> if (to.ordinal >= from.ordinal) 1 else -1 },
     ) { active ->
         when (active) {
-            PlayerPane.Cover -> {
+            PlayerPane.Cover -> BoxWithConstraints(Modifier.fillMaxSize()) {
+                // Allocate the preview from the space left after a useful cover, not the reverse.
+                val previewHeight = (maxHeight - 220.dp).coerceAtLeast(50.dp * LocalDensity.current.fontScale)
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = if (showArtwork) Arrangement.SpaceBetween else Arrangement.Center,
                 ) {
                     if (showArtwork) {
-                        ArtworkPane(track, Modifier.weight(1f), onDismiss = onDismiss)
+                        ArtworkPane(track, Modifier.weight(1f))
                         Spacer(Modifier.height(8.dp))
                     }
-                    if (!showArtwork) HeroSyncedLyricsPreview(
+                    HeroSyncedLyricsPreview(
                         track = track,
                         progress = playerState.progress,
                         nativePositionMs = playerState.positionMs,
                         lyricsState = lyricsState,
                         onOpenFullLyrics = onOpenFullLyrics,
+                        coverPreview = showArtwork,
+                        maximumPreviewHeight = if (showArtwork) previewHeight else null,
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                     )
                 }
@@ -695,8 +668,10 @@ private fun HeroSyncedLyricsPreview(
     lyricsState: LyricsUiState,
     onOpenFullLyrics: () -> Unit,
     modifier: Modifier = Modifier,
+    coverPreview: Boolean = false,
+    maximumPreviewHeight: androidx.compose.ui.unit.Dp? = null,
 ) {
-    val stage = LocalLyricStage.current
+    val stage = LocalLyricStage.current && !coverPreview
     val compactPreview = !stage && LocalDensity.current.fontScale > 1.2f
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
     val positionMs = (nativePositionMs ?: (durationMs * progress.coerceIn(0f, 1f)).toLong())
@@ -730,6 +705,7 @@ private fun HeroSyncedLyricsPreview(
                             ?: com.resonance.player.model.LyricDisplay.Bilingual,
                         stage = stage,
                         compact = compactPreview,
+                        maximumHeight = maximumPreviewHeight,
                     )
                 } else {
                     val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
@@ -780,40 +756,20 @@ private fun HeroSyncedLyricsPreview(
 private fun ArtworkPane(
     track: Track,
     modifier: Modifier = Modifier,
-    onDismiss: (() -> Unit)? = null,
 ) {
     val reducedMotion = LocalReducedMotion.current
 
     BoxWithConstraints(
-        modifier = modifier.then(
-            if (onDismiss != null) {
-                Modifier.pointerInput(Unit) {
-                    var dragY = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { dragY = 0f },
-                        onDragEnd = {
-                            if (dragY > 60f) onDismiss()
-                            dragY = 0f
-                        },
-                        onDragCancel = { dragY = 0f },
-                        onVerticalDrag = { _, dragAmount ->
-                            dragY += dragAmount
-                            if (dragY > 120f) {
-                                onDismiss()
-                            }
-                        }
-                    )
-                }
-            } else Modifier
-        ),
+        modifier = modifier.then(playerDismissGestureModifier()),
         contentAlignment = Alignment.Center,
     ) {
         val artworkCorner = 14.dp
-        val artworkSize = minOf(maxWidth - 24.dp, maxHeight - 24.dp, 380.dp).coerceAtLeast(0.dp)
+        val artworkSize = minOf(maxWidth, maxHeight - 12.dp, 520.dp).coerceAtLeast(0.dp)
         Box(
             modifier = Modifier
                 .size(artworkSize)
                 .testTag("player-artwork")
+                .playerExpansionArtwork()
                 .shadow(
                     elevation = 16.dp,
                     shape = RoundedCornerShape(artworkCorner),
@@ -821,7 +777,7 @@ private fun ArtworkPane(
                     ambientColor = if (ResonanceColors.isDark) Color.Black.copy(alpha = 0.35f) else Color(0xFF29342F).copy(alpha = 0.08f),
                 )
                 .clip(RoundedCornerShape(artworkCorner))
-                .border(1.dp, ResonanceColors.Divider.copy(alpha = if (ResonanceColors.isDark) 0.35f else 0.5f), RoundedCornerShape(artworkCorner))
+
                 .background(ResonanceColors.Soft),
         ) {
             AnimatedContent(
@@ -861,6 +817,7 @@ private fun PlaybackProgress(track: Track, progress: Float, onSeek: (Float) -> U
         formatPosition = ::formatPlaybackPosition,
         modifier = Modifier.padding(horizontal = 4.dp),
         isPlaying = isPlaying,
+        flat = true,
     )
 }
 
@@ -871,13 +828,11 @@ private fun TactilePlayPauseButton(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false,
 ) {
-    SoftHeroPlayButton(
-        isPlaying = isPlaying,
-        onClick = onClick,
-        modifier = modifier,
-        size = 58.dp,
-        isLoading = isLoading,
-    )
+    IconButton(onClick = onClick, modifier = modifier.size(64.dp)) {
+        if (isLoading) CircularProgressIndicator(Modifier.size(32.dp).semantics { contentDescription = "加载中" }, color = Color.White, strokeWidth = 2.dp)
+        else Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+            if (isPlaying) "暂停" else "播放", Modifier.size(48.dp), tint = Color.White)
+    }
 }
 
 @Composable
@@ -887,13 +842,10 @@ private fun TactileSkipButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SoftSkipButton(
-        isNext = icon == Icons.Default.SkipNext,
-        onClick = onClick,
-        modifier = modifier,
-        size = 46.dp,
-        contentDescription = contentDescription,
-    )
+    IconButton(onClick = onClick, modifier = modifier.size(56.dp)) {
+        Icon(if (icon == Icons.Default.SkipNext) Icons.Default.FastForward else Icons.Default.FastRewind,
+            contentDescription, Modifier.size(36.dp), tint = Color.White)
+    }
 }
 
 @Composable
@@ -904,14 +856,10 @@ private fun TactileSecondaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SoftUtilityButton(
-        icon = icon,
-        contentDescription = contentDescription,
-        onClick = onClick,
-        modifier = modifier,
-        size = 40.dp,
-        isActive = isActive,
-    )
+    IconButton(onClick = onClick, modifier = modifier.size(48.dp)
+        .background(if (isActive) Color.White.copy(alpha = .18f) else Color.Transparent, RoundedCornerShape(10.dp))) {
+        Icon(icon, contentDescription, Modifier.size(23.dp), tint = Color.White)
+    }
 }
 
 @Composable
@@ -962,6 +910,27 @@ private fun PlaybackControls(
             isActive = playerState.repeatMode != RepeatMode.Off,
             onClick = onCycleRepeat,
         )
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun PlayerVolume(volume: Float, onChange: (Float) -> Unit) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.AutoMirrored.Filled.VolumeDown, null, Modifier.size(18.dp), tint = Color.White.copy(alpha = .7f))
+        Slider(volume, onChange, Modifier.weight(1f).padding(horizontal = 12.dp).semantics { contentDescription = "播放音量" },
+            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White.copy(alpha = .8f), inactiveTrackColor = Color.White.copy(alpha = .22f)),
+            thumb = { }, track = { state -> SliderDefaults.Track(state, Modifier.height(4.dp), thumbTrackGapSize = 0.dp, drawStopIndicator = null, colors = SliderDefaults.colors(activeTrackColor = Color.White.copy(alpha = .8f), inactiveTrackColor = Color.White.copy(alpha = .22f))) })
+        Icon(Icons.AutoMirrored.Filled.VolumeUp, null, Modifier.size(20.dp), tint = Color.White.copy(alpha = .7f))
+    }
+}
+
+@Composable
+private fun PlayerQuickActions(onSettings: () -> Unit, onEffects: () -> Unit, onSleep: (() -> Unit)?) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        TextButton(onSettings) { Text("音量", color = Color.White.copy(alpha = .8f)) }
+        TextButton(onEffects) { Text("音效", color = Color.White.copy(alpha = .8f)) }
+        if (onSleep != null) TextButton(onSleep) { Text("定时", color = Color.White.copy(alpha = .8f)) }
     }
 }
 
@@ -1140,6 +1109,7 @@ internal fun LyricsContent(
     onEmbedLyrics: (() -> Unit)? = null,
 ) {
     val reducedMotion = LocalReducedMotion.current
+    val stage = LocalLyricStage.current
 
     if (lyrics.instrumental) {
         Column(
@@ -1244,7 +1214,9 @@ internal fun LyricsContent(
                     LyricRow(
                         line = line,
                         active = isActive,
+                        synchronized = lyrics.synchronized,
                         modifier = Modifier.testTag("lyric-line-$index").semantics { selected = isActive },
+                        contextDistance = if (stage && lyrics.synchronized && !browsing && activeIndex >= 0) kotlin.math.abs(index - activeIndex) else 0,
                         onClick = line.timestampMs?.takeIf { lyrics.synchronized }?.let { timestamp ->
                             {
                                 browsing = false
@@ -1291,11 +1263,11 @@ internal fun LyricsContent(
 }
 
 @Composable
-private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+private fun LyricRow(line: LyricLine, active: Boolean, synchronized: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier, contextDistance: Int = 0) {
     val stage = LocalLyricStage.current
     val interactionSource = remember { MutableInteractionSource() }
     val color by animateColorAsState(
-        targetValue = if (active) ResonanceColors.Notice else ResonanceColors.Muted,
+        targetValue = if (stage) Color.White.copy(alpha = if (active || !synchronized) 1f else .45f) else if (active) ResonanceColors.Notice else ResonanceColors.Muted,
         animationSpec = tween(motionDuration(160)),
         label = "lyricColor",
     )
@@ -1318,12 +1290,12 @@ private fun LyricRow(line: LyricLine, active: Boolean, onClick: (() -> Unit)?, m
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val display = LocalMusicFeatures.current?.settings?.lyricDisplay ?: com.resonance.player.model.LyricDisplay.Bilingual
-        Column {
+        Column(Modifier.blur(if (stage && !LocalReducedMotion.current) minOf(contextDistance * 1.5f, 4f).dp else 0.dp)) {
         Text(
             if (display == com.resonance.player.model.LyricDisplay.Translation) line.translation ?: line.text else line.text,
-            style = if (stage) MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 38.sp)
+            style = if (stage) MaterialTheme.typography.headlineSmall.copy(fontSize = 34.sp, lineHeight = 44.sp)
                 else MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Medium,
+            fontWeight = if (stage) FontWeight.Bold else FontWeight.Medium,
             color = color,
         )
         if (display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank()) {

@@ -78,4 +78,56 @@ class LibraryPersistenceTest {
             assertEquals("3.0", store.readUiValue("gain.track.a"))
         } finally { directory.toFile().deleteRecursively() }
     }
+    @Test fun temporarilyUnavailableAudioSurvivesOtherCatalogWritesAndReconnect() {
+        val directory = Files.createTempDirectory("resonance-offline-catalog-")
+        try {
+            val a = Files.writeString(directory.resolve("a.mp3"), "generated A")
+            val b = Files.writeString(directory.resolve("b.mp3"), "generated B")
+            val first = Track("a", "Offline", "Artist", "Album", "3:00", 1, true, a.toString())
+            val second = first.copy(id = "b", title = "Online", sourceUri = b.toString(), isFavorite = false)
+            val store = DesktopLibraryStore(directory)
+            store.save(listOf(first, second))
+            store.savePlaylists(listOf(com.resonance.player.model.Playlist("mine", "Keep", "", listOf(first), 0)))
+            Files.delete(a)
+            assertEquals(listOf("a", "b"), store.load().map { it.id })
+            store.setFavorite("b", true)
+            store.updateTracks(listOf(second.copy(title = "Edited", isFavorite = true)))
+            Files.writeString(a, "generated A")
+            val restarted = DesktopLibraryStore(directory)
+            assertEquals(first, restarted.load().first { it.id == "a" })
+            assertEquals(first, restarted.loadPlaylists().single().tracks.single())
+            assertTrue(restarted.load().single { it.id == "b" }.isFavorite)
+        } finally { directory.toFile().deleteRecursively() }
+    }
+
+    @Test fun specializedPreferenceReadersAndWritersAlwaysRecoverBeforeUpdating() {
+        val directory = Files.createTempDirectory("resonance-preference-recovery-")
+        try {
+            val store = DesktopLibraryStore(directory)
+            val primary = directory.resolve("ui-state.properties")
+            fun corrupt() {
+                store.writeUiValue("unrelated", "keep")
+                store.writeUiValue("unrelated", "keep")
+                Files.writeString(primary, "broken=\\uZZZZ")
+            }
+            store.saveThemeMode(com.resonance.player.model.ThemeMode.Dark)
+            store.savePlaybackMode(true, com.resonance.player.model.RepeatMode.One)
+            store.saveLastSelectedPlaylistId("mine")
+            store.saveCustomLyricsFolder("lyrics")
+            corrupt(); assertEquals(com.resonance.player.model.ThemeMode.Dark, store.loadThemeMode())
+            corrupt(); assertEquals("mine", store.loadLastSelectedPlaylistId())
+            corrupt(); assertTrue(store.loadPlaybackMode().shuffleEnabled)
+            corrupt(); assertEquals("lyrics", store.loadCustomLyricsFolder())
+            corrupt(); store.saveThemeMode(com.resonance.player.model.ThemeMode.Light)
+            corrupt(); store.savePlaybackMode(false, com.resonance.player.model.RepeatMode.All)
+            corrupt(); store.saveLastSelectedPlaylistId("new")
+            corrupt(); store.saveCustomLyricsFolder("new-lyrics")
+            assertEquals("keep", store.readUiValue("unrelated"))
+            assertEquals("new", store.loadLastSelectedPlaylistId())
+            assertEquals("new-lyrics", store.loadCustomLyricsFolder())
+            assertEquals(com.resonance.player.model.ThemeMode.Light, store.loadThemeMode())
+            assertEquals(com.resonance.player.model.RepeatMode.All, store.loadPlaybackMode().repeatMode)
+        } finally { directory.toFile().deleteRecursively() }
+    }
+
 }

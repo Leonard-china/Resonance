@@ -261,6 +261,7 @@ private fun WavySlider(
     modifier: Modifier = Modifier,
     onPreview: (Float?) -> Unit = {},
     isPlaying: Boolean = false,
+    flat: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -272,7 +273,7 @@ private fun WavySlider(
     var preview by remember { mutableFloatStateOf(value) }
     val displayValue = (if (editing) preview else value).coerceIn(0f, 1f)
     val density = LocalDensity.current
-    val phase = rememberPlaybackVisualPhase(isPlaying, 3_600)
+    val phase = rememberPlaybackVisualPhase(isPlaying && !flat, 3_600)
     val activePath = remember { Path() }
     val inactivePath = remember { Path() }
 
@@ -292,7 +293,7 @@ private fun WavySlider(
         modifier = modifier.fillMaxWidth().height(48.dp).semantics { contentDescription = label },
         thumb = {
             val thumbActive = focused || pressed || dragging
-            val thumbSize = if (thumbActive) 17.dp else 14.dp
+            val thumbSize = if (flat && !thumbActive) 4.dp else if (thumbActive) 17.dp else 14.dp
             Box(Modifier.size(24.dp, 48.dp), contentAlignment = Alignment.Center) {
                 Box(
                     Modifier
@@ -317,6 +318,11 @@ private fun WavySlider(
                 if (width <= 0f) return@Canvas
 
                 val currentX = (sliderState.value * width).coerceIn(0f, width)
+                if (flat) {
+                    drawLine(inactive, Offset(0f, centerY), Offset(width, centerY), 4.dp.toPx(), cap = StrokeCap.Round)
+                    drawLine(active, Offset(0f, centerY), Offset(currentX, centerY), 4.dp.toPx(), cap = StrokeCap.Round)
+                    return@Canvas
+                }
                 val twoPi = (2.0 * PI).toFloat()
                 val offset = phase.value
                 fun waveY(x: Float): Float {
@@ -366,10 +372,10 @@ private fun WavySlider(
 
 @Composable
 fun SoftRefinedPlaybackScrubber(progress: Float, durationText: String, onSeek: (Float) -> Unit,
-    formatPosition: (String, Float) -> String, modifier: Modifier = Modifier, isPlaying: Boolean = false) {
+    formatPosition: (String, Float) -> String, modifier: Modifier = Modifier, isPlaying: Boolean = false, flat: Boolean = false) {
     var preview by remember { mutableStateOf<Float?>(null) }
     Column(modifier.fillMaxWidth()) {
-        WavySlider(progress, onSeek, "播放进度", onPreview = { preview = it }, isPlaying = isPlaying)
+        WavySlider(progress, onSeek, "播放进度", onPreview = { preview = it }, isPlaying = isPlaying, flat = flat)
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             val timeStyle = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
             Text(formatPosition(durationText, (preview ?: progress).coerceIn(0f, 1f)), style = timeStyle, color = ResonanceColors.Muted)

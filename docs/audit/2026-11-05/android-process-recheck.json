@@ -1,0 +1,32 @@
+{
+  "firstAttempt": {
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "message": "INSTRUMENTATION_RESULT: shortMsg=Process crashed.",
+    "instrumentationCode": 0,
+    "completedCases": 0
+  },
+  "freshInstallationRetry": {
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "tabsExposeSelectionAndKeepTouchTargetsInReducedMotion",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "seekAndVolumeExposeNativeProgressActionsAndFreshCallbacks",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "albumAtmosphereCanReadNativeArtworkPixels",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      }
+    ],
+    "recoveredFromIncomplete": true
+  },
+  "rootCause": "未定位；单独复测通过不等于证明根因已修复"
+}

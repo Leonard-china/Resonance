@@ -120,3 +120,11 @@ Android 和 Windows 随包内置 PP-OCRv5 mobile 检测/识别模型与字典，
 `builtin/qq.js` 与 `builtin/archive.js` 为本项目原创适配代码，未复制第三方 MusicFree 下载插件；目录或歌词接口可用不代表音频可播放，不绕过平台登录、付费或地区限制。新增内置源会在既有用户配置中增补一次，保留旧源和停用／卸载选择。歌源运行时没有新增 npm 或 Android 权限。
 
 固定 Cloudflare HTTPS DNS 仅用于系统全 Fake-IP 的兼容；不会关闭目标地址公网验证或将任意私网 IP 当作目的地。正常公网解析不产生该请求。实现及实际公网验证见[独立记录](changes/2026-11-04-12-more-builtin-sources-and-vpn-dns.md)；协议参考 [Cloudflare DNS JSON](https://developers.cloudflare.com/1.1.1.1/encryption/dns-over-https/make-api-requests/dns-json/)、[Internet Archive 元数据](https://archive.org/developers/metadata-schema/index.html)。
+
+## AM++ 视觉/布局参考（2026-11-04）
+
+用户指定 [Zennmn/AM-plus-plus](https://github.com/Zennmn/AM-plus-plus)，核对 commit `b112af969789c5d1da04255830d6700062968b95` 的 `EmbeddedSettingsPalette`、双栏播放器、歌词截图及 `LiquidBottomTabs`。上游模块为 GPL-3.0；本次只作为视觉/行为参考，以本项目原生 Compose 独立实现，未复制其模块代码、宿主 Apple Music 专有资源或示例音乐封面，不新增打包依赖、不更改本项目 MIT 许可。磨砂继续使用原有 Haze，并非其 Android 专用 Backdrop 的等价光学折射实现；范围及验证见[UI 记录](changes/2026-11-05-02-am-reference-native-ui.md)。
+
+## Apple Music UI Demo 交互参考（2026-11-05）
+
+用户指定 [sebjvidal/Apple-Music-UI-Demo](https://github.com/sebjvidal/Apple-Music-UI-Demo)，只读核对 commit `9d7a0276ed9fd44e7bd261eac5bb3c22fe53ca76` 的 `AMNowPlayingAnimationController`、`AMNowPlayingViewController` 与 `AMArtworkView`。参考播放条/封面到全屏的视觉衔接及拖动反馈，由 Resonance 的 Kotlin/Compose 独立实现；未复制 Swift/UIKit 源码、图片、字体、歌曲或其他上游资源，不新增依赖、不改变项目许可证。实现与实际验证见[播放页过渡记录](changes/2026-11-05-11-apple-music-player-expansion.md)。

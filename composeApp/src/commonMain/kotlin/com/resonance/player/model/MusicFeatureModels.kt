@@ -103,6 +103,8 @@ data class BilibiliVideo(val bvid: String, val cid: Long, val title: String, val
 data class VideoImportRequest(val link: String, val title: String, val artist: String, val album: String, val cover: String = "", val playlistId: String? = null, val preserveAudio: Boolean = false)
 data class SongRequest(val title: String, val artist: String, val album: String = "", val reason: String = "")
 data class RecommendationBatch(val createdAt: Long = 0, val trackIds: List<String> = emptyList(), val reasons: Map<String, String> = emptyMap(), val createdDate: String = "")
+data class AudioDeletionRequest(val id: String, val tracks: List<Track>, val sessionId: String, val createdAt: Long)
+
 data class MusicAssistantState(
     val messages: List<AssistantMessage> = emptyList(),
     val task: MusicTaskStatus = MusicTaskStatus(),
@@ -117,6 +119,8 @@ data class MusicAssistantState(
     val actions: List<AssistantAction> = emptyList(),
     val recommendationFeedback: Map<String, RecommendationFeedback> = emptyMap(),
     val screenshotDraft: ScreenshotImportDraft? = null,
+    /** Ephemeral and consumed once; never encoded into music-assistant.json. */
+    val pendingAudioDeletion: AudioDeletionRequest? = null,
     val recommendationHistory: List<RecommendationHistoryItem> = emptyList(),
     val releasedDownloadIds: Set<String> = emptySet(),
 )

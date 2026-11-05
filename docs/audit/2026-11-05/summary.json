@@ -1,0 +1,39 @@
+{
+  "featureChecks": 191,
+  "effectiveCases": 565,
+  "counts": {
+    "共享/桌面JVM": {
+      "passed": 414,
+      "skipped": 7
+    },
+    "Android设备": {
+      "passed": 62,
+      "failed": 10,
+      "skipped": 7
+    },
+    "Python/website": {
+      "passed": 45
+    },
+    "Python/relay": {
+      "passed": 11
+    },
+    "Python/rendezvous": {
+      "passed": 7
+    },
+    "Python/deployment": {
+      "passed": 2
+    }
+  },
+  "desktopVisualTimeouts": [
+    "renderPhoneDesktopPlayerAndToolsWithFixtureData"
+  ],
+  "androidIncomplete": [],
+  "pythonCases": {
+    "website": 45,
+    "relay": 11,
+    "rendezvous": 7,
+    "deployment": 2
+  },
+  "androidNotRunClasses": 0,
+  "androidNotRunMethods": 0
+}

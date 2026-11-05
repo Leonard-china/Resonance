@@ -1,0 +1,667 @@
+[
+  {
+    "class": "com.resonance.player.AndroidExportLocationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "directoryUriTargetsTheExportSubfolderAndOtherLocationsAreRejected",
+        "class": "com.resonance.player.AndroidExportLocationTest",
+        "status": "passed"
+      },
+      {
+        "name": "folderLaunchUsesAFreshDocumentTaskAndCarriesNoStorageGrant",
+        "class": "com.resonance.player.AndroidExportLocationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.ApplicationLifecycleDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "repeatedRecreationAndShutdownKeepTheMainLooperResponsive",
+        "class": "com.resonance.player.ApplicationLifecycleDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.AssistantDeletionConfirmationDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "concreteFilesAreShownAndNoOperationOccursUntilExplicitConfirmation",
+        "class": "com.resonance.player.AssistantDeletionConfirmationDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.AudioControllerLifecycleDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "revokedGainDefersUntilGrantedAndDisposedActivityCannotChangeNewController",
+        "class": "com.resonance.player.AudioControllerLifecycleDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.AudioSessionIntegrationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "r128JsonIsParsedOnTheAndroidRegexEngine",
+        "class": "com.resonance.player.AudioSessionIntegrationTest",
+        "status": "passed"
+      },
+      {
+        "name": "processorAmplifiesActualPcmAndSupportsMono",
+        "class": "com.resonance.player.AudioSessionIntegrationTest",
+        "status": "passed"
+      },
+      {
+        "name": "commandsAreGrantedAndBackgroundTrackChangesUseOnlyGlobalVolume",
+        "class": "com.resonance.player.AudioSessionIntegrationTest",
+        "status": "passed"
+      },
+      {
+        "name": "bundledFfmpegMeasuresAndCachesWholeTrackLoudness",
+        "class": "com.resonance.player.AudioSessionIntegrationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.HorizontalPageSwipeTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "horizontalSwipesChangeOnePageAndDoNotWrapAtEdges",
+        "class": "com.resonance.player.HorizontalPageSwipeTest",
+        "status": "passed"
+      },
+      {
+        "name": "verticalScrollAndSliderDragDoNotChangePage",
+        "class": "com.resonance.player.HorizontalPageSwipeTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LibraryDetailTransitionTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "openingCrossfadesBothPagesAndClipsAtTheViewport",
+        "class": "com.resonance.player.LibraryDetailTransitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "immediateBackInterruptsTheOpeningWithoutLeavingAStaleLayer",
+        "class": "com.resonance.player.LibraryDetailTransitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "reducedMotionDoesNotCrossfadeBothPagesTogether",
+        "class": "com.resonance.player.LibraryDetailTransitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "returningCrossfadeSettlesToTheListInDarkMode",
+        "class": "com.resonance.player.LibraryDetailTransitionTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LibraryNavigationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "rapidPageChangesKeepTopEdgeCoveredInDarkMode",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "libraryBoundarySwipeOpensAssistant",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantExampleFillsDraftWithoutSendingRequest",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "librarySwipesSelectTabsBeforeMainNavigationAndRetainListPosition",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantKeepsPlayerAndDockBoundsStable",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidPageChangesKeepTopEdgeCoveredInLightMode",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "enteringSongsDoesNotJumpToPlayingTrackAndTabScrollPositionIsRetained",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantHeaderKeepsTitleOnOneLineAndActionsVisible",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "enabledRecommendationCardOpensItsOwnPlaylistPage",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "playerCanExpandAndCloseRepeatedlyWithoutLeavingAnOverlay",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "aboutShowsHighlightsForInstalledVersion",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "disabledRecommendationsStayHiddenAndRemainConfigurableFromSettings",
+        "class": "com.resonance.player.LibraryNavigationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.ListeningSessionDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "activityRecreationBackgroundPauseSeekAndNativeRepeatKeepAccurateStats",
+        "class": "com.resonance.player.ListeningSessionDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LocalScreenshotOcrTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "bundledOfflineOcrReadsBilingualPlaylistAndReleasesSessions",
+        "class": "com.resonance.player.LocalScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "wideScreenshotsUseRealDecoderScaleWithinSliceBounds",
+        "class": "com.resonance.player.LocalScreenshotOcrTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LyricsPlayerRegressionDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "coverAndFullLyricsFollowNativePositionWithVisibleHighlight",
+        "class": "com.resonance.player.LyricsPlayerRegressionDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "largeTextKeepsCoverPreviewAndTransportReachable",
+        "class": "com.resonance.player.LyricsPlayerRegressionDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LyricsPreviewMotionDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "onePersistentRowSlidesIntoFocusAcrossSeveralFrames",
+        "class": "com.resonance.player.LyricsPreviewMotionDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "reducedMotionAndBackwardSeekKeepTheSameFocus",
+        "class": "com.resonance.player.LyricsPreviewMotionDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LyricsScrollDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "returnButtonImmediatelyRecentersEvenWhilePaused",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "seekingToAnOffscreenLineStartsByScrollingTheExistingRows",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "plainTextBrowsingDoesNotSeekOrShowFollowControls",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidlyReversingTheTargetDoesNotReplayOrSnap",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "firstLastResizeAndLargeTextStayCenteredWithReducedMotion",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "initialAndWrappedBilingualLinesAreCentered",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "nextLinePassesThroughIntermediatePositionsWithoutChangingRowHeight",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "tappingUsesOffsetAndClampsSeekToTheAudioRange",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "changingTracksWithTheSameLinesAndTimestampStillCentersTheNewList",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "browsingWaitsThenResumesWithoutANewLyricTimestamp",
+        "class": "com.resonance.player.LyricsScrollDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.LyricsTranslationDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "failedRequestShowsErrorBesideControlsAndAllowsRetry",
+        "class": "com.resonance.player.LyricsTranslationDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "clickingTranslateShowsBilingualLyricsFromOriginalOnlyMode",
+        "class": "com.resonance.player.LyricsTranslationDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.MusicFeaturesIntegrationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "importedAudioHasEditableTagsAndCoverAndDislikeCanPhysicallyDeleteIt",
+        "class": "com.resonance.player.MusicFeaturesIntegrationTest",
+        "status": "passed"
+      },
+      {
+        "name": "longScreenshotsAreSplitAndCredentialsAreEncrypted",
+        "class": "com.resonance.player.MusicFeaturesIntegrationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.MusicStageDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "lyricsQueueSeekAndDismissUseRealControls",
+        "class": "com.resonance.player.MusicStageDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "playingAtmosphereAndNextTrackRemainInteractive",
+        "class": "com.resonance.player.MusicStageDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "largeTextKeepsTransportAndPlaybackSettingsReachable",
+        "class": "com.resonance.player.MusicStageDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.MusicStageFrameMetricsTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "playingStageReportsActualWindowFrameDurations",
+        "class": "com.resonance.player.MusicStageFrameMetricsTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.OfflineCatalogDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "missingManagedAudioSurvivesAnUnrelatedEditAndReconnect",
+        "class": "com.resonance.player.OfflineCatalogDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.PlaybackSettingsDialogDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "volumeOpensAdjustsReopensAndLeavesPlaybackResponsive",
+        "class": "com.resonance.player.PlaybackSettingsDialogDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.PlayerDialogsDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "audioEffectsOpenSelectAndCloseWithoutStoppingPlayerControls",
+        "class": "com.resonance.player.PlayerDialogsDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.PreferenceCommitDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "failedSynchronousCommitIsReportedRatherThanAccepted",
+        "class": "com.resonance.player.PreferenceCommitDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "failedImportRestoresEveryPreferenceStoreAndTypedValue",
+        "class": "com.resonance.player.PreferenceCommitDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.PromoAiSetupDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "configurePrivateCameraThroughEphemeralSocket",
+        "class": "com.resonance.player.PromoAiSetupDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.PromoAiSetupDeviceTest$configurePrivateCameraThroughEphemeralSocket$1.invokeSuspend(PromoAiSetupDeviceTest.kt:16)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.PromoAiSetupDeviceTest.configurePrivateCameraThroughEphemeralSocket(PromoAiSetupDeviceTest.kt:14)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.PromoAiSetupDeviceTest:"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.PromoCaptureDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "recordNativePlayerStory",
+        "class": "com.resonance.player.PromoCaptureDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: Pass -e capturePromo true to record\n\tat org.junit.Assume.assumeTrue(Assume.java:68)\n\tat com.resonance.player.PromoCaptureDeviceTest.recordNativePlayerStory(PromoCaptureDeviceTest.kt:79)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$testWithDisposal$1.evaluate(AndroidComposeTestRule.android.kt:418)\n\tat org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invokeSuspend(AndroidComposeTestRule.android.kt:438)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:4)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invokeSuspend(ComposeUiTest.android.kt:682)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:2)\n\tat androidx.compose.ui.test.EspressoLink.withStrategy(EspressoLink.android.kt:69)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invokeSuspend(ComposeUiTest.android.kt:679)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:4)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$1.invokeSuspend(TestBuilders.kt:317)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.test.TestDispatcher.processEvent$kotlinx_coroutines_test(TestDispatcher.kt:24)\n\tat kotlinx.coroutines.test.TestCoroutineScheduler.tryRunNextTaskUnless$kotlinx_coroutines_test(TestCoroutineScheduler.kt:98)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$workRunner$1.invokeSuspend(TestBuilders.kt:326)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat kotlinx.coroutines.test.TestBuildersJvmKt.createTestResult(TestBuildersJvm.kt:10)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:309)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:167)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment.runTest(ComposeUiTest.android.kt:658)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1.evaluate(AndroidComposeTestRule.android.kt:438)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.PromoCaptureDeviceTest:"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.PromoFeaturesCaptureDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "recordAssistantEntryAndRealEncryptedRoom",
+        "class": "com.resonance.player.PromoFeaturesCaptureDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.PromoFeaturesCaptureDeviceTest$recordAssistantEntryAndRealEncryptedRoom$1.invokeSuspend(PromoFeaturesCaptureDeviceTest.kt:33)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.PromoFeaturesCaptureDeviceTest.recordAssistantEntryAndRealEncryptedRoom(PromoFeaturesCaptureDeviceTest.kt:31)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$testWithDisposal$1.evaluate(AndroidComposeTestRule.android.kt:418)\n\tat org.junit.rules.ExternalResource$1.evaluate(ExternalResource.java:54)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invokeSuspend(AndroidComposeTestRule.android.kt:438)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1$evaluate$1.invoke(Unknown Source:4)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invokeSuspend(ComposeUiTest.android.kt:682)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1$1$1$1.invoke(Unknown Source:2)\n\tat androidx.compose.ui.test.EspressoLink.withStrategy(EspressoLink.android.kt:69)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invokeSuspend(ComposeUiTest.android.kt:679)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:8)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment$runTest$1$1.invoke(Unknown Source:4)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$1.invokeSuspend(TestBuilders.kt:317)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.test.TestDispatcher.processEvent$kotlinx_coroutines_test(TestDispatcher.kt:24)\n\tat kotlinx.coroutines.test.TestCoroutineScheduler.tryRunNextTaskUnless$kotlinx_coroutines_test(TestCoroutineScheduler.kt:98)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt$runTest$2$1$workRunner$1.invokeSuspend(TestBuilders.kt:326)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat kotlinx.coroutines.test.TestBuildersJvmKt.createTestResult(TestBuildersJvm.kt:10)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:309)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat kotlinx.coroutines.test.TestBuildersKt__TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:167)\n\tat kotlinx.coroutines.test.TestBuildersKt.runTest-8Mi8wO0(TestBuilders.kt:1)\n\tat androidx.compose.ui.test.AndroidComposeUiTestEnvironment.runTest(ComposeUiTest.android.kt:658)\n\tat androidx.compose.ui.test.junit4.AndroidComposeTestRule$apply$1.evaluate(AndroidComposeTestRule.android.kt:438)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.PromoFeaturesCaptureDeviceTest:"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.SmartCleanupConfirmationDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "selectedGroupsProduceOneBatchAfterConfirmationAndCancelProducesNone",
+        "class": "com.resonance.player.SmartCleanupConfirmationDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.SyncPackageDialogDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "exportScopesScrollConfirmCancelAndReopenWithoutFreezingHost",
+        "class": "com.resonance.player.SyncPackageDialogDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.SyncPackageFeedbackDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "completionKeepsLocationVisibleWhenFileManagerCannotOpen",
+        "class": "com.resonance.player.SyncPackageFeedbackDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TogetherCompanionDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "androidKeystoreMutualTlsChatPairAndDirectInvite",
+        "class": "com.resonance.player.TogetherCompanionDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TogetherCompanionUiDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "failedLocalSaveKeepsDraftAndClearRequiresConfirmation",
+        "class": "com.resonance.player.TogetherCompanionUiDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "pairedInvitationDoesNotJoinUntilRecipientAccepts",
+        "class": "com.resonance.player.TogetherCompanionUiDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TogetherConnectionDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "physicalAndroidFollowsWindowsAudioPauseSeekAndReplacement",
+        "class": "com.resonance.player.TogetherConnectionDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherConnectionDeviceTest$physicalAndroidFollowsWindowsAudioPauseSeekAndReplacement$1.invokeSuspend(TogetherConnectionDeviceTest.kt:39)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherConnectionDeviceTest.physicalAndroidFollowsWindowsAudioPauseSeekAndReplacement(TogetherConnectionDeviceTest.kt:36)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.TogetherConnectionDeviceTest:"
+      },
+      {
+        "name": "androidPeersCanCreateAndValidateEphemeralTlsCertificates",
+        "class": "com.resonance.player.TogetherConnectionDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "mumuNativeHostKeepsPublishingAfterActivityGoesIntoBackground",
+        "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest$mumuNativeHostKeepsPublishingAfterActivityGoesIntoBackground$1.invokeSuspend(TogetherNativePlaybackDeviceTest.kt:20)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest.mumuNativeHostKeepsPublishingAfterActivityGoesIntoBackground(TogetherNativePlaybackDeviceTest.kt:19)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n\ncom.resonance.player.TogetherNativePlaybackDeviceTest:"
+      },
+      {
+        "name": "servicePlayerFollowsWindowsAfterActivityGoesIntoBackground",
+        "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest$servicePlayerFollowsWindowsAfterActivityGoesIntoBackground$1.invokeSuspend(TogetherNativePlaybackDeviceTest.kt:76)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest.servicePlayerFollowsWindowsAfterActivityGoesIntoBackground(TogetherNativePlaybackDeviceTest.kt:74)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n"
+      },
+      {
+        "name": "checkAssistantAvailabilityForPromoWithoutExportingCredentials",
+        "class": "com.resonance.player.TogetherNativePlaybackDeviceTest",
+        "status": "skipped",
+        "stack": "org.junit.AssumptionViolatedException: got: <false>, expected: is <true>\n\tat org.junit.Assume.assumeThat(Assume.java:106)\n\tat org.junit.Assume.assumeTrue(Assume.java:50)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest$checkAssistantAvailabilityForPromoWithoutExportingCredentials$1.invokeSuspend(TogetherNativePlaybackDeviceTest.kt:68)\n\tat kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)\n\tat kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)\n\tat kotlinx.coroutines.EventLoopImplBase.processNextEvent(EventLoop.common.kt:256)\n\tat kotlinx.coroutines.BlockingCoroutine.joinBlocking(Builders.kt:54)\n\tat kotlinx.coroutines.BuildersKt__BuildersKt.runBlockingImpl(Builders.kt:30)\n\tat kotlinx.coroutines.BuildersKt.runBlockingImpl(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK(Builders.concurrent.kt:172)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK(Unknown Source:1)\n\tat kotlinx.coroutines.BuildersKt__Builders_concurrentKt.runBlockingK$default(Builders.concurrent.kt:157)\n\tat kotlinx.coroutines.BuildersKt.runBlockingK$default(Unknown Source:1)\n\tat com.resonance.player.TogetherNativePlaybackDeviceTest.checkAssistantAvailabilityForPromoWithoutExportingCredentials(TogetherNativePlaybackDeviceTest.kt:67)\n\tat java.lang.reflect.Method.invoke(Native Method)\n\tat org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)\n\tat org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)\n\tat org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)\n\tat org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)\n\tat org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)\n\tat org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:63)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runners.Suite.runChild(Suite.java:128)\n\tat org.junit.runners.Suite.runChild(Suite.java:27)\n\tat org.junit.runners.ParentRunner$4.run(ParentRunner.java:331)\n\tat org.junit.runners.ParentRunner$1.schedule(ParentRunner.java:79)\n\tat org.junit.runners.ParentRunner.runChildren(ParentRunner.java:329)\n\tat org.junit.runners.ParentRunner.access$100(ParentRunner.java:66)\n\tat org.junit.runners.ParentRunner$2.evaluate(ParentRunner.java:293)\n\tat org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)\n\tat org.junit.runners.ParentRunner.run(ParentRunner.java:413)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:137)\n\tat org.junit.runner.JUnitCore.run(JUnitCore.java:115)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:68)\n\tat androidx.test.internal.runner.TestExecutor.execute(TestExecutor.java:59)\n\tat androidx.test.runner.AndroidJUnitRunner.onStart(AndroidJUnitRunner.java:463)\n\tat android.app.Instrumentation$InstrumentationThread.run(Instrumentation.java:2720)\n"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TogetherUiDeviceTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "roomCreationAndClosureUseExplicitActionsAndKeepPortVisible",
+        "class": "com.resonance.player.TogetherUiDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "openingOrPastingAnInvitationDoesNotConnectUntilExplicitJoin",
+        "class": "com.resonance.player.TogetherUiDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "externalInvitationShowsAddressWithoutAutomaticallyConnecting",
+        "class": "com.resonance.player.TogetherUiDeviceTest",
+        "status": "passed"
+      },
+      {
+        "name": "incomingFriendMustBeApprovedAndControlsRemainAccessible",
+        "class": "com.resonance.player.TogetherUiDeviceTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.TutorialNavigationTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "settingsOpensQuickGuideAndAllFourPagesCanBeRead",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseAndResumeRetainStepAndDoNotEnableRecommendations",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "quickGuideRemainsNavigableWithLargeTextAndShortViewport",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "offscreenSettingsTargetIsBroughtIntoView",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "welcomeCanBeSkippedAndIsNotOfferedAgain",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      },
+      {
+        "name": "spotlightPassesRealClicksAndAdvancesThroughPlayerTabs",
+        "class": "com.resonance.player.TutorialNavigationTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "class": "com.resonance.player.UiInteractionContractTest",
+    "exit": 0,
+    "incomplete": false,
+    "cases": [
+      {
+        "name": "tabsExposeSelectionAndKeepTouchTargetsInReducedMotion",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "seekAndVolumeExposeNativeProgressActionsAndFreshCallbacks",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "albumAtmosphereCanReadNativeArtworkPixels",
+        "class": "com.resonance.player.UiInteractionContractTest",
+        "status": "passed"
+      }
+    ]
+  }
+]

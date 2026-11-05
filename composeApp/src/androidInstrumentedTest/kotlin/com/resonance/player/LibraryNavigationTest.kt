@@ -156,12 +156,13 @@ class LibraryNavigationTest {
         ui.onNodeWithTag("assistant-input").assertTextContains(prompt)
         ui.runOnIdle { org.junit.Assert.assertEquals(0, chatCalls) }
     }
-    @Test fun disabledRecommendationCardAppearsBeforeUserPlaylistsAndOpensSettings() {
+    @Test fun disabledRecommendationsStayHiddenAndRemainConfigurableFromSettings() {
         show()
-        val daily = ui.onNodeWithText("每日推荐").fetchSemanticsNode().positionInRoot.y
-        val custom = ui.onNodeWithText("My playlist").fetchSemanticsNode().positionInRoot.y
-        org.junit.Assert.assertTrue(daily <= custom)
-        ui.onNodeWithContentDescription("每日推荐未开启，打开推荐设置").performClick()
+        ui.onNodeWithContentDescription("每日推荐未开启，打开推荐设置").assertDoesNotExist()
+        ui.onNodeWithText("My playlist").assertExists()
+        ui.onNodeWithText("工具").performClick()
+        ui.onNodeWithText("设置").performScrollTo().performClick()
+        ui.onNodeWithText("每日推荐计划").performScrollTo().performClick()
         ui.onNodeWithText("自动推荐并下载").assertExists()
     }
     @Test fun enabledRecommendationCardOpensItsOwnPlaylistPage() {

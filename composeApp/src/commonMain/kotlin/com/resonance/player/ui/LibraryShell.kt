@@ -32,8 +32,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
-import androidx.compose.animation.core.Animatable
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -63,6 +61,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -334,7 +333,6 @@ fun LibraryShell(
     var sidebarDetail by remember { mutableStateOf<LibraryDetail?>(null) }
     var showNowPlaying by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(destination) { if (destination != LibraryDestination.Playing) showNowPlaying = false }
-    var mountPlayer by remember { mutableStateOf(false) }
     var trackPendingEdit by remember { mutableStateOf<Track?>(null) }
     val tutorial = LocalTutorial.current
     var wasTeaching by remember { mutableStateOf(false) }
@@ -443,26 +441,11 @@ fun LibraryShell(
         }
         val currentTrackForOverlay = playerState.currentTrack ?: activeOverlayTrack
         val isNowPlayingVisible = showNowPlaying && currentTrackForOverlay != null
-        val reducedMotion = LocalReducedMotion.current
-
-        val overlayMotion = remember { Animatable(0f) }
-        var playerSettled by remember { mutableStateOf(false) }
-        LaunchedEffect(isNowPlayingVisible, reducedMotion) {
-            playerSettled = false
-            if (isNowPlayingVisible) {
-                mountPlayer = true
-                // Allow the fixed-size player to compose before moving its layer.
-                withFrameNanos { }
-                withFrameNanos { }
-            }
-            overlayMotion.animateTo(if (isNowPlayingVisible) 1f else 0f,
-                if (reducedMotion) tween(120) else ResonanceMotionTokens.PlayerSpec)
-            if (!isNowPlayingVisible) mountPlayer = false
-            playerSettled = isNowPlayingVisible
-        }
-        val backgroundModifier = Modifier.fillMaxSize()
-
-        Box(modifier = backgroundModifier) {
+        PlayerExpansionLayout(
+            expanded = isNowPlayingVisible,
+            track = currentTrackForOverlay,
+            onExpandedChange = { showNowPlaying = it },
+            background = {
             when (windowClass) {
                 WindowClass.Compact -> {
                     val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
@@ -472,13 +455,13 @@ fun LibraryShell(
                         // One stable dock across primary destinations; only IME/tutorial can hide it.
                         if (!isImeVisible && !(destination == LibraryDestination.Tutorial && tutorial?.quickMode == true)) {
                             Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
-                                .resonanceGlass(shape = RoundedCornerShape(24.dp), shadowElevation = 5.dp)
                                 .testTag("app-dock")) {
                                 if (playerState.currentTrack != null) {
-                                    MiniPlayer(playerState, onTogglePlay, onPrevious, onNext,
-                                        { showNowPlaying = true }, compact = true, integrated = true)
-                                    androidx.compose.material3.HorizontalDivider(Modifier.padding(horizontal = 12.dp),
-                                        color = ResonanceColors.Divider.copy(alpha = .40f))
+                                    Box(Modifier.fillMaxWidth().resonanceGlass(shape = RoundedCornerShape(30.dp), shadowElevation = 3.dp)) {
+                                        MiniPlayer(playerState, onTogglePlay, onPrevious, onNext,
+                                            { showNowPlaying = true }, compact = true, integrated = true)
+                                    }
+                                    Spacer(Modifier.height(8.dp))
                                 }
                                 BottomNavigationBar(destination, handleDestination)
                             }
@@ -540,26 +523,7 @@ fun LibraryShell(
                     }
                 }
             }
-        }
-
-        if (mountPlayer) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer { alpha = overlayMotion.value }
-                    .background(Color.Black.copy(alpha = 0.45f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = { showNowPlaying = false },
-                    )
-            )
-        }
-
-        if (mountPlayer) Box(Modifier.fillMaxSize().graphicsLayer {
-            translationY = if (reducedMotion) 0f else size.height * (1f - overlayMotion.value)
-            alpha = if (reducedMotion) overlayMotion.value else 1f
-        }) {
+        }, player = { playerSettled ->
             if (currentTrackForOverlay != null) {
                 NowPlayingOverlay(
                     ambientMotionEnabled = playerSettled,
@@ -601,7 +565,7 @@ fun LibraryShell(
                     onMoveInQueueOrder = onMoveInQueueOrder,
                 )
             }
-        }
+        })
 
         if (tutorial?.step != null) TutorialCoach(tutorial)
 
@@ -661,22 +625,27 @@ private fun subPageIndexOf(destination: LibraryDestination): Int = when (destina
 @Composable
 private fun BottomNavigationBar(destination: LibraryDestination, onDestinationChange: (LibraryDestination) -> Unit) {
     val activeTab = tabDestinationOf(destination)
-    Row(Modifier.fillMaxWidth().selectableGroup().padding(horizontal = 6.dp, vertical = 4.dp)) {
-        destinationItems.forEach { item ->
-            val selected = activeTab == item.destination
-            val fill by androidx.compose.animation.animateColorAsState(
-                if (selected) ResonanceColors.PrimarySoft else Color.Transparent,
-                tween(com.resonance.player.design.motionDuration(140)), label = "dockSelection")
-            Column(Modifier.weight(1f).heightIn(min = 56.dp).clip(RoundedCornerShape(16.dp))
-                .background(fill).border(1.dp, if (selected) ResonanceColors.GlassBorder else Color.Transparent, RoundedCornerShape(16.dp))
-                .selectable(selected, role = Role.Tab, onClick = { onDestinationChange(item.destination) })
-                .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center) {
-                Icon(item.icon, null, Modifier.size(22.dp), tint = if (selected) ResonanceColors.Notice else ResonanceColors.Muted)
-                Spacer(Modifier.height(3.dp))
-                Text(item.label, style = MaterialTheme.typography.labelMedium,
-                    color = if (selected) ResonanceColors.Notice else ResonanceColors.Muted,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
+    BoxWithConstraints(Modifier.fillMaxWidth().resonanceGlass(shape = RoundedCornerShape(999.dp), shadowElevation = 3.dp)
+        .padding(5.dp)) {
+        val itemWidth = maxWidth / destinationItems.size
+        val index = destinationItems.indexOfFirst { it.destination == activeTab }.coerceAtLeast(0)
+        val indicatorOffset by androidx.compose.animation.core.animateDpAsState(itemWidth * index,
+            tween(com.resonance.player.design.motionDuration(220), easing = ResonanceMotionTokens.ExitEasing), label = "navigationLens")
+        Box(Modifier.offset(x = indicatorOffset).width(itemWidth).height(58.dp)
+            .background(ResonanceColors.PrimarySoft, RoundedCornerShape(999.dp)))
+        Row(Modifier.fillMaxWidth().selectableGroup()) {
+            destinationItems.forEach { item ->
+                val selected = activeTab == item.destination
+                Column(Modifier.weight(1f).heightIn(min = 58.dp).clip(RoundedCornerShape(999.dp))
+                    .selectable(selected, role = Role.Tab, onClick = { onDestinationChange(item.destination) })
+                    .padding(vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center) {
+                    Icon(item.icon, null, Modifier.size(23.dp), tint = if (selected) ResonanceColors.Primary else ResonanceColors.Muted)
+                    Spacer(Modifier.height(3.dp))
+                    Text(item.label, style = MaterialTheme.typography.labelSmall,
+                        color = if (selected) ResonanceColors.Primary else ResonanceColors.Muted,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium)
+                }
             }
         }
     }
@@ -762,7 +731,7 @@ private fun DesktopSidebar(
         modifier = Modifier
             .width(232.dp)
             .fillMaxHeight()
-            .background(ResonanceColors.GlassLight.copy(alpha = .32f))
+            .background(ResonanceColors.Soft)
             .padding(horizontal = 18.dp, vertical = 28.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -884,6 +853,7 @@ private fun DestinationContent(
     val coroutineScope = rememberCoroutineScope()
     val features = LocalMusicFeatures.current
     var activeShareCard by remember { mutableStateOf<ShareCardContent?>(null) }
+    var duplicateDeletion by remember { mutableStateOf<List<Track>>(emptyList()) }
     Box(Modifier.fillMaxSize()) {
     ContinuousPageTransition(
         target = destination,
@@ -930,7 +900,7 @@ private fun DestinationContent(
                     }
                 },
                 onCleanDuplicates = { tracksToClean ->
-                    for (t in tracksToClean) onDeleteLocalTrack(t)
+                    duplicateDeletion = tracksToClean.distinctBy(Track::id)
                 },
                 compact = compact,
             )
@@ -1040,6 +1010,14 @@ private fun DestinationContent(
     }
     }
     }
+    if (duplicateDeletion.isNotEmpty()) BatchDeleteTracksDialog(duplicateDeletion.size, tracks = duplicateDeletion,
+        onDismiss = { duplicateDeletion = emptyList() },
+        onConfirm = {
+            val confirmed = duplicateDeletion
+            duplicateDeletion = emptyList()
+            onBatchDelete(confirmed)
+        })
+
         activeShareCard?.let { content ->
             ShareCardDialog(content = content, onDismiss = { activeShareCard = null })
         }
@@ -2633,8 +2611,9 @@ private fun MiniPlayer(
     val reducedMotion = LocalReducedMotion.current
 
     BoxWithConstraints(Modifier.fillMaxWidth().tutorialTarget(TutorialTarget.MiniPlayer)
-        .then(if (integrated) Modifier else Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-            .resonanceGlass(shape = RoundedCornerShape(22.dp), shadowElevation = 6.dp))) {
+        .then(if (integrated) Modifier else Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+            .resonanceGlass(shape = RoundedCornerShape(30.dp), shadowElevation = 3.dp))
+        .playerExpansionSource()) {
         val wide = maxWidth >= 850.dp
         Row(Modifier.fillMaxWidth().heightIn(min = if (integrated) 60.dp else 80.dp)
             .padding(horizontal = if (integrated) 12.dp else 20.dp, vertical = 8.dp),
@@ -2642,7 +2621,7 @@ private fun MiniPlayer(
             Row(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button, onClick = onOpenNowPlaying)
                 .heightIn(min = 48.dp).semantics { contentDescription = "打开正在播放详情与歌词" },
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                AlbumArtwork(track.artworkSeed, Modifier.size(if (integrated) 42.dp else 50.dp), 9.dp, track.artworkPath, track.sourceUri)
+                AlbumArtwork(track.artworkSeed, Modifier.size(if (integrated) 42.dp else 50.dp).playerExpansionSource(artwork = true), 9.dp, track.artworkPath, track.sourceUri)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(track.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(if (playerState.isBuffering) "正在缓冲…" else if (playerState.isPreparing) "正在准备…" else track.artist.ifBlank { "未知艺术家" },

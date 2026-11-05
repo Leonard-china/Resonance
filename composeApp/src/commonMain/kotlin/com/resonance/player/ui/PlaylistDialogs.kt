@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
@@ -171,6 +172,7 @@ fun BatchDeleteTracksDialog(
     count: Int,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
+    tracks: List<Track> = emptyList(),
 ) {
     val deleteInteraction = remember { MutableInteractionSource() }
     DialogScrim(onDismiss = onDismiss) {
@@ -178,6 +180,15 @@ fun BatchDeleteTracksDialog(
             Text("批量删除 $count 首歌曲？", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary)
             Spacer(Modifier.height(6.dp))
             Text("选中的 $count 首歌曲的本地音频文件将直接从存储中永久删除，并从音乐库和全部歌单中移除。此操作不可撤销。", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted)
+            if (tracks.isNotEmpty()) {
+                Spacer(Modifier.height(12.dp))
+                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 180.dp)) {
+                    items(tracks, key = { it.id }) { track ->
+                        Text("${track.title} · ${track.artist}", style = MaterialTheme.typography.bodyMedium,
+                            color = ResonanceColors.TextPrimary, modifier = Modifier.padding(vertical = 4.dp))
+                    }
+                }
+            }
             Spacer(Modifier.height(22.dp))
             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                 TextButton(onClick = onDismiss) { Text("取消", color = ResonanceColors.Muted) }

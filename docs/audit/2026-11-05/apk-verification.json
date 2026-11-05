@@ -1,0 +1,36 @@
+{
+  "main": {
+    "file": "Resonance-0.6.6-debug.apk",
+    "applicationId": "com.resonance.player.validation.qa.validation20261105refactor",
+    "sha256": "3b1762a67a7b36fc8aa9b35d140fd08c0eeec4361c8a1495b15a6d9f991c03fa",
+    "bytes": 175773751,
+    "manifest": [
+      "package: name='com.resonance.player.validation.qa.validation20261105refactor' versionCode='40' versionName='0.6.6' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+      "targetSdkVersion:'36'",
+      "uses-permission: name='android.permission.READ_MEDIA_AUDIO'",
+      "uses-permission: name='android.permission.READ_EXTERNAL_STORAGE' maxSdkVersion='32'",
+      "uses-permission: name='android.permission.INTERNET'",
+      "uses-permission: name='android.permission.ACCESS_COARSE_LOCATION'",
+      "uses-permission: name='android.permission.POST_NOTIFICATIONS'",
+      "uses-permission: name='android.permission.FOREGROUND_SERVICE'",
+      "uses-permission: name='android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK'",
+      "uses-permission: name='android.permission.WAKE_LOCK'",
+      "uses-permission: name='android.permission.SYSTEM_ALERT_WINDOW'",
+      "uses-permission: name='android.permission.ACCESS_NETWORK_STATE'",
+      "uses-permission: name='android.permission.FOREGROUND_SERVICE_DATA_SYNC'",
+      "uses-permission: name='android.permission.RECEIVE_BOOT_COMPLETED'",
+      "uses-permission: name='com.resonance.player.validation.qa.validation20261105refactor.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION'"
+    ]
+  },
+  "test": {
+    "file": "composeApp-debug-androidTest.apk",
+    "applicationId": "com.resonance.player.validation.qa.validation20261105refactor.test",
+    "sha256": "a15e4d89adad8f1d5f530668b1ef78cac8931e461f88bcba2a962d76e7c1d81e",
+    "bytes": 1360463,
+    "manifest": [
+      "package: name='com.resonance.player.validation.qa.validation20261105refactor.test' versionCode='' versionName='' platformBuildVersionName='16' platformBuildVersionCode='36' compileSdkVersion='36' compileSdkVersionCodename='16'",
+      "targetSdkVersion:'36'",
+      "uses-permission: name='android.permission.REORDER_TASKS'"
+    ]
+  }
+}

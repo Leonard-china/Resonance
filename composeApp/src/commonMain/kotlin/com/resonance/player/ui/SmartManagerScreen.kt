@@ -115,7 +115,7 @@ fun SmartManagerScreen(
             ) {
                 SummaryStat("已体检曲目", "${currentReport.totalScanned}")
                 SummaryStat("待清洗标签", "${currentReport.tagIssueCount}", isHighlight = currentReport.tagIssueCount > 0)
-                SummaryStat("重复/多版本", "${currentReport.duplicateGroupCount}", isHighlight = currentReport.duplicateGroupCount > 0)
+                SummaryStat("疑似重复", "${currentReport.duplicateGroupCount}", isHighlight = currentReport.duplicateGroupCount > 0)
             }
         }
 
@@ -272,7 +272,7 @@ private fun DuplicateCleaningView(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ResonanceColors.Positive, modifier = Modifier.size(48.dp))
                 Spacer(Modifier.height(12.dp))
-                Text("曲库中未发现重复音频或冗余文件！", color = ResonanceColors.Muted, fontSize = 14.sp)
+                Text("未发现歌名、歌手和时长相同的疑似重复项", color = ResonanceColors.Muted, fontSize = 14.sp)
             }
         }
         return
@@ -283,15 +283,10 @@ private fun DuplicateCleaningView(
     }
 
     Column(modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("已自动为您推荐保留最佳版本", fontSize = 12.sp, color = ResonanceColors.Dim)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TextButton(onClick = { selectedTrackIds = groups.flatMap { it.selectedToCleanIds }.toSet() }) { Text("推荐选择") }
-                TextButton(onClick = { selectedTrackIds = emptySet() }) { Text("全不选") }
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            Text("相同信息不代表相同录音，请核对版本后手动选择；容器格式不代表实际音质", fontSize = 12.sp, color = ResonanceColors.Dim)
+            TextButton(onClick = { selectedTrackIds = emptySet() }, modifier = Modifier.align(Alignment.End)) {
+                Text("全不选")
             }
         }
 
@@ -365,7 +360,7 @@ private fun DuplicateCleaningView(
         ) {
             Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("安全释放所选冗余音频 (${toCleanTracks.size} 首)")
+            Text("确认删除所选音频 (${toCleanTracks.size} 首)")
         }
     }
 }

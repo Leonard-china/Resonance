@@ -1,0 +1,8 @@
+{
+  "initialInstall": "ADB timed out at the manufacturer authentication step; user then completed device authentication",
+  "initialInstalledPackages": 0,
+  "resumedMain": "Previously authorized QA install reused only after pulling base.apk and matching SHA-256 with the current build",
+  "mainSha256": "e119620587da78ffae8eec03faea22b0dd79ff1c31bfb52b97a19fdac2f4407c",
+  "testInstallLog": "Performing Push Install\nSuccess\n/mnt/data/Project/Resonance/composeApp/build/outputs/apk/androidTest/debug/composeApp-debug-androidTest.apk: 1 file pushed, 0 skipped. 681.6 MB/s (1377639 bytes in 0.002s)",
+  "formalAppNeverReinstalled": true
+}

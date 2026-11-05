@@ -24,6 +24,23 @@ class ListeningStatsRepositoryTest {
         } finally { ListeningStatsRepository.release(root); root.toFile().deleteRecursively() }
     }
 
+    @Test fun uiSnapshotDoesNotWaitForTheDiskStoresMonitor() = runBlocking {
+        val root = Files.createTempDirectory("listening-snapshot-")
+        val repository = ListeningStatsRepository.get(root)
+        try {
+            repository.record("a", 3, false)
+            repository.flush()
+            assertTrue(repository.snapshots.value.loaded)
+            val complete = java.util.concurrent.CountDownLatch(1)
+            var seconds = -1L
+            synchronized(repository.store) {
+                Thread { seconds = repository.getAllStats().totalSeconds; complete.countDown() }.start()
+                assertTrue(complete.await(500, java.util.concurrent.TimeUnit.MILLISECONDS), "Reading UI data must not acquire the disk store lock")
+            }
+            assertEquals(3L, seconds)
+        } finally { ListeningStatsRepository.release(root); root.toFile().deleteRecursively() }
+    }
+
     @Test fun writeFailureIsVisibleAndAcceptedIncrementIsNotDuplicatedOnFlushRetry() = runBlocking {
         val root = Files.createTempDirectory("listening-failure-")
         val blocked = root.resolve("not-directory")
@@ -34,6 +51,8 @@ class ListeningStatsRepositoryTest {
             assertFails { repository.flush() }
             assertNotNull(repository.errors.value)
             assertEquals(1L, repository.store.getAllStats().totalSeconds)
+            assertEquals(1L, repository.snapshots.value.stats.totalSeconds)
+            assertNotNull(repository.snapshots.value.error)
             Files.delete(blocked) // This test owns this temporary fixture.
             Files.createDirectory(blocked)
             repository.flush()

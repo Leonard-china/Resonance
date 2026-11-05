@@ -6,7 +6,7 @@
 
 android
 
-本次设计与实现任务优先 Android 原生应用；同一播放器也发布 Windows 版本。本记录不把 Windows 描述为 iOS，也不覆盖独立的 `website/` 官网。
+当前设计覆盖 Android、Windows、Linux 三端原生应用。本记录不把 Windows 描述为 iOS，也不覆盖独立的 `website/` 官网。
 
 ## Stack
 
@@ -56,3 +56,8 @@ android
 
 
 2026-11-03 后续试用反馈：用户指出 macOS 毛玻璃只在歌词详情明显、没有覆盖整体，并反馈歌词滚动缺少高亮。当前任务扩大共享材质覆盖，保留原生导航与功能；用户明确选择「亮色文字＋轻微底色」作为当前歌词提示，且字号／行高稳定。验证与本地试用包见 docs/changes/2026-11-03-09-app-wide-frosted-material.md 与 2026-11-03-10-restore-lyric-focus.md；首轮跳过测试的历史描述不作为本轮验证状态。
+
+
+## 当前确认的方向（2026-11-04）
+
+用户明确指定 AM++ 项目，要求看源码复刻，并回答「Android、Linux、Windows 一起改」；随后要求自主推进。此指令替代先前矿物绿/合并底座的视觉选择。共享原生 UI 采用 AM++ 可核对的灰白/玫红设置色板、宽屏左封面/控制与右歌词、白色无底播放控件、手机独立胶囊底栏；保留全部 Resonance 产品功能、系统能力和数据边界。AM++ 不包含 Apple Music 全部宿主页面源码；不能据此宣称完整宿主或像素级复刻。实际构建与验证见 docs/changes/2026-11-05-02-am-reference-native-ui.md。

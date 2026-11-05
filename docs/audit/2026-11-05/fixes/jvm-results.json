@@ -1,0 +1,3266 @@
+[
+  {
+    "ignored": 0,
+    "milliseconds": 150,
+    "tests": 5,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "shutdownStopsProducersThenDrainsEveryWriterBeforeReleasingPlatform",
+        "class": "com.resonance.player.ApplicationSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "cancellingOneQueuedOperationDoesNotStrandAnOrderedBarrier",
+        "class": "com.resonance.player.ApplicationSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "cancellationCleanupCanCommitBeforeTheWritersAreClosed",
+        "class": "com.resonance.player.ApplicationSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "failingTaskIsObservableAndDoesNotCancelOtherApplicationWork",
+        "class": "com.resonance.player.ApplicationSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "oneFailedDrainDoesNotSkipOtherWritersOrNativeCleanup",
+        "class": "com.resonance.player.ApplicationSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ApplicationSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 147,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "cancelledEmptyImportDoesNotReloadOrCommitAnOlderUiCatalog",
+        "class": "com.resonance.player.ApplicationUseCaseTest",
+        "status": "passed"
+      },
+      {
+        "name": "importingPackageReloadsCommittedPlaylistsAfterTheWriteBarrier",
+        "class": "com.resonance.player.ApplicationUseCaseTest",
+        "status": "passed"
+      },
+      {
+        "name": "preferenceChangesShareOneCapturedOrderedTransactionStream",
+        "class": "com.resonance.player.ApplicationUseCaseTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ApplicationUseCaseTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 52,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "staleAndMalformedIdsRemainReadableWithoutInventingTracks",
+        "class": "com.resonance.player.AssistantMusicLinksTest",
+        "status": "passed"
+      },
+      {
+        "name": "attachmentsAreBoundedAndQueueKeepsExistingOrder",
+        "class": "com.resonance.player.AssistantMusicLinksTest",
+        "status": "passed"
+      },
+      {
+        "name": "duplicateLinksCollapseButPlainNamesAndExternalLinksNeverBecomePlayable",
+        "class": "com.resonance.player.AssistantMusicLinksTest",
+        "status": "passed"
+      },
+      {
+        "name": "encodedIdsResolveToCurrentLibraryMetadataInReplyOrder",
+        "class": "com.resonance.player.AssistantMusicLinksTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.AssistantMusicLinksTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 36,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "matchedLocalTrackKeepsCatalogArtworkWhenLocalArtworkIsMissing",
+        "class": "com.resonance.player.CatalogArtworkRematchTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.CatalogArtworkRematchTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 39,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "nativePositionInPlayerStateOverridesMissingMetadataDuration",
+        "class": "com.resonance.player.FloatingLyricsTest",
+        "status": "passed"
+      },
+      {
+        "name": "unavailableTranslationNeverMakesOriginalLyricsDisappear",
+        "class": "com.resonance.player.FloatingLyricsTest",
+        "status": "passed"
+      },
+      {
+        "name": "translatedAndOriginalLinesShareTheOriginalTimeAxis",
+        "class": "com.resonance.player.FloatingLyricsTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativePositionKeepsBackgroundLyricsMovingWhenTrackDurationIsNotReady",
+        "class": "com.resonance.player.FloatingLyricsTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.FloatingLyricsTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 44,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "realConversionProblemIsReportedAsNotProcessed",
+        "class": "com.resonance.player.ImportReportMessageTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyPlaylistPackageHasVisibleSuccessMessage",
+        "class": "com.resonance.player.ImportReportMessageTest",
+        "status": "passed"
+      },
+      {
+        "name": "packageImportReportsPlaylistsAndDoesNotClaimAudioWasConverted",
+        "class": "com.resonance.player.ImportReportMessageTest",
+        "status": "passed"
+      },
+      {
+        "name": "fullSuccessReportsConvertedCount",
+        "class": "com.resonance.player.ImportReportMessageTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ImportReportMessageTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 345,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "searchesTenThousandTracksWithAReusableIndex",
+        "class": "com.resonance.player.LibrarySearchIndexTest",
+        "status": "passed"
+      },
+      {
+        "name": "indexedSearchPreservesChineseInitialsAndPunctuationMatching",
+        "class": "com.resonance.player.LibrarySearchIndexTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.LibrarySearchIndexTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 29,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "jitterBetweenWallClockAndAudioClockDoesNotLoseTimeOnEveryTick",
+        "class": "com.resonance.player.ListeningSessionTrackerTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingSeekSpeedAndRemoteAudioDoNotInflateDuration",
+        "class": "com.resonance.player.ListeningSessionTrackerTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseNearEndDoesNotCompleteAgainAndRepeatStartsAnotherPass",
+        "class": "com.resonance.player.ListeningSessionTrackerTest",
+        "status": "passed"
+      },
+      {
+        "name": "quarterSecondNativeUpdatesAccumulateAcrossPauseWithoutUiTimer",
+        "class": "com.resonance.player.ListeningSessionTrackerTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ListeningSessionTrackerTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 28,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "oversizedLinesKeepTheirBeginningReadable",
+        "class": "com.resonance.player.LyricScrollTest",
+        "status": "passed"
+      },
+      {
+        "name": "measuredBilingualAndWrappedRowsShareTheSameCenter",
+        "class": "com.resonance.player.LyricScrollTest",
+        "status": "passed"
+      },
+      {
+        "name": "usesTheViewportCoordinateSystemIncludingTopPadding",
+        "class": "com.resonance.player.LyricScrollTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.LyricScrollTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 105,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "cancelledLookupCannotPublishAfterSelectingTheSameTrackAgain",
+        "class": "com.resonance.player.LyricsSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "acceptedOffsetEditInvalidatesAnInFlightLookup",
+        "class": "com.resonance.player.LyricsSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "manualRefreshWinsOverAnOlderAutomaticLookup",
+        "class": "com.resonance.player.LyricsSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.LyricsSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 37,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "orphanAndCyclicHistoricalParentsDoNotLoopOrLoseEntries",
+        "class": "com.resonance.player.MusicTaskGroupsTest",
+        "status": "passed"
+      },
+      {
+        "name": "groupsNestedStagesWithoutCombiningSeparateImports",
+        "class": "com.resonance.player.MusicTaskGroupsTest",
+        "status": "passed"
+      },
+      {
+        "name": "successfulSongHidesRecoveredSourceAttemptButKeepsFailedCoverRetry",
+        "class": "com.resonance.player.MusicTaskGroupsTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.MusicTaskGroupsTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 116,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "coalescedWritesDoNotJumpAcrossOrderedActions",
+        "class": "com.resonance.player.PersistenceQueueTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidSliderChangesKeepLatestValuesForEachTrackAndGlobalVolume",
+        "class": "com.resonance.player.PersistenceQueueTest",
+        "status": "passed"
+      },
+      {
+        "name": "diskWritesStayOrderedAndFailureDoesNotDropFollowingActions",
+        "class": "com.resonance.player.PersistenceQueueTest",
+        "status": "passed"
+      },
+      {
+        "name": "disposingTheUiFinishesAcceptedWrites",
+        "class": "com.resonance.player.PersistenceQueueTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PersistenceQueueTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 20,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "oldSameTrackAttemptIsRejectedAfterAtoBtoA",
+        "class": "com.resonance.player.PlaybackIssueTest",
+        "status": "passed"
+      },
+      {
+        "name": "previewAndStorageFailureNeverInterruptMainPlayback",
+        "class": "com.resonance.player.PlaybackIssueTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackIssueTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 157,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "desktopPlatformServicesPersistsAndLoadsPlaybackMode",
+        "class": "com.resonance.player.PlaybackModePersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "defaultPlaybackModePreferenceIsDisabledAndRepeatOff",
+        "class": "com.resonance.player.PlaybackModePersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "playerStatePreservesPlaybackModeWhenResettingCurrentTrack",
+        "class": "com.resonance.player.PlaybackModePersistenceTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackModePersistenceTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 115,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "blockedOldWriteCannotOverwriteLastActionAndCloseDrains",
+        "class": "com.resonance.player.PlaybackModeWriterTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackModeWriterTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 38,
+    "tests": 7,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "fallsBackToFullLibraryWhenCustomQueueIsNull",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "selectedDownloadIsIncludedEvenBeforeLibraryReloadReachesTheUi",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeQueueUsesTheSelectedAudioInsteadOfAnOlderCopyWithTheSameId",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "scopesPlaybackToSpecificPlaylist",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "fallsBackToFullLibraryWhenAllCustomTracksAreUnplayable",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "filtersOutUnplayableTracksInCustomQueue",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationQueueKeepsItsOrderAndSkipsEntriesWithoutAudio",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 173,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "clearingAnEmptyQueueCancelsAFileCheckThatFinishesLate",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "consecutiveQueueCommandsReadTheCommittedInMemoryState",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidRequestsRejectAnObsoleteNonCancellableFileCheck",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "removingCurrentTrackCannotRestoreItThroughTheOldCapturedQueue",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 34,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "restoresExistingPlaylist",
+        "class": "com.resonance.player.SelectedPlaylistStateTest",
+        "status": "passed"
+      },
+      {
+        "name": "returnsNullForEmptyLibrary",
+        "class": "com.resonance.player.SelectedPlaylistStateTest",
+        "status": "passed"
+      },
+      {
+        "name": "fallsBackToFirstPlaylistWhenStoredIdIsMissing",
+        "class": "com.resonance.player.SelectedPlaylistStateTest",
+        "status": "passed"
+      },
+      {
+        "name": "doesNotRestoreRemovedLocalLibraryCard",
+        "class": "com.resonance.player.SelectedPlaylistStateTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.SelectedPlaylistStateTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 20,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "draftStoreKeepsIndependentDraftsPerProvider",
+        "class": "com.resonance.player.StatePreservationTest",
+        "status": "passed"
+      },
+      {
+        "name": "draftStorePreservesUnsavedInputAcrossRecreationWithoutBundleSerialization",
+        "class": "com.resonance.player.StatePreservationTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.StatePreservationTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 134,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "rapidReplacementNeverStartsOrAcknowledgesAnOldPreparedTrack",
+        "class": "com.resonance.player.TogetherPlaybackDriverTest",
+        "status": "passed"
+      },
+      {
+        "name": "localAudioInterruptionKeepsRoomButNeverAutoplaysUntilExplicitResume",
+        "class": "com.resonance.player.TogetherPlaybackDriverTest",
+        "status": "passed"
+      },
+      {
+        "name": "interruptionWhilePreparingNeverResumesOrAcknowledgesTheOldAudio",
+        "class": "com.resonance.player.TogetherPlaybackDriverTest",
+        "status": "passed"
+      },
+      {
+        "name": "smallTimingNoiseDoesNotSeekAndLargeCorrectionsHaveHysteresis",
+        "class": "com.resonance.player.TogetherPlaybackDriverTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.TogetherPlaybackDriverTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 46,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "malformedInventedAndDuplicateCandidatesAreRejected",
+        "class": "com.resonance.player.TogetherSuggestionsTest",
+        "status": "passed"
+      },
+      {
+        "name": "indicesReferOnlyToTheCapturedCandidateList",
+        "class": "com.resonance.player.TogetherSuggestionsTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.TogetherSuggestionsTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 28,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "rainSnowAndStormsUseBlue",
+        "class": "com.resonance.player.WeatherPaletteTest",
+        "status": "passed"
+      },
+      {
+        "name": "invalidLocationsCannotBeUsed",
+        "class": "com.resonance.player.WeatherPaletteTest",
+        "status": "passed"
+      },
+      {
+        "name": "ambiguousWeatherPreservesLastPalette",
+        "class": "com.resonance.player.WeatherPaletteTest",
+        "status": "passed"
+      },
+      {
+        "name": "clearWeatherUsesSage",
+        "class": "com.resonance.player.WeatherPaletteTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.WeatherPaletteTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 41,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "cleansAndParsesAiGeneratedLrcContent",
+        "class": "com.resonance.player.ai.DeepSeekClientTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ai.DeepSeekClientTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 36,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "shortOrSilenceAudioReturnsDefaults",
+        "class": "com.resonance.player.audio.AudioFeatureAnalyzerTest",
+        "status": "passed"
+      },
+      {
+        "name": "syntheticBeatsAt120BpmAreAccuratelyDetected",
+        "class": "com.resonance.player.audio.AudioFeatureAnalyzerTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.audio.AudioFeatureAnalyzerTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 475,
+    "tests": 6,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "preparedPausedPlaybackWaitsForResumeAndIsNotAStalledDevice",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "outputThatMakesNoProgressBacksOffAndReportsOneBoundedFailure",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeCleanupDoesNotBlockStopOrTheNextPlayCommand",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "pausingDuringAPartialWriteStopsRetriesUntilResume",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "replacementRejectsAnOldDecoderWhichFinishesAfterTheNewRequest",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingEndsOnlyWhenPcmArrivesRatherThanWhenDeviceOpens",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 402,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "wholeTrackAnalyzerDistinguishesWeakAndLoudAudio",
+        "class": "com.resonance.player.audio.FfmpegLoudnessIntegrationTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.audio.FfmpegLoudnessIntegrationTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 54,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "weakTrackUsesTruePeakHeadroom",
+        "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+        "status": "passed"
+      },
+      {
+        "name": "wholeTrackAnalysisDoesNotSeekOrLimitDuration",
+        "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+        "status": "passed"
+      },
+      {
+        "name": "loudTrackIsAttenuatedAndVeryWeakGainIsBounded",
+        "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+        "status": "passed"
+      },
+      {
+        "name": "silenceAndIncompleteOutputAreNotCached",
+        "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.audio.LoudnessAnalysisTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 46,
+    "tests": 8,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "newGainRampsInsteadOfJumping",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "largeGainNeverWrapsOrClipsAbruptly",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "playbackTempoRemainsWithinFfmpegFilterRange",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "masterMuteProducesSilence",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "surroundPresetWidensStereoSpread",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "vocalSuppressionSuppressesCenterChannelWhileRetainingStereo",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "positiveDigitalPreampActuallyAmplifiesPcm",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      },
+      {
+        "name": "allAudioEffectPresetsProcessPcmSafely",
+        "class": "com.resonance.player.audio.PcmGainProcessorTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.audio.PcmGainProcessorTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 403,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "cancellingDecryptionPreservesSourceAndRemovesPartialOutput",
+        "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+        "status": "passed"
+      },
+      {
+        "name": "convertsFlacInsideKgmaToManagedMp3AndCleansStaging",
+        "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+        "status": "passed"
+      },
+      {
+        "name": "convertsWavToManaged320kMp3WithoutChangingSource",
+        "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.conversion.DesktopManagedMp3ConverterTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 60,
+    "tests": 6,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "parsesKggV5HeaderCorrectly",
+        "class": "com.resonance.player.conversion.KggCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "decryptStreamWorksCorrectly",
+        "class": "com.resonance.player.conversion.KggCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "detectsAudioFormatsCorrectly",
+        "class": "com.resonance.player.conversion.KggCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "testKuGouKeyDatabaseLoadsWhenPresent",
+        "class": "com.resonance.player.conversion.KggCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "qmc2Rc4IsSelfInvertingAcrossMultipleSegments",
+        "class": "com.resonance.player.conversion.KggCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "qmc2MapIsSelfInverting",
+        "class": "com.resonance.player.conversion.KggCipherTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.conversion.KggCipherTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 40,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "audioSignaturesAreDetected",
+        "class": "com.resonance.player.conversion.KgmaCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "decryptingEncryptedBytesRestoresOriginal",
+        "class": "com.resonance.player.conversion.KgmaCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "littleEndianHeaderFieldsAreDecoded",
+        "class": "com.resonance.player.conversion.KgmaCipherTest",
+        "status": "passed"
+      },
+      {
+        "name": "chunkedDecryptionMatchesSinglePass",
+        "class": "com.resonance.player.conversion.KgmaCipherTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.conversion.KgmaCipherTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 64,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "writesSmallFixtureForAndroidConversionSmokeTest",
+        "class": "com.resonance.player.conversion.KgmaDeviceFixtureTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.conversion.KgmaDeviceFixtureTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 61,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "catalogRejectsCoversAndLiveVersionsAndPrefersRequestedAlbum",
+        "class": "com.resonance.player.enrich.AlbumCoverRepositoryTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.enrich.AlbumCoverRepositoryTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 106,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "cleansTrackTitleProperly",
+        "class": "com.resonance.player.enrich.MetadataEnricherTest",
+        "status": "passed"
+      },
+      {
+        "name": "detectMissingMetadataHelpers",
+        "class": "com.resonance.player.enrich.MetadataEnricherTest",
+        "status": "passed"
+      },
+      {
+        "name": "publicCatalogMatchingRejectsWrongSongsAndAllowsUnknownArtist",
+        "class": "com.resonance.player.enrich.MetadataEnricherTest",
+        "status": "passed"
+      },
+      {
+        "name": "skipsAlreadyCompleteTrackWhenNotForceRefresh",
+        "class": "com.resonance.player.enrich.MetadataEnricherTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.enrich.MetadataEnricherTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 393,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "pngAndWebpCoversAreSupportedWithoutKeepingFullResolution",
+        "class": "com.resonance.player.features.ArtworkDecodeTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.ArtworkDecodeTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 145,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "compactionKeepsJsonAndWholeIdsInsteadOfCuttingArrays",
+        "class": "com.resonance.player.features.AssistantToolSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "identicalMutationsRunOnceEvenAfterManySuccessfulRoundsAndArgumentReordering",
+        "class": "com.resonance.player.features.AssistantToolSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "failedDuplicateRunsOnceAndStopsWithoutAnotherRequestAfterSixIdleRounds",
+        "class": "com.resonance.player.features.AssistantToolSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.AssistantToolSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 188,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "archiveListsIndividualPublicTracksAndSkipsRestrictedItems",
+        "class": "com.resonance.player.features.BuiltinMusicSourcesTest",
+        "status": "passed"
+      },
+      {
+        "name": "qqResolvesFreeMediaAndLyricsButNeverRequestsPaidMedia",
+        "class": "com.resonance.player.features.BuiltinMusicSourcesTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.BuiltinMusicSourcesTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 57,
+    "tests": 5,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "swipePageTargetRejectsAtBoundariesWithoutWrapping",
+        "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+        "status": "passed"
+      },
+      {
+        "name": "appVersionAndHighlightsGeneratedFromReleaseNotes",
+        "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+        "status": "passed"
+      },
+      {
+        "name": "swipePageTargetRejectsSubThresholdOrZeroThreshold",
+        "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+        "status": "passed"
+      },
+      {
+        "name": "swipePageTargetSupportsFlingVelocityWhenDistanceIsSubThreshold",
+        "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+        "status": "passed"
+      },
+      {
+        "name": "swipePageTargetAdvancesToNextOnLeftSwipeAndPreviousOnRightSwipe",
+        "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.HorizontalPageSwipeUnitTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 106,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "brokenConnectionIsNotReplayedAndReportsUnknownUsage",
+        "class": "com.resonance.player.features.MusicAiWireTest",
+        "status": "passed"
+      },
+      {
+        "name": "officialFlashRequestsFinalContentWhileGenericEndpointsAndReasonersKeepTheirContract",
+        "class": "com.resonance.player.features.MusicAiWireTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.MusicAiWireTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1536,
+    "tests": 44,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "unavailableNewBatchKeepsPreviousAudioAndTimestamp",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "localRecognitionFailureNeverFallsBackToPaidApi",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "playingOldRecommendationIsDeferredInsteadOfDeletingAnOpenFile",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationRetainedWhenUnlistenedEvenIfIntervalExpired",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "recentlyRemovedRecommendationIsNotDownloadedAgain",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "negatedAndPlaylistOnlyRequestsCannotDeleteAudio",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "sourceDownloadFailureRemainsVisibleWhenBilibiliFallbackAlsoFails",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyOrNonJsonTranslationReturnsUsefulErrorWithoutCaching",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "wrongTranslationLineCountDoesNotCacheOrModifyOriginal",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "changedAudioOrCancelledProposalCannotDeleteAnything",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "tokenUsageRestrictionsAreCancelledAndDoNotRejectRequests",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "oldAutomaticAiSettingsEnterCooldownWithoutCallingTheModelOnUpgrade",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationVotesAndCommentsDoNotFavoriteOrDeleteAudioOrCallModel",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "laterSearchKeepsPreviouslyReturnedSourceIdsAvailableForDownload",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "cleanupProtectsSavedAndPlayingAudio",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "playlistManagementToolsNeverDeleteAudioAndSnapshotPrefixStaysStable",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "cancellationAfterAudioImportKeepsItInPendingRecommendationCleanup",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "screenshotSelectionCanBeEditedAndDiscardedWithoutDownloading",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "saveRecommendationToNewPlaylistSurvivesRolloverAndReload",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "failedRepeatedToolsStopLocallyWithoutCallingTheModelForever",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "retryCoverDoesNotDownloadAudioAgainAndHistorySurvivesRestart",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "automaticRecommendationWaitsForNetworkButManualRequestCanProceed",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "localScreenshotImportNeedsNoApiKeyAndCompletesTitlesBeforeDownload",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "chatWithMultipleSessionsMaintainsIsolationAndAttribution",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "feedbackSurvivesRolloverCleanupAndIsPassedToNextAiRecommendation",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "chatToolExecutionExceeds16StepsWithoutLimit",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "dislikeDeletesEvenFavoriteAndEveryPlaylistMembership",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "unsolicitedDeleteToolIsRejectedAndExplicitDeleteStillNeedsLocalConfirmation",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "modelDeletionRequiresAnExactLocalSingleUseConfirmation",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "translationCachesPerTextAndTargetAndPreservesTimestamps",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "originalCandidatesBeatLiveCoverAndUnrelatedArtist",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "failedAutomaticRecommendationDoesNotPayAgainEachMinuteOrAfterRestart",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "translationCacheNormalizesTargetLanguageLikeFreshRequests",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "cleanupReleasesOnlyOwnedTemporaryAudioAndCanRestoreIt",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "screenshotRecognitionIsCachedAndExistingSongsAreNotDownloadedAgain",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "sourcePreviewUsesBoundedTemporaryFileWithoutImportingOrCallingAi",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "interruptedTaskIsRecoveredAndSpeechBudgetRejectsBeforeUpload",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "generatedLyricsUseAudioTimestampsAndCacheWithoutChargingTwice",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "localAudioOutsideManagedRootCannotBecomeCleanupTarget",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationRolloverDeletesOnlyUnsavedDownloads",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "builtInHelpDoesNotSendAnyModelRequest",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "networkSettingRoundTripsAndLegacySettingsKeepPreviousBehavior",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "libraryToolReturnsPlayableLinksWithoutExposingFileLocations",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      },
+      {
+        "name": "batchRetryNeverRunsPaidLyricsAndUndoClearsOldRejection",
+        "class": "com.resonance.player.features.MusicAssistantTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.MusicAssistantTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 69,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "twoCorruptCopiesStopInsteadOfSilentlyResettingSettingsAndHistory",
+        "class": "com.resonance.player.features.MusicJsonStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "corruptPrimaryRecoversWithoutOverwritingGoodBackupOnNextWrite",
+        "class": "com.resonance.player.features.MusicJsonStoreTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.MusicJsonStoreTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 819,
+    "tests": 9,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "searchLimitLeavesRoomForAlternativeSources",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "realQuickJsRunsAsyncMusicFreeCoreAndPersistsInstallation",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "invalidReplacementAndUnsupportedDependencyKeepInstalledSource",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "builtinSourcesInstalledSuccessfullyAndExposeCoreCapabilities",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "runtimeSupportsCryptoJsWithoutExposingHostClasses",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationsWithEmptyArtistsUsesDefaultPopularSeeds",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "publicTransportRejectsLocalAddressesAndCredentialUrls",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "builtinUpgradeAddsSourcesOnceWithoutRestoringRemovedOrEnablingDisabledSources",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      },
+      {
+        "name": "cancellationInterruptsInfiniteScriptAndRuntimeCanBeUsedAgain",
+        "class": "com.resonance.player.features.MusicSourceRegistryTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.MusicSourceRegistryTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 108,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "flacAudioKeepsEncodingExtensionMimeAndArtwork",
+        "class": "com.resonance.player.features.PlaylistArchiveFormatTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.PlaylistArchiveFormatTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 54,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "privateAndLiteralTargetsCannotUseVpnFallback",
+        "class": "com.resonance.player.features.PublicSourceDnsTest",
+        "status": "passed"
+      },
+      {
+        "name": "fakeIpUsesVerifiedPublicDestinationsAndCachesOnlySuccessfulResults",
+        "class": "com.resonance.player.features.PublicSourceDnsTest",
+        "status": "passed"
+      },
+      {
+        "name": "ordinaryPublicDnsDoesNotContactAnotherResolver",
+        "class": "com.resonance.player.features.PublicSourceDnsTest",
+        "status": "passed"
+      },
+      {
+        "name": "fallbackResponsesStillRejectPrivateFakeOrMixedAddresses",
+        "class": "com.resonance.player.features.PublicSourceDnsTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.PublicSourceDnsTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 70,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "feedbackUsesMusicalIdentityAndRemovingVoteKeepsComment",
+        "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+        "status": "passed"
+      },
+      {
+        "name": "likesAndNegativeCommentsChangeCandidateRankingWithoutBanningAnArtist",
+        "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+        "status": "passed"
+      },
+      {
+        "name": "favoritesHaveMoreSeedWeightThanLikesAndAiSummaryIsBounded",
+        "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.RecommendationFeedbackPolicyTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 55,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "reasonsOnlyUseRealSavedEvidence",
+        "class": "com.resonance.player.features.RecommendationPolicyTest",
+        "status": "passed"
+      },
+      {
+        "name": "legacySettingsDefaultToSourceModeAndRoundTripNewControls",
+        "class": "com.resonance.player.features.RecommendationPolicyTest",
+        "status": "passed"
+      },
+      {
+        "name": "cooldownSurvivesFileRemovalAndUsesRollingDays",
+        "class": "com.resonance.player.features.RecommendationPolicyTest",
+        "status": "passed"
+      },
+      {
+        "name": "duplicateFilesCountOnceAndVersionsRemainSeparate",
+        "class": "com.resonance.player.features.RecommendationPolicyTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.RecommendationPolicyTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1227,
+    "tests": 8,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "truncatedSongIsCompletedOnlyFromUnambiguousMatchingEvidence",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "headerAndCreatorAbovePlaybackToolbarAreNotImportedAsMusic",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "numericSongTitlesArePreservedWhileRankingColumnIsIgnored",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "publicCatalogParsingAndRelaxedSearchStillRequireTheVisibleTitleAndArtist",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "recognitionModeDefaultsLocallyAndRoundTripsWithoutCredentials",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "bundledModelsActuallyReadChineseAndEnglishScreenshot",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "parserPairsSongsAndSkipsControlsBadgesAndOverlappingRows",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      },
+      {
+        "name": "parserDoesNotInventArtistsFromEmptyOrUnpairedText",
+        "class": "com.resonance.player.features.ScreenshotOcrTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.ScreenshotOcrTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 539,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "lyricOffsetStoreDirectionAndPersistence",
+        "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantPlaybackAndNavigationActionsExecuteAndRejectInvalid",
+        "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+        "status": "passed"
+      },
+      {
+        "name": "cleanupRollsBackWhenFileDeleteFails",
+        "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationHistoryPersistsAcrossRestartAndEnforcesRollingDays",
+        "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.StorageAndAssistantExtraTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 120,
+    "tests": 6,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "wrongEventsCannotCompleteStepsAndSkippingDoesNotPretendSuccess",
+        "class": "com.resonance.player.features.TutorialProgressTest",
+        "status": "passed"
+      },
+      {
+        "name": "invalidAndFutureProgressCannotEscapeKnownChapterBounds",
+        "class": "com.resonance.player.features.TutorialProgressTest",
+        "status": "passed"
+      },
+      {
+        "name": "welcomeIsOnlyOfferedUntilDismissedAndSurvivesRestart",
+        "class": "com.resonance.player.features.TutorialProgressTest",
+        "status": "passed"
+      },
+      {
+        "name": "missingTrackRoutesToLibraryWithoutExecutingAnOperation",
+        "class": "com.resonance.player.features.TutorialProgressTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseRestoresExactStepAndOtherChaptersRemainIndependent",
+        "class": "com.resonance.player.features.TutorialProgressTest",
+        "status": "passed"
+      },
+      {
+        "name": "tutorialPreferenceUsesAtomicUiStoreAndPreservesPlaybackSettings",
+        "class": "com.resonance.player.features.TutorialProgressTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.features.TutorialProgressTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 61,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "unrelatedLyricsNeverReceiveInventedTimestamps",
+        "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+        "status": "passed"
+      },
+      {
+        "name": "partialSpeechEventsAreIgnoredAndFinalWordTimesArePreserved",
+        "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+        "status": "passed"
+      },
+      {
+        "name": "zeroOnlyAndOutOfDurationLrcAreNotSynchronized",
+        "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+        "status": "passed"
+      },
+      {
+        "name": "alignsRepeatedChorusesToTheirActualAudioOccurrences",
+        "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.lyrics.AudioLyricAlignmentTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 55,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "decodesValidKrcData",
+        "class": "com.resonance.player.lyrics.KrcDecoderTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.lyrics.KrcDecoderTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 269,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "exactPlainLyricsContinueSearchingForSynchronizedVersion",
+        "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+        "status": "passed"
+      },
+      {
+        "name": "parsesMultipleTimestampsAndFractions",
+        "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+        "status": "passed"
+      },
+      {
+        "name": "fetchesExactLyricsAndUsesPersistentCache",
+        "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.lyrics.LrclibLyricsRepositoryTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 845,
+    "tests": 13,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "modelTextNeverCreatesASynchronizedTimeline",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "failedOrPlainSourcePreservesCachedTextAndOffsetAndCancellationPropagates",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "sourceLyricsMatchRecordingAndNeverFetchAudio",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "synchronizedSearchCandidateWinsOverHigherScoringPlainOrInvalidTimeline",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "sourceKeepsUsablePlainLyricsWhenLaterMatchingCandidateFails",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "publicSourceFindsUserReportedRecordingWhenExplicitlyEnabled",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "skipped"
+      },
+      {
+        "name": "sourcesPreferSynchronizedLyricsAcrossSourcesAndWithinMatchingCandidates",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "freshAndCachedPlainLyricsContinueToSynchronizedSource",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "publicSynchronizedLyricsReplaceReportedRecordingsPlainCacheWhenExplicitlyEnabled",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "skipped"
+      },
+      {
+        "name": "cachedPlainLyricsCanRecoverFromLrclibWithoutInstalledSources",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "localPlainLyricsDoNotBlockSynchronizedSourceOrLoseTextOnFailure",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "modelUnavailableIsNotReportedAsANetworkOrSearchFailure",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      },
+      {
+        "name": "cachedLrclibMissDoesNotBlockSourceFallbackAndSuccessPersists",
+        "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.lyrics.LyricsAcquisitionTest",
+    "assumptions": 2,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 107,
+    "tests": 7,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "testExtractAndMergeCookies",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      },
+      {
+        "name": "testPollQrStatusSuccessWithCookies",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      },
+      {
+        "name": "testCreateQrSessionSuccess",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      },
+      {
+        "name": "testPollQrStatusWaiting",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      },
+      {
+        "name": "testCreateQrSessionFailure",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      },
+      {
+        "name": "testPollQrStatusScanned",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      },
+      {
+        "name": "testPollQrStatusExpired",
+        "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.media.BilibiliLoginServiceTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 40,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "parseRunningAndBpmQuery",
+        "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+        "status": "passed"
+      },
+      {
+        "name": "parseRainyHealingAcousticQuery",
+        "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+        "status": "passed"
+      },
+      {
+        "name": "parseSlowBalladQuery",
+        "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.model.SemanticSearchIntentParserTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 56,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "auditSuggestsReviewWithoutPreselectingDestructiveActions",
+        "class": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+        "status": "passed"
+      },
+      {
+        "name": "recordingVersionsDurationsAndUnknownArtistsAreNotInterchangeable",
+        "class": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+        "status": "passed"
+      },
+      {
+        "name": "auditCleansGarbagePrefixAndParsesArtistFromTitle",
+        "class": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.model.SmartLibraryAuditEngineTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 57,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "namesAreSinglePortableComponentsIncludingWindowsReservedNames",
+        "class": "com.resonance.player.model.SyncPackageNamingTest",
+        "status": "passed"
+      },
+      {
+        "name": "playlistTitleIsTheFilenameWithoutTimestampsAndLibraryHasAClearName",
+        "class": "com.resonance.player.model.SyncPackageNamingTest",
+        "status": "passed"
+      },
+      {
+        "name": "longUnicodeNamesStayWithinFilenameLimitsWithoutCuttingEmojiInHalf",
+        "class": "com.resonance.player.model.SyncPackageNamingTest",
+        "status": "passed"
+      },
+      {
+        "name": "repeatedExportsKeepExistingFilesAndUseTheNextFreeSuffix",
+        "class": "com.resonance.player.model.SyncPackageNamingTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.model.SyncPackageNamingTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 56,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "tracksWithEmotionalKeywordsProduceNostalgicOrDreamerPersona",
+        "class": "com.resonance.player.model.TasteAnalyticsEngineTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyTracksReturnsDefaultPersona",
+        "class": "com.resonance.player.model.TasteAnalyticsEngineTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.model.TasteAnalyticsEngineTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 187,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "removingOneTrackRetainsTheSharedArtworkOfAnotherTrack",
+        "class": "com.resonance.player.platform.DeletionSafetyTest",
+        "status": "passed"
+      },
+      {
+        "name": "deniedDeletionPreservesRecordsAndPartialBatchReportsOnlyActualRemovals",
+        "class": "com.resonance.player.platform.DeletionSafetyTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.platform.DeletionSafetyTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 359,
+    "tests": 6,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "badInputsDoNotPreventHealthyFilesFromImporting",
+        "class": "com.resonance.player.platform.DesktopMusicImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "oversizedUriPayloadIsRejected",
+        "class": "com.resonance.player.platform.DesktopMusicImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "cancellationDuringEnumerationKeepsSourceUntouched",
+        "class": "com.resonance.player.platform.DesktopMusicImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "mixedFilesAndOverlappingFoldersImportOnceAndPreserveSources",
+        "class": "com.resonance.player.platform.DesktopMusicImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "unsupportedSelectionExplainsWhyNothingWasImported",
+        "class": "com.resonance.player.platform.DesktopMusicImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "fileManagerPayloadsHandleUnicodeSpacesAndUriEscapes",
+        "class": "com.resonance.player.platform.DesktopMusicImportTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.platform.DesktopMusicImportTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 182,
+    "tests": 8,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "selectingPackageRestoresMetadataAndPlaylistsAcrossRestart",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "folderAndUriDropFindUppercasePackageAndDeduplicateSelection",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "maliciousPackageCannotEscapeManagedDirectory",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "pickerIncludesPackagesAndAudioWithoutExposingUnrelatedFiles",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "corruptedPackageDoesNotBlockHealthyPackageOrCommitBadAudio",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyPlaylistPackageIsStillReportedAndSaved",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "cancellingBetweenPackagesRetainsCompletedPlaylistAndSource",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      },
+      {
+        "name": "conversionSelectionKeepsPackagedAudioFormatAndBytes",
+        "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.platform.DesktopSyncPackageImportTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 211,
+    "tests": 6,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "unreadableUiSettingsRecoverTheBackupBeforeTheNextWrite",
+        "class": "com.resonance.player.platform.LibraryPersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "concurrentMergesAndFavoritesPreserveEveryTrack",
+        "class": "com.resonance.player.platform.LibraryPersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "temporarilyUnavailableAudioSurvivesOtherCatalogWritesAndReconnect",
+        "class": "com.resonance.player.platform.LibraryPersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "specializedPreferenceReadersAndWritersAlwaysRecoverBeforeUpdating",
+        "class": "com.resonance.player.platform.LibraryPersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "corruptedPrimaryRecoversThePreviousValidRevision",
+        "class": "com.resonance.player.platform.LibraryPersistenceTest",
+        "status": "passed"
+      },
+      {
+        "name": "relinkingMissingAudioPreservesIdentityFavoriteAndPlaylistAfterRestart",
+        "class": "com.resonance.player.platform.LibraryPersistenceTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.platform.LibraryPersistenceTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 113,
+    "tests": 7,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "linuxCredentialsRejectSymlinkedKeyAndDirectory",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      },
+      {
+        "name": "linuxNetworkCostOnlyAcceptsConnectedUnmeteredInterfaces",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      },
+      {
+        "name": "ffmpegUsesHostNameAndPackagedOrExplicitExecutable",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      },
+      {
+        "name": "dataPathsRespectXdgOverridesAndWindowsLayout",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      },
+      {
+        "name": "existingLinuxLibraryIsKeptUntilXdgDirectoryExists",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      },
+      {
+        "name": "linuxCredentialsRejectTamperingWrongDirectoryAndMissingKey",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      },
+      {
+        "name": "linuxCredentialsSurviveRestartAndUsePrivatePermissions",
+        "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.platform.LinuxDesktopSupportTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 7272,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "platformRecordsWithoutComposeAndDeduplicatesNearEndPauseResume",
+        "class": "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseSeekSpeedAndRapidReplacementReachRealAudioOutput",
+        "class": "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.DesktopAudioOutputIntegrationTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 45,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "actualDecoderFailuresCarryOriginAndRequestAcrossAtoBtoA",
+        "class": "com.resonance.player.playback.DesktopPlaybackFailureTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.DesktopPlaybackFailureTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 135,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "serviceAndRecreatedUiShareOneStoreAndCannotOverwriteEachOther",
+        "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+        "status": "passed"
+      },
+      {
+        "name": "writeFailureIsVisibleAndAcceptedIncrementIsNotDuplicatedOnFlushRetry",
+        "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+        "status": "passed"
+      },
+      {
+        "name": "uiSnapshotDoesNotWaitForTheDiskStoresMonitor",
+        "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.ListeningStatsRepositoryTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 120,
+    "tests": 5,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "formatsListeningSecondsNicely",
+        "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "recordsPlaybackSecondsAndSavesAtomically",
+        "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "batchedWritesFlushWithoutLosingAcceptedSecondsAndReportFailures",
+        "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "audioEffectPresetFromIdWorks",
+        "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "corruptHistoryIsPreservedAndValidBackupRecovers",
+        "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.ListeningStatsStoreTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 52,
+    "tests": 10,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "testFilterAndSortTracks_sortDuration",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testBuildPlayNextQueue_movesExistingTrackWithoutDuplicate",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testFilterAndSortTracks_missingCoverAndMetadata",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testBuildPlayNextQueue_ignoresUnplayableOrCurrentTrack",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testBuildPlayNextQueue_insertsAfterCurrentTrack",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testFilterAndSortTracks_filterQuery",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testFilterAndSortTracks_losslessAndQuality",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testBuildPlayNextQueue_insertsAtBeginningWhenCurrentTrackNull",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testBuildReorderedQueue",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      },
+      {
+        "name": "testBuildRemoveFromQueue",
+        "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackQueueAndFilterTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 67,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "countdownUsesDeadlineAndExpiresOnlyOnce",
+        "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "status": "passed"
+      },
+      {
+        "name": "replacingAndCancellingTimersNeverPausesFromOldDeadline",
+        "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "status": "passed"
+      },
+      {
+        "name": "endOfTrackStopsOnceWithoutStartingAnotherQueueItem",
+        "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 38,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "persistsCurrentTrackQueuePositionAndPlaylist",
+        "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+        "status": "passed"
+      },
+      {
+        "name": "malformedSnapshotDoesNotPreventStartup",
+        "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 167,
+    "tests": 15,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "disposedStateRejectsLateAudioResults",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidSwitchIgnoresLegacyCalibrationAndAppliesOnlyLatestBalancedGain",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "lateAnalysisCannotOverwriteNewSong",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "volumeAndCachedGainAreAppliedBeforePlaybackStarts",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "clearingTemporaryPlaybackCancelsAStartThatFinishesAfterLeavingTheRoom",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "manualVolumeAndGainWinOverPendingReadsAndAnalysis",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "previousNativePauseCannotCancelASingleTrackSelection",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseWhilePreparingPreventsPlaybackStartOnReady",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingTransitionsReflectInPlayerStateAndClearOnPlayback",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "failureExitsPreparingAndBufferingStates",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "switchingDuringQueuePreparationCannotStartThePreviousTrack",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "oldNativeTrackEventsCannotCancelTheLatestPlaybackRequest",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "refreshingAudioWhileLoadingKeepsThePendingPlaybackRequest",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "audioRefreshPreservesProtectionFromPreviousNativeStatus",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "previousNativePlayingCannotUndoAnExplicitPauseDuringPreparation",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 616,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "progressingAudioOutlivesMetadataDeadlineWithoutChangingPublicAddressGuards",
+        "class": "com.resonance.player.sources.SourceDownloadTimeoutTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.sources.SourceDownloadTimeoutTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 198,
+    "tests": 5,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "cancellationAfterMovingFilesRestoresOriginalBytes",
+        "class": "com.resonance.player.sync.ArchiveRollbackTest",
+        "status": "passed"
+      },
+      {
+        "name": "fileTransactionRestoresMetadataAndRemovesOnlyNewFiles",
+        "class": "com.resonance.player.sync.ArchiveRollbackTest",
+        "status": "passed"
+      },
+      {
+        "name": "badPlaylistMetadataNeverMovesAudioOrCallsPersistence",
+        "class": "com.resonance.player.sync.ArchiveRollbackTest",
+        "status": "passed"
+      },
+      {
+        "name": "persistenceFailureRollsBackBothReplacedAudioAndArtwork",
+        "class": "com.resonance.player.sync.ArchiveRollbackTest",
+        "status": "passed"
+      },
+      {
+        "name": "referenceBudgetsAndDuplicateIdsAreCheckedBeforeReplacement",
+        "class": "com.resonance.player.sync.ArchiveRollbackTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.sync.ArchiveRollbackTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 121,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "createsAndroidImportFixtureWithArtwork",
+        "class": "com.resonance.player.sync.CrossDeviceSyncFixtureTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.sync.CrossDeviceSyncFixtureTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 142,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "rejectsCorruptedAudio",
+        "class": "com.resonance.player.sync.PlainSyncPackageTest",
+        "status": "passed"
+      },
+      {
+        "name": "exportAndImportSucceedWhenArtworkIsMissing",
+        "class": "com.resonance.player.sync.PlainSyncPackageTest",
+        "status": "passed"
+      },
+      {
+        "name": "rejectsLegacyEncryptedPackage",
+        "class": "com.resonance.player.sync.PlainSyncPackageTest",
+        "status": "passed"
+      },
+      {
+        "name": "roundTripPreservesMetadataAudioAndArtwork",
+        "class": "com.resonance.player.sync.PlainSyncPackageTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.sync.PlainSyncPackageTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 12855,
+    "tests": 10,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "protocolRejectsDeepJsonDuplicateKeysAndMalformedUtf8",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "invitationRoundTripsIpv6AndRejectsAmbiguousCapabilities",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "racedConnectionSuccessfullySelectsReachableCandidate",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "malformedAuthenticatedFramesNeverBecomePlayableFiles",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "ipv6LoopbackCanCarryTheEncryptedSession",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "wrongPinAndWrongKeyCannotReadAudioOrOccupyTheRoom",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "roomCapacityRejectionAndEndedInvitationCannotJoinANewRoom",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "authenticatedAudioPauseSeekAndNextTrackStayWithinTemporaryCache",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "leavingAndImmediatelyRejoiningDoesNotDeleteNewSessionMedia",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      },
+      {
+        "name": "invitationSupportsMultipleCandidatesAndRoundTrips",
+        "class": "com.resonance.player.together.ListenTogetherTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.ListenTogetherTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 38,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "captureRealAssistantAnswerWhenConfigured",
+        "class": "com.resonance.player.together.PromoAssistantProbeTest",
+        "status": "skipped"
+      }
+    ],
+    "class": "com.resonance.player.together.PromoAssistantProbeTest",
+    "assumptions": 1,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 2368,
+    "tests": 7,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "legacyAnonymousRoomsRemainCompatibleBothWays",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      },
+      {
+        "name": "incomingMessageEventFiresAfterPersistenceButNotForReplayOrClearedHistory",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      },
+      {
+        "name": "boundedPendingQueueNeverSilentlyDropsUndeliveredMessages",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      },
+      {
+        "name": "firstLaunchDoesNotListenUntilRoomActionButRememberedPartnersCanReceiveInvites",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      },
+      {
+        "name": "realTlsChatPairingLocalClearAndStableDeviceIdentityAcrossNewRooms",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      },
+      {
+        "name": "rememberedPartnerInviteRequiresAcceptanceAndRemovalRevokesOffers",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      },
+      {
+        "name": "encryptedIdentityAndHistorySurviveRestartAndClearDoesNotReplay",
+        "class": "com.resonance.player.together.TogetherCompanionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherCompanionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 301,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "leavingDuringParallelTlsHandshakesClosesAllAttemptsPromptly",
+        "class": "com.resonance.player.together.TogetherConnectionBoundsTest",
+        "status": "passed"
+      },
+      {
+        "name": "candidateCountAndEveryAddressAreValidatedBeforeConnecting",
+        "class": "com.resonance.player.together.TogetherConnectionBoundsTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherConnectionBoundsTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 39,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "windowsHostForPhysicalAndroidPeer",
+        "class": "com.resonance.player.together.TogetherDeviceBridgeTest",
+        "status": "skipped"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherDeviceBridgeTest",
+    "assumptions": 1,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 38,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "windowsNativeHostForMuMu",
+        "class": "com.resonance.player.together.TogetherNativeBridgeTest",
+        "status": "skipped"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherNativeBridgeTest",
+    "assumptions": 1,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 531,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "networkChangeOrExplicitDisableRetiresPartialPrefetchWithoutDroppingCurrentSong",
+        "class": "com.resonance.player.together.TogetherPrefetchCancellationTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherPrefetchCancellationTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 1525,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "productionUrlsRequireHttpsWithoutCredentialsQueriesOrFragments",
+        "class": "com.resonance.player.together.TogetherRendezvousTest",
+        "status": "passed"
+      },
+      {
+        "name": "javaSignaturesInteroperateAndChangedPartnerEndpointCanBeInvited",
+        "class": "com.resonance.player.together.TogetherRendezvousTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherRendezvousTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 39,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "windowsNativeGuestFollowsMuMuHost",
+        "class": "com.resonance.player.together.TogetherReverseNativeBridgeTest",
+        "status": "skipped"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherReverseNativeBridgeTest",
+    "assumptions": 1,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 4150,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "serverRoomDoesNotPublishPeerNetworkAddresses",
+        "class": "com.resonance.player.together.TogetherServerRoutingTest",
+        "status": "passed"
+      },
+      {
+        "name": "serverFailureDoesNotDialReachablePeerAddress",
+        "class": "com.resonance.player.together.TogetherServerRoutingTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherServerRoutingTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 68148,
+    "tests": 10,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "sharedQueueUsesOpaqueIdsAndMembersCanControlWithoutApproval",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "dynamicMeteredNetworkPreventsAndCancelsPrefetch",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "invitationInspectionAndQrAreLocalStrictAndRoundTrip",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "refreshedAndExpiredInvitationsCannotStartTransfers",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "prefetchedNextTrackIsVerifiedAndReusedWithoutAnotherRead",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "thirtyJoinLeaveCyclesRetireOwnedFilesAndPreserveOtherCacheFiles",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "evictedPreviousTrackIsRequestedAgainWithoutLosingCurrentAudio",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "lyricsArriveBoundedWithoutExposingHostTrackIdsOrPaths",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "hostApprovalPrecedesAnyAudioReadAndCanReject",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "temporaryNetworkBreakRecoversWithSeparateCredential",
+        "class": "com.resonance.player.together.TogetherSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 815,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "endpointRejectsInsecureOrAmbiguousTargets",
+        "class": "com.resonance.player.together.TogetherWebSocketTest",
+        "status": "passed"
+      },
+      {
+        "reason": "got: <false>, expected: is <true>",
+        "name": "deployedPinnedTlsRoundTripOverWebSocket",
+        "class": "com.resonance.player.together.TogetherWebSocketTest",
+        "status": "skipped"
+      },
+      {
+        "name": "defaultsRespectSavedOptOutAndCustomServer",
+        "class": "com.resonance.player.together.TogetherWebSocketTest",
+        "status": "passed"
+      },
+      {
+        "name": "realPinnedTlsRoundTripOverWebSocket",
+        "class": "com.resonance.player.together.TogetherWebSocketTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.together.TogetherWebSocketTest",
+    "assumptions": 1,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 12468,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "lyricsUpdateLockCloseAndReopenWhileMainWindowIsHidden",
+        "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+        "status": "passed"
+      },
+      {
+        "name": "linuxLyricsCanBeDraggedUnlockedAndStayInPlaceDuringUpdates",
+        "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+        "status": "passed"
+      },
+      {
+        "name": "productionAppCanCloseLyricsWithoutShowingMainWindow",
+        "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.DesktopWindowLifecycleTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 5407,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "wrappedLineMovesThroughIntermediatePositionsWithoutReflow",
+        "class": "com.resonance.player.ui.LyricsMotionTest",
+        "status": "passed"
+      },
+      {
+        "name": "previewReusesTheSameLineWhileItSlidesIntoFocus",
+        "class": "com.resonance.player.ui.LyricsMotionTest",
+        "status": "passed"
+      },
+      {
+        "name": "focusBandAndSelectedLineMoveTogetherInBothThemes",
+        "class": "com.resonance.player.ui.LyricsMotionTest",
+        "status": "passed"
+      },
+      {
+        "name": "reducedMotionSeeksImmediatelyAndTranslationArrivalPreservesListIdentity",
+        "class": "com.resonance.player.ui.LyricsMotionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.LyricsMotionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 18914,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "coverPreviewAndImmersiveFocusFollowNativePositionAtAllWindowSizes",
+        "class": "com.resonance.player.ui.LyricsPlayerRegressionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.LyricsPlayerRegressionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 172,
+    "tests": 6,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "trimmedLanguageAndOriginalOnlyModeShowTranslationWithoutChangingTimeline",
+        "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "status": "passed"
+      },
+      {
+        "name": "trackChangeRetiresOldRequestAndAllowsImmediateTranslationOfNewSong",
+        "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "status": "passed"
+      },
+      {
+        "name": "languageChangeAndReplacedSourceRejectOldResult",
+        "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "status": "passed"
+      },
+      {
+        "name": "blankLanguageAndUnavailableServiceReportAnActionableFailure",
+        "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "status": "passed"
+      },
+      {
+        "name": "slowCacheMissCannotEraseANewManualTranslation",
+        "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "status": "passed"
+      },
+      {
+        "name": "failedRetranslationKeepsPreviousTranslationAndCanBeRetried",
+        "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.LyricsTranslationControllerTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 9388,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "volumeOpensAdjustsAndClosesWithPlaybackControlsStillResponsive",
+        "class": "com.resonance.player.ui.PlaybackSettingsDialogTest",
+        "status": "passed"
+      },
+      {
+        "name": "dialogIsolatesEveryContentSlotFromHostGlassWithoutChangingHostState",
+        "class": "com.resonance.player.ui.PlaybackSettingsDialogTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.PlaybackSettingsDialogTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 78095,
+    "tests": 5,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "verticalDragTracksThePointerShortPullReturnsAndLongPullDismisses",
+        "class": "com.resonance.player.ui.PlayerExpansionTest",
+        "status": "passed"
+      },
+      {
+        "name": "realShellConnectsItsMiniPlayerAtEveryWindowClass",
+        "class": "com.resonance.player.ui.PlayerExpansionTest",
+        "status": "passed"
+      },
+      {
+        "name": "coverConnectsMeasuredEndpointsAndRapidReversalKeepsItsPosition",
+        "class": "com.resonance.player.ui.PlayerExpansionTest",
+        "status": "passed"
+      },
+      {
+        "name": "upwardReversalAndLyricsScrollingKeepThePlayerOpen",
+        "class": "com.resonance.player.ui.PlayerExpansionTest",
+        "status": "passed"
+      },
+      {
+        "name": "reducedMotionAndKeyboardKeepTheCoverStationaryAndVisible",
+        "class": "com.resonance.player.ui.PlayerExpansionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.PlayerExpansionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 8758,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "favoriteCardOnlyShowsSongCount",
+        "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+        "status": "passed"
+      },
+      {
+        "name": "audioDialogHasBoundedListAndSelectionDoesNotInvokePlaybackWorkUntilChosen",
+        "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyLyricsHaveOneSearchActionAndReachableToolsWithLargeText",
+        "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.PlayerRecoveryUiTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 168,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "failedRestoreKeepsPlaybackAndAllowsRetry",
+        "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+        "status": "passed"
+      },
+      {
+        "name": "restoredAudioIsPlayableBeforeTheUiLibrarySnapshotUpdates",
+        "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+        "status": "passed"
+      },
+      {
+        "name": "lateRestoreCannotOverrideANewerRecommendationClick",
+        "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationPlaybackUsesBatchOrderAndExcludesUnrelatedLibraryTracks",
+        "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.RecommendationPlaybackTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 7733,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "lastPlaylistRemainsSelectableAndActionsFitShortLargeTextWindows",
+        "class": "com.resonance.player.ui.SyncPackageDialogTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyLibraryAndImportPreserveNullScopeAndDoNoWorkBeforeConfirmation",
+        "class": "com.resonance.player.ui.SyncPackageDialogTest",
+        "status": "passed"
+      },
+      {
+        "name": "openingLargeCatalogOnlyComposesVisiblePlaylistOptions",
+        "class": "com.resonance.player.ui.SyncPackageDialogTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.SyncPackageDialogTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 5843,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "progressCanBeDismissedAndBusyScreenCannotStartAnotherArchive",
+        "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+        "status": "passed"
+      },
+      {
+        "name": "completedExportShowsActualLocationAndLongFilenameWithReachableActions",
+        "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+        "status": "passed"
+      },
+      {
+        "name": "failureNeverDisplaysSuccessOrLocationActions",
+        "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.ui.SyncPackageFeedbackTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "class": "com.resonance.player.ui.UiVisualContractTest",
+    "exit": 0,
+    "tests": 22,
+    "failures": 0,
+    "assumptions": 0,
+    "cases": [
+      {
+        "name": "galleryPlayerKeepsTransportReachableWithLargeTextInShortWindow",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "playbackErrorOffersRetryInBothThemes",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingAndLoadingStatesRenderDistinctVisualFeedbackInDarkAndLight",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "draggingProgressCommitsOnlyOnceOnRelease",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "songInformationRemainsReachableFromPlayerMenu",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "wideStageKeepsLyricsQueueAndTransportConnected",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "stageBackdropRemainsStableAcrossPlaybackAndAccessibilityStates",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "shortLandscapeKeepsPaneTabsAndTransportInsideViewport",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeSlidersAndTabsExposeWorkingActionsAndMinimumTargets",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "compactAssistantKeepsTitleOnOneLineWithLargeText",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "albumAtmosphereFollowsColoredArtworkAndIgnoresTransparentArt",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "emptyLibraryKeepsEntryActionsUsableWithLargeText",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "playbackWaveMovesOnlyWhilePlayingAndKeepsNativeSeek",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "switchingThemeKeepsFirstFrameReadable",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "textAndSelectedRolesStayReadableAcrossAllThemes",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "renderPhoneDesktopPlayerAndToolsWithFixtureData",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "renderFrostedDestinationsThroughTheRealShell",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "assistantAttachmentsOnlyActOnExplicitClicks",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "renderApprovedPlayerPanes",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "renderApprovedLightNativePagesAndSettings",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "shortLandscapeRetainsCollectionViewportAndTransport",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativePagesReverseWithoutRecreatingTheDepartingContent",
+        "class": "com.resonance.player.ui.UiVisualContractTest",
+        "status": "passed"
+      }
+    ]
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 32,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "testGetCharInitial",
+        "class": "com.resonance.player.util.PinyinUtilsTest",
+        "status": "passed"
+      },
+      {
+        "name": "testToPinyinInitials",
+        "class": "com.resonance.player.util.PinyinUtilsTest",
+        "status": "passed"
+      },
+      {
+        "name": "testMatches",
+        "class": "com.resonance.player.util.PinyinUtilsTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.util.PinyinUtilsTest",
+    "assumptions": 0,
+    "exit": 0
+  }
+]

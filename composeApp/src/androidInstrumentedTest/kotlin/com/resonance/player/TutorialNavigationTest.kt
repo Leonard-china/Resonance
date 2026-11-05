@@ -77,19 +77,20 @@ class TutorialNavigationTest {
         ui.onNodeWithText("跳过，稍后再看").performClick()
         ui.runOnIdle { tutorial.offerWelcome(); assertTrue(saved.welcomeDismissed) }
         ui.onNodeWithText("欢迎使用 Resonance").assertDoesNotExist()
-        ui.onNodeWithText("使用教程").assertIsDisplayed()
+        ui.onNodeWithText("使用教程").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun settingsOpensQuickGuideAndAllFourPagesCanBeRead() {
         show()
-        ui.onNodeWithText("使用教程").performClick()
+        ui.onNodeWithText("使用教程").performScrollTo().performClick()
         ui.onNodeWithText("开始浏览").performClick()
         ui.onNodeWithText("让音乐来到你的曲库").assertIsDisplayed()
         capture("quick")
         repeat(3) { ui.onNodeWithText("下一步").performScrollTo().performClick(); ui.waitForIdle() }
         ui.onNodeWithText("开始使用").performScrollTo().performClick()
         ui.runOnIdle { assertTrue(saved.quickCompleted) }
-        ui.onNodeWithText("你的歌单").assertExists()
+        ui.runOnIdle { assertEquals(LibraryDestination.Library, tutorial.currentDestination) }
+        ui.onNodeWithTag("library-page-swipe").assertIsDisplayed()
     }
 
     @Test fun spotlightPassesRealClicksAndAdvancesThroughPlayerTabs() {

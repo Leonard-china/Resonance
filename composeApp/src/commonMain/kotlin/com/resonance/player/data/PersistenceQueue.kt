@@ -6,6 +6,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /** Enqueue on the UI thread to preserve user action order across suspending disk writes. */
@@ -14,14 +15,18 @@ class PersistenceQueue(scope: CoroutineScope, private val onError: (Throwable) -
     private val writes = Channel<Write>(Channel.UNLIMITED)
     private val pending = mutableMapOf<String, Write>()
     private val writerScope = CoroutineScope(scope.coroutineContext.minusKey(Job))
+    private val worker: Job
     init {
         scope.coroutineContext[Job]?.invokeOnCompletion { close() }
-        writerScope.launch {
+        worker = writerScope.launch {
             try {
                 for (write in writes) {
                     write.key?.let { key -> if (pending[key] === write) pending.remove(key) }
                     try { write.action() }
-                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (cancelled: CancellationException) {
+                        // Cancelling one operation must not strand later accepted writes.
+                        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                    }
                     catch (error: Exception) { onError(error) }
                 }
             } finally { writerScope.cancel() }
@@ -51,4 +56,5 @@ class PersistenceQueue(scope: CoroutineScope, private val onError: (Throwable) -
     }
     /** Stop accepting actions; finish everything already accepted even if the UI is disposed. */
     fun close() { writes.close() }
+    suspend fun closeAndJoin() { close(); worker.join() }
 }

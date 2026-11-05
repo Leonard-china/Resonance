@@ -83,13 +83,20 @@ class LyricsScrollDeviceTest {
 
     @Test fun rapidlyReversingTheTargetDoesNotReplayOrSnap() {
         show()
+        val initialCenter = ui.onNodeWithTag("lyric-line-8").fetchSemanticsNode().boundsInRoot.center.y
         ui.runOnIdle { position.value = 90_000 }
         ui.mainClock.advanceTimeBy(96)
-        val before = ui.onNodeWithTag("lyric-line-8").fetchSemanticsNode().boundsInRoot.center.y
         ui.runOnIdle { position.value = 80_000 }
+        // The next frame first ticks the old animation, then applies this state/recomposition.
+        // Sample once the new target is acknowledged instead of treating that old tick as a snap.
         ui.mainClock.advanceTimeByFrame()
+        ui.onNodeWithTag("lyric-line-8").assertIsSelected()
         val retargeted = ui.onNodeWithTag("lyric-line-8").fetchSemanticsNode().boundsInRoot.center.y
-        assertTrue("Retargeting must start at the current position", abs(before - retargeted) < with(ui.density) { 8.dp.toPx() })
+        assertTrue("Accepting the target must not snap to its final center", retargeted < initialCenter - 1)
+        ui.mainClock.advanceTimeByFrame()
+        val firstFrame = ui.onNodeWithTag("lyric-line-8").fetchSemanticsNode().boundsInRoot.center.y
+        assertTrue("Retargeting must start at the current position: before=$retargeted, after=$firstFrame",
+            abs(retargeted - firstFrame) < with(ui.density) { 8.dp.toPx() })
         settle()
         assertCentered(8)
     }

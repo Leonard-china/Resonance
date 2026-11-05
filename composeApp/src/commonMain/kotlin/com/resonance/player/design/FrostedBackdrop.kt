@@ -27,16 +27,8 @@ import kotlinx.coroutines.withContext
 fun FrostedBackdrop(track: Track?, modifier: Modifier = Modifier, immersive: Boolean = false) {
     // The library uses the approved quiet canvas; only the player samples album imagery.
     // This keeps the navigation surface independent of large blurred bitmap layers.
-    if (!immersive && !ResonanceColors.isDark) {
-        val canvas = ResonanceColors.Canvas
-        val primarySoft = ResonanceColors.PrimarySoft
-        Box(modifier.background(canvas).drawWithCache {
-            val accent = Brush.radialGradient(listOf(primarySoft.copy(alpha = .38f), androidx.compose.ui.graphics.Color.Transparent),
-                center = androidx.compose.ui.geometry.Offset(size.width * .92f, 0f), radius = size.maxDimension * .70f)
-            val cool = Brush.radialGradient(listOf(androidx.compose.ui.graphics.Color(0xFFD2DFED).copy(alpha = .45f), androidx.compose.ui.graphics.Color.Transparent),
-                center = androidx.compose.ui.geometry.Offset(0f, size.height), radius = size.maxDimension * .75f)
-            onDrawBehind { drawRect(accent); drawRect(cool) }
-        })
+    if (!immersive) {
+        Box(modifier.background(ResonanceColors.Canvas))
         return
     }
     val revision by ArtworkMemoryCache.revision.collectAsState()
@@ -61,14 +53,14 @@ fun FrostedBackdrop(track: Track?, modifier: Modifier = Modifier, immersive: Boo
                 Image(bitmap, null, contentScale = ContentScale.Crop,
                     colorFilter = remember { androidx.compose.ui.graphics.ColorFilter.colorMatrix(
                         androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(.65f) }) },
-                    modifier = Modifier.fillMaxSize().scale(1.14f).blur(if (immersive) 32.dp else 56.dp))
+                    modifier = Modifier.fillMaxSize().scale(1.14f).blur(if (immersive) 64.dp else 56.dp))
             } else {
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
                     listOf(atmosphere.edge.copy(alpha = .70f), atmosphere.glow.copy(alpha = .55f), canvas))))
             }
         }
         // The text always reads over a controlled luminance range, including pre-Android-12 fallback.
-        val tint = if (immersive) { if (dark) .54f else .58f } else { if (dark) .48f else .52f }
+        val tint = if (immersive) { if (dark) .38f else .58f } else { if (dark) .48f else .52f }
         Box(Modifier.matchParentSize().background(canvas.copy(alpha = tint)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(
             canvas.copy(alpha = .08f), canvas.copy(alpha = if (immersive) .26f else .12f)))))

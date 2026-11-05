@@ -1,0 +1,10 @@
+{
+  "main": {
+    "path": "composeApp/build/outputs/apk/debug/Resonance-0.6.6-debug.apk",
+    "sha256": "e119620587da78ffae8eec03faea22b0dd79ff1c31bfb52b97a19fdac2f4407c"
+  },
+  "test": {
+    "path": "composeApp/build/outputs/apk/androidTest/debug/composeApp-debug-androidTest.apk",
+    "sha256": "6661eed186c5fa8eb152cb64c69e2a834ab28356600e36fefc89ececca0278a6"
+  }
+}

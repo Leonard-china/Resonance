@@ -1,4 +1,32 @@
-# 2026-11-04 — Resonance 文档入口与开发变更索引
+# 2026-11-05 — Resonance 文档入口与开发变更索引
+
+最新修复验收：[本次缺陷修复与重新验收](audit/2026-11-05/FIX-VALIDATION.md)。处理前轮12项问题及手机失败项，本次有效589项：575通过、0失败、14条件跳过；Q07明确BPM尚未接入筛选。完整双端编译及独立手机包验收通过，未升版。各独立原因、代码和限制见下方18—28号记录；[191项功能清单](audit/2026-11-05/FUNCTION-CHECKLIST.md)与[原手机结果](audit/2026-11-05/ANDROID-DEVICE-REPORT.md)保留修复前历史。
+
+最新手机更新：[播放页动效与助手修复正式包覆盖安装](changes/2026-11-05-15-player-animation-phone-install.md)。已同签名保留数据覆盖，设备实际 APK 与本轮完整包逐字节一致；启动、展开、短拉回弹、长拉收起及再次开合实机通过。版本保持 0.6.6 / 40，电脑本轮未更新；验证范围见记录。
+
+当前内存约束：[构建前预留桌面内存](changes/2026-11-05-14-reserve-host-memory-before-builds.md)。共享构建锁；可用内存须覆盖进程树上限并另留 1.5 GiB，运行中余量不足停止自身构建，不关闭用户应用。前轮内存不足时停止了打包；满足门槛后的手机构建/安装以上方 15 号记录为准。
+
+本轮代码与回归：[助手重复请求与下载修复](changes/2026-11-05-12-assistant-repeat-cost-and-download-recovery.md)、[Linux 桌面歌词拖动与解锁](changes/2026-11-05-13-linux-desktop-lyrics-drag-and-unlock.md)。完整双端源码编译、69 项本地回归及两倍缩放三项通过；当轮打包因内存余量不足被拦下。手机后续已通过上方 15 号记录完成更新，电脑尚未覆盖。付费接口、真实公网下载及 Wayland 人工操作边界见记录。
+
+播放页交互改进：[参考 Apple Music UI Demo 的原生展开与收起](changes/2026-11-05-11-apple-music-player-expansion.md)。调整播放条到全屏的衔接和跟手回弹，保留已修复的歌词显示与焦点；原源码验证范围见该记录，后续手机安装与实机开合以上方 15 号记录为准。
+
+前轮手机安装：[重连后完成歌词修复正式包覆盖与启动验收](changes/2026-11-05-10-complete-phone-lyrics-fix-installation.md)。已保留数据覆盖原正式应用，设备 APK 与该轮最终包逐字节核对一致，同一进程连续运行 15 秒且主界面恢复；电脑前轮已更新。版本仍为 0.6.6 / 40，该轮验证范围见记录，当前手机安装以上方 15 号记录为准。
+
+最新本机安装：[歌词修复正式包替换手机与 Linux 电脑](changes/2026-11-05-09-install-lyrics-fix-on-phone-and-linux.md)。Linux 已切换至完整歌词修复版并正常启动；手机安装及启动复核的最终状态以记录为准，保留原数据和回退副本。
+
+最新歌词回归修复：[恢复封面预览、同步歌词优先与当前句高亮](changes/2026-11-05-08-restore-player-lyrics-and-synchronized-priority.md)。封面歌词重新可见，纯文本缓存不再阻断同步版本，沉浸歌词恢复淡底焦点；本次验证和手机安装范围见记录。
+
+最新核心架构：[应用任务、播放会话、平台能力与桌面音频重构](changes/2026-11-05-07-application-core-and-desktop-audio-refactor.md)。已拆分导入/队列/歌词用例与平台职责，统一退出排空和统计快照，重写桌面音频会话边界；保持原生 Kotlin 和数据兼容。共享/桌面 388 通过、8 条件跳过，最终补充 55 项通过；Android 独立包三轮重建/关闭通过，Linux 完整包已安装并从原入口启动，旧安装保留。Windows/长时限制见记录。
+
+前轮窗口修复：[桌面歌词窗口与应用会话分离](changes/2026-11-05-06-desktop-lyrics-window-and-stability-boundaries.md)。已采集本机黑框、窗口状态与音频线程证据；应用/窗口分离与 Linux 歌词不透明回退已通过 25 项定向回归及隔离实屏核对。整工程构建受内存约束、未更新正式安装，具体见记录。[架构与语言评估](ARCHITECTURE-STABILITY.md)区分已实施与后续工作，不将换语言视为稳定性保证。
+
+最新歌单包导入：[修复 Linux `.resonance` 不可见与拖入忽略](changes/2026-11-05-04-linux-resonance-package-import.md)。普通文件选择、递归目录和整窗拖放均接入现有歌单包校验与恢复流程，导入后同步刷新歌单；本次验证及安装状态见记录。
+
+最新桌面运行：[正常退出旧实例并启动最新版](changes/2026-11-05-03-desktop-latest-running-instance.md)。已逐文件核对最新安装、正常退出两个旧实例，并启动 `0.6.6-20261105-am-ui/` 的可见原生窗口；当前桌面/菜单入口与运行程序一致。
+
+最新桌面导入：[多选文件/目录与整窗拖入](changes/2026-11-05-01-desktop-files-and-drop-import.md)。Linux/Windows 共用扫描、转换、取消和入库链路，新增文件管理器拖入提示、路径去重与错误隔离；本次实际验证和系统限制见记录。
+
+最新三端界面：[AM++ 源码/截图参考的原生 UI](changes/2026-11-05-02-am-reference-native-ui.md)。宽屏左侧封面/播放、右侧歌词，手机双胶囊底栏，灰白/玫红主题与白色沉浸控制；保留 Resonance 功能及原生平台。本机入口已更新，后续已正常退出旧实例并打开新版，见上方桌面运行记录。最终桌面354通过/10跳过，Android/Linux构建通过；设备与鼠标拖放边界以记录为准，不宣称完整 Apple Music 宿主源码或逐像素相同着色器。
 
 本机优先更新：[最终导出修复 Linux 电脑安装](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。用户要求先安装到电脑，使用本次重新构建的完整程序，不复用今晚较早的同版本包；实际结果见记录。
 
@@ -93,6 +121,31 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-05 | 从当前修复源码构建Android/Windows/Linux正式包，核验后更新GitHub和官网 | [具体记录](changes/2026-11-05-29-publish-three-platform-release.md) |
+| 2026-11-05 | 播放页按可用高度分配封面与歌词预览 | [具体记录](changes/2026-11-05-28-player-cover-preview-height-budget.md) |
+| 2026-11-05 | 同步原生界面测试契约并按真实变化采集窗口帧 | [具体记录](changes/2026-11-05-27-native-test-contracts-and-frame-stimulus.md) |
+| 2026-11-05 | 官网导航乱序响应、缓存和历史统一按最后意图提交 | [具体记录](changes/2026-11-05-26-website-latest-navigation-wins.md) |
+| 2026-11-05 | Android同步偏好写失败向调用方报告 | [具体记录](changes/2026-11-05-25-android-preference-commit-errors.md) |
+| 2026-11-05 | 删除失败保留记录、批量报告实际结果并保留共享封面 | [具体记录](changes/2026-11-05-24-delete-failures-and-shared-artwork.md) |
+| 2026-11-05 | 语义搜索明确BPM尚未参与筛选 | [具体记录](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md) |
+| 2026-11-05 | 重复项保留录音版本并按完整批次确认 | [具体记录](changes/2026-11-05-22-smart-cleanup-safe-batch.md) |
+| 2026-11-05 | 助手删除绑定具体音频并强制本机确认 | [具体记录](changes/2026-11-05-21-assistant-local-audio-delete-confirmation.md) |
+| 2026-11-05 | 桌面专用偏好入口统一恢复备份 | [具体记录](changes/2026-11-05-20-recover-specialized-desktop-preferences.md) |
+| 2026-11-05 | 保留暂时不可用的曲目、收藏与歌单引用 | [具体记录](changes/2026-11-05-19-retain-unavailable-library-tracks.md) |
+| 2026-11-05 | 同步包完整校验、失败回退与资源预算 | [具体记录](changes/2026-11-05-18-sync-import-rollback-and-budgets.md) |
+| 2026-11-05 | 手机重连后执行79项独立包回归，62通过/10失败/7跳过，保留首次异常与复测证据并更新功能报告 | [具体记录](changes/2026-11-05-17-android-device-functional-regression.md) |
+| 2026-11-05 | 整理191项功能并执行隔离回归/异常验收，记录12项问题与手机断连、Windows和外部服务缺口 | [具体记录](changes/2026-11-05-16-comprehensive-feature-testing.md) |
+| 2026-11-05 | 手机重连后构建当前完整源码正式包，保留数据更新播放页动效及助手修复 | [具体记录](changes/2026-11-05-15-player-animation-phone-install.md) |
+| 2026-11-05 | 参考 Apple Music UI Demo，连接播放条与封面端点并增加原生跟手收起和弹簧回弹 | [具体记录](changes/2026-11-05-11-apple-music-player-expansion.md) |
+| 2026-11-05 | 手机重连后保留数据覆盖最终歌词修复正式包，核对实际安装字节和持续启动状态 | [具体记录](changes/2026-11-05-10-complete-phone-lyrics-fix-installation.md) |
+| 2026-11-05 | Android 正式覆盖包准备、Linux 歌词修复版保留数据安装与运行核对；手机待重连 | [具体记录](changes/2026-11-05-09-install-lyrics-fix-on-phone-and-linux.md) |
+| 2026-11-05 | 恢复封面歌词预览、同步歌词检索优先与沉浸当前句淡底高亮，补实际播放器/手机回归 | [具体记录](changes/2026-11-05-08-restore-player-lyrics-and-synchronized-priority.md) |
+| 2026-11-05 | 重构应用任务/退出、平台能力、导入/队列/歌词与桌面 PCM 输出，统一顺序写入与统计快照 | [具体记录](changes/2026-11-05-07-application-core-and-desktop-audio-refactor.md) |
+| 2026-11-05 | 应用会话与桌面窗口分离、Linux 歌词表面降级与原生窗口回归，明确稳定性重构阶段 | [具体记录](changes/2026-11-05-06-desktop-lyrics-window-and-stability-boundaries.md) |
+| 2026-11-05 | 普通文件选择/目录扫描/拖放支持 `.resonance`，恢复歌单并避免旧界面列表覆盖 | [具体记录](changes/2026-11-05-04-linux-resonance-package-import.md) |
+| 2026-11-05 | 正常退出旧实例并从桌面固定入口启动最新完整程序，验证进程和原生窗口 | [具体记录](changes/2026-11-05-03-desktop-latest-running-instance.md) |
+| 2026-11-05 | 按 AM++ 源码与截图重做三端原生播放页、歌词及玻璃导航 | [具体记录](changes/2026-11-05-02-am-reference-native-ui.md) |
+| 2026-11-05 | 桌面支持音乐文件/目录多选和整窗拖入、路径去重及坏文件隔离 | [具体记录](changes/2026-11-05-01-desktop-files-and-drop-import.md) |
 | 2026-11-04 | 优先更新本机 Linux 为包含最终歌单导出修复的完整版本 | [具体记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md) |
 | 2026-11-04 | 构建最终导出修复三端产物、推送 GitHub 并更新官网发布 | [具体记录](changes/2026-11-04-20-publish-0.6.6-three-platforms.md) |
 | 2026-11-04 | 导出文件按歌单名命名、重名加序号，并直接打开保存子目录 | [具体记录](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md) |
