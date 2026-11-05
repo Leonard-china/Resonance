@@ -28,4 +28,15 @@ Android 使用同签名正式 APK 覆盖安装，Windows 使用完整 EXE 安装
 
 ## 安装包校验
 
-实际产物生成后填入本次 SHA-256，并随 GitHub Release 提供 `SHA256SUMS.txt`、源码快照提交与本说明；不复用 0.6.6 的安装包或校验值。
+以下 SHA-256 从本次实际四份产物计算；GitHub Release 同时提供 `SHA256SUMS.txt`、源码快照提交与本说明。
+
+<!-- GENERATED-CHECKSUMS -->
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| `Resonance-0.6.7-release.apk` | 167536666 | `6a65c0cef360e1d372e8da8571d6fa2971eb5362e8054cb61d16b1fa7dcbd6e2` |
+| `Resonance-0.6.7.exe` | 276192768 | `ed26288a0b2fa978677774eb35f51aa55632bf9f3ca04ea2245b66fdb13b8119` |
+| `Resonance-0.6.7-linux-x86_64.tar.gz` | 267107156 | `6376b652e2315c1643c45a750587f59736caa0310653372d9601c588901e41be` |
+| `Resonance-0.6.7-linux-x86_64.deb` | 246081146 | `a74223fbc6dd700634e07829589b290723e2be67b60609e707ebab2a31a2dfc9` |
+
+<!-- END-GENERATED-CHECKSUMS -->
