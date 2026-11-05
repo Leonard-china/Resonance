@@ -1,5 +1,7 @@
 # 2026-11-05 — Resonance 文档入口与开发变更索引
 
+最新发布：[0.6.6三端正式发布](changes/2026-11-05-29-publish-three-platform-release.md)已完成GitHub公开与官网受控上线，含Android APK、Windows EXE、Linux便携包/DEB及本次实际SHA。[官网介绍/五张截图/下载页](changes/2026-11-05-30-refresh-website-release-pages.md)已更新；公开Range与源站校验通过。普通页面Cloudflare缓存按用户选择等待自然更新，可立即访问[新版首页](https://leonard.asia/?v=0.6.6)及[下载](https://leonard.asia/downloads?v=0.6.6)。最终CI、构建及平台限制见发布记录。
+
 最新修复验收：[本次缺陷修复与重新验收](audit/2026-11-05/FIX-VALIDATION.md)。处理前轮12项问题及手机失败项，本次有效589项：575通过、0失败、14条件跳过；Q07明确BPM尚未接入筛选。完整双端编译及独立手机包验收通过，未升版。各独立原因、代码和限制见下方18—28号记录；[191项功能清单](audit/2026-11-05/FUNCTION-CHECKLIST.md)与[原手机结果](audit/2026-11-05/ANDROID-DEVICE-REPORT.md)保留修复前历史。
 
 最新手机更新：[播放页动效与助手修复正式包覆盖安装](changes/2026-11-05-15-player-animation-phone-install.md)。已同签名保留数据覆盖，设备实际 APK 与本轮完整包逐字节一致；启动、展开、短拉回弹、长拉收起及再次开合实机通过。版本保持 0.6.6 / 40，电脑本轮未更新；验证范围见记录。
@@ -30,7 +32,7 @@
 
 本机优先更新：[最终导出修复 Linux 电脑安装](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。用户要求先安装到电脑，使用本次重新构建的完整程序，不复用今晚较早的同版本包；实际结果见记录。
 
-当前发布：[0.6.6 三端 GitHub 与官网发布](changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。用户已授权将导出修复发布到 Android／Windows／Linux；本次重新构建及实际上线状态以记录为准，不复用旧 Windows／Linux 包。
+前轮发布准备：[0.6.6 三端 GitHub 与官网发布](changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。用户已授权将导出修复发布到 Android／Windows／Linux；本次重新构建及实际上线状态以记录为准，不复用旧 Windows／Linux 包。
 
 最新导出命名与目录：[按歌单名保存并直接打开导出目录](changes/2026-11-04-19-playlist-names-and-direct-export-directory.md)。单歌单使用简洁歌单名，全库使用「整个音乐库」；重名加序号。Android 入口以明确目录 URI 打开系统文件浏览器，并避免复用其他浏览位置；20 项 JVM／最终 6 项设备回归及 Lint 通过。最终正式包已安装原手机，真实歌单命名、旧包保留和连续三次直达 `Download/Resonance` 实测通过；APK、证据和平台限制见记录。
 

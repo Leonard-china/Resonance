@@ -1,6 +1,6 @@
 # Resonance 官网
 
-2026-11-05 页面核对：首页按当前原生界面更新五张实际UI预览，保留灰绿品牌；下载页补Linux DEB入口和t64依赖边界。桌面/手机切换支持实际点击、键盘、缩放后保留选择，关闭JS时两张预览都能阅读。素材来自本轮合成数据回归，不含用户音乐/账号；本次构建与上线结果见[三端发布](../docs/changes/2026-11-05-29-publish-three-platform-release.md)及[页面记录](../docs/changes/2026-11-05-30-refresh-website-release-pages.md)。
+2026-11-05 上线核对：首页按当前原生界面更新五张实际UI预览，保留灰绿品牌；下载页补Linux DEB入口和t64依赖边界。桌面/手机切换支持实际点击、键盘、缩放后保留选择，关闭JS时两张预览都能阅读。素材来自本轮合成数据回归，不含用户音乐/账号；已部署并通过45项服务器回归、三端公开Range及静态资源SHA验证；普通页面缓存按用户选择等待自然更新，可立即访问 https://leonard.asia/?v=0.6.6 与 https://leonard.asia/downloads?v=0.6.6 。本次构建与上线结果见[三端发布](../docs/changes/2026-11-05-29-publish-three-platform-release.md)及[页面记录](../docs/changes/2026-11-05-30-refresh-website-release-pages.md)。
 
 2026-11-04 发布能力核对：官网支持 Windows EXE、Android APK 与可选 Linux x86_64 TAR.GZ，一次校验成功后事务切换；旧双端发布继续兼容。`manage.py import-release --linux <实际便携包路径>` 可一并导入三端。Linux 也显示真实大小、SHA-256、镜像与官网直连，详见[0.6.6 本轮发布记录](../docs/changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。作者发布总请求上限调整为 1280 MiB，每个包仍最多 400 MiB，公开表单沿用原小请求限制；外部代理仍可能限制大请求，大包优先用服务器本地 CLI 导入，不为发布自动群发邮件。
 
@@ -25,7 +25,7 @@
 
 ## 导航回归（2026-11-05）
 
-客户端切页按最后一次导航意图提交，覆盖乱序响应、缓存、前进后退与延迟ViewTransition回调。执行 `node --test website/tests/test_navigation.cjs`（Node内置测试，无额外npm依赖），并执行 `python -m unittest discover -s website/tests -p 'test_*.py' -v`（从仓库根目录）。这轮修改未部署现网；具体结果见[独立修复记录](../docs/changes/2026-11-05-26-website-latest-navigation-wins.md)。
+客户端切页按最后一次导航意图提交，覆盖乱序响应、缓存、前进后退与延迟ViewTransition回调。执行 `node --test website/tests/test_navigation.cjs`（Node内置测试，无额外npm依赖），并执行 `python -m unittest discover -s website/tests -p 'test_*.py' -v`（从仓库根目录）。该修复已随2026-11-05官网更新部署；初次验证历史与具体原因见[独立修复记录](../docs/changes/2026-11-05-26-website-latest-navigation-wins.md)。
 
 ## 本地运行
 

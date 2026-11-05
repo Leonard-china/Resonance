@@ -218,6 +218,8 @@ PlaybackStateStore.activate 只加载 vol.global 和 gain.auto_enabled 下的缓
 
 整曲响度按真实峰值余量限制补偿，算法版本化缓存；先播放后完成分析，增益平滑更新；静音/失败不缓存成功。保留 generation、准备任务取消、用户修改版本和旧原生事件保护，不能缩减为仅按 trackId 触发的无版本协程。
 
+2026-11-05 发布回归核对：响度分析的loudnorm目标LRA使用20，以兼容Ubuntu 22.04的FFmpeg 4.4；增益仍仅取input_i/input_tp，不改变缓存及峰值限制。配对重连测试有界等待连接后的配对和历史刷新，见[FFmpeg兼容修复](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md)与[配对回归等待](changes/2026-11-05-32-await-companion-restoration-in-regression.md)。
+
 Android PlaybackService 无 Activity 也能随原生队列切歌加载全局/自动值；自定义命令和 PreampAudioProcessor 完成增益/限幅。Windows FFmpeg 输出 48k PCM、Java Sound 输出，变速 atempo；停止/删除当前音频前关闭解码进程释放文件。
 
 2026-11-03 播放并发核对：`PlaybackStateStore` 的显式切歌准备请求在 `onReady` 交给原生播放器前，不接受旧媒体的 `isPlaying` 回调改变播放意图；用户主动暂停继续经 `setUserPlayIntent` 生效，刷新音量保留待启动请求属性。`PlaybackSession` 调用 `resolveTrackPlaybackQueue` 在启动前替换目标同 ID 的旧 Track，补入缺失目标、过滤空音频并去重；实际播放与快照使用同一队列。文件不可读后的恢复请求保留队列及随机模式。相关回归与设备边界见 [推荐播放修复](changes/2026-11-03-08-daily-recommendation-playback-selection.md)。
@@ -698,13 +700,13 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 <a id="website"></a>
 
-2026-11-05 发布回归核对：响度分析的loudnorm目标LRA使用20，以兼容Ubuntu 22.04的FFmpeg 4.4；增益仍仅取input_i/input_tp，不改变缓存及峰值限制。配对重连测试有界等待连接后的配对和历史刷新，见[FFmpeg兼容修复](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md)与[配对回归等待](changes/2026-11-05-32-await-companion-restoration-in-regression.md)。
+## 16. 独立官网与匿名论坛（发布能力核对 2026-11-05）
 
-## 16. 独立官网与匿名论坛（发布能力核对 2026-11-04）
+2026-11-05生产核对：0.6.6四份正式产物已公开GitHub，官网受控发布三端并保留数据与私有备份；候选副本45项回归通过后HUP网站，公网三端Range/ETag/首字节及CSS/JS/五图SHA通过。容器默认临时盘不足100MiB，服务器回归需把TMPDIR/TEMP/TMP设到网站文件系统的独立测试目录，保持低空间保护测试。普通首页和下载页仍可能命中Cloudflare旧缓存，用户选择自然更新，立即验证链接为`/?v=0.6.6`及`/downloads?v=0.6.6`；未完成全网清缓存。详见[正式发布记录](changes/2026-11-05-29-publish-three-platform-release.md)。
 
 2026-11-05页面核对：首页使用五张当前原生回归截图、三端介绍及清楚的下载入口；预览绑定在同一section查找按钮，图/选中状态一致，点击、键盘、缩放及无JS回退经过浏览器验证。下载页Linux仍通过原三端资产模型提供便携包，DEB直达本次GitHub同版本资产并提示t64依赖，不新增数据库平台类型。论坛、后台、订阅和用户运行数据保持原服务。见[页面记录](changes/2026-11-05-30-refresh-website-release-pages.md)。
 
-2026-11-05导航核对：`site.js` 每次navigate（含缓存/popstate）递增navigationGeneration，异步响应和ViewTransition提交前核对代次，只有当前导航能改DOM/history或触发原生回退；前进后退不pushState。执行 `node --test website/tests/test_navigation.cjs` 覆盖六种乱序/缓存/过渡/失败/点击当前页面场景，未发布现网。见[导航修复](changes/2026-11-05-26-website-latest-navigation-wins.md)。
+2026-11-05导航核对：`site.js` 每次navigate（含缓存/popstate）递增navigationGeneration，异步响应和ViewTransition提交前核对代次，只有当前导航能改DOM/history或触发原生回退；前进后退不pushState。执行 `node --test website/tests/test_navigation.cjs` 覆盖六种乱序/缓存/过渡/失败/点击当前页面场景，已随本次0.6.6官网更新部署。见[导航修复](changes/2026-11-05-26-website-latest-navigation-wins.md)。
 
 2026-11-03：用户指定迁往新购阿里云 Ubuntu 24.04 主机，目标 Nginx 直接 HTTPS＋官网／邮件／一起听三项 systemd；不再依赖翼龙启动器或 Cloudflare Tunnel。配置、源码白名单打包及保留真实数据的切换入口见 [阿里云部署](../services/deploy/aliyun/README.md)。新机已安装并恢复网站迁移副本，官网／中继 systemd 运行与重启、回环四页 200／两端 Range 206／WebSocket 配对验证通过；邮件 worker 未启动。公开切换尚未完成，原部署仍为公开入口；北京区续费备案、受信证书、最终数据同步及公网切换须后续完成。
 
