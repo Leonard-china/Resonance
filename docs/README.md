@@ -121,7 +121,8 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
-| 2026-11-05 | FFmpeg 4.4响度参数兼容与配对重连回归等待 | [具体记录](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md) |
+| 2026-11-05 | 配对重连回归等待持久化状态刷新 | [具体记录](changes/2026-11-05-32-await-companion-restoration-in-regression.md) |
+| 2026-11-05 | FFmpeg 4.4整轨响度参数兼容 | [具体记录](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md) |
 | 2026-11-05 | 官网以当前真实原生截图更新首页/介绍/三端下载，修复预览切换并补DEB说明 | [具体记录](changes/2026-11-05-30-refresh-website-release-pages.md) |
 | 2026-11-05 | 从当前修复源码构建Android/Windows/Linux正式包，核验后更新GitHub和官网 | [具体记录](changes/2026-11-05-29-publish-three-platform-release.md) |
 | 2026-11-05 | 播放页按可用高度分配封面与歌词预览 | [具体记录](changes/2026-11-05-28-player-cover-preview-height-budget.md) |

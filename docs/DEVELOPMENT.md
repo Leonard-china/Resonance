@@ -698,7 +698,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 <a id="website"></a>
 
-2026-11-05 发布回归核对：响度分析的loudnorm目标LRA使用20，以兼容Ubuntu 22.04的FFmpeg 4.4；增益仍仅取input_i/input_tp，不改变缓存及峰值限制。配对重连测试有界等待连接后的配对和历史刷新，见[兼容修复](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md)。
+2026-11-05 发布回归核对：响度分析的loudnorm目标LRA使用20，以兼容Ubuntu 22.04的FFmpeg 4.4；增益仍仅取input_i/input_tp，不改变缓存及峰值限制。配对重连测试有界等待连接后的配对和历史刷新，见[FFmpeg兼容修复](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md)与[配对回归等待](changes/2026-11-05-32-await-companion-restoration-in-regression.md)。
 
 ## 16. 独立官网与匿名论坛（发布能力核对 2026-11-04）
 

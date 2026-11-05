@@ -32,4 +32,15 @@ BPM目前仅能识别查询意图，尚未接通真实节拍分析与筛选；�
 
 ## 安装包校验
 
-GitHub Release附带从本次实际四份产物计算的 `SHA256SUMS.txt` 与源码提交信息。构建和上传完成前不填旧哈希冒充本轮结果。
+GitHub Release附带从本次实际四份产物计算的 `SHA256SUMS.txt` 与源码提交信息。本表由本次最终文件重新计算；应用源码提交为 `1874eb53b7d5fc3fe0ec5e42fb7bd6c655031a80`。
+
+<!-- GENERATED-CHECKSUMS -->
+
+| 安装包 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| `Resonance-0.6.6.exe` | 275987456 | `de02fcf4c4f5a08abf9d2de1a32983bc79aded90a500ba5b9547214e67e47b3b` |
+| `Resonance-0.6.6-release.apk` | 167484252 | `a300cbea3321fbdeb5267462d213486da31856a4bb95ed71b42c3c5e25d30a8b` |
+| `Resonance-0.6.6-linux-x86_64.tar.gz` | 266896255 | `a13d9900081c90f230d637a60d7f0c95b8d57769c11e8fd9b15b0c34907a34a3` |
+| `Resonance-0.6.6-linux-x86_64.deb` | 245892814 | `8d3ef53f7522d43e75e43241075cd6cc90c245b9227e43274cfe0b7b6b9f6e97` |
+
+<!-- END-GENERATED-CHECKSUMS -->
