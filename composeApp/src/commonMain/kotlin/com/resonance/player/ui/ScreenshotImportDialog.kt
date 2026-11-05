@@ -13,16 +13,24 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.resonance.player.model.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
     val feature = LocalMusicFeatures.current ?: return
     val assistant = feature.assistant ?: return
     val state by assistant.state.collectAsState()
     var lists by remember(draft.id) { mutableStateOf(draft.playlists) }
-    var selected by remember(draft.id) { mutableStateOf(draft.playlists.flatMapIndexed { i, list -> list.tracks.indices.map { i to it } }.toSet()) }
+    var selected by remember(draft.id) { mutableStateOf(draft.playlists.flatMapIndexed { i, list -> list.tracks.indices.filter { draft.selectedTracks?.contains("$i:$it") != false }.map { i to it } }.toSet()) }
     val chosen = lists.mapIndexedNotNull { i, list -> list.copy(tracks = list.tracks.filterIndexed { n, _ -> i to n in selected }).takeIf { it.tracks.isNotEmpty() } }
     val valid = chosen.isNotEmpty() && chosen.all { it.name.isNotBlank() && it.tracks.all { song -> song.title.isNotBlank() && song.artist.isNotBlank() } }
-    fun dismiss() { if (!state.task.running) feature.launch { assistant.discardScreenshotImport() } }
+    fun snapshot() = draft.copy(playlists = lists, selectedTracks = selected.map { "${it.first}:${it.second}" }.toSet())
+    LaunchedEffect(lists, selected) {
+        kotlinx.coroutines.delay(300)
+        try { assistant.saveScreenshotImportDraft(snapshot()) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (error: Exception) { feature.message = "草稿保存失败：${error.message}" }
+    }
+    fun dismiss() { if (!state.task.running) feature.launch { assistant.saveScreenshotImportDraft(snapshot()); feature.hiddenScreenshotDraftId = draft.id } }
     Dialog(onDismissRequest = ::dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxWidth(0.94f).widthIn(max = 760.dp).fillMaxHeight(0.92f).resonanceGlass(shape = MaterialTheme.shapes.large), shape = MaterialTheme.shapes.large, color = androidx.compose.ui.graphics.Color.Transparent) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -34,10 +42,10 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
                 }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     lists.forEachIndexed { listIndex, list ->
-                        item(key = "header-$listIndex") {
+                        item(key = "header-$listIndex", contentType = "header") {
                             OutlinedTextField(list.name, { name -> lists = lists.mapIndexed { n, old -> if (n == listIndex) old.copy(name = name.take(80)) else old } }, label = { Text("歌单名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())
                         }
-                        itemsIndexed(list.tracks, key = { index, _ -> "$listIndex-$index" }) { songIndex, song ->
+                        itemsIndexed(list.tracks, key = { index, _ -> "$listIndex-$index" }, contentType = { _, _ -> "song" }) { songIndex, song ->
                             val key = listIndex to songIndex
                             fun change(value: SongRequest) { lists = lists.mapIndexed { n, old -> if (n == listIndex) old.copy(tracks = old.tracks.mapIndexed { m, entry -> if (m == songIndex) value else entry }) else old } }
                             Surface(color = com.resonance.player.design.ResonanceColors.GlassLight, shape = MaterialTheme.shapes.medium) {
@@ -58,8 +66,9 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = ::dismiss, enabled = !state.task.running) { Text("取消导入") }
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { feature.launch { assistant.discardScreenshotImport() } }, enabled = !state.task.running) { Text("丢弃草稿") }
+                    TextButton(onClick = ::dismiss, enabled = !state.task.running) { Text("稍后继续") }
                     Button(onClick = { feature.launch { assistant.confirmScreenshotImport(draft.id, chosen); feature.onReload() } }, enabled = valid && !state.task.running) { Text("确认导入 ${selected.size} 首") }
                 }
             }

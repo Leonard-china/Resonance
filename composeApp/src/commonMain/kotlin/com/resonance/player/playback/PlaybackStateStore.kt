@@ -28,6 +28,7 @@ class PlaybackStateStore(
         val prepare: suspend () -> Unit,
         val ready: () -> Unit,
         val startsNativePlayback: Boolean,
+        val controlsPlayback: Boolean,
     )
     private var pendingStart: StartAction? = null
     private var closed = false
@@ -41,6 +42,7 @@ class PlaybackStateStore(
         autoPlay: Boolean = true,
         prepare: suspend () -> Unit = {},
         analyzeLoudness: Boolean = true,
+        nativePlayback: NativePlaybackState? = null,
         onReady: () -> Unit = {},
     ) {
         if (closed) return
@@ -52,15 +54,15 @@ class PlaybackStateStore(
         val volumeVersion = volumeRevision
         val gainVersion = gainRevision
         audioJob?.cancel()
-        val start = StartAction(prepare, onReady, startsNativePlayback = expectNativeTrack)
+        val start = StartAction(prepare, onReady, startsNativePlayback = expectNativeTrack, controlsPlayback = nativePlayback == null)
         pendingStart = start
         state.value = state.value.copy(
             currentTrack = track,
-            isPreparing = true,
-            isBuffering = false,
-            isPlaying = false,
-            progress = 0f,
-            positionMs = null,
+            isPreparing = nativePlayback == null,
+            isBuffering = nativePlayback?.isBuffering ?: false,
+            isPlaying = nativePlayback?.isPlaying ?: false,
+            progress = nativePlayback?.progress ?: 0f,
+            positionMs = nativePlayback?.positionMs,
             trackGainDb = 0f,
             isCurrentTrackCalibrated = false,
         )
@@ -87,11 +89,13 @@ class PlaybackStateStore(
                 state.value = state.value.copy(isPreparing = false)
                 started = true
                 pendingStart = null
-                if (userPlayIntent) {
-                    onReady()
-                } else {
-                    // User requested pause or lost focus while preparing; do not resume playback on ready.
-                    services.setPlaying(false)
+                if (start.controlsPlayback) {
+                    if (userPlayIntent) {
+                        onReady()
+                    } else {
+                        // User requested pause or lost focus while preparing; do not resume playback on ready.
+                        services.setPlaying(false)
+                    }
                 }
                 if (analyzeLoudness && !track.id.startsWith("together:") && calibrated == null && automatic && cached == null) {
                     val analyzed = services.analyzeAndCacheLoudnessGain(track)
@@ -102,7 +106,12 @@ class PlaybackStateStore(
                 throw cancelled
             } catch (error: Exception) {
                 if (request == generation) {
-                    state.value = state.value.copy(isPreparing = false, isBuffering = false, isPlaying = false)
+                    val failedBeforeStart = start.controlsPlayback && !started
+                    state.value = state.value.copy(
+                        isPreparing = false,
+                        isBuffering = if (failedBeforeStart) false else state.value.isBuffering,
+                        isPlaying = if (failedBeforeStart) false else state.value.isPlaying,
+                    )
                     if (!started) {
                         // Persistence/preparation failures must not start an obsolete queue.
                         pendingStart = null
@@ -112,6 +121,12 @@ class PlaybackStateStore(
                 }
             }
         }
+    }
+
+    /** Adopt an autonomous native transition without restarting or pausing its media item. */
+    fun adoptNativeTrack(track: Track, playlistId: String?, native: NativePlaybackState) {
+        if (native.trackId != track.id || !acceptNativeTrack(track.id)) return
+        activate(track, playlistId, resetGain = false, autoPlay = native.playWhenReady, nativePlayback = native)
     }
 
     fun setUserPlayIntent(playing: Boolean) {
@@ -191,6 +206,9 @@ class PlaybackStateStore(
                 expectNativeTrack = pending?.startsNativePlayback == true,
                 autoPlay = userPlayIntent,
                 prepare = pending?.prepare ?: {},
+                nativePlayback = if (pending?.controlsPlayback != true) NativePlaybackState(
+                    it.id, current.isPlaying, userPlayIntent, current.isBuffering, current.progress, current.positionMs,
+                ) else null,
                 onReady = pending?.ready ?: {},
             )
             state.value = state.value.copy(progress = current.progress, positionMs = current.positionMs, isPlaying = current.isPlaying)
@@ -204,7 +222,7 @@ class PlaybackStateStore(
             if (trackId != expected) return false
             expectedNativeTrack = null
         }
-        return pendingStart == null && trackId != state.value.currentTrack?.id
+        return pendingStart?.controlsPlayback != true && trackId != state.value.currentTrack?.id
     }
 
     fun playbackFailed() {

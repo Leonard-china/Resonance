@@ -91,6 +91,8 @@ fun SmartManagerScreen(
             }
         }
 
+        AudioRelinkEntry(tracks)
+
         val currentReport = report
         if (currentReport == null || isAuditing) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

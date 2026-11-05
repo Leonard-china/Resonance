@@ -89,6 +89,8 @@ internal fun MusicFeatureSettingsSection(section: SettingsSection) {
     }
     }
     if (section == SettingsSection.Ai) {
+    ToggleSetting("联网检索", settings.assistantWebSearchEnabled) { feature.save(settings.copy(assistantWebSearchEnabled = it)) }
+    Text("使用当前 DeepSeek 官方连接搜索网页、读取正文并附来源；搜索与抓取按服务商计费。其他连接不会转发密钥。", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
     SectionHeader("音乐来源与助手")
     SettingRow(Icons.Default.LibraryMusic, "歌源", "导入源 · 搜索专辑单曲 · 音轨与封面来源", { feature.onNavigate(LibraryDestination.Sources) })
     SettingRow(Icons.Default.FolderOpen, "下载与空间", "临时空间上限 · 释放下载 · 检查重复文件", { feature.onNavigate(LibraryDestination.Storage) })
@@ -359,6 +361,7 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
     val activeModelName = activeConnection?.model?.ifBlank { null } ?: "默认模型"
 
     val byId = remember(feature.library) { feature.library.associateBy(Track::id) }
+    val researchSteps = state.tasks.filter { it.kind == "assistant_web" && it.parentId == state.assistantTaskId }
     val listState = rememberLazyListState()
     LaunchedEffect(state.messages.size) {
         if (state.messages.isNotEmpty()) {
@@ -426,10 +429,14 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
                     if (user) AssistantMusicContent(item.content, emptyList()) else resolveAssistantMusic(item.content, byId)
                 }
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = if (user) Alignment.End else Alignment.Start) {
+                    if (!user && item === state.messages.lastOrNull() && researchSteps.isNotEmpty()) {
+                        AssistantResearchSteps(researchSteps, state.task.running)
+                    }
                     Surface(color = if (user) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
                         shape = MaterialTheme.shapes.medium) {
-                        Text(music.text, Modifier.padding(horizontal = if (user) 14.dp else 0.dp, vertical = 10.dp),
-                            color = if (user) MaterialTheme.colorScheme.onPrimaryContainer else ResonanceColors.TextPrimary)
+                        if (user) Text(music.text, Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer)
+                        else AssistantReply(music.text, Modifier.padding(vertical = 10.dp))
                     }
                     if (music.tracks.isNotEmpty()) AssistantMusicAttachment(music.tracks,
                         onPlay = { feature.playRecommendation(it, music.tracks) }, onAppend = feature.onAppendQueue)
@@ -438,11 +445,16 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 6.dp))
                 }
             }
+            if (state.messages.lastOrNull()?.role == "user" && researchSteps.isNotEmpty()) item(key = "assistant-research") {
+                AssistantResearchSteps(researchSteps, state.task.running)
+            }
             items(state.actions.filter { it.kind.startsWith("suggest_") }, key = AssistantAction::id) { action ->
                 FilledTonalButton(onClick = { feature.launch { feature.onAction(action); assistant.acknowledgeAction(action.id) } }, enabled = !state.task.running) { Text(action.label) }
             }
-            if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
-            if (!state.task.running && state.task.message.isNotBlank()) item { Text(state.task.message, style = MaterialTheme.typography.bodySmall) }
+            val lastReply = state.messages.lastOrNull()?.takeIf { it.role == "assistant" }?.content.orEmpty()
+            val notices = listOf(feature.message, state.task.message.takeUnless { state.task.running }.orEmpty())
+                .filter { it.isNotBlank() && !lastReply.endsWith(it) }.distinct()
+            items(notices) { Text(it, style = MaterialTheme.typography.bodySmall) }
         }
         if (images.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
             Text("已选择 ${images.size} 个截图片段 · ${feature.settings.screenshotRecognition.label}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
@@ -560,7 +572,7 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
 internal fun MusicFeatureDialogs() {
     val feature = LocalMusicFeatures.current ?: return
     val assistantState = feature.assistant?.state?.collectAsState()?.value
-    assistantState?.screenshotDraft?.let { ScreenshotImportDialog(it) }
+    assistantState?.screenshotDraft?.takeUnless { it.id == feature.hiddenScreenshotDraftId }?.let { ScreenshotImportDialog(it) }
     if (feature.showVideoImport) VideoImportDialog(feature)
     if (feature.showOverlayPermissionPrompt) {
         AlertDialog(

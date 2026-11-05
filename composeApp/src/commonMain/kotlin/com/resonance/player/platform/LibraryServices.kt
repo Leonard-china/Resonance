@@ -24,6 +24,7 @@ interface LibraryServices {
     suspend fun importMusicPaths(paths: List<String>, convertToMp3: Boolean = false): ImportReport =
         error("当前平台不支持文件拖入")
     suspend fun audioFileAvailable(track: Track): Boolean = track.sourceUri != null
+    suspend fun chooseRelinkDirectory(): List<com.resonance.player.model.AudioRelinkCandidate>? = null
     suspend fun chooseReplacementAudio(track: Track): Track? = null
     suspend fun saveReplacementAudio(track: Track) { updateTracks(listOf(track)) }
     suspend fun loadLibrary(): List<Track>

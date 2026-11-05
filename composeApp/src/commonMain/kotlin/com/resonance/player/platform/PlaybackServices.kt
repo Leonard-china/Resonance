@@ -17,13 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** Focused platform contract; implemented by the existing native adapters. */
 interface PlaybackServices {
+    val persistsNativePlaybackSnapshot: Boolean get() = false
     val listeningStats: StateFlow<com.resonance.player.model.ListeningStatsSnapshot>? get() = null
-    suspend fun awaitSynchronizedReady(trackId: String): Boolean = true
-    fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
-        restorePausedPlayback(track, listOf(track), progress, false, RepeatMode.Off)
-        setPlaybackSpeed(speed)
-        setPlaying(playing)
-    }
     val playbackErrors: Flow<String> get() = kotlinx.coroutines.flow.emptyFlow()
     val playbackIssues: Flow<PlaybackIssue> get() = playbackErrors.map { PlaybackIssue(it) }
     fun isCurrentPlaybackIssue(issue: PlaybackIssue): Boolean = true
@@ -54,6 +49,7 @@ interface PlaybackServices {
     }
     val playbackEnded: Flow<Unit>
     val playbackPositionMs: Long? get() = null
+    val currentPlaybackState: com.resonance.player.playback.NativePlaybackState? get() = null
     val playbackProgress: Flow<Float>
     val isPlayingChanges: Flow<Boolean>
     val isBufferingChanges: Flow<Boolean> get() = kotlinx.coroutines.flow.emptyFlow()

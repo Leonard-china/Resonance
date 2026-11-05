@@ -29,6 +29,7 @@ class PlaybackStateStoreTest {
     private class Backend(private val scope: CoroutineScope) {
         val volumes = mutableListOf<Float>()
         val gains = mutableListOf<Float>()
+        val playingCommands = mutableListOf<Boolean>()
         val values = mutableMapOf<String, Any?>()
         val delays = mutableMapOf<String, Long>()
         val services = Proxy.newProxyInstance(PlatformServices::class.java.classLoader, arrayOf(PlatformServices::class.java)) { _, method, args ->
@@ -37,6 +38,7 @@ class PlaybackStateStoreTest {
                 "setVolume" -> { volumes += arguments[0] as Float; Unit }
                 "setTrackGain" -> { gains += arguments[0] as Float; Unit }
                 "cancelVolumeCalibration" -> Unit
+                "setPlaying" -> { playingCommands += arguments[0] as Boolean; Unit }
                 else -> {
                     val id = when (val arg = arguments.firstOrNull()) { is Track -> arg.id; is String -> arg; else -> "" }
                     val key = "${method.name}:$id"
@@ -47,6 +49,7 @@ class PlaybackStateStoreTest {
                         else -> null
                     }
                     val value = if (values.containsKey(key)) values[key] else fallback
+                    if (value is Throwable) throw value
                     val wait = delays[key] ?: 0L
                     if (wait > 0) {
                         @Suppress("UNCHECKED_CAST") val continuation = arguments.last() as Continuation<Any?>
@@ -273,5 +276,146 @@ class PlaybackStateStoreTest {
         assertFalse(store.state.value.isBuffering)
         assertFalse(store.state.value.isPlaying)
         assertFalse(store.state.value.isLoading)
+    }
+
+    private fun native(id: String, playing: Boolean = true, ready: Boolean = playing, buffering: Boolean = false) =
+        NativePlaybackState(id, playing, ready, buffering, 0.25f, 45_000L)
+
+    @Test fun nativeAutoAdvanceKeepsPlayingWithoutAnotherPlayingEvent() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        store.setPlaying(true)
+        store.adoptNativeTrack(track("next"), null, native("next"))
+        assertTrue(store.state.value.isPlaying)
+        assertFalse(store.state.value.isPreparing)
+        assertEquals(0.25f, store.state.value.progress)
+        assertEquals(45_000L, store.state.value.positionMs)
+        advanceUntilIdle() // Media3 stays playing and emits no additional isPlaying=true callback.
+        assertTrue(store.state.value.isPlaying)
+        assertTrue(backend.playingCommands.isEmpty())
+    }
+
+    @Test fun nativeSnapshotOverridesAnOldPausedUiOnAutoAdvance() = runTest {
+        val backend = Backend(this)
+        val store = PlaybackStateStore(backend.services, this)
+        store.setPlaying(false)
+        store.adoptNativeTrack(track("next"), null, native("next"))
+        advanceUntilIdle()
+        assertTrue(store.state.value.isPlaying)
+        assertEquals("next", store.state.value.currentTrack?.id)
+        assertTrue(backend.playingCommands.isEmpty())
+    }
+
+    @Test fun bufferingNativeTransitionDoesNotTurnIntoAPauseAfterGainLoads() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        store.adoptNativeTrack(track("next"), null, native("next", playing = false, ready = true, buffering = true))
+        store.setPlaying(false) // Not audible while buffering, but playWhenReady is still true.
+        advanceUntilIdle()
+        assertTrue(store.state.value.isBuffering)
+        assertTrue(backend.playingCommands.isEmpty())
+        store.setPlaying(true)
+        assertTrue(store.state.value.isPlaying)
+        assertFalse(store.state.value.isBuffering)
+    }
+
+    @Test fun pausedNativeTransitionIsAdoptedWithoutRestartOrPauseCommands() = runTest {
+        val backend = Backend(this)
+        val store = PlaybackStateStore(backend.services, this)
+        store.setPlaying(true)
+        store.adoptNativeTrack(track("next"), null, native("next", playing = false))
+        advanceUntilIdle()
+        assertFalse(store.state.value.isPlaying)
+        assertTrue(backend.playingCommands.isEmpty())
+    }
+
+    @Test fun explicitPauseDuringNativeGainLoadingRemainsPaused() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        store.adoptNativeTrack(track("next"), null, native("next"))
+        runCurrent()
+        val requestedPlaying = !store.state.value.isPlaying // Same toggle as the main and floating controls.
+        assertFalse(requestedPlaying)
+        store.setUserPlayIntent(requestedPlaying)
+        backend.services.setPlaying(requestedPlaying)
+        store.setPlaying(false)
+        advanceUntilIdle()
+        assertFalse(store.state.value.isPlaying)
+        assertEquals(listOf(false), backend.playingCommands)
+    }
+
+    @Test fun nextNativeTransitionCanReplacePendingGainWork() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadAutoLoudnessGain:b"] = 500
+        backend.values["loadAutoLoudnessGain:b"] = 8f
+        backend.values["loadAutoLoudnessGain:c"] = -2f
+        val store = PlaybackStateStore(backend.services, this)
+        store.adoptNativeTrack(track("b"), null, native("b"))
+        runCurrent()
+        store.adoptNativeTrack(track("c"), null, native("c"))
+        advanceUntilIdle()
+        assertEquals("c", store.state.value.currentTrack?.id)
+        assertTrue(store.state.value.isPlaying)
+        assertEquals(-2f, store.state.value.trackGainDb)
+        assertFalse(8f in backend.gains)
+    }
+
+    @Test fun audioRefreshDuringNativeTransitionPreservesPauseAndPosition() = runTest {
+        val backend = Backend(this)
+        backend.delays["loadGlobalVolume:"] = 500
+        val store = PlaybackStateStore(backend.services, this)
+        store.adoptNativeTrack(track("next"), null, native("next"))
+        runCurrent()
+        store.setUserPlayIntent(false)
+        store.refreshAudio(null)
+        advanceUntilIdle()
+        assertFalse(store.state.value.isPlaying)
+        assertFalse(store.state.value.isPreparing)
+        assertEquals(45_000L, store.state.value.positionMs)
+        assertTrue(backend.playingCommands.isEmpty())
+    }
+
+    @Test fun gainReadFailureCannotMarkAnAudibleNativeTrackPaused() = runTest {
+        val backend = Backend(this)
+        backend.values["loadGlobalVolume:"] = IllegalStateException("settings read failed")
+        var failure: Throwable? = null
+        val store = PlaybackStateStore(backend.services, this) { failure = it }
+        store.adoptNativeTrack(track("next"), null, native("next"))
+        advanceUntilIdle()
+        assertNotNull(failure)
+        assertTrue(store.state.value.isPlaying)
+        assertFalse(store.state.value.isPreparing)
+        assertTrue(backend.playingCommands.isEmpty())
+    }
+
+    @Test fun obsoleteOrUnacknowledgedNativeSnapshotsCannotReplaceUserSelection() = runTest {
+        val backend = Backend(this)
+        val store = PlaybackStateStore(backend.services, this)
+        store.activate(track("selected"), null, expectNativeTrack = true)
+        advanceUntilIdle()
+        store.adoptNativeTrack(track("old"), null, native("selected")) // Queued old event; controller already moved.
+        store.adoptNativeTrack(track("old"), null, native("old"))
+        assertEquals("selected", store.state.value.currentTrack?.id)
+        store.adoptNativeTrack(track("selected"), null, native("selected")) // Acknowledge latest explicit request.
+        store.adoptNativeTrack(track("next"), null, native("next"))
+        advanceUntilIdle()
+        assertEquals("next", store.state.value.currentTrack?.id)
+        assertTrue(store.state.value.isPlaying)
+    }
+
+    @Test fun loudnessFailureAfterPlaybackStartsCannotFalselyPauseTheButton() = runTest {
+        val backend = Backend(this)
+        backend.values["analyzeAndCacheLoudnessGain:next"] = IllegalStateException("analysis failed")
+        var failure: Throwable? = null
+        val store = PlaybackStateStore(backend.services, this) { failure = it }
+        store.activate(track("next"), null, expectNativeTrack = true) { store.setPlaying(true) }
+        advanceUntilIdle()
+        assertNotNull(failure)
+        assertTrue(store.state.value.isPlaying)
+        assertFalse(store.state.value.isPreparing)
+        assertTrue(backend.playingCommands.isEmpty())
     }
 }

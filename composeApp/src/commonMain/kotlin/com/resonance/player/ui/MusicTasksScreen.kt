@@ -39,6 +39,7 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
             Text("任务列表", style = MaterialTheme.typography.headlineMedium)
         }
+        if (state.screenshotDraft != null) TextButton(onClick = { feature.hiddenScreenshotDraftId = null }) { Text("继续核对截图歌单草稿") }
         TextButton(onClick = { feature.launch { assistant.matchVideoCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("匹配已下载歌曲的专辑封面") }
         TextButton(onClick = { feature.launch { assistant.matchMissingCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("补齐曲库缺失封面 · 不调用模型") }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {

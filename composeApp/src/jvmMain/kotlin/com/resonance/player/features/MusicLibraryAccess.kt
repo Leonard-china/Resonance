@@ -26,6 +26,8 @@ interface MusicLibraryAccess {
         return restored
     }
     suspend fun audioInfo(track: Track): AudioFileInfo = AudioFileInfo()
+    suspend fun prepareAnalysisAudio(track: Track, output: Path) { error("此平台未提供本地音频分析") }
+    suspend fun audioRevision(track: Track): String = track.sourceUri.orEmpty()
     suspend fun prepareSpeechAudio(track: Track, output: Path) { error("此平台未提供音频识别准备能力") }
     fun playingTrackId(): String? = null
     fun hasListened(trackId: String): Boolean = false

@@ -1,4 +1,8 @@
-# 2026-11-05 — Resonance 详细开发说明：应用会话、原生播放与平台边界
+# 2026-11-05 — Resonance 详细开发说明：应用会话、独立播放与平台边界
+
+2026-11-05 播放器优化核对：歌词工具改为独立有界滚动面板，歌词容器裁剪；暂停／悬浮关闭减少空闲唤醒，单调歌词采用时间戳索引，Android原生服务独占周期快照；桌面设备失败后保留进度重试。截图核对草稿、编辑与勾选保存到本机，可从任务页继续；智能管家支持选目录、预览后批量重新定位失效音频；意图找歌接入真实本地BPM分析与缓存校验。每首最多前90秒，不上传／不调用模型。独立变更34—39号及[本次验收](audit/2026-11-05/player-improvements/VALIDATION.md)记录当前范围，手机未连接，未安装／发布。
+
+2026-11-05 当前功能核对：按用户要求移除一起听，三端仅保留独立播放。主导航为音乐库、音乐助手、工具；删除房间／聊天／伙伴／邀请、客户端中继与寻址、Android 后台房间运行时及桌面轮询。旧房间数据和临时缓存不再读取，也不自动清除。源码改动、本次验证和发布边界见[移除记录](changes/2026-11-05-33-remove-listen-together.md)；本页后部有明确日期的旧房间验收仅是历史。
 
 2026-11-05 全功能测试核对：[191项功能清单与总报告](audit/2026-11-05/FEATURE-TEST-REPORT.md)基于当前未提交源码；手机重连后，Android 30类79项实测为62通过、10失败、7条件跳过，首轮异常组单独复测3项通过但原始异常保留。合并前轮本机结果为541通过、10失败、14跳过，另1个桌面批量截图方法超时；前轮12项问题（5 P1、7 P2）仍未修复。未改产品代码或断言，正式包未覆盖，独立包已移除。实际失败包含旧界面/转场契约与定位不符、尺寸和帧采样验收缺口，见[Android续测](audit/2026-11-05/ANDROID-DEVICE-REPORT.md)及[17号记录](changes/2026-11-05-17-android-device-functional-regression.md)；前轮编译/本机过程保留在[16号记录](changes/2026-11-05-16-comprehensive-feature-testing.md)。Windows、真实系统入口、付费/公网和长时验收仍未补齐。
 
@@ -12,7 +16,7 @@
 
 2026-11-05 较早桌面安装：完整程序已安装为 `0.6.6-20261105-am-ui/`，本次包内392文件与原生事件验收 app image 一致，桌面/菜单 `current` 已切换；本次已通过应用托盘正常退出两个旧实例，启动最新版并确认进程目录、WM_CLASS 与可见窗口，见[桌面切换记录](changes/2026-11-05-03-desktop-latest-running-instance.md)。新导入和界面/本次验证见[导入记录](changes/2026-11-05-01-desktop-files-and-drop-import.md)、[UI/安装记录](changes/2026-11-05-02-am-reference-native-ui.md)。最终桌面364项：354通过/10跳过，Android与Linux构建通过，Android/Windows设备和真实文件管理器手动拖放边界分别保留。
 
-2026-11-04 定向审计核对：[Bug 与优化报告](audit/2026-11-04/BUG-AND-OPTIMIZATION-REPORT.md)记录当前未修复的导入提交、离线曲库、备份恢复、删除授权/版本去重与 UI 接线等 13 项问题及 9 项优化入口。本次只增加报告/隔离证据并勘误下方能力表；不代表已经修复，也不以历史测试代替本次结果。原生音频分析器/缓存目前没有生产调用点，本地意图搜索仅按元数据文本规则评分，BPM 只显示标签。
+2026-11-04 定向审计核对：[Bug 与优化报告](audit/2026-11-04/BUG-AND-OPTIMIZATION-REPORT.md)记录当前未修复的导入提交、离线曲库、备份恢复、删除授权/版本去重与 UI 接线等 13 项问题及 9 项优化入口。本次只增加报告/隔离证据并勘误下方能力表；不代表已经修复，也不以历史测试代替本次结果。该段为11月4日审计历史；2026-11-05本地音频分析／缓存已接入BPM生产筛选，现行边界以上方最新核对为准。
 
 2026-11-04 本机最终安装：当前用户 `current` 指向 `0.6.6-20261104-export-fix/`，原桌面／菜单入口和旧程序、音乐数据保留；本次新包及原生可见窗口通过检查，见[安装记录](changes/2026-11-04-21-install-final-export-fix-on-linux-desktop.md)。
 
@@ -20,11 +24,11 @@
 
 2026-11-02 当前质量进度：第一批双主题/统计保护/默认 WSS、第二批原生统计/偏好顺序/错误归属、第三批全链路加载与缓冲状态已实现，并完成 MuMu 帧率实测与 Windows 真实桌面可见窗口验收；当前证据见 [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md) 和变更 01–07。公网中继已上线并通过双端原生复测；跨蜂窝网络真机、多人平权控制及 2 小时长时压力验收仍待后续环境具备。PRODUCT_AUDIT 保留修改前基线，下文历史发布结果不能替代当前验收。
 
-源码核对日期：2026-11-05（Asia/Shanghai）；本次为核心重构，当前工作区保留此前发布设定的 **`0.6.6 / 40`**。最新核心实现与本次限制以上方重构记录为准。此前发布构建、测试、桌面安装和 GitHub 状态见[本轮独立记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)，不以历史验证代替本次结果。
+源码核对日期：2026-11-05（Asia/Shanghai）；本次核对包含一起听移除，当前工作区保留此前发布设定的 **`0.6.6 / 40`**。最新核心实现与本次限制以上方重构记录为准。此前发布构建、测试、桌面安装和 GitHub 状态见[本轮独立记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)，不以历史验证代替本次结果。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
-维护者已选择根目录 [MIT 许可证](../LICENSE) 用于原创代码，并确认长时间双人房间、各自本机聊天记录与常听伙伴方案，见[实施边界](changes/2026-10-30-07-companion-room-chat-and-partner-scope.md)。聊天/伙伴和可选寻址基础功能已实现并通过核心回归，长时原生及交付验收仍在进行；当前默认中继与公网验收边界以第 7.1 节为准，早期可选寻址方案属于历史阶段。
+维护者已选择根目录 [MIT 许可证](../LICENSE) 用于原创代码。2026-10-30 的陪伴房间需求与实现已随本次一起听移除而终止，不作为当前能力或后续待办。
 
 2026-10-30 MuMu 输入配置变化会重建正式 MainActivity；`App.destination` 已改为 `rememberSaveable`，新包待复测。只保存枚举，邀请/Key 不进 SavedState；其他临时草稿未全部审计，见[独立记录](changes/2026-10-30-04-preserve-navigation-across-input-configuration.md)。
 
@@ -56,7 +60,7 @@
 | KGMA v3 / slot 1 转 MP3 | 已接入 | 已接入 | 进度、取消、保留源文件；支持载荷转 320k MP3 |
 | KGG v5 转 MP3 | 不支持，明确提示 | 已接入 | 需要本机酷狗数据库中的匹配密钥 |
 | 播放/队列/随机/循环/变速/恢复 | Media3 服务 | FFmpeg/Java Sound | 原生后台播放与快照恢复 |
-| 双人一起听 | JVM TLS + MediaSessionService 托管 | JVM TLS + 原生同步作用域 | 邀请确认/过期、有限恢复、准备确认、显式队列与点歌审批、预取、歌词与 AI 候选；最终设备验收进行中，异地仍需可达；见第 7.1 节 |
+| 一起听／陪伴房间 | 已移除 | 已移除 | 2026-11-05：Android／Windows／Linux 不再创建、加入或后台连接房间；见第 7.1 节 |
 | 自动音量平衡 | 单开关 | 单开关 | 全局音量、整曲分析/缓存，独立帮助页 |
 | 歌词与双向翻译 | 已接入 | 已接入 | 本地 LRC/KRC、LRCLIB、显式 AI、任意目标语言和双语模式 |
 | 后台悬浮歌词 | 系统 overlay（带权限引导） | 透明置顶窗口 | 灵动岛展开全屏播放器常驻触觉切换按钮；拖动、字号、锁定/点击穿透，Android 悬浮窗未授权时自动弹出引导对话框并直达系统设置 |
@@ -70,7 +74,7 @@
 | 设备/LAN/二维码同步、酷狗歌单链接 | 已删除 | 已删除 | 不删除历史歌单；酷狗补全和 KGG 密钥读取仍在 |
 | 睡眠定时 | 原生播放服务 | 桌面运行作用域 | 15／30／45／60 分钟或曲终停止；后台继续，完全退出不恢复 |
 | 歌词整体偏移/原文件写回 | 偏移已接入，写回有限 | 偏移已接入，写回有限 | 单曲偏移独立持久化，不宣称完整原文件写回 UI |
-| 自然语言意图找歌（2026-11-04 核对） | 文本规则已接入 | 文本规则已接入 | 场景、情绪、曲风与关键词按标题/歌手/专辑评分，不调用模型；BPM 仅展示意图标签，尚未参与结果匹配，见审计 B08 |
+| 自然语言意图找歌（2026-11-05 核对） | 本地文本＋BPM | 本地文本＋BPM | 场景／情绪／曲风按标题、歌手、专辑文字匹配；BPM来自显式本地前90秒分析，范围会实际筛选；无模型或服务器请求，未知节拍不伪造 |
 | 本地曲库智能管家 | 已接入 | 已接入 | 一键体检、垃圾字符清理、标题歌手分离、未知专辑规范与多版本音质去重 |
 | 实时伴奏消除与音效预设 | 已接入 | 已接入 | 统一 PCM DSP（原声/人声/低音/流行/摇滚/3D环绕/伴奏消音），全屏与歌曲详情一键切换 |
 | 听歌时长与播放频次统计 | 已接入 | 已接入 | 单曲与全库累计听歌时长、完播次数、最后收听记录，原子持久化并在详情与画像展示 |
@@ -83,7 +87,7 @@
 
 精确依赖以 [版本目录](../gradle/libs.versions.toml)、[Gradle 配置](../composeApp/build.gradle.kts) 为准：Kotlin 2.3.20、Compose 1.11.0、AGP 8.9.2、Gradle Wrapper 8.11.1、Lint 9.4.1；Android minSdk 26 / compile/target 36，Build Tools 36.0.0。
 
-Media3 1.10.1、WorkManager 2.10.1、FFmpegKit audio 8.1.7、Smart Exception 0.2.1、jaudiotagger 3.0.1、sqlite-jdbc 3.47.1.0、org.json 20250517、JNA 5.17.0、Haze 2.0.0-alpha02。2026-11-01 核对：当前仍依赖 ZXing 3.5.3，用于 B 站登录与一起听邀请二维码；不能沿用早期 LAN 移除时“ZXing 已移除”的描述。sqlite-jdbc 只读取酷狗密钥，不是曲库数据库。
+Media3 1.10.1、WorkManager 2.10.1、FFmpegKit audio 8.1.7、Smart Exception 0.2.1、jaudiotagger 3.0.1、sqlite-jdbc 3.47.1.0、org.json 20250517、JNA 5.17.0、Haze 2.0.0-alpha02。2026-11-05 核对：ZXing 3.5.3 仅保留 B 站登录二维码用途；一起听专用 okhttp-tls 已删除，OkHttp 仍用于同步歌词识别。sqlite-jdbc 只读取酷狗密钥，不是曲库数据库。
 
 | 源集（下文简写） | 作用 |
 | --- | --- |
@@ -105,7 +109,7 @@ Gradle 只有 `:composeApp` 一个应用模块。源码简写 C/J/A/D 均指 `co
 | [C/App.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/App.kt) | UI 状态与启动装配、导航/弹窗、前台推荐/翻译接线；导入/队列/歌词编排委托 application 用例 |
 | C/application/ApplicationTasks、ApplicationLifetime | 应用任务所有权、异常反馈、停止生产者/等待清理/排空写入/释放平台的退出事务 |
 | C/application/PlaybackSession、LyricsSession、LibraryImportUseCase、ApplicationPreferences | 播放命令与最新队列、带代次查词、导入屏障与重载、捕获值有序保存 |
-| [C/platform/PlatformServices.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/platform/PlatformServices.kt) | 兼容聚合接口，继承 PlaybackServices、LibraryServices、PreferenceServices、AppearanceServices、LyricsServices；保留助手/一起听/生命周期等平台装配入口 |
+| [C/platform/PlatformServices.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/platform/PlatformServices.kt) | 兼容聚合接口，继承 PlaybackServices、LibraryServices、PreferenceServices、AppearanceServices、LyricsServices；保留助手/生命周期等平台装配入口 |
 | [C/platform/MusicAssistantServices.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/platform/MusicAssistantServices.kt) | 配置/连接测试、聊天、视频、翻译缓存、推荐/拒绝/原因、取消、后台快照 |
 | C/model/LibraryModels.kt、MusicFeatureModels.kt | Track/Playlist/Lyrics、报告、模型连接、设置、进度、Token、推荐 |
 | [C/playback/PlaybackStateStore.kt](../composeApp/src/commonMain/kotlin/com/resonance/player/playback/PlaybackStateStore.kt) | 激活代次、准备任务取消、用户设置版本、全局音量/自动增益 |
@@ -210,7 +214,7 @@ AndroidMusicAccess 共用 filesDir 锁，读取托管索引+App 曲库快照，�
 
 ## 7. 播放、音量平衡与恢复
 
-2026-11-05 播放用例：`PlaybackSession` 拥有待执行文件检查及请求代次；UI state bridge 每次读取最新有效队列。删除当前曲目直接把缩减后的队列交给下一请求，清空时取消文件检查并清 PlaybackStateStore，避免迟到请求复活已删除条目。一起听控制门禁仍由该用例遵守原房间角色规则。
+2026-11-05 播放用例：`PlaybackSession` 拥有待执行文件检查及请求代次；UI state bridge 每次读取最新有效队列。删除当前曲目直接把缩减后的队列交给下一请求，清空时取消文件检查并清 PlaybackStateStore，避免迟到请求复活已删除条目。播放、切歌、队列编辑均直接控制本机播放器，不再经过房间角色或控制请求。
 
 桌面 `DesktopPcmPlayer` 以请求会话持有解码器/输出，`DesktopAudioBackend` 分离 FFmpeg 与 JavaSound。play/pause/seek/close 不在调用线程访问 native 输出；worker 每轮检查暂停，写入最多 2048 字节并按 4 字节帧对齐，零写入退让 10ms，5 秒无进展报错；结束通过有界消费检查代替无期限 drain。首次真正 PCM/写入决定准备/缓冲状态，位置由 worker 缓存；旧会话不发布当前事件。最多两个 daemon worker、一个待执行任务和两个设备槽位，核心线程空闲回收；native 驱动永久阻塞仍需平台验收，不能承诺 JVM 强制中断。FFmpeg 错误提示仅读取日志的有界尾部，完成/清理有等待期限。
 
@@ -224,51 +228,17 @@ Android PlaybackService 无 Activity 也能随原生队列切歌加载全局/自
 
 2026-11-03 播放并发核对：`PlaybackStateStore` 的显式切歌准备请求在 `onReady` 交给原生播放器前，不接受旧媒体的 `isPlaying` 回调改变播放意图；用户主动暂停继续经 `setUserPlayIntent` 生效，刷新音量保留待启动请求属性。`PlaybackSession` 调用 `resolveTrackPlaybackQueue` 在启动前替换目标同 ID 的旧 Track，补入缺失目标、过滤空音频并去重；实际播放与快照使用同一队列。文件不可读后的恢复请求保留队列及随机模式。相关回归与设备边界见 [推荐播放修复](changes/2026-11-03-08-daily-recommendation-playback-selection.md)。
 
+2026-11-05 自动切歌状态核对（0.6.6 / 40）：`PlaybackServices.currentPlaybackState` 在 UI 线程读取当前原生曲目、实际播放、playWhenReady、缓冲和位置；Android 从 MediaController 读取，Windows／Linux 从桌面原生会话读取。`App.activeTrackChanges → PlaybackStateStore.adoptNativeTrack` 校验事件／快照曲目及显式点播保护后附着，只刷新音频设置，不暂停／重播；音量读取未完成也允许下一次原生切歌取消旧工作。`refreshAudio` 保持附着语义和用户暂停；原生已在播放或新播放启动后的响度失败只报告错误，不伪造暂停状态。详见[自动切歌修复](changes/2026-11-05-40-auto-next-playback-state.md)。
+
 PlaybackSnapshot 保存曲目、队列、进度、歌单。冷启动暂停恢复，后台会话存活则附着。Android activeMusicId 来自真实服务状态，不能拿上次快照判断“正在播放”，否则旧推荐永远被保留。
 
-### 7.1 一起听与多人房间的当前边界（协议历史核对 2026-10-31；UI 核对 2026-11-03）
+### 7.1 一起听已移除（2026-11-05）
 
-2026-11-03 UI：`TogetherScreen` 使用独立 `TogetherRoomPage`，复制／分享邀请与结束／退出在滚动容器之外的固定磨砂页头，创建／加入新房间时回到内容顶部。复制反馈直接显示在按钮上，过期时同一位置提供刷新；二维码、刷新及地址／端口编辑由邀请菜单进入。`TogetherRoomHero` 使用房主实际曲目或访客远端曲目的封面与真实状态；成员和 AI 选歌默认收起。`TogetherQueueSummary` 最多组合当前及后续两首（没有当前项时为前三首）；“查看全部”打开有固定关闭入口、85% 可用高度和稳定歌曲 ID 的 `LazyColumn` 原生对话框，保留点歌、上移／下移／移除及原权限限制。共享队列不会因展示收起而缩短。聊天、网络协议、加入确认与音频传输沿用原实现。本次按用户要求未运行测试或设备验收，构建与产物见[房间重排记录](changes/2026-11-03-03-together-room-and-pinned-invitation.md)。
+因维护者不再承担房间服务器成本，也不继续实现点对点方案，删除该功能而非隐藏入口。共享 UI／模型／平台接口、JVM 房间传输（TLS／WSS／STUN／寻址）、伙伴／聊天存储实现、原生同步驱动及专用测试已移除。Android 不再注册 `resonance-listen` 链接、接收邀请、创建房间通知或在 PlaybackService 装配房间运行时；Windows／Linux 不再创建房间服务、后台同步轮询或托盘聊天通知。
 
-2026-11-01 状态校正：下列“尚未构建/测试”的描述保留各次实施当时的边界；后续构建记录见 [11月1日交付](changes/2026-11-01-09-together-chat-routing-and-full-validation.md)，本次重新执行的结果见 [审计台账](PRODUCT_AUDIT.md#6-本次验证台账)。桌面回归不等于三端设备、跨网、长时或中继生产验收，这些限制仍然有效。
+本机曲库、歌单、收藏、音频、播放快照、统计、顺序偏好写入和 `.resonance` 包格式保持兼容。旧 `together-companions`／`cache/together-audio` 等数据不再读取，不自动删除；播放统计和响度流程中的旧临时 ID 排除条件仅作兼容保护，不会启动网络。ZXing 继续用于 B 站登录，OkHttp 继续用于语音同步歌词；仅移除房间证书专用的 okhttp-tls。
 
-工作区已编写多人协调、共享队列、群聊、平等控制及可选中继代码；这些代码均未构建或测试。当前不能将多人功能、群消息可靠送达、协调节点迁移或真实跨网可达视为已完成。房间由创建者设备协调；成员操作免逐次审批，但加入需要用户选择的确认流程。详见[多人记录](changes/2026-10-31-23-multiplayer-room-coordinator-and-equal-control.md)及[后续审查和修正](changes/2026-10-31-28-group-chat-routing-and-admission-safety.md)。
-
-同一成员连接的完整媒体传输在源码中已串行化，并在启动协程前固定媒体 ID；实际弱网与多端传输尚未验证。见[音频传输记录](changes/2026-10-31-29-serialize-room-audio-transfers.md)。
-
-创建者与访客接收音频时按服务自有临时文件的进程内账目预留空间，多个并发传输共用 512 MiB 上限；已有未登记的历史文件不计入该账目。实现未构建或测试，见[并发缓存限额](changes/2026-11-01-01-bound-concurrent-room-audio-cache.md)。
-
-2026-11-01：共享队列通过带会话/修订的本机 `hostQueue` 投影连接原生驱动和界面；`TogetherHostPlaybackDriver` 在 Android 服务及 Windows 原生作用域处理控制，Compose 不再重复执行。增删移动、混合贡献队列、贡献校验完成和 Windows 自动换曲已接入源码；Android 增量修改 Media3 时间线，尽量保留当前位置。投影确认防旧界面覆盖，明确空队列不回退曲库。均未构建测试，见[原生控制与队列](changes/2026-11-01-05-native-host-controls-and-playable-queue.md)。早期接线历史见[控制记录](changes/2026-10-31-31-route-room-playback-controls-and-queue.md)及[贡献曲记录](changes/2026-10-31-32-play-contributed-room-audio.md)。
-
-房间广播按连接世代检查，播放器动作附带房间 ID，界面拒绝执行来自旧房间的非空 ID 动作；其余跨房间竞争仍需处理，尚未构建或测试，见[会话隔离修正](changes/2026-10-31-35-bind-room-actions-to-session.md)。
-
-聊天室附着和收发也检查对应连接是否仍有效，异步成员更新携带会话 ID 防止迟到覆盖；实现未构建或测试，见[聊天室生命周期修正](changes/2026-11-01-03-reject-stale-companion-room-attachments.md)。
-
-群聊新增 `chatReceipts=1` 能力：本人待发和协调设备转发记录保存原接收名单，按发送者及序号补发、逐成员落盘回执，只在原名单全部确认时显示均已接收；后来加入者不收历史。原房间关闭、记录清空或进程重启后的投递仍不保证，旧实验群协议也不兼容；逐成员 TLS 仍不防协调设备读取/伪造内容。代码尚未构建或测试，见[逐成员回执记录](changes/2026-11-01-04-persist-group-chat-recipient-receipts.md)。
-
-共享契约为 `C/platform/ListenTogetherService.kt`，实现为 `J/together/JvmListenTogetherService.kt` 与 `TogetherTransport.kt`。Android 的 `AndroidTogetherRuntime` 和 Windows 驱动负责原生播放同步；音频临时文件不加入曲库。新房间使用随机聊天会话 ID，群消息按发送者序号去重，清空仅操作本机；逐成员回执/原房间内重试已写入源码，未构建测试，不能承诺不丢消息。发送者签名、协调设备移交、进程重启后投递及全部旧版兼容仍未完成。协调设备参与并可读取消息，TLS 及可选中继外层 TLS 不等于协调设备不可见的群组加密。
-
-实验多人协议为 `groupVersion=2`，群聊另协商 `chatReceipts=1`，双方需更新；没有聊天存储的音频客户端不声明聊天能力。群快照检查房间、递增修订、人数/曲目上限、唯一合法身份、文本与当前曲一致性；切歌重置就绪并过滤旧媒体 ready，失败上传清理待传输条目，旧单对端单独发送队列列表；旧私聊不直接混为群聊。实现未验证，见[快照与恢复](changes/2026-11-01-06-validate-room-snapshots-and-media-recovery.md)。
-
-维护者将最终构建与测试指定交给 Antigravity，本轮没有运行这些命令；可复制的[验收提示词](HANDOFF-2026-11-01-ANTIGRAVITY-VALIDATION.md)列出当前变动、验证矩阵与双端 Release 任务。
-
-当前会话新增最多 999 条进程内未读计数，只在新消息落盘后增加；聊天末条可见时本机归零，不发送已读回执。播放器标题和聊天旧消息浏览时显示新消息；协调设备附着成员退出后尝试选择剩余验证成员。系统杀进程后不保证接收；实现未构建测试，见[消息提醒及通道恢复](changes/2026-11-01-07-unread-chat-and-surviving-member-channel.md)。
-
-2026-10-31 静态修复：同时只允许一个等待审批的请求；成员插入及清理核验世代和身份；上传必须属于发送者队列；旧私聊数据保留，新房间不自动迁移早期实验群记录。配对身份、成员状态、恢复令牌和群消息的完整多端交互仍需验证。[聊天与准入记录](changes/2026-10-31-28-group-chat-routing-and-admission-safety.md)
-
-播放策略在播放中对较大漂移执行限频 seek；Android 代码保留速率微调，Windows 因修改速度会重新启动解码而禁用该微调。[播放修正记录](changes/2026-10-31-27-avoid-desktop-tempo-restarts.md)；听感与卡顿根因尚未验证。Android 添加唤醒锁/Wi-Fi 锁代码，但不保证系统后台或网络条件下永不掉线；电池影响尚未测量。
-
-Android 运行锁在活动连接期间有界续期，空房间不持有，只有活动网络为 Wi-Fi 时持有 Wi-Fi 锁；行为尚未构建或设备验证，见[运行锁修正](changes/2026-10-31-30-bound-and-renew-android-room-locks.md)。
-
-2026-11-03 传输更新：带服务器地址的邀请仅通过该服务器连接，不拨设备候选地址，服务失败后也不退回直连；创建房间时本地 Socket 仅监听回环，邀请不发布设备网络地址。无服务器旧邀请仍兼容，已有自定义或关闭配置保留。房间创建者仍负责协调，内层 TLS、邀请授权和音频缓存边界保留；不是服务器托管曲库。Android 与桌面共用该 JVM 链路，相关回归见 [阿里云迁移准备记录](changes/2026-11-03-06-aliyun-hosting-and-server-routed-together.md)。当前客户端源码尚未发布，新主机迁移副本与回环服务已通过验证，公开证书／DNS 和正式最终数据同步尚未完成。
-
-2026-11-03 性能核对：新机隔离 Nginx＋WSS 回环字节回传在 1／3／6 对突发负载下零错误；六对各 8 MiB 同时传输时探测 p95 最高 3023 ms，存在排队风险。这些连接对不是原生多人房间，发生器也在同机，不能据此确认跨网音频流畅。本轮本机真实 FFmpeg／Java Sound 与一起听协议定向共 18 项，17 通过、1 项生产地址验收跳过；稳态补测因浏览器控制失联未提交，详见 [部署性能记录](changes/2026-11-03-07-aliyun-deployment-performance-validation.md)。
-
-历史 2026-11-01：优先直连；无已保存配置的新用户默认 WSS `wss://leonard.asia/resonance-relay/v1`，旧自定义及关闭状态保留，直连失败后尝试中继。公共服务于 2026-11-02 已部署，公网 WSS 与共享 Kotlin 内层 TLS 往返通过；发布前仍需独立网络双设备播放验收，见 [部署方案](../services/relay/DEPLOYMENT-leonard.md)。当前代码不会自动向公共 STUN 服务查询，也不能用 UDP 映射推断 TCP 监听可达；见[网络修正记录](changes/2026-10-31-26-do-not-publish-udp-stun-as-tcp-candidate.md)。自托管签名寻址仅交换地址，不能转发房间内容，且默认关闭。以上均未证明手机移动数据与家庭宽带能连通。[中继记录](changes/2026-10-31-20-opt-in-encrypted-relay-transport.md)和[寻址记录](changes/2026-10-31-04-opt-in-signed-partner-rendezvous.md)记录服务边界。
-
-自选中继等待队列的并发清理、数量上限和邀请刷新后的按成员限期恢复路由已按源码修正，但均尚未运行、未审计。见[中继队列修正](changes/2026-10-31-33-relay-waiting-queue-cleanup.md)和[成员恢复路由](changes/2026-10-31-34-relay-routes-for-member-reconnect.md)。
-
-Android 通知和 Windows 托盘提醒仅为已接线且未构建验证的代码；应用进程不运行时不提供离线推送。老版 R5 的设备验收只覆盖当时的代码，不能证明本轮多人、中继和通知修改可用。待用户允许时，需进行两端编译、迁移与并发回归、至少三端实际联调、聊天投递/清空及对抗审查、真实跨网和长时间播放验收。
+`services/relay`、`services/rendezvous` 仅保留退役说明与原忽略规则；官网源码打包与 `prepare.sh` 不再包含或安装中继，`benchmark.py` 仅测官网。历史部署和发布记录不改写，本轮没有连接、停用或删除线上服务／预算，也未替换已安装客户端。具体文件和验证见[本次独立记录](changes/2026-11-05-33-remove-listen-together.md)。
 
 <a id="lyrics"></a>
 
@@ -276,7 +246,7 @@ Android 通知和 Windows 托盘提醒仅为已接线且未构建验证的代码
 
 2026-11-05 歌词回归核对：本地/缓存/LRCLIB 的纯文本只作为兜底，继续寻找有效同步时间轴；LRCLIB 与最多八个歌源内均先校验歌名/歌手/版本/时长，再优先同步结果。同一歌源最多尝试两条匹配候选，后续失败或超时保留已取得的文本；没有同步结果仍显示纯文本，不猜测时间戳。同步本地/缓存与已生成同步歌词继续直接复用，偏移仍独立合并。旧纯文本缓存可自动升级，失败保留原文和偏移；仍只有纯文本的歌曲再次加载可能新增免费查询。窄屏封面恢复紧凑歌词预览，沉浸完整歌词恢复白字+淡底+细边，手动浏览清晰但仍保留焦点；字号/字重/行高固定。实际播放器离屏及手机回归入口为 `LyricsPlayerRegressionTest` / `LyricsPlayerRegressionDeviceTest`；本次结果与限制见[独立记录](changes/2026-11-05-08-restore-player-lyrics-and-synchronized-priority.md)。
 
-2026-11-05 查词用例：`LyricsSession` 管理自动查词、强制刷新和已接受偏移的代次，查词返回后校验协程取消及代次；A→B→A 也拒绝第一次 A 的迟到结果，偏移不会被旧结果重置。翻译控制器和一起听原歌词来源规则继续保留。
+2026-11-05 查词用例：`LyricsSession` 管理自动查词、强制刷新和已接受偏移的代次，查词返回后校验协程取消及代次；A→B→A 也拒绝第一次 A 的迟到结果，偏移不会被旧结果重置。翻译控制器继续保留；歌词仅从本机当前曲目查找，不再等待房主共享。
 
 2026-11-04 核对：自动加载与“查找歌词”按本地／缓存、LRCLIB、启用歌源依次查询；旧 LRCLIB 未命中缓存不会阻断新增歌源。`JvmMusicAssistant.findSourceLyrics` 等待内置源初始化后调用 `MusicSourceRegistry.findLyrics`，最多 8 源并发、单源 8 秒，严格匹配歌名／歌手／版本及合理时长，只取歌词，不下载或上传音频、不调用模型。异常结束加载态；刷新取消旧 AI 文本结果。空态只有一个查找按钮，歌词工具默认收起、展开后可滚动。模型拒绝明确解释“当前模型未能提供原曲歌词”，提示查找或音频识别；不能承诺重复生成成功。公网服务与本次验证限制见[独立记录](changes/2026-11-04-09-lyrics-source-recovery-and-compact-tools.md)。
 
@@ -375,11 +345,11 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 ## 11. UI、封面与悬浮歌词
 
-2026-11-05质量修复核对：封面页按真实可用高度限制同步歌词预览，正常高竖屏保留180dp封面验收；小窗/大字优先保证控制可达，完整歌词页与连续跟随保留。智能管家按完整版本歌名+歌手+时长找“疑似重复”，未知歌手不成组、默认不选删除；容器格式不等于音质。清理把整批明细送入一次批量确认，确认层在页面之后绘制，取消不删除。语义搜索解析BPM时明确“尚不支持BPM筛选”，现有结果仍是文字匹配，不宣称接通真实节拍分析。见[封面与预览](changes/2026-11-05-28-player-cover-preview-height-budget.md)、[清理](changes/2026-11-05-22-smart-cleanup-safe-batch.md)、[BPM边界](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md)。
+2026-11-05质量修复核对：封面页按真实可用高度限制同步歌词预览，正常高竖屏保留180dp封面验收；小窗/大字优先保证控制可达，完整歌词页与连续跟随保留。智能管家按完整版本歌名+歌手+时长找“疑似重复”，未知歌手不成组、默认不选删除；容器格式不等于音质。清理把整批明细送入一次批量确认，确认层在页面之后绘制，取消不删除。当轮语义搜索只说明BPM未接入；该历史边界已由本轮39号记录的本地分析与范围筛选替代。见[封面与预览](changes/2026-11-05-28-player-cover-preview-height-budget.md)、[清理](changes/2026-11-05-22-smart-cleanup-safe-batch.md)、[BPM边界](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md)。
 
 2026-11-05 播放页过渡核对：`LibraryShell` 通过 `PlayerExpansionLayout` 连接三种窗口布局的迷你播放条和 `NowPlayingOverlay`。展开/收起使用实际端点、独立封面图层、表面裁剪与同一个无回弹弹簧；正文尺寸固定，不在每帧重排。主壳最多缩小到 96%。顶栏和封面接入统一竖向手势：拖动期间实时更新位置，释放根据距离和速度投影决定回弹/收起，可中途反向；歌词列表和进度控件不接入该关闭手势。减少动态使用 90ms 静止淡变，键盘路径即时切换；两者不进行封面飞行/背景缩放。前置歌词可见性、同步优先、淡底焦点、播放和存储行为保留。参考 commit、实际验证与未打包/未安装范围见[本轮记录](changes/2026-11-05-11-apple-music-player-expansion.md)。本段只更新播放页过渡，不改变下方 AM++ 主题与自适应布局基线。
 
-2026-11-05 最新 AM++ 参考重构：用户明确指定 AM++ 源码/截图并确认 Android/Linux/Windows 三端一起改。`ResonanceTheme` 使用参考灰白/黑灰/玫红角色，保留冰蓝/天气选择；主壳为平整画布。`NowPlayingOverlay` 始终采用白色前景的封面透色背景（64dp 模糊）；宽屏左46%为封面/曲名/平直进度/播放/音量，右54%为歌词或队列，首次直接选择歌词；窄屏上下排列。手机迷你播放器和四项导航分成两个胶囊，导航选中面连续移动；桌面保留响应式 rail/侧栏。歌词稳定版式，当前句清晰白字与淡底细边，周边按距离轻微模糊；手动浏览或减少动态时清晰，焦点仍保留。窄屏封面保留紧凑歌词预览（2026-11-05 回归修正）。`SoftRefinedPlaybackScrubber(flat=true)` 复用松手提交的 seek，原波形默认仍兼容。设置白色分组行/玫红图标，原配置回调、返回、安全区和键盘保留。实现与验证见[本轮记录](changes/2026-11-05-02-am-reference-native-ui.md)；以下历史段落保留当时状态，颜色、结构冲突以本段和当前 Kotlin 为准。AM++ 未提供 Apple Music 全部宿主页面源码；本次独立实现视觉/结构，不复制 GPL 模块/专有资源，现有 Haze 不宣称等同其完整光学折射。
+2026-11-05 最新 AM++ 参考重构：用户明确指定 AM++ 源码/截图并确认 Android/Linux/Windows 三端一起改。`ResonanceTheme` 使用参考灰白/黑灰/玫红角色，保留冰蓝/天气选择；主壳为平整画布。`NowPlayingOverlay` 始终采用白色前景的封面透色背景（64dp 模糊）；宽屏左46%为封面/曲名/平直进度/播放/音量，右54%为歌词或队列，首次直接选择歌词；窄屏上下排列。手机迷你播放器和三项导航分成两个胶囊（2026-11-05 已移除一起听），导航选中面连续移动；桌面保留响应式 rail/侧栏。歌词稳定版式，当前句清晰白字与淡底细边，周边按距离轻微模糊；手动浏览或减少动态时清晰，焦点仍保留。窄屏封面保留紧凑歌词预览（2026-11-05 回归修正）。`SoftRefinedPlaybackScrubber(flat=true)` 复用松手提交的 seek，原波形默认仍兼容。设置白色分组行/玫红图标，原配置回调、返回、安全区和键盘保留。实现与验证见[本轮记录](changes/2026-11-05-02-am-reference-native-ui.md)；以下历史段落保留当时状态，颜色、结构冲突以本段和当前 Kotlin 为准。AM++ 未提供 Apple Music 全部宿主页面源码；本次独立实现视觉/结构，不复制 GPL 模块/专有资源，现有 Haze 不宣称等同其完整光学折射。
 
 2026-11-04 音量弹窗核对：`NowPlayingOverlay` 的“音量”与“播放设置 · 音量与速度”使用 `FrostedAlertDialog`。该通用封装现在在 `LocalGlassState provides null` 内构建表面及所有内容槽，通过 `resonanceGlass` 静态主题渐变回退隔离主窗口 Haze；宿主页面保留原采样状态。此规则同样覆盖歌曲信息、歌词工具等共用封装的原生窗口。打开不调用音量／倍速／平衡设置回调。回归、Android 包及原手机未连接的验证限制见[独立记录](changes/2026-11-04-15-volume-dialog-window-isolation.md)，跨窗口泄漏已确认，原手机卡死仍需实机复测。
 
@@ -404,7 +374,7 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 内容与示意内置，无新增联网/权限。教程不会主动登录、扫描、下载、删除或发送付费请求；推荐清理、真实删除、AI/语音收费和上传在相关章节说明，危险操作只阅读。进度键 `tutorial.progress.v1` 存 Android `resonance_ui_state` / Windows 原子 `ui-state.properties`，不含音乐/凭据，不进入歌单文件；Windows 沿用同步锁、原子写和备份，Android 检查 commit，UI 经 PersistenceQueue 顺序保存。回归入口为 `TutorialProgressTest` 与 Android `TutorialNavigationTest`。
 
-LibraryShell（2026-11-03）：<720 dp 底栏、720–1099 rail、>=1100 侧栏。主导航为音乐库、音乐助手、一起听、工具；一起听返回音乐库，不再归为工具子页；本地搜索在曲库右上角。新增 Tasks / Recommendations；紧凑窗口导航与迷你播放器共用一个底座，助手页也保留播放器；聊天只在回复含真实歌曲链接时展示对应附件，不混放每日推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
+LibraryShell（2026-11-03）：<720 dp 底栏、720–1099 rail、>=1100 侧栏。2026-11-05 主导航收敛为音乐库、音乐助手、工具；本地搜索在曲库右上角。新增 Tasks / Recommendations；紧凑窗口导航与迷你播放器共用一个底座，助手页也保留播放器；聊天只在回复含真实歌曲链接时展示对应附件，不混放每日推荐。MainActivity 显式配置 adjustResize，紧凑底栏与 MiniPlayer 在软键盘（IME）弹起时自动隐藏，避免推飞标题栏与产生底部断层。媒体下载使用标准 Chrome User-Agent 与双向缓冲流规避 QoS 限速，转码启用多线程，歌曲入库后封面与歌词获取并发执行并增加 8 秒超时保护。
 
 首轮原生视觉基线（2026-11-03，后续全应用覆盖与验证见本节补充核对）：按用户认可的 macOS 毛玻璃图片落地，原生设计规范见 [DESIGN.md](../DESIGN.md)，构建及未测试范围见[磨砂 UI 与 APK 记录](changes/2026-11-03-02-frosted-ui-and-release-apk.md)。`FrostedBackdrop` 复用封面缓存，将真实封面柔焦并覆盖受控明暗底色，播放器使用独立 Haze 采样源；无封面使用低饱和种子色。`resonanceGlass` 的 28dp 模糊、透色、细边缘和浅阴影用于主导航、迷你播放器、播放器控制台／歌词／队列、曲库工具栏及工具页容器；行和消息仅用透色底色。浅色画布 `#EFF3F6`、深色 `#182027`，保留原生系统字体和对话框语义色。手机播放器歌曲信息左对齐，封面正面展示；控制台收纳进度／播放／分栏切换，歌词预览高度减为正常字号 112dp。导航弹簧阻尼改为 1，无越位回弹；移除背景粒子、光束和封面倾斜，换歌背景短过渡；减少动效即时切换。助手手机顶栏收为一行，新建直接可用，历史／任务／设置进入更多菜单；工具按任务分组，去掉重复一级入口。首轮按当时用户要求未运行测试、未安装设备、未做帧率或视觉截图验收；后续全应用覆盖补修已执行定向回归与离屏截图，见本节补充核对，仍不能替代真机验收。
 
@@ -506,7 +476,12 @@ Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装
 
 ### 12.3 测试定位
 
-2026-11-05测试契约核对：转场像素检查透明混合/裁剪及终态，推荐关闭时卡片隐藏但设置可达；教程先滚动到入口，房间固定顶栏直接点击。`MusicStageFrameMetricsTest` 明确驱动80次进度变化后采集窗口FrameMetrics，不把静止时长换算FPS；只作Debug诊断。`UiVisualContractTest` 保留70场景渲染/尺寸检查，PNG及360帧媒体导出需 `RESONANCE_UI_ARTIFACTS=1`；逐方法隔离避免累计类超时。新增归档回退、离线记录、实际删除失败、偏好写失败和本机确认回归。本次真实结果及边界见[修复验收](audit/2026-11-05/FIX-VALIDATION.md)。
+2026-11-05 新增 `OfflineLibraryImprovementsTest`、`AudioRelinkSessionTest`、`OfflineRecoveryTest`、`DesktopAnalysisDecodeTest`、`LyricTimelineBenchmarkTest` 和 `LyricsToolsDeviceTest`；原生后台soak通过 `RESONANCE_PLAYBACK_SOAK_SECONDS=60..7200` 显式开启，默认跳过。新增 `LibraryServices.chooseRelinkDirectory`、`MusicAssistantServices.saveScreenshotImportDraft/analyzeAudioFeatures/refreshAudioFeatures`，两端实现已检查。
+
+新存储：`music-assistant.json.screenshotDraft`保留核对文字、编辑和选中项，300ms去抖，显式关闭先保存；确认／丢弃先移除磁盘草稿。`audio-features.json`保存BPM／energy／calculatedAt／revision，来源、大小、修改时间匹配才复用，0表示未知；旧无revision缓存重新分析。两者共用MusicJsonStore的路径锁、原子文件和有效备份恢复，失败不静默。
+
+
+2026-11-05测试契约核对：转场像素检查透明混合/裁剪及终态，推荐关闭时卡片隐藏但设置可达；教程先滚动到入口；房间专用测试已随功能移除。`MusicStageFrameMetricsTest` 明确驱动80次进度变化后采集窗口FrameMetrics，不把静止时长换算FPS；只作Debug诊断。`UiVisualContractTest` 保留70场景渲染/尺寸检查，PNG及360帧媒体导出需 `RESONANCE_UI_ARTIFACTS=1`；逐方法隔离避免累计类超时。新增归档回退、离线记录、实际删除失败、偏好写失败和本机确认回归。本次真实结果及边界见[修复验收](audit/2026-11-05/FIX-VALIDATION.md)。
 
 2026-11-05 资源受限验证：在独立进程树上以同版本 Kotlin/Compose CLI 分别完整编译 C/J/D 和 C/J/A（含生成版本源码），随后完整编译/执行共享与桌面测试；打包仍通过 Gradle 资源/Manifest/D8/jpackage 任务，但由临时 init 接入上述完整 class 输出，避免同一服务内再次叠加 Kotlin 编译内存。不能只替换少数 class：能力接口拆分改变默认参数 helper 所属类，所有调用者必须重编译。该方法与普通默认 Gradle 编译区分记录，脚本/日志在本次忽略目录，准确命令及当前结果见[重构记录](changes/2026-11-05-07-application-core-and-desktop-audio-refactor.md)。常规开发命令不变。
 
@@ -591,10 +566,17 @@ DeepSeek 文本可配千问/豆包视觉；未配置视觉则提示，不把图�
 | update_metadata | 曲库标题/歌手/专辑/封面；AI 封面只接受 B 站 HTTPS 图片 |
 | delete_tracks | 仅明确执行意图可提出具体音频删除提案；awaiting_user_confirmation不代表已删。本机确认后才调用删除，逐项报告 |
 | find_and_download / search_bilibili / import_bilibili | 本地优先、原版候选、指定视频下载与自定义信息 |
+| web_search / web_fetch | 当前 DeepSeek 官方连接且联网开关开启时，独立 Search／Fetch API 查网页与正文，返回可引用来源；不下载音频、不自动重试 |
 
 2026-11-05删除门禁核对：询问/解释/否定/只删歌单不授予音频删除。`AudioDeletionRequest` 仅保存在内存，含随机ID、最多300首曲目及sourceURI快照、会话、创建时间；`confirmAudioDeletion` 在10分钟内单次消费并复核当前会话与来源。新消息/新建/切换/清除对话使旧提案失效。本机弹窗展示具体歌名与文件名，确认不发模型请求，取消不删；不声称识别同一路径被外部替换的字节。见[助手删除确认](changes/2026-11-05-21-assistant-local-audio-delete-confirmation.md)。
 
-工具调用已取消 16 轮/步骤限制，单轮最多 20 个工具。2026-11-05 核对：`AssistantToolSession` 保留最近四个完整调用组（约 24K 字符）和完成动作概要，同任务同参数复用结果，连续六轮无新成功操作本地暂停；持续推进的任务无总轮数上限。长结果保持有效 JSON，歌单成员分页查询，源搜索 ID 保留至本次任务结束。无效 ID/工具报错，不伪称完成；否定删除、只删歌单等有回归。音乐任务可取消，已完成入库保留。MusicTaskEntry 可带 parentId，任务页按操作分组并汇总截图导入逐首进度；免费失败媒体步骤可批量重试，收费歌词仍单独确认。
+工具调用已取消 16 轮/步骤限制，单轮最多 20 个工具。2026-11-05 核对：`AssistantToolSession` 保留最近四个完整调用组（约 24K 字符）、完成动作概要及最近八份有新信息的检索摘要（最多 8K 字符），同任务同参数复用结果。新且非空的只读结果也算进展；空结果、换词后返回相同条目及重复失败不算进展。连续六轮无进展后停止工具阶段，仅追加一次不携带工具的最终答复请求；模型仍调用工具或返回空白时本地失败，不继续循环、不执行该调用。持续推进的任务无总轮数上限。长结果保持有效 JSON，歌单成员分页查询，源搜索 ID 保留至本次任务结束。无效 ID/工具报错，不伪称完成；空模型回复不再伪装“已完成音乐管理操作”。聊天错误记录为本地执行反馈，同句底部状态去重，独立错误仍显示。具体原因、验证和上线限制见[检索与收束修复](changes/2026-11-05-41-assistant-search-progress-and-final-answer.md)。音乐任务可取消，已完成入库保留。MusicTaskEntry 可带 parentId，任务页按操作分组并汇总截图导入逐首进度；免费失败媒体步骤可批量重试，收费歌词仍单独确认。
+
+普通音乐／播客推荐及知识问答可直接给文字建议，不要求下载或改库。2026-11-05 核对：参照并移植 MIT 的 DeepSeek Harness Search／Fetch 模块，新增 `MusicWebResearch`／`DeepSeekWebResearch`；共享 `assistantWebSearchEnabled` 缺省 true，可在 AI 设置关闭。只在当前助手使用已配置的 DeepSeek 官方 HTTPS 标准地址时提供 `web_search`／`web_fetch`，复用该会话的密钥；第三方或其他供应商的密钥不发送给官方接口。不启用时模型得到明确能力说明，不声称已在线核实。这里是网页资料搜索，不是 RSS 订阅／播客音频播放功能。
+
+每次检索直接请求 `/v1/tools/search`（最多六份来源、每份摘要 800 字符），网页直接请求 `/v1/tools/fetch`（保留前 3000 字符和截断标记）；无辅助模型请求，不重发，不跟随 API 重定向。公开 HTTP／HTTPS 目标排除凭据、字面内网／回环和本机域名；网页是证据数据，不能授权删除、下载或改库。DeepSeek 服务按成功搜索／抓取请求独立计费，设置中明确提示；聊天 Token 统计不代表检索账单。已有幂等去重、取消、六轮无进展单次收束继续生效。
+
+原生 `AssistantReply` 实际使用 `multiplatform-markdown-renderer-m3:0.38.1`，异步解析可选择的 Markdown，标题、列表和引用链接按 Material 3 渲染。远程图片不加载，外链只响应显式点击且仅 HTTP／HTTPS；本地 `playLink` 仍先经真实曲库解析并复用原点播／队列附件。搜索与抓取步骤复用持久 `MusicTaskJournal` 子任务，当前聊天通过仅内存的 `assistantTaskId` 展示可展开检索过程；新建、切换、删除、清空对话时清除显示归属，不改变历史消息格式。许可、来源、当前验证与未安装范围见[接入记录](changes/2026-11-05-42-harness-web-research-and-native-replies.md)。
 
 ### B 站链路
 
@@ -641,8 +623,9 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | 应用退出/设置写入/统计页面等待 | ApplicationTasks、ApplicationLifetime、ApplicationPreferences、PersistenceQueue、ListeningStatsRepository、ListeningStatsState | ApplicationSessionTest、ApplicationUseCaseTest、PersistenceQueueTest、ListeningStatsRepositoryTest |
 | 桌面音频高 CPU/暂停/设备卡住 | DesktopPcmPlayer、DesktopAudioBackend、DesktopAudioPlayer | DesktopPcmPlayerSessionTest、DesktopAudioOutputIntegrationTest，实际设备/CPU另验 |
 | 音量、快速切歌竞争 | PlaybackSession、PlaybackStateStore、PlaybackService、平台响度 | PlaybackSessionTest、PlaybackStateStoreTest、AudioSessionIntegrationTest |
+| 自动切歌按钮与音频不同步 | App.activeTrackChanges、PlaybackStateStore.adoptNativeTrack、PlaybackServices.currentPlaybackState、两端原生快照 | PlaybackStateStoreTest 的原生连续播放／缓冲／暂停／快速切歌／响度失败回归；Android 自动切歌实机另验 |
 | 每日推荐播放错位／切歌跳出批次 | MusicTasksScreen.RecommendationsScreen、MusicFeatureController.playRecommendation、PlaybackSession / resolveTrackPlaybackQueue、PlaybackStateStore | RecommendationPlaybackTest、PlaybackQueueResolutionTest、PlaybackStateStoreTest；Android 真实播放需设备另验 |
-| 双人一起听/邀请/临时音频/同步 | ListenTogetherService、TogetherScreen、TogetherRoomComponents、TogetherPlaybackBinding、JvmListenTogetherService、TogetherTransport、两端 PlatformServices | ListenTogetherTest、TogetherConnectionDeviceTest、TogetherDeviceBridgeTest、TogetherUiDeviceTest；先读第 7.1 节与 2026-10-30 规划 |
+| 一起听移除／独立播放回归 | App、PlaybackSession、LyricsSession、LibraryShell、两端 PlatformServices、PlaybackService | PlaybackSessionTest、UiVisualContractTest 的三项主导航与播放菜单回归；现行边界见第 7.1 节 |
 | 桌面选文件/拖入导入 | Main、DesktopMusicDrop、DesktopPlatformServices.importSelectedMusic、DesktopMusicScanner、LibraryImportUseCase | DesktopMusicImportTest、DesktopManagedMp3ConverterTest；Linux/Windows 原生文件管理器分别验收，Copy 语义/中文路径/重复目录/取消/源文件保留 |
 | 转换慢/取消 | ImportControl、Scanner/scanDocumentTree、两端 FFmpeg | DesktopManagedMp3ConverterTest，源文件/staging/阶段 |
 | 列表封面 | DynamicArtwork、audioArtwork、ArtworkMemoryCache、SyncArtwork | MusicFeaturesIntegrationTest、CatalogArtworkRematchTest |
@@ -652,7 +635,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | 打开导出选项卡死／大歌单选择 | SyncScreen、App.syncAction、SyncPackageDialog、FrostedAlertDialog | SyncPackageDialogTest、SyncPackageDialogDeviceTest；原生窗口 Haze 隔离、末尾歌单可达、打开／取消不导出；实际 ZIP 使用上一行回归 |
 | 导出命名／保存位置提示／打开目录 | App.syncInProgress/syncResult、SyncPackageNaming、SyncPackageFeedback、SyncReport.exportedPackage、AndroidExportLocation、平台 openExportLocation | SyncPackageNamingTest、SyncPackageFeedbackTest、SyncPackageFeedbackDeviceTest、AndroidExportLocationTest；命名／重名、处理状态、失败回退、目录 URI 及窗口隔离 |
 | B 站412/匹配错误 | BilibiliClient.json/inspect/search/candidateScore | 官方验证/网络/Cookie，MusicAssistantTest |
-| AI工具/截图/预算 | JvmMusicAssistant、MusicAiClient、AssistantImages、Codec、ocr/*、SongIdentityResolver | MusicAssistantTest、ScreenshotOcrTest、LocalScreenshotOcrTest、MusicFeaturesIntegrationTest |
+| AI工具/网页/截图/预算 | JvmMusicAssistant、AssistantToolSession、MusicAiClient、DeepSeekWebResearch、AssistantReply、AssistantImages、Codec、ocr/*、SongIdentityResolver | MusicAssistantTest、AssistantToolSessionTest、DeepSeekWebResearchTest、AssistantMusicLinksTest、UiVisualContractTest；截图见 ScreenshotOcrTest、LocalScreenshotOcrTest、MusicFeaturesIntegrationTest |
 | 推荐误删/清理失败 | recommendInternal/pending、原生 delete/activeMusicId | rollover/failure/current-playing/dislike 回归 |
 | 翻译/时间轴/音频识别 | ParaformerLyricsClient、AudioLyricAlignment、GeneratedLyricsStore、原生positionMs | AudioLyricAlignmentTest / MusicAssistantTest / FloatingLyricsTest |
 | 任务重试/中断 | MusicTaskJournal、JvmMusicAssistant.step/retryTask | 持久恢复、封面重试、推荐pending取消回归 |
@@ -708,7 +691,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 2026-11-05导航核对：`site.js` 每次navigate（含缓存/popstate）递增navigationGeneration，异步响应和ViewTransition提交前核对代次，只有当前导航能改DOM/history或触发原生回退；前进后退不pushState。执行 `node --test website/tests/test_navigation.cjs` 覆盖六种乱序/缓存/过渡/失败/点击当前页面场景，已随本次0.6.6官网更新部署。见[导航修复](changes/2026-11-05-26-website-latest-navigation-wins.md)。
 
-2026-11-03：用户指定迁往新购阿里云 Ubuntu 24.04 主机，目标 Nginx 直接 HTTPS＋官网／邮件／一起听三项 systemd；不再依赖翼龙启动器或 Cloudflare Tunnel。配置、源码白名单打包及保留真实数据的切换入口见 [阿里云部署](../services/deploy/aliyun/README.md)。新机已安装并恢复网站迁移副本，官网／中继 systemd 运行与重启、回环四页 200／两端 Range 206／WebSocket 配对验证通过；邮件 worker 未启动。公开切换尚未完成，原部署仍为公开入口；北京区续费备案、受信证书、最终数据同步及公网切换须后续完成。
+2026-11-05 部署范围：阿里云准备脚本只装配独立官网／邮件服务，不再装配一起听中继；源码白名单、数据迁移和切换入口见[阿里云部署](../services/deploy/aliyun/README.md)。本轮未操作远端；2026-11-03 的迁移副本与中继实测仅保留在历史记录中。
 
 2026-11-03 短时性能验证：五个只读路径共 230 次零错误，12 并发回环 HTTPS 的 p95 157.133 ms；混合两个限速安装包下载时另 80 次页面零错误、p99 1952.476 ms。官网 cgroup 采样峰值 91.19 MiB，主机最低可用 387.48 MiB，无新 OOM；生产服务状态、重启计数与中继预算未改变。复测工具为 `services/deploy/aliyun/benchmark.py`，只开放临时回环监听，记录见 [部署性能验证](changes/2026-11-03-07-aliyun-deployment-performance-validation.md)。这是约 16 秒首轮观测，不代表公网下载速度、浏览器渲染帧率或长期稳定性。
 
@@ -769,7 +752,7 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 ### 17.3 助手和播放器交互
 
-2026-11-04 核对：工具 `publicTrack` 剔除本地 source/artwork 后提供 `playLink`（`resonance://track/` 加 UTF-8 编码 ID）。模型原样以 Markdown 引用；`resolveAssistantMusic` 只从当前曲库解析明确链接，按出现顺序去重、最多 20 首；未知/删除 ID 保留可读标签，纯歌名及外部 URL 不猜配。`AssistantMusicAttachment` 点击复用 `playRecommendation`；`onAppendQueue` 保序去重追加且不自动开播，一起听中提示用房间队列。缺音源条目不追加，点播沿用恢复入口。消息/存储格式不变、不增加外部 Intent。解析4项、模拟工具1项、原生按钮1项通过，无真实付费请求。见[歌曲链接记录](changes/2026-11-03-12-assistant-playable-music-links.md)。
+2026-11-04 核对：工具 `publicTrack` 剔除本地 source/artwork 后提供 `playLink`（`resonance://track/` 加 UTF-8 编码 ID）。模型原样以 Markdown 引用；`resolveAssistantMusic` 只从当前曲库解析明确链接，按出现顺序去重、最多 20 首；未知/删除 ID 保留可读标签，纯歌名及外部 URL 不猜配。`AssistantMusicAttachment` 点击复用 `playRecommendation`；`onAppendQueue` 保序去重追加且不自动开播，直接加入本机队列。缺音源条目不追加，点播沿用恢复入口。消息/存储格式不变、不增加外部 Intent。解析4项、模拟工具1项、原生按钮1项通过，无真实付费请求。见[歌曲链接记录](changes/2026-11-03-12-assistant-playable-music-links.md)。
 
 新增read_help、open_page、start_tutorial、play_tracks、set_playing、seek、next、previous、track_sources、inspect_storage、search_sources、download_source。下载只用先前实际源搜索返回的条目ID。帮助关键词检索复用TutorialCatalog和新功能说明，无模型请求。摘要按歌曲去重最多120首，带当前页面/播放状态，工具仍可查询大库。
 
@@ -825,6 +808,10 @@ composeApp/build.gradle.kts的generateAppVersion继续只从version.properties�
 
 当前 DeepSeek 默认模型为 deepseek-flash；仅对 api.deepseek.com 上白名单 Flash/V4 模型显式传 thinking disabled，避免短任务依赖默认 high 思考在有限输出内返回最终 content。2026-11-05 核对：仅官方域名的退役 deepseek-chat／deepseek-reasoner 在请求时映射 deepseek-flash，分别保留 disabled／enabled 思考语义，第三方地址不改。定长请求体避免隐式付费 POST 重放，断线不自动重试且明确用量未知。实际凭据与宣传录制状态见独立记录，不将请求替身测试当作真实模型回答。
 
+
+## 历史验收附录（一起听内容于 2026-11-05 退役）
+
+以下按原日期保留已执行事实，不是现行功能、待办或可执行命令。当前一起听移除状态以第 7.1 节为准。
 
 ## 2026-11-01 第一批质量优化核对
 

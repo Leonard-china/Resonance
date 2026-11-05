@@ -6,6 +6,12 @@ import java.net.URLEncoder
 private const val trackLinkPrefix = "resonance://track/"
 private val musicLinkPattern = Regex("\\[([^]\\n]{1,240})]\\((resonance://track/[^\\s)]{1,2048})\\)")
 
+/** Model-generated links open only on an explicit click, and only as web pages. */
+fun isAssistantWebLink(value: String): Boolean = runCatching {
+    val uri = java.net.URI(value)
+    uri.scheme?.lowercase() in setOf("http", "https") && !uri.host.isNullOrBlank() && uri.userInfo == null
+}.getOrDefault(false)
+
 fun assistantTrackLink(trackId: String): String = trackLinkPrefix + URLEncoder.encode(trackId, "UTF-8")
 
 data class AssistantMusicContent(val text: String, val tracks: List<Track>)

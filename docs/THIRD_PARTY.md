@@ -8,6 +8,7 @@
 | --- | --- |
 | Kotlin / Compose / Material / Coroutines | 两端共享 UI/状态/任务 |
 | Haze / haze-blur | 原生界面材质 |
+| multiplatform-markdown-renderer-m3 0.38.1 | 助手原生 Markdown、列表、标题和可点击来源；Apache-2.0，保留上游附带的 MIT 声明 |
 | AndroidX Activity / DocumentFile / Media3 | 权限/文件选择/音频与媒体会话 |
 | WorkManager 2.10.1 | Android 后台推荐及 dataSync 下载通知 |
 | FFmpegKit audio 8.1.7 / Smart Exception 0.2.1 | Android 音频转换/整曲响度；显式补齐 Java facade 依赖 |
@@ -18,9 +19,11 @@
 | org.json 20250517 | 两端 JSON 编解码 |
 | OkHttp 4.12.0 / Okio | 两端 WSS 语音识别连接，遵循组件 Apache 2.0 许可 |
 
-2026-10-30 核对：ZXing core 3.5.3 已用于 B 站与一起听邀请二维码，OkHttp TLS 4.12.0 用于临时房间证书构造；实际传输使用平台 TLS Socket。旧 LAN 的 jdk.httpserver 仍未恢复。维护者已选择 [MIT](../LICENSE) 用于项目原创代码；第三方组件与移植代码保留其自身许可。KGG 实现注释记录 FlyMouseFormat 移植来源，发布应核对上游声明/许可。Windows FFmpeg 非固定 Gradle 二进制，需对实际 ffmpeg -version/-buildconf、许可证与对应源码分发条件核验；本文不声称已完成新 Release 许可证审计。Android 依赖为 audio 包，发布仍按实际内容核验。
+2026-11-05 核对：ZXing core 3.5.3 保留 B 站登录二维码用途；一起听功能及临时证书依赖 okhttp-tls 已移除，OkHttp 保留同步歌词识别用途。旧 LAN 的 jdk.httpserver 仍未恢复。维护者已选择 [MIT](../LICENSE) 用于项目原创代码；第三方组件与移植代码保留其自身许可。KGG 实现注释记录 FlyMouseFormat 移植来源，发布应核对上游声明/许可。Windows FFmpeg 非固定 Gradle 二进制，需对实际 ffmpeg -version/-buildconf、许可证与对应源码分发条件核验；本文不声称已完成新 Release 许可证审计。Android 依赖为 audio 包，发布仍按实际内容核验。
 
-一起听通过 TLS 向被邀请朋友发送房主当前曲与显式开启的下一首预取、最多五十首队列标题/歌手、当前已显示歌词；不发路径、API Key、Cookie、整库或朋友历史。房间 AI 候选由房主显式发起，只发送最多六十首候选标题/歌手及本次要求给已选模型，预览确认后才入队。
+一起听已移除：客户端不再创建房间监听、连接中继或寻址服务，也不向朋友发送音频、队列、歌词和聊天。历史本机房间数据保留且不再读取；本轮未操作线上旧服务。
+
+2026-11-05：新增显式本地BPM分析，复用现有FFmpeg／FFmpegKit，每首仅解码前90秒PCM并在本机缓存估算结果，不上传音频、不调用AI／语音识别接口。截图核对草稿保存文字和勾选，不额外保存截图或凭据；批量来源修复只引用用户选定的新目录。
 
 ## 外部请求
 
@@ -83,7 +86,7 @@ Android 悬浮权限 SYSTEM_ALERT_WINDOW 由系统设置授予；后台推荐使
 
 官网只保存访客主动提交的帖子/回复/截图、邮箱订阅偏好与版本信息，不读取播放器曲库。截图经重编码移除 EXIF；匿名限速使用带站点密钥的 IP HMAC，不在 SQLite 存原始 IP。邮箱不出现在公共页面，版本/推广分别确认、独立发送，TLS/STARTTLS 邮件仅交给作者配置的 SMTP 服务，真实 SMTP 尚未验证。
 
-2026-11-03：用户指定阿里云 Ubuntu 主机作为官网与一起听的新部署目标，采用 Nginx／systemd 直接 HTTPS。迁移尚未完成，仍需原数据、受信证书、备案／域名和真实网络验收，见 [阿里云迁移](../services/deploy/aliyun/README.md)。新版带服务器邀请只经服务器转发，保留内层 TLS；服务器可见 IP／时长／流量，房间创建者仍协调并可读房间内容。
+2026-11-05：阿里云源码包／准备脚本只包含官网与邮件服务，不再部署一起听中继；[部署说明](../services/deploy/aliyun/README.md)保留网站数据和凭据边界。本轮没有重新部署、关停或更改线上配置。
 
 此前现网 leonard.asia 经 Cloudflare Tunnel 提供 HTTPS，运行于用户配置的 Pterodactyl 容器；本机独立运维客户端使用面板 API。Cloudflare 处理网站流量，面板控制服务器文件/进程，均不是播放器云端账户。面板配置、隧道 token 和作者凭据不进入本仓库。实际路径及验证范围见 [现网运维](../website/OPERATIONS.md)。
 
@@ -124,6 +127,15 @@ Android 和 Windows 随包内置 PP-OCRv5 mobile 检测/识别模型与字典，
 ## AM++ 视觉/布局参考（2026-11-04）
 
 用户指定 [Zennmn/AM-plus-plus](https://github.com/Zennmn/AM-plus-plus)，核对 commit `b112af969789c5d1da04255830d6700062968b95` 的 `EmbeddedSettingsPalette`、双栏播放器、歌词截图及 `LiquidBottomTabs`。上游模块为 GPL-3.0；本次只作为视觉/行为参考，以本项目原生 Compose 独立实现，未复制其模块代码、宿主 Apple Music 专有资源或示例音乐封面，不新增打包依赖、不更改本项目 MIT 许可。磨砂继续使用原有 Haze，并非其 Android 专用 Backdrop 的等价光学折射实现；范围及验证见[UI 记录](changes/2026-11-05-02-am-reference-native-ui.md)。
+
+## DeepSeek Harness 模块移植与原生 Markdown（2026-11-05）
+
+- 用户指定 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)，核对 commit `fcc0ad462172522aaf5c93a7b2e01f6b9f0b0159` 的 `packages/web/web-deepseek-api/src/search.ts`、`fetch.ts`、`transport.ts` 及 `packages/web/tool-web`。将 Search／Fetch 的直接请求、来源字段投影、凭据就绪检查、拒绝重定向和不自动重试流程移植到 Kotlin `DeepSeekWebResearch`，并保留 MIT 来源说明及 [DeepSeek 许可](../composeApp/src/commonMain/composeResources/files/licenses/deepseek-harness-LICENSE.txt)。没有嵌入 Cordis／Node／Web UI／任意 shell，也没有宣称完整移植 Harness。
+- 实际添加 [mikepenz/multiplatform-markdown-renderer](https://github.com/mikepenz/multiplatform-markdown-renderer/tree/v0.38.1) 的 Material 3 依赖 **0.38.1**，核对其发布 POM 使用 Kotlin 2.2.21，JVM 字节码 major=61，适配本项目 Kotlin 2.3.20／JDK 17；0.40.0 首次原生测试因要求 Java 21 被剔除，0.42–0.46 还要求 Kotlin 2.4，未采用。使用原生 Compose 渲染，保持图片加载关闭，外链仅响应用户明确点击的 HTTP／HTTPS 页面。[完整上游许可](../composeApp/src/commonMain/composeResources/files/licenses/multiplatform-markdown-renderer-LICENSE.txt)保留 Apache-2.0 及 Erik Hellman 的 MIT 部分。
+- 许可证文件放入 `commonMain/composeResources/files/licenses/`，由正常 Compose 资源构建纳入三端应用。未构建本轮分发包，不将源码资源存在说成已验证安装包包含。
+- 调研 [Auxio](https://github.com/OxygenCobalt/Auxio)、[RetroMusicPlayer](https://github.com/RetroMusicPlayer/RetroMusicPlayer) 的项目说明和 GPL-3.0 声明；本轮未复制其源文件或资源。继续保留用户已选定的 AM++ 原生视觉方向，具体界面参考和现有 Haze／Media3 使用范围以上文为准。
+
+本次网络、配置、验证及限制见[Harness 搜索与原生回答接入](changes/2026-11-05-42-harness-web-research-and-native-replies.md)。
 
 ## Apple Music UI Demo 交互参考（2026-11-05）
 

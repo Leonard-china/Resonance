@@ -67,6 +67,8 @@ kotlin {
                 implementation(libs.compose.resources)
                 implementation(libs.compose.preview)
                 implementation(libs.kotlinx.coroutines.core)
+                // Native Markdown with Java 17 / Kotlin 2.3.20 compatible JVM bytecode.
+                implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.38.1")
                 // This release matches the project's Compose 1.11.0 / Kotlin 2.3.20 ABI.
                 implementation("dev.chrisbanes.haze:haze:2.0.0-alpha02")
                 implementation("dev.chrisbanes.haze:haze-blur:2.0.0-alpha02")
@@ -87,8 +89,6 @@ kotlin {
             dependsOn(commonMain)
             dependencies {
                 implementation("org.json:json:20250517")
-                // Certificate construction only; transport uses the platform TLS implementation.
-                implementation("com.squareup.okhttp3:okhttp-tls:4.12.0")
                 implementation("com.squareup.okhttp3:okhttp:4.12.0")
                 implementation("io.github.dokar3:quickjs-kt:1.0.10")
                 implementation("com.google.zxing:core:3.5.3")

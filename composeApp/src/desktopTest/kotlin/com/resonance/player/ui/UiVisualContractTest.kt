@@ -272,9 +272,10 @@ class UiVisualContractTest {
     }
 
     @Composable
-    private fun FixtureFeatures(conversation: Boolean = false, content: @Composable () -> Unit) {
+    private fun FixtureFeatures(conversation: Boolean = false, initialState: MusicAssistantState? = null,
+                                notice: String = "", content: @Composable () -> Unit) {
         val services = remember {
-            val state = MutableStateFlow(MusicAssistantState(
+            val state = MutableStateFlow(initialState ?: MusicAssistantState(
                 messages = if (conversation) listOf(AssistantMessage("user", "推荐几首适合傍晚散步的歌"),
                     AssistantMessage("assistant", "选了三首舒缓的歌，陪你慢慢走。\n\n" + PreviewLibrary.tracks.take(3).joinToString(" · ") {
                         "[${it.title}](${assistantTrackLink(it.id)})"
@@ -284,6 +285,7 @@ class UiVisualContractTest {
                 arrayOf(MusicAssistantServices::class.java)) { _, method, _ ->
                 when (method.name) {
                     "getState" -> state
+                    "saveScreenshotImportDraft" -> Unit
                     "feedbackFor" -> null
                     "storageReport" -> MusicStorageReport(entries = PreviewLibrary.tracks.take(2).map {
                         ManagedAudioEntry(it, bytes = 4_000_000, saved = true, playing = it.id == player.currentTrack?.id)
@@ -294,23 +296,10 @@ class UiVisualContractTest {
             Proxy.newProxyInstance(PlatformServices::class.java.classLoader, arrayOf(PlatformServices::class.java)) { _, method, _ ->
                 when (method.name) {
                     "getMusicAssistant" -> assistant
-                    "getListenTogether" -> object : com.resonance.player.platform.ListenTogetherService {
-                        override val state = MutableStateFlow(com.resonance.player.platform.TogetherState())
-                        override val companion = MutableStateFlow(com.resonance.player.platform.TogetherCompanionState(
-                            available = true, relayUrl = com.resonance.player.platform.TogetherDefaults.RelayUrl, relayConfigured = true))
-                        override val remotePlayback = MutableStateFlow<com.resonance.player.platform.TogetherPlayback?>(null)
-                        override suspend fun host(port: Int) {}
-                        override suspend fun join(invitation: String) {}
-                        override fun invitation(address: String, port: Int) = "fixture"
-                        override fun publishPlayback(player: PlayerState) {}
-                        override fun leave() {}
-                        override fun close() {}
-                    }
                     "getSupportsWebLogin", "getSupportsKgg", "getSupportsKeyboardShortcuts" -> false
-                    "getTogetherNotificationsBlocked" -> MutableStateFlow(false)
-                    "requestTogetherNotifications" -> Unit
                     "getImportProgress" -> MutableStateFlow<ImportProgress?>(null)
                     "getListeningStats" -> MutableStateFlow(ListeningStatsSnapshot(loaded = true))
+                    "isVocalSuppressionEnabled" -> MutableStateFlow(false)
                     "getAllListeningStats" -> AllListeningStats()
                     "getForeground" -> MutableStateFlow(true)
                     "audioFileAvailable" -> true
@@ -320,7 +309,9 @@ class UiVisualContractTest {
             } as PlatformServices
         }
         val scope = rememberCoroutineScope()
-        val feature = remember { MusicFeatureController(services, scope).apply { library = PreviewLibrary.tracks.map { it.copy(sourceUri = "fixture://${it.id}") } } }
+        val feature = remember { MusicFeatureController(services, scope).apply {
+            library = PreviewLibrary.tracks.map { it.copy(sourceUri = "fixture://${it.id}") }; message = notice
+        } }
         CompositionLocalProvider(LocalMusicFeatures provides feature, content = content)
     }
 
@@ -397,6 +388,80 @@ class UiVisualContractTest {
                     for (label in listOf("对话历史", "音乐任务", "助手设置")) {
                         assertNotNull(scene.node(label).config.getOrNull(SemanticsActions.OnClick)?.action)
                     }
+                }
+            }
+        }
+    }
+
+    @Test fun assistantShowsReportedFailureOnceAndKeepsUnrelatedFeedbackVisible() {
+        SwingUtilities.invokeAndWait {
+            val error = "检索来源暂不可用，请稍后重试。"
+            val reply = "处理未完成：$error"
+            for (notice in listOf(error, "设置保存失败：磁盘已满")) {
+                ImageComposeScene(390, 900) {
+                    ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                      androidx.compose.material3.Surface {
+                        FixtureFeatures(initialState = MusicAssistantState(
+                            messages = listOf(AssistantMessage("user", "找些英语播客"),
+                                AssistantMessage("assistant", reply, "本地执行反馈 · DeepSeek (deepseek-flash)")),
+                            task = MusicTaskStatus(message = error)), notice = notice) { AssistantScreen(true, {}) }
+                      }
+                    }
+                }.rendering { scene ->
+                    scene.render(0).close(); scene.render(500_000_000).close()
+                    fun texts(node: SemanticsNode): List<String> =
+                        node.config.getOrNull(SemanticsProperties.Text).orEmpty().map { it.text } + node.children.flatMap(::texts)
+                    val visible = scene.semanticsOwners.flatMap { texts(it.rootSemanticsNode) }
+                    assertEquals(1, visible.count { it == reply })
+                    assertFalse(error in visible, "Do not repeat the chat error as a footer")
+                    if (notice != error) assertTrue(notice in visible, "Keep unrelated errors visible")
+                    val output = Path.of("build/assistant-recovery/screenshots")
+                    Files.createDirectories(output)
+                    scene.render(600_000_000).use { image ->
+                        assertNotNull(image.encodeToData()).use { Files.write(output.resolve(if (notice == error) "single-error.png" else "separate-error.png"), it.bytes) }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test fun assistantResearchUsesNativeMarkdownAndRevealsRealSteps() {
+        SwingUtilities.invokeAndWait {
+            val root = "research-root"
+            val reply = "## 英语播客\n\n适合 **A2–B1**，提供逐字稿。\n\n[节目官网](https://publisher.example/english)"
+            val steps = listOf(
+                MusicTaskEntry("search", "搜索网页", kind = "assistant_web", parentId = root,
+                    outcome = MusicTaskOutcome.Completed, progress = ImportProgress("搜索网页", "English podcasts A2 B1")),
+                MusicTaskEntry("fetch", "读取网页", kind = "assistant_web", parentId = root,
+                    outcome = MusicTaskOutcome.Completed, progress = ImportProgress("读取网页", "https://publisher.example/english")))
+            ImageComposeScene(390, 900) {
+                CompositionLocalProvider(androidx.compose.ui.platform.LocalInspectionMode provides true) {
+                    ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                        androidx.compose.material3.Surface {
+                            FixtureFeatures(initialState = MusicAssistantState(assistantTaskId = root, tasks = steps,
+                                messages = listOf(AssistantMessage("user", "给我找一些适合 A2 到 B1 的英语播客"),
+                                    AssistantMessage("assistant", reply, "DeepSeek (deepseek-flash)")))) { AssistantScreen(true, {}) }
+                        }
+                    }
+                }
+            }.rendering { scene ->
+                scene.render(0).close(); scene.render(500_000_000).close()
+                fun texts(node: SemanticsNode): List<androidx.compose.ui.text.AnnotatedString> =
+                    node.config.getOrNull(SemanticsProperties.Text).orEmpty() + node.children.flatMap(::texts)
+                val rich = scene.semanticsOwners.flatMap { texts(it.rootSemanticsNode) }
+                assertTrue(rich.any { it.text == "英语播客" }, "Render Markdown headings as native text")
+                assertFalse(rich.any { it.text.contains("## ") || it.text.contains("**") }, "Do not print raw Markdown")
+                assertTrue(rich.any { text -> text.getLinkAnnotations(0, text.length).any {
+                    (it.item as? androidx.compose.ui.text.LinkAnnotation.Url)?.url == "https://publisher.example/english"
+                } }, "Expose the official source as a native clickable web link")
+                assertNotNull(scene.node("查看检索过程 · 2 项步骤").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+                scene.render(600_000_000).close(); scene.render(1_000_000_000).close()
+                assertNotNull(scene.node("English podcasts A2 B1"))
+                assertNotNull(scene.node("https://publisher.example/english"))
+                val output = Path.of("build/assistant-harness/screenshots")
+                Files.createDirectories(output)
+                scene.render(1_200_000_000).use { image ->
+                    assertNotNull(image.encodeToData()).use { Files.write(output.resolve("research-and-sources.png"), it.bytes) }
                 }
             }
         }
@@ -563,7 +628,7 @@ class UiVisualContractTest {
             for (dark in listOf(false, true)) {
                 val mode = if (dark) ThemeMode.Dark else ThemeMode.Light
                 for ((width, height, scale) in listOf(Triple(360, 800, 1f), Triple(1280, 800, 1f), Triple(360, 800, 1.5f), Triple(640, 360, 1f), Triple(640, 360, 1.5f))) {
-                    for (page in listOf("library", "empty", "player", "tools", "assistant", "settings", "together")) {
+                    for (page in listOf("library", "empty", "player", "tools", "assistant", "settings")) {
                         ImageComposeScene(width, height, density = Density(1f, scale)) {
                             ResonanceTheme(mode, reducedMotion = true) {
                                 FixtureFeatures {
@@ -574,7 +639,6 @@ class UiVisualContractTest {
                                             onToggleShuffle = {}, onCycleRepeat = {}, onSeek = {}, onTrackSelected = {}, onToggleFavorite = {}, onRefreshLyrics = {})
                                         "tools" -> ProfileScreen(width < 720, {}, {}, {}, {})
                                         "assistant" -> AssistantScreen(width < 720, {})
-                                        "together" -> TogetherScreen(width < 720, {})
                                         else -> LibraryShell(
                                             destination = if (page == "settings") LibraryDestination.Settings else LibraryDestination.Library, onDestinationChange = {},
                                             playlists = if (page == "empty") emptyList() else PreviewLibrary.playlists,
@@ -615,7 +679,7 @@ class UiVisualContractTest {
             val output = Path.of("build/macos-layout/screenshots")
             Files.createDirectories(output)
             val destinations = listOf(LibraryDestination.Library, LibraryDestination.Assistant,
-                LibraryDestination.Together, LibraryDestination.Profile, LibraryDestination.Settings,
+                LibraryDestination.Profile, LibraryDestination.Settings,
                 LibraryDestination.Recommendations, LibraryDestination.RecommendationHistory,
                 LibraryDestination.Tasks, LibraryDestination.Sources, LibraryDestination.Storage,
                 LibraryDestination.SmartManager, LibraryDestination.TasteRadar, LibraryDestination.Import,
@@ -734,6 +798,108 @@ class UiVisualContractTest {
         }
     }
 
+    @Test fun screenshotDraftFooterWrapsWithoutHidingActionsAtLargeText() {
+        SwingUtilities.invokeAndWait {
+            ImageComposeScene(390, 720, density = Density(1f, 1.6f)) {
+                ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                    FixtureFeatures {
+                        ScreenshotImportDialog(ScreenshotImportDraft("layout-fixture", listOf(ScreenshotPlaylistDraft("测试歌单",
+                            listOf(SongRequest("原创歌曲", "测试歌手")))), "本地 OCR"))
+                    }
+                }
+            }.rendering { scene ->
+                scene.render(0).close(); scene.render(500_000_000).close()
+                for (label in listOf("丢弃草稿", "稍后继续", "确认导入 1 首")) {
+                    val bounds = scene.node(label).touchBoundsInRoot
+                    assertTrue(bounds.left >= 0 && bounds.right <= 390 && bounds.top >= 0 && bounds.bottom <= 720,
+                        "Draft action must stay visible at large text: $label $bounds")
+                }
+            }
+        }
+    }
+
+    @Test fun lyricToolsStayScrollableAndClickableInShortLargeTextWindow() {
+        SwingUtilities.invokeAndWait {
+            var adjustment = 0L
+            ImageComposeScene(390, 360, density = Density(1f, 1.6f)) {
+                ResonanceTheme(ThemeMode.Dark, reducedMotion = true) {
+                    LyricsContent(player.currentTrack!!, .4f, 80_000L, stageLyrics.let { (it as LyricsUiState.Ready).lyrics },
+                        onSeek = {}, onAdjustOffset = { adjustment += it })
+                }
+            }.rendering { scene ->
+                scene.render(0).close(); scene.render(500_000_000).close()
+                assertNotNull(scene.node("歌词工具").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+                scene.render(600_000_000).close(); scene.render(1_000_000_000).close()
+                assertNotNull(scene.node("关闭").config.getOrNull(SemanticsActions.OnClick)?.action)
+                fun find(node: SemanticsNode): SemanticsNode? = if (node.config.getOrNull(SemanticsProperties.TestTag) == "lyrics-tools-scroll") node
+                    else node.children.firstNotNullOfOrNull { find(it) }
+                val scroll = assertNotNull(scene.semanticsOwners.firstNotNullOfOrNull { find(it.rootSemanticsNode) })
+                assertTrue(assertNotNull(scroll.config.getOrNull(SemanticsActions.ScrollBy)?.action).invoke(0f, 350f))
+                repeat(15) { scene.render(1_100_000_000L + it * 50_000_000).close() }
+                val button = scene.node("歌词落后了 · 提前 0.5 秒")
+                assertTrue(button.boundsInRoot.top >= scroll.boundsInRoot.top && button.boundsInRoot.bottom <= scroll.boundsInRoot.bottom,
+                    "Calibration action must become visible inside the independent scroll area")
+                assertNotNull(button.config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+                assertEquals(500L, adjustment)
+                val path = Path.of("build/player-improvements/screenshots/lyrics-tools-short-large.png")
+                Files.createDirectories(path.parent)
+                scene.render(2_000_000_000).use { bitmap -> assertNotNull(bitmap.encodeToData()).use { Files.write(path, it.bytes) } }
+                assertNotNull(scene.node("关闭").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+                scene.render(2_100_000_000).close(); scene.render(2_500_000_000).close()
+                assertFailsWith<IllegalStateException> { scene.node("关闭") }
+            }
+        }
+    }
+
+    @Test fun threeMainDestinationsRemainReachableWithoutRoomEntry() {
+        SwingUtilities.invokeAndWait {
+            for (width in listOf(390, 960, 1280)) {
+                val destination = mutableStateOf(LibraryDestination.Library)
+                ImageComposeScene(width, 844) {
+                    ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                        ApprovedShell(destination.value) { destination.value = it }
+                    }
+                }.rendering { scene ->
+                    var time = 0L
+                    fun settle() { repeat(12) { time += 16_666_667; scene.render(time).close() } }
+                    settle()
+                    for ((label, target) in listOf("音乐助手" to LibraryDestination.Assistant,
+                        "工具" to LibraryDestination.Profile, "音乐库" to LibraryDestination.Library)) {
+                        assertNotNull(scene.node(label).config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+                        settle()
+                        assertEquals(target, destination.value)
+                        assertNotNull(scene.node("播放"))
+                        assertFailsWith<IllegalStateException> { scene.node("一起听") }
+                    }
+                    scene.render(time).use { bitmap ->
+                        val path = Path.of("build/remove-together/screenshots/navigation-$width.png")
+                        Files.createDirectories(path.parent)
+                        assertNotNull(bitmap.encodeToData()).use { Files.write(path, it.bytes) }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test fun localPlayerMenuHasNoRoomInvitation() {
+        SwingUtilities.invokeAndWait {
+            ImageComposeScene(390, 844) {
+                ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                    FixtureFeatures { FixturePlayer() }
+                }
+            }.rendering { scene ->
+                scene.render(0).close()
+                scene.render(500_000_000).close()
+                assertNotNull(scene.node("播放选项").config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
+                scene.render(600_000_000).close()
+                scene.render(1_000_000_000).close()
+                assertNotNull(scene.node("歌曲与来源"))
+                assertNotNull(scene.node("播放设置 · 音量与速度"))
+                assertFailsWith<IllegalStateException> { scene.node("与朋友一起听") }
+            }
+        }
+    }
+
     @Test fun renderApprovedLightNativePagesAndSettings() {
         SwingUtilities.invokeAndWait {
             val output = Path.of("build/light-ui-native/screenshots")
@@ -775,7 +941,7 @@ class UiVisualContractTest {
                         assertNotNull(scene.node("专辑"))
                         assertEquals(LibraryDestination.Library, destination.value)
                     }
-                    for (page in listOf(LibraryDestination.Assistant, LibraryDestination.Together, LibraryDestination.Profile,
+                    for (page in listOf(LibraryDestination.Assistant, LibraryDestination.Profile,
                         LibraryDestination.Recommendations, LibraryDestination.RecommendationHistory, LibraryDestination.Tasks,
                         LibraryDestination.Sources, LibraryDestination.Storage, LibraryDestination.SmartManager, LibraryDestination.TasteRadar,
                         LibraryDestination.Import, LibraryDestination.PlaylistArchive, LibraryDestination.About, LibraryDestination.Discover,
@@ -801,7 +967,7 @@ class UiVisualContractTest {
             Files.createDirectories(output)
             for (scale in listOf(1f, 1.5f)) {
               for (page in listOf(LibraryDestination.Library, LibraryDestination.Settings, LibraryDestination.Assistant,
-                  LibraryDestination.Together, LibraryDestination.Profile)) {
+                  LibraryDestination.Profile)) {
                 ImageComposeScene(640, 360, density = Density(1f, scale)) {
                     ResonanceTheme(ThemeMode.Light, reducedMotion = true) { ApprovedShell(page) {} }
                 }.rendering { scene ->
@@ -813,7 +979,7 @@ class UiVisualContractTest {
                         val viewport = assertNotNull(scene.semanticsOwners.firstNotNullOfOrNull { findTag(it.rootSemanticsNode) }).boundsInRoot
                         assertTrue(viewport.height >= 150f, "The collection must retain a usable scroll viewport: $viewport at $scale")
                     }
-                    for (label in listOf("播放", "下一首", "音乐库", "音乐助手", "一起听", "工具")) {
+                    for (label in listOf("播放", "下一首", "音乐库", "音乐助手", "工具")) {
                         val bounds = scene.node(label).touchBoundsInRoot
                         assertTrue(bounds.top >= 0 && bounds.bottom <= 360 && bounds.left >= 0 && bounds.right <= 640,
                             "$label must remain inside the short window: $bounds")

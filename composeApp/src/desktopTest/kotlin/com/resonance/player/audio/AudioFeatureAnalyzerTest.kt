@@ -40,10 +40,10 @@ class AudioFeatureAnalyzerTest {
     }
 
     @Test
-    fun shortOrSilenceAudioReturnsDefaults() {
+    fun shortOrSilenceAudioHasNoInventedBpm() {
         val bytes = ByteArray(100)
         val result = AudioFeatureAnalyzer.analyzePcm(bytes, 48000, 2)
-        assertEquals(120, result.first)
-        assertEquals(50, result.second)
+        assertEquals(0, result.first)
+        assertEquals(0, result.second)
     }
 }

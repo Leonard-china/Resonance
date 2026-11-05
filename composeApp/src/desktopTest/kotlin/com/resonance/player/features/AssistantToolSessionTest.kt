@@ -40,7 +40,7 @@ class AssistantToolSessionTest {
         }
     }
 
-    @Test fun failedDuplicateRunsOnceAndStopsWithoutAnotherRequestAfterSixIdleRounds() = runBlocking {
+    @Test fun failedDuplicateRunsOnceAndRequestsFinalAnswerAfterSixIdleRounds() = runBlocking {
         val session = AssistantToolSession(prefix())
         var attempts = 0
         repeat(5) { index ->
@@ -51,9 +51,44 @@ class AssistantToolSessionTest {
             record(session, "failed-$index", result.text)
         }
         assertEquals(1, attempts)
-        val stopped = assertFailsWith<IllegalStateException> { record(session, "failed-6", "{}") }
-        assertContains(stopped.message.orEmpty(), "避免重复消耗")
-        assertContains(stopped.message.orEmpty(), "fixture unavailable")
+        assertFalse(session.needsFinalAnswer)
+        record(session, "failed-6", "{}")
+        assertTrue(session.needsFinalAnswer)
+        assertContains(session.failureMessage, "fixture unavailable")
+        assertContains(session.finalMessages().toString(), "禁止继续调用工具")
+    }
+
+    @Test fun freshReadResultsCanContinuePastSixRoundsAndRemainAvailableForSummary() = runBlocking {
+        val session = AssistantToolSession(prefix())
+        repeat(12) { index ->
+            val result = session.execute("search_library", JSONObject().put("offset", index)) {
+                JSONArray().put(JSONObject().put("id", "song-$index").put("title", "Song $index")).toString()
+            }
+            record(session, "read-$index", result.text)
+            assertFalse(session.needsFinalAnswer, "New read results are progress at round $index")
+        }
+        assertContains(session.messages().toString(), "Song 5", message = "Keep bounded evidence beyond the last four tool groups")
+        assertTrue(session.messages().toString().length < 40_000)
+    }
+
+    @Test fun emptySearchesDoNotMakeProgressEvenWithDifferentQueries() = runBlocking {
+        val session = AssistantToolSession(prefix())
+        repeat(6) { index ->
+            val result = session.execute("search_sources", JSONObject().put("query", "variant-$index")) { "[]" }
+            record(session, "empty-$index", result.text)
+        }
+        assertTrue(session.needsFinalAnswer)
+    }
+
+    @Test fun rephrasedSearchesWithTheSameResultsDoNotKeepTheLoopAlive() = runBlocking {
+        val session = AssistantToolSession(prefix())
+        repeat(7) { index ->
+            val result = session.execute("search_library", JSONObject().put("query", "variant-$index")) {
+                if (index % 2 == 0) "[{\"id\":\"one\",\"title\":\"One\"}]" else "[{\"title\":\"One\",\"id\":\"one\"}]"
+            }
+            record(session, "same-$index", result.text)
+        }
+        assertTrue(session.needsFinalAnswer)
     }
 
     @Test fun compactionKeepsJsonAndWholeIdsInsteadOfCuttingArrays() {

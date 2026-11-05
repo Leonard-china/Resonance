@@ -516,9 +516,6 @@ private fun NowPlayingTopBar(
                     DropdownMenuItem(text = { Text("音效调校 · ${playerState.audioEffectPreset.displayName}") }, onClick = { menuExpanded = false; showEffectDialogInMenu = true })
                     DropdownMenuItem(text = { Text("播放设置 · 音量与速度") }, onClick = { menuExpanded = false; onOpenPlaybackSettings() })
                     LocalMusicFeatures.current?.let { feature ->
-                        DropdownMenuItem(text = { Text("与朋友一起听") }, onClick = {
-                            menuExpanded = false; onDismiss(); feature.onNavigate(com.resonance.player.model.LibraryDestination.Together)
-                        })
                         val vocalEnabled by feature.services.isVocalSuppressionEnabled.collectAsState()
                         DropdownMenuItem(text = { Text(if (vocalEnabled) "伴奏模式 · 已开启" else "伴奏模式 (人声消除)") }, onClick = { menuExpanded = false; feature.services.setVocalSuppression(!vocalEnabled) })
                         if (!track.id.startsWith("together:")) {
@@ -1126,8 +1123,9 @@ internal fun LyricsContent(
 
     val durationMs = durationTextToSeconds(track.durationText).coerceAtLeast(1) * 1_000L
     val positionMs = (nativePositionMs ?: (durationMs * progress.coerceIn(0f, 1f)).toLong()) + lyrics.offsetMs
+    val timeline = remember(lyrics.lines) { com.resonance.player.model.LyricTimeline(lyrics.lines) }
     val activeIndex = if (lyrics.synchronized) {
-        lyrics.lines.indexOfLast { (it.timestampMs ?: Long.MAX_VALUE) <= positionMs }
+        timeline.activeIndex(positionMs)
     } else {
         -1
     }
@@ -1180,27 +1178,8 @@ internal fun LyricsContent(
                 Text(if (toolsExpanded) "收起工具" else "歌词工具")
             }
         }
-        if (toolsExpanded) {
-            TranslationControls()
-            if (lyrics.synchronized && onAdjustOffset != null) {
-                var calibrating by remember(track.id) { mutableStateOf(false) }
-                TextButton(onClick = { calibrating = !calibrating }) {
-                    Text(if (calibrating) "收起校准" else "时间不准？校准时间轴")
-                }
-                if (calibrating) {
-                    Text("整体提前／落后可校准；越唱偏差越大时请更换歌词或音源版本。",
-                        style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        TextButton(onClick = { onAdjustOffset(-500L) }) { Text("歌词提前了") }
-                        TextButton(onClick = { onAdjustOffset(-lyrics.offsetMs) }, enabled = lyrics.offsetMs != 0L) {
-                            Text(if (lyrics.offsetMs == 0L) "正常" else "%+.1fs · 重置".format(lyrics.offsetMs / 1000.0))
-                        }
-                        TextButton(onClick = { onAdjustOffset(500L) }) { Text("歌词落后了") }
-                    }
-                }
-            }
-        }
-        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        if (toolsExpanded) LyricsToolsDialog(lyrics, activeIndex, onAdjustOffset) { toolsExpanded = false }
+        BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
             val centerPadding = if (lyrics.synchronized) maxHeight / 2 else 8.dp
 
             LazyColumn(
@@ -1209,7 +1188,7 @@ internal fun LyricsContent(
                 contentPadding = PaddingValues(top = centerPadding, bottom = centerPadding, start = 8.dp, end = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                itemsIndexed(lyrics.lines, key = { index, line -> "${line.timestampMs}-$index" }) { index, line ->
+                itemsIndexed(lyrics.lines, key = { index, line -> "${line.timestampMs}-$index" }, contentType = { _, _ -> "lyric" }) { index, line ->
                     val isActive = index == activeIndex
                     LyricRow(
                         line = line,
@@ -1522,6 +1501,37 @@ private fun QueuePane(
                         }
                     }
                     Spacer(Modifier.height(2.dp))
+                }
+            }
+        }
+    }
+}
+
+/** Separate native window: a moving lyric can never draw over or consume a tools gesture. */
+@Composable
+internal fun LyricsToolsDialog(lyrics: Lyrics, activeIndex: Int, onAdjustOffset: ((Long) -> Unit)?, onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(Modifier.fillMaxWidth(.94f).widthIn(max = 560.dp).fillMaxHeight(.85f),
+            shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
+            Column(Modifier.padding(16.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("歌词工具", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    TextButton(onClick = onClose) { Text("关闭") }
+                }
+                Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).testTag("lyrics-tools-scroll"),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    lyrics.lines.getOrNull(activeIndex)?.let { Text(it.text, maxLines = 3, overflow = TextOverflow.Ellipsis) }
+                    TranslationControls()
+                    if (lyrics.synchronized && onAdjustOffset != null) {
+                        Text("时间不准？校准时间轴", style = MaterialTheme.typography.titleMedium)
+                        Text("整体提前／落后可校准；越唱偏差越大时请更换歌词或音源版本。", style = MaterialTheme.typography.bodySmall)
+                        Text("当前偏移：%+.1f 秒".format(lyrics.offsetMs / 1000.0))
+                        TextButton(onClick = { onAdjustOffset(-500L) }, modifier = Modifier.fillMaxWidth()) { Text("歌词提前了 · 延后 0.5 秒") }
+                        TextButton(onClick = { onAdjustOffset(500L) }, modifier = Modifier.fillMaxWidth()) { Text("歌词落后了 · 提前 0.5 秒") }
+                        TextButton(onClick = { onAdjustOffset(-lyrics.offsetMs) }, enabled = lyrics.offsetMs != 0L,
+                            modifier = Modifier.fillMaxWidth()) { Text("重置时间偏移") }
+                    }
                 }
             }
         }

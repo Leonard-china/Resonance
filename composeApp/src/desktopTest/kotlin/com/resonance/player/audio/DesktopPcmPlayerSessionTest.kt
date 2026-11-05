@@ -17,6 +17,7 @@ class DesktopPcmPlayerSessionTest {
         assertTrue(condition(), "Playback did not reach the expected state")
     }
     private class Output : PcmOutput {
+        var firstWriteCount = 4
         var zeroWrites = false
         var pauseOnFirstWrite: (() -> Unit)? = null
         val writes = AtomicInteger()
@@ -32,17 +33,19 @@ class DesktopPcmPlayerSessionTest {
             writes.incrementAndGet()
             if (zeroWrites) return 0
             assertTrue(length in 4..2048 && length % 4 == 0)
-            val count = if (writes.get() == 1 && pauseOnFirstWrite != null) { pauseOnFirstWrite!!.invoke(); 4 } else length
+            val count = if (writes.get() == 1 && pauseOnFirstWrite != null) { pauseOnFirstWrite!!.invoke(); firstWriteCount } else length
             frames.addAndGet((count / 4).toLong())
             return count
         }
         override fun close() { closeGate?.await(2, TimeUnit.SECONDS); closed.countDown() }
     }
     private class Backend(val output: Output = Output(), val bytes: ByteArray = ByteArray(16384)) : DesktopAudioBackend {
+        val offsets = CopyOnWriteArrayList<Double>()
         var readGate: CountDownLatch? = null
         val opened = CountDownLatch(1)
         val cancelled = AtomicInteger()
         override fun decode(track: Track, offset: Double, speed: Double) = object : DecodedPcm {
+            init { offsets += offset }
             override val input = object : InputStream() {
                 private val source = ByteArrayInputStream(bytes)
                 override fun read(): Int = source.read()
@@ -123,6 +126,23 @@ class DesktopPcmPlayerSessionTest {
             assertFalse(events.any { it.kind == DesktopPlaybackEvent.Kind.Error })
             player.setPlaying(true)
             await { events.any { it.kind == DesktopPlaybackEvent.Kind.Ended } }
+        } finally { player.close() }
+    }
+    @Test fun retryAfterOutputFailureRetainsThePlayedPosition() {
+        val backend = Backend()
+        backend.output.firstWriteCount = 2048
+        backend.output.pauseOnFirstWrite = { backend.output.zeroWrites = true }
+        val events = CopyOnWriteArrayList<DesktopPlaybackEvent>()
+        val player = DesktopPcmPlayer(backend, 100, events::add)
+        try {
+            player.play(track)
+            await { events.any { it.kind == DesktopPlaybackEvent.Kind.Error } && player.sessionClosed }
+            assertTrue(player.snapshot().progress > 0)
+            backend.output.zeroWrites = false
+            backend.output.pauseOnFirstWrite = null
+            player.setPlaying(true)
+            await { backend.offsets.size == 2 }
+            assertTrue(backend.offsets.last() > 0, "An output retry must start at the retained position, not zero")
         } finally { player.close() }
     }
     @Test fun preparedPausedPlaybackWaitsForResumeAndIsNotAStalledDevice() {

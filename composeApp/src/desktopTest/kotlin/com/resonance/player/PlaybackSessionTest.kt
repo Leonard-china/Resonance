@@ -22,7 +22,6 @@ class PlaybackSessionTest {
         val services = Proxy.newProxyInstance(PlatformServices::class.java.classLoader, arrayOf(PlatformServices::class.java)) { _, method, args ->
             val arguments = args.orEmpty()
             when (method.name) {
-                "getListenTogether" -> null
                 "audioFileAvailable" -> {
                     val gate = gates[(arguments[0] as Track).id]
                     if (gate == null) true else {

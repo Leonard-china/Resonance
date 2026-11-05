@@ -60,19 +60,22 @@ class MusicAssistantTest {
     private class Transport : MusicAiTransport {
         val replies = ArrayDeque<JSONObject>()
         val requests = mutableListOf<JSONArray>()
+        val requestTools = mutableListOf<JSONArray?>()
         override suspend fun complete(connection: AiConnection, messages: JSONArray, tools: JSONArray?, maxTokens: Int): AiReply {
             requests += JSONArray(messages.toString())
+            requestTools += tools?.let { JSONArray(it.toString()) }
             return AiReply(replies.removeFirst(), AssistantUsage(100, 60, 20))
         }
         fun content(value: String) { replies.add(JSONObject().put("role", "assistant").put("content", value)) }
         fun songs(vararg titles: String) = content(JSONArray(titles.map { JSONObject().put("title", it).put("artist", "Artist").put("album", "Album").put("reason", "Taste") }).toString())
         fun call(name: String, args: JSONObject) { replies.add(JSONObject().put("role", "assistant").put("content", "").put("tool_calls", JSONArray().put(JSONObject().put("id", "tool-1").put("type", "function").put("function", JSONObject().put("name", name).put("arguments", args.toString()))))) }
     }
-    private suspend fun fixture(block: suspend (JvmMusicAssistant, Library, Videos, Transport, MusicJsonStore) -> Unit) {
+    private suspend fun fixture(web: com.resonance.player.ai.MusicWebResearch = com.resonance.player.ai.DeepSeekWebResearch(),
+                                block: suspend (JvmMusicAssistant, Library, Videos, Transport, MusicJsonStore) -> Unit) {
         val root = Files.createTempDirectory("resonance-assistant-test-")
         try {
             val library = Library(root); val videos = Videos(); val ai = Transport(); val store = MusicJsonStore(root.resolve("state"))
-            val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos, artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null }, lyricSource = { LyricsFetchResult.Unavailable("fixture", false) })
+            val runtime = JvmMusicAssistant(store, root, library, client = ai, videoSource = videos, artworkSource = com.resonance.player.enrich.MusicArtworkSource { _, _ -> null }, lyricSource = { LyricsFetchResult.Unavailable("fixture", false) }, webResearch = web)
             runtime.saveSettings(MusicFeatureSettings(connections = listOf(AiConnection(apiKey = "test-key")), recommendationsEnabled = true, recommendationMode = com.resonance.player.model.RecommendationMode.Ai, screenshotRecognition = ScreenshotRecognition.CloudApi))
             runtime.settings()
             block(runtime, library, videos, ai, store)
@@ -106,13 +109,131 @@ class MusicAssistantTest {
         }
     }
 
-    @Test fun failedRepeatedToolsStopLocallyWithoutCallingTheModelForever() = runBlocking {
+    @Test fun failedRepeatedToolsGetOneFinalAnswerWithoutFurtherToolAccess() = runBlocking {
         fixture { runtime, _, _, ai, _ ->
-            repeat(10) { ai.call("not_a_tool", JSONObject().put("attempt", it)) }
-            val error = assertFailsWith<IllegalStateException> { runtime.chat("给我推荐几首类似的歌曲", emptyList()) }
-            assertTrue(error.message.orEmpty().contains("6"))
-            assertEquals(6, ai.requests.size)
-            assertTrue(runtime.state.value.messages.last().content.contains("暂停"))
+            repeat(6) { ai.call("not_a_tool", JSONObject().put("attempt", it)) }
+            ai.content("工具不支持该操作。你可以先告诉我喜欢的歌手，我会给出文字建议。")
+            runtime.chat("给我推荐几首类似的歌曲", emptyList())
+            assertEquals(7, ai.requests.size)
+            assertNull(ai.requestTools.last())
+            assertContains(ai.requests.last().toString(), "不支持的音乐工具")
+            assertContains(runtime.state.value.messages.last().content, "文字建议")
+            assertFalse(runtime.state.value.task.running)
+        }
+    }
+
+    @Test fun podcastRecommendationCanAnswerAfterSixEmptySearchesWithoutDownloading() = runBlocking {
+        fixture { runtime, library, videos, ai, _ ->
+            repeat(6) { ai.call("search_library", JSONObject().put("query", "podcast-$it")) }
+            val reply = "可以从面向学习者的慢速英语节目开始，先选带逐字稿的短集。以下是未经在线核实的一般学习建议。"
+            ai.content(reply)
+            runtime.chat("给我找一些英语播客 podcast 适用于A2到B1", emptyList())
+            assertEquals(reply, runtime.state.value.messages.last().content)
+            assertEquals(7, ai.requests.size)
+            assertNull(ai.requestTools.last())
+            assertContains(ai.requests.first().toString(), "本轮未启用网页检索")
+            assertTrue(library.lists.isEmpty())
+            assertTrue(library.songs.isEmpty())
+            assertEquals(0, videos.downloads)
+        }
+    }
+
+    @Test fun freshSearchResultsDoNotFailAtSixRounds() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            repeat(9) { index ->
+                val track = Track("song-$index", "Title $index", "Artist", "", "3:00", index)
+                library.songs[track.id] = track
+                ai.call("search_library", JSONObject().put("query", track.title))
+            }
+            ai.content("找到了这些曲目，可以选择一首试听。")
+            runtime.chat("找几首不同的歌曲", emptyList())
+            assertEquals(10, ai.requests.size)
+            assertNotNull(ai.requestTools.last(), "Fresh results must keep normal tool access")
+            assertContains(runtime.state.value.messages.last().content, "找到了")
+        }
+    }
+
+    @Test fun finalAnswerCannotExecuteToolsEvenWhenTheModelIgnoresTheBoundary() = runBlocking {
+        fixture { runtime, library, _, ai, _ ->
+            repeat(6) { ai.call("search_library", JSONObject().put("query", "absent-$it")) }
+            ai.call("create_playlist", JSONObject().put("name", "must not exist"))
+            ai.content("must not request again")
+            val error = assertFailsWith<IllegalStateException> { runtime.chat("找些播客", emptyList()) }
+            assertContains(error.message.orEmpty(), "最终答复")
+            assertEquals(7, ai.requests.size)
+            assertEquals(1, ai.replies.size)
+            assertNull(ai.requestTools.last())
+            assertTrue(library.lists.isEmpty())
+            assertTrue(runtime.state.value.messages.last().model.orEmpty().startsWith("本地执行反馈"))
+            assertTrue(runtime.state.value.tasks.any { it.outcome == MusicTaskOutcome.Failed })
+        }
+    }
+
+    @Test fun emptyModelReplyIsNotReportedAsCompletedMusicManagement() = runBlocking {
+        fixture { runtime, _, _, ai, _ ->
+            ai.content("")
+            assertFailsWith<IllegalStateException> { runtime.chat("推荐一些英语播客", emptyList()) }
+            assertContains(runtime.state.value.messages.last().content, "未返回有效回复")
+            assertFalse(runtime.state.value.messages.last().content.contains("已完成音乐管理"))
+            assertEquals(1, ai.requests.size)
+        }
+    }
+
+    private class Web : com.resonance.player.ai.MusicWebResearch {
+        var searches = 0
+        var fetches = 0
+        override fun available(connection: AiConnection) = com.resonance.player.ai.DeepSeekWebResearch.supports(connection)
+        override suspend fun search(connection: AiConnection, query: String, question: String): JSONArray {
+            searches++
+            return JSONArray().put(JSONObject().put("url", "https://publisher.example/english")
+                .put("title", "Learner podcast").put("summary", "A2 to B1, with transcripts"))
+        }
+        override suspend fun fetch(connection: AiConnection, url: String): JSONObject {
+            fetches++
+            return JSONObject().put("url", url).put("content", "Official learner programme. A2 to B1. Transcripts are available.")
+        }
+    }
+
+    @Test fun harnessWebToolsSearchReadAndCiteWithoutDownloadingAndReuseRepeatedSearch() = runBlocking {
+        val web = Web()
+        fixture(web) { runtime, library, videos, ai, _ ->
+            runtime.saveSettings(runtime.settings().copy(assistantProvider = AiProvider.DeepSeek,
+                connections = listOf(AiConnection(AiProvider.DeepSeek, apiKey = "fixture-web-key"))))
+            val query = JSONObject().put("query", "English podcasts A2 B1 transcripts official")
+            ai.call("web_search", query)
+            ai.call("web_fetch", JSONObject().put("url", "https://publisher.example/english"))
+            ai.call("web_search", query)
+            ai.content("适合 A2–B1，并提供逐字稿。[节目官网](https://publisher.example/english)")
+            runtime.chat("给我找一些英语播客 podcast 适用于A2到B1", emptyList())
+            assertEquals(1, web.searches); assertEquals(1, web.fetches)
+            assertContains(ai.requestTools.first().toString(), "web_search")
+            assertContains(ai.requests.last().toString(), "Official learner programme")
+            assertFalse(ai.requests.any { it.toString().contains("fixture-web-key") })
+            assertContains(runtime.state.value.messages.last().content, "https://publisher.example/english")
+            assertTrue(library.songs.isEmpty()); assertTrue(library.lists.isEmpty()); assertEquals(0, videos.downloads)
+            val root = runtime.state.value.assistantTaskId
+            val steps = runtime.state.value.tasks.filter { it.parentId == root && it.kind == "assistant_web" }
+            assertEquals(2, steps.size)
+            assertTrue(steps.all { it.outcome == MusicTaskOutcome.Completed })
+            runtime.createSession("Another conversation")
+            assertEquals("", runtime.state.value.assistantTaskId)
+        }
+    }
+
+    @Test fun disabledOrNonOfficialWebToolsAreNeitherAdvertisedNorExecuted() = runBlocking {
+        for (disabled in listOf(true, false)) {
+            val web = Web()
+            fixture(web) { runtime, _, _, ai, _ ->
+                runtime.saveSettings(runtime.settings().copy(assistantProvider = AiProvider.DeepSeek,
+                    assistantWebSearchEnabled = !disabled, connections = listOf(AiConnection(AiProvider.DeepSeek,
+                        baseUrl = if (disabled) AiProvider.DeepSeek.url else "https://proxy.example/v1", apiKey = "fixture"))))
+                ai.call("web_search", JSONObject().put("query", "podcast"))
+                ai.content("本轮没有联网检索能力，以下建议未经在线核实。")
+                runtime.chat("找英语播客", emptyList())
+                assertFalse(ai.requestTools.first().toString().contains("\"name\":\"web_search\""))
+                assertEquals(0, web.searches)
+                assertContains(ai.requests.last().toString(), "本轮未启用网页检索")
+            }
         }
     }
 

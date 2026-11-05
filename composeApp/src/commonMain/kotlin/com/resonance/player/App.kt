@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import com.resonance.player.application.ApplicationEffect
 import androidx.compose.runtime.Composable
@@ -53,12 +53,12 @@ import com.resonance.player.ui.TutorialController
 import com.resonance.player.ui.TutorialDialogs
 import com.resonance.player.tutorial.TutorialCompletion
 import com.resonance.player.platform.FloatingLyricsHost
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import com.resonance.player.playback.PlaybackStateStore
-import com.resonance.player.platform.isTogetherTrack
 import com.resonance.player.playback.PlaybackSnapshot
 import com.resonance.player.data.PersistenceQueue
 import kotlin.random.Random
@@ -116,53 +116,6 @@ fun App(
         var customQueue by customQueueState
         val activePlaylistIdState = remember { mutableStateOf<String?>(null) }
         var activePlaylistId by activePlaylistIdState
-        val together = services.listenTogether
-        val togetherRoom = together?.state?.collectAsState()?.value
-        val sharedLyrics = together?.remoteLyrics?.collectAsState()?.value
-        var wasHostingTogether by remember(services) { mutableStateOf(false) }
-        ApplicationEffect(scope, togetherRoom?.role) {
-            if (togetherRoom?.role == com.resonance.player.platform.TogetherRole.Host) {
-                wasHostingTogether = true
-            } else if (wasHostingTogether) {
-                wasHostingTogether = false
-                customQueue = customQueue?.filterNot { it.isTogetherTrack() }?.takeIf { it.isNotEmpty() }
-                if (player.currentTrack?.isTogetherTrack() == true) {
-                    services.setPlaying(false)
-                    player = player.copy(currentTrack = null, isPlaying = false, progress = 0f, positionMs = null)
-                }
-            }
-        }
-        ApplicationEffect(scope, togetherRoom?.isGuest) {
-            if (togetherRoom?.isGuest == true && services.togetherLocalSnapshot == null && player.currentTrack?.isTogetherTrack() != true) {
-                services.togetherLocalSnapshot = TogetherLocalSnapshot(player, customQueue, activePlaylistId)
-            } else if (togetherRoom?.isGuest != true) {
-                val saved = services.togetherLocalSnapshot as? TogetherLocalSnapshot
-                services.togetherLocalSnapshot = null
-                if (saved != null) {
-                    customQueue = saved.queue
-                    activePlaylistId = saved.playlistId
-                    val track = saved.player.currentTrack
-                    if (track != null) {
-                        playback.activate(track, saved.playlistId, expectNativeTrack = true,
-                            prepare = { check(services.audioFileAvailable(track)) { "原来的歌曲暂时不可用" } }) {
-                            services.restorePausedPlayback(track, saved.queue ?: listOf(track), saved.player.progress,
-                                saved.player.shuffleEnabled, saved.player.repeatMode)
-                            player = saved.player.copy(isPlaying = false)
-                        }
-                    }
-                }
-            }
-        }
-        ApplicationEffect(scope, together) {
-            together?.hostQueue?.collect { queue ->
-                if (queue != null && together.state.value.role == com.resonance.player.platform.TogetherRole.Host &&
-                    together.state.value.roomSessionId == queue.roomSessionId) customQueue = queue.tracks
-            }
-        }
-        com.resonance.player.ui.TogetherPlaybackBinding(services, playback, player) { track ->
-            customQueue = track?.let(::listOf)
-            activePlaylistId = null
-        }
         val persistence = remember(services) { PersistenceQueue(scope) {
             importMessage = "保存失败：${it.message.orEmpty()}"
             playbackIssue = com.resonance.player.platform.PlaybackIssue(importMessage.orEmpty(),
@@ -204,7 +157,6 @@ fun App(
         var batchEnrichJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
         val features = remember(services) { MusicFeatureController(services, scope) }
-        com.resonance.player.ui.TogetherInvitationPrompt(services) { destination = LibraryDestination.Together }
         ApplicationEffect(scope, tutorial.activeChapterId, tutorial.step?.id, importedTracks, playlists, player.currentTrack, features.settings) {
             val completion = tutorial.step?.completion
             val satisfied = when (completion) {
@@ -237,10 +189,9 @@ fun App(
             importedTracks = tracksWithPlaylistArtwork(loaded, lists)
             playlists = lists
             customQueue = customQueue?.mapNotNull { queued ->
-                if (queued.isTogetherTrack() && together?.state?.value?.role == com.resonance.player.platform.TogetherRole.Host) queued
-                else loaded.firstOrNull { it.id == queued.id }
+                loaded.firstOrNull { it.id == queued.id }
             }
-            player.currentTrack?.takeUnless { it.isTogetherTrack() }?.let { current ->
+            player.currentTrack?.let { current ->
                 val updated = loaded.firstOrNull { it.id == current.id }
                 player = if (updated != null) player.copy(currentTrack = updated) else { services.setPlaying(false); PlayerState(autoLoudnessEnabled = player.autoLoudnessEnabled, volume = player.volume) }
             }
@@ -287,16 +238,16 @@ fun App(
         features.lyrics = originalLyrics
         val translatedLyrics = (originalLyrics as? LyricsUiState.Ready)?.lyrics?.let(features::translatedLyrics)
         val displayLyrics = translatedLyrics?.let { LyricsUiState.Ready(it) } ?: originalLyrics
-        SideEffect {
-            if (togetherRoom?.role == com.resonance.player.platform.TogetherRole.Host) {
-                together?.publishLyrics(player.currentTrack?.id.orEmpty(), (displayLyrics as? LyricsUiState.Ready)?.lyrics)
-            }
-        }
         ApplicationEffect(scope, player.currentTrack?.id, (originalLyrics as? LyricsUiState.Ready)?.lyrics?.copy(offsetMs = 0),
             features.settings.translationLanguage) {
             features.reloadTranslation()
         }
-        ApplicationEffect(scope, player, displayLyrics, features.settings) { services.updateFloatingLyrics(player, displayLyrics, features.settings) }
+        val overlayPublished = remember(services) { booleanArrayOf(false) }
+        SideEffect {
+            val enabled = features.settings.floatingLyrics
+            if (enabled || overlayPublished[0]) services.updateFloatingLyrics(player, displayLyrics, features.settings)
+            overlayPublished[0] = enabled
+        }
 
         fun startBatchEnrich(tracks: List<Track>, options: com.resonance.player.model.BatchEnrichOptions) {
             batchEnrichRunning = true
@@ -416,7 +367,6 @@ fun App(
         val playbackQueue = remember(customQueue, fullLibraryQueue) {
             resolvePlaybackQueue(customQueue, fullLibraryQueue)
         }
-        SideEffect { together?.publishQueue(customQueue ?: playbackQueue) }
 
         fun persistPlaylists(updated: List<Playlist>) {
             playlists = updated
@@ -451,7 +401,6 @@ fun App(
         }
 
         fun toggleFavorite(track: Track) {
-            if (track.isTogetherTrack()) { importMessage = "跟听音频只保存在临时缓存中，不能加入本机收藏"; return }
             val next = !track.isFavorite
             fun mark(list: List<Track>): List<Track> =
                 list.map { if (it.id == track.id) it.copy(isFavorite = next) else it }
@@ -489,8 +438,6 @@ fun App(
             applicationLifetime.registerStop("playback.requests", queueSession::close)
             onDispose { queueSession.close() }
         }
-        fun requestTogetherToggle() = queueSession.requestTogetherToggle()
-        fun allowLocalPlayback() = queueSession.allowLocalPlayback()
         fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = player.shuffleEnabled) = queueSession.startTrack(track, newQueue, shuffle)
         fun startShufflePlayback(tracks: List<Track>) = queueSession.startShufflePlayback(tracks)
         fun moveInQueue(direction: Int, automatic: Boolean = false) = queueSession.moveInQueue(direction, automatic)
@@ -499,65 +446,9 @@ fun App(
         fun clearQueue() = queueSession.clearQueue()
         fun moveTrackInQueue(fromIndex: Int, toIndex: Int) = queueSession.moveTrackInQueue(fromIndex, toIndex)
 
-        val togetherAction by androidx.compose.runtime.rememberUpdatedState<(com.resonance.player.platform.TogetherRequest) -> Unit>({ request ->
-            when (request.action) {
-                com.resonance.player.platform.TogetherControl.Play, com.resonance.player.platform.TogetherControl.Pause -> {
-                    val playing = request.action == com.resonance.player.platform.TogetherControl.Play
-                    services.setPlaying(playing)
-                    player = player.copy(isPlaying = playing)
-                }
-                com.resonance.player.platform.TogetherControl.Next -> moveInQueue(1)
-                com.resonance.player.platform.TogetherControl.Previous -> moveInQueue(-1)
-                com.resonance.player.platform.TogetherControl.Seek -> request.trackId.toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }?.let {
-                    services.seekTo(it); player = player.copy(progress = it)
-                }
-                com.resonance.player.platform.TogetherControl.Select -> playbackQueue.firstOrNull { it.id == request.trackId }?.let { startTrack(it, playbackQueue) }
-                com.resonance.player.platform.TogetherControl.Append -> {
-                    (request.track ?: playbackQueue.firstOrNull { it.id == request.trackId })?.let {
-                        if (playbackQueue.none { t -> t.id == it.id }) customQueue = playbackQueue + it
-                    }
-                }
-                com.resonance.player.platform.TogetherControl.Remove -> {
-                    playbackQueue.firstOrNull { it.id == request.trackId }?.let { removeFromQueue(it) }
-                }
-                com.resonance.player.platform.TogetherControl.Move -> {
-                    val parts = request.trackId.split(":")
-                    if (parts.size == 2) {
-                        val from = parts[0].toIntOrNull()
-                        val to = parts[1].toIntOrNull()
-                        if (from != null && to != null && from in playbackQueue.indices && to in playbackQueue.indices) {
-                            moveTrackInQueue(from, to)
-                        }
-                    }
-                }
-            }
-        })
-        ApplicationEffect(scope, together) {
-            if (services.managesTogetherPlayback) return@ApplicationEffect
-            together?.approvedActions?.collect { request ->
-                val room = together.state.value
-                if (room.role == com.resonance.player.platform.TogetherRole.Host &&
-                    (request.roomSessionId.isEmpty() || request.roomSessionId == room.roomSessionId)) togetherAction(request)
-            }
-        }
-
         ApplicationEffect(scope, services, playbackQueue, player.currentTrack, player.repeatMode, player.shuffleEnabled) {
             services.playbackEnded.collect {
-                if (!(services.managesTogetherPlayback && together?.state?.value?.role == com.resonance.player.platform.TogetherRole.Host))
-                    moveInQueue(direction = 1, automatic = true)
-            }
-        }
-        ApplicationEffect(scope, together) {
-            if (!services.managesTogetherPlayback) return@ApplicationEffect
-            together?.hostPlayback?.collect { snapshot ->
-                if (snapshot == null || together.state.value.role != com.resonance.player.platform.TogetherRole.Host) return@collect
-                val track = snapshot.currentTrack
-                if (track != null) {
-                    if (playback.acceptNativeTrack(track.id)) playback.activate(track, activePlaylistId)
-                    if (player.currentTrack?.id != track.id) return@collect
-                    player = player.copy(isPlaying = snapshot.isPlaying, progress = snapshot.progress, positionMs = snapshot.positionMs,
-                        playbackSpeed = snapshot.playbackSpeed)
-                } else if (together.hostQueue.value?.tracks?.isEmpty() == true) playback.clearCurrentTrack()
+                moveInQueue(direction = 1, automatic = true)
             }
         }
         ApplicationEffect(scope, services) {
@@ -586,18 +477,18 @@ fun App(
             services.currentAudioEffectPreset.collect { preset -> player = player.copy(audioEffectPreset = preset) }
         }
 
-        ApplicationEffect(scope, services, playbackQueue, player.currentTrack?.id) {
-            while (true) {
+        val snapshotQueueIds = remember(playbackQueue) { playbackQueue.map(Track::id) }
+        ApplicationEffect(scope, services, snapshotQueueIds, player.currentTrack?.id) {
+            if (services.persistsNativePlaybackSnapshot) return@ApplicationEffect
+            androidx.compose.runtime.snapshotFlow {
+                player.currentTrack?.let { track -> PlaybackSnapshot(track.id, snapshotQueueIds, player.progress, activePlaylistId) }
+            }.conflate().collect { snapshot ->
+                if (snapshot != null) persistence.submitLatest("playback.snapshot") { services.savePlaybackSnapshot(snapshot) }
                 delay(2_000)
-                player.currentTrack?.let { track ->
-                    if (track.isTogetherTrack()) return@let
-                    val snapshot = PlaybackSnapshot(track.id, playbackQueue.filterNot { it.isTogetherTrack() }.map(Track::id), player.progress, activePlaylistId)
-                    persistence.submitLatest("playback.snapshot") { services.savePlaybackSnapshot(snapshot) }
-                }
             }
         }
-        ApplicationEffect(scope, services, player.currentTrack?.id, sharedLyrics) {
-            lyricSession.load(player.currentTrack, sharedLyrics)
+        ApplicationEffect(scope, services, player.currentTrack?.id) {
+            lyricSession.load(player.currentTrack)
         }
 
         fun requestAiLyrics() {
@@ -605,23 +496,19 @@ fun App(
         }
         ApplicationEffect(scope, services, playbackQueue, selectedPlaylistId) {
             services.activeTrackChanges.collect { trackId ->
-                if (!playback.acceptNativeTrack(trackId)) return@collect
+                val native = services.currentPlaybackState ?: return@collect
                 playbackQueue.firstOrNull { it.id == trackId }?.let { track ->
-                    if (!track.isTogetherTrack()) playback.activate(track, activePlaylistId, resetGain = false)
+                    playback.adoptNativeTrack(track, activePlaylistId, native)
                 }
             }
         }
         features.onPlay = { track, queue -> startTrack(track, queue) }
         features.onQueueNext = ::playNext
         features.onAppendQueue = { tracks ->
-            if (together?.state?.value?.role?.let { it != com.resonance.player.platform.TogetherRole.None } == true) {
-                features.message = "一起听中请通过房间队列添加歌曲"
-            } else {
-                val base = if (player.currentTrack == null && customQueue == null) emptyList() else playbackQueue
-                val updated = com.resonance.player.model.appendAssistantQueue(base, tracks)
-                customQueue = updated
-                features.message = if (updated.size > base.size) "已加入 ${updated.size - base.size} 首歌曲" else "歌曲已在播放队列中"
-            }
+            val base = if (player.currentTrack == null && customQueue == null) emptyList() else playbackQueue
+            val updated = com.resonance.player.model.appendAssistantQueue(base, tracks)
+            customQueue = updated
+            features.message = if (updated.size > base.size) "已加入 ${updated.size - base.size} 首歌曲" else "歌曲已在播放队列中"
         }
         features.onAction = { action ->
             when (action.kind) {
@@ -647,14 +534,9 @@ fun App(
                 "pause", "resume" -> {
                     check(player.currentTrack != null) { "请先选择歌曲" }
                     val playing = action.kind == "resume"
-                    val together = services.listenTogether
-                    if (together?.state?.value?.isGuest == true) {
-                        together.requestControl(if (playing) com.resonance.player.platform.TogetherControl.Play else com.resonance.player.platform.TogetherControl.Pause)
-                    } else {
-                        playback.setUserPlayIntent(playing)
-                        services.setPlaying(playing)
-                        player = player.copy(isPlaying = playing)
-                    }
+                    playback.setUserPlayIntent(playing)
+                    services.setPlaying(playing)
+                    player = player.copy(isPlaying = playing)
                 }
                 "next" -> moveInQueue(direction = 1)
                 "previous" -> moveInQueue(direction = -1)
@@ -663,11 +545,8 @@ fun App(
                     val duration = player.currentTrack?.let { com.resonance.player.model.durationTextToSeconds(it.durationText) } ?: 0
                     check(duration > 0) { "当前歌曲时长尚不可用" }
                     val fraction = (seconds / duration).coerceIn(0f, 1f)
-                    val together = services.listenTogether
-                    if (together?.state?.value?.isGuest == true) {
-                        check(together.state.value.equalControls) { "对方使用旧版，暂不支持共同调整进度" }
-                        together.requestControl(com.resonance.player.platform.TogetherControl.Seek, fraction.toString())
-                    } else { services.seekTo(fraction); player = player.copy(progress = fraction, positionMs = (fraction * duration * 1000).toLong()) }
+                    services.seekTo(fraction)
+                    player = player.copy(progress = fraction, positionMs = (fraction * duration * 1000).toLong())
                 }
                 else -> error("操作不支持")
             }
@@ -682,11 +561,9 @@ fun App(
         }
         if (!stopping) FloatingLyricsHost(player, displayLyrics, features.settings, features::save,
             onTogglePlay = {
-                if (!requestTogetherToggle() && allowLocalPlayback()) {
-                    val nextPlaying = !player.isPlaying
-                    playback.setUserPlayIntent(nextPlaying)
-                    services.setPlaying(nextPlaying)
-                }
+                val nextPlaying = !player.isPlaying
+                playback.setUserPlayIntent(nextPlaying)
+                services.setPlaying(nextPlaying)
             }, onPrevious = { moveInQueue(-1) }, onNext = { moveInQueue(1) })
         mainWindow {
         CompositionLocalProvider(LocalMusicFeatures provides features, LocalTutorial provides tutorial) {
@@ -732,9 +609,7 @@ fun App(
                         playerState = player,
                         playbackQueue = playbackQueue,
                         lyricsState = displayLyrics,
-                        onTogglePlay = toggle@{
-                            if (requestTogetherToggle()) return@toggle
-                            if (!allowLocalPlayback()) return@toggle
+                        onTogglePlay = {
                             val nextPlaying = !player.isPlaying
                             playback.setUserPlayIntent(nextPlaying)
                             services.setPlaying(nextPlaying)
@@ -812,15 +687,13 @@ fun App(
                         libraryLocation = services.libraryLocation,
                         onPrevious = { moveInQueue(direction = -1) },
                         onNext = { moveInQueue(direction = 1) },
-                        onToggleShuffle = shuffle@{
-                            if (!allowLocalPlayback()) return@shuffle
+                        onToggleShuffle = {
                             val next = !player.shuffleEnabled
                             services.setPlaybackMode(next, player.repeatMode)
                             player = player.copy(shuffleEnabled = next)
                             playbackModeWriter.save(next, player.repeatMode)
                         },
-                        onCycleRepeat = repeat@{
-                            if (!allowLocalPlayback()) return@repeat
+                        onCycleRepeat = {
                             val nextRepeat = when (player.repeatMode) {
                                     RepeatMode.Off -> RepeatMode.All
                                     RepeatMode.All -> RepeatMode.One
@@ -830,15 +703,7 @@ fun App(
                             player = player.copy(repeatMode = nextRepeat)
                             playbackModeWriter.save(player.shuffleEnabled, nextRepeat)
                         },
-                        onSeek = seek@{ progress ->
-                            val together = services.listenTogether
-                            if (together?.state?.value?.isGuest == true) {
-                                if (together.state.value.equalControls && progress.isFinite())
-                                    together.requestControl(com.resonance.player.platform.TogetherControl.Seek, progress.coerceIn(0f, 1f).toString())
-                                else importMessage = "对方使用旧版，暂不支持共同调整进度。"
-                                return@seek
-                            }
-                            if (!allowLocalPlayback()) return@seek
+                        onSeek = { progress ->
                             services.seekTo(progress)
                             player = player.copy(progress = progress)
                         },
@@ -848,8 +713,7 @@ fun App(
                             val playlistId = activePlaylistId
                             persistence.submitLatest("volume.global") { services.saveGlobalVolume(vol) }
                         },
-                        onSpeedChange = speed@{ speed ->
-                            if (!allowLocalPlayback()) return@speed
+                        onSpeedChange = { speed ->
                             services.setPlaybackSpeed(speed)
                             player = player.copy(playbackSpeed = speed)
                         },
@@ -1151,7 +1015,7 @@ fun App(
             val current = services.isCurrentPlaybackIssue(issue) && (issue.trackId == null || issue.trackId == player.currentTrack?.id)
             com.resonance.player.ui.PlaybackErrorDialog(issue.message,
                 onDismiss = { playbackIssue = null },
-                onRetry = if (issue.interruptsPlayback && current && player.currentTrack != null && togetherRoom?.role in listOf(null, com.resonance.player.platform.TogetherRole.None)) {
+                onRetry = if (issue.interruptsPlayback && current && player.currentTrack != null) {
                     { playbackIssue = null; if (services.isCurrentPlaybackIssue(issue)) player.currentTrack?.let { startTrack(it) } }
                 } else null,
                 title = when (issue.source) {
@@ -1281,8 +1145,6 @@ internal fun rematchCatalogTracks(playlists: List<Playlist>, localTracks: List<T
         playlist.copy(tracks = rematched, subtitle = "${rematched.size} 首 · 已匹配 $available 首本地音乐")
     }
 }
-
-private data class TogetherLocalSnapshot(val player: PlayerState, val queue: List<Track>?, val playlistId: String?)
 
 private fun normalizeMetadata(value: String): String = value.lowercase().filter(Char::isLetterOrDigit)
 

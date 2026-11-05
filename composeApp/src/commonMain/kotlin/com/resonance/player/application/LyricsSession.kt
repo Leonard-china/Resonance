@@ -2,7 +2,6 @@ package com.resonance.player.application
 
 import com.resonance.player.model.*
 import com.resonance.player.platform.LyricsServices
-import com.resonance.player.platform.isTogetherTrack
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -11,14 +10,9 @@ import kotlinx.coroutines.ensureActive
 class LyricsSession(private val services: LyricsServices, private val publish: (LyricsUiState) -> Unit) {
     private var generation = 0L
     private var trackId: String? = null
-    suspend fun load(track: Track?, shared: Lyrics? = null, forceRefresh: Boolean = false) {
+    suspend fun load(track: Track?, forceRefresh: Boolean = false) {
         val request = ++generation
         trackId = track?.id
-        if (track?.isTogetherTrack() == true) {
-            publish(shared?.takeIf { it.trackId == track.id }?.let(LyricsUiState::Ready)
-                ?: LyricsUiState.Unavailable("等待房主分享当前歌词", false))
-            return
-        }
         if (track?.sourceUri == null) { publish(LyricsUiState.Idle); return }
         publish(LyricsUiState.Loading)
         try {

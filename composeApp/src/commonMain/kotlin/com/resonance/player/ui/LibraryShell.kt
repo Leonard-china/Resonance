@@ -257,7 +257,6 @@ private data class DestinationItem(
 private val destinationItems = listOf(
     DestinationItem(LibraryDestination.Library, "音乐库", Icons.Default.LibraryMusic),
     DestinationItem(LibraryDestination.Assistant, "音乐助手", Icons.Default.AutoAwesome),
-    DestinationItem(LibraryDestination.Together, "一起听", Icons.Default.Headphones),
     DestinationItem(LibraryDestination.Profile, "工具", Icons.Default.GridView),
 )
 
@@ -609,8 +608,7 @@ private val profileSubPages = setOf(
 private fun mainTabIndexOf(destination: LibraryDestination): Int = when (tabDestinationOf(destination)) {
     LibraryDestination.Library -> 0
     LibraryDestination.Assistant -> 1
-    LibraryDestination.Together -> 2
-    LibraryDestination.Profile -> 3
+    LibraryDestination.Profile -> 2
     else -> 0
 }
 
@@ -971,7 +969,6 @@ private fun DestinationContent(
                 onOpenSettings = { onDestinationChange(LibraryDestination.Settings) },
                 onOpenAbout = { onDestinationChange(LibraryDestination.About) },
             )
-            LibraryDestination.Together -> TogetherScreen(compact) { onDestinationChange(LibraryDestination.Library) }
             LibraryDestination.About -> AboutScreen(
                 compact = compact,
                 onBack = { onDestinationChange(LibraryDestination.Profile) },
@@ -2206,7 +2203,7 @@ private fun DiscoverScreen(
         if (feature != null) Row(Modifier.padding(horizontal = pagePadding), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(!online && !isSemanticSearch, { isSemanticSearch = false; feature.searchOnline = false; selecting = false }, label = { Text("本地") })
             FilterChip(online && !isSemanticSearch, { isSemanticSearch = false; feature.searchOnline = true; selecting = false }, label = { Text("在线") })
-            FilterChip(isSemanticSearch, { isSemanticSearch = true; feature.searchOnline = false; selecting = false }, label = { Text("AI 语义") })
+            FilterChip(isSemanticSearch, { isSemanticSearch = true; feature.searchOnline = false; selecting = false }, label = { Text("意图找歌") })
         }
         if (isSemanticSearch) {
             SemanticSongSearch(

@@ -77,6 +77,51 @@ class DesktopAudioOutputIntegrationTest {
         } finally { player.close(); removeFixture(directory) }
     }
 
+    @Test fun backgroundPlaybackSoakRetainsProgressAndAccountingAcrossInterruptions() = runBlocking {
+        enabled()
+        val seconds = System.getenv("RESONANCE_PLAYBACK_SOAK_SECONDS")?.toIntOrNull() ?: 0
+        assumeTrue("Set RESONANCE_PLAYBACK_SOAK_SECONDS for a bounded background soak", seconds in 60..7200)
+        val directory = Files.createTempDirectory("resonance-native-test-")
+        val previous = System.getProperty("RESONANCE_DATA")
+        var services: DesktopPlatformServices? = null
+        try {
+            System.setProperty("RESONANCE_DATA", directory.toString())
+            val track = fixture(directory)
+            val native = DesktopPlatformServices().also { services = it }
+            native.setVolume(0f); native.foreground.value = false
+            val started = System.nanoTime()
+            var cycle = 0
+            while ((System.nanoTime() - started) / 1_000_000_000 < seconds) {
+                native.play(track, listOf(track), false, RepeatMode.Off)
+                assertTrue(native.awaitPlaybackReady(track.id))
+                await("Background output must advance") { (native.playbackPositionMs ?: 0) >= 1000 }
+                native.setPlaying(false)
+                val paused = native.playbackPositionMs ?: 0
+                Thread.sleep(800)
+                assertTrue((native.playbackPositionMs ?: 0) - paused < 100)
+                native.seekTo(.25f)
+                assertTrue(native.awaitPlaybackReady(track.id))
+                Thread.sleep(300)
+                native.setPlaying(true)
+                val mark = native.playbackPositionMs ?: 0
+                await("Output resumes after pause and seek") { (native.playbackPositionMs ?: 0) >= mark + 1000 }
+                Thread.sleep(5000)
+                native.flushListeningStats()
+                val elapsed = (System.nanoTime() - started) / 1_000_000_000
+                assertTrue((native.getTrackListeningStats(track.id)?.totalSeconds ?: 0) <= elapsed + 2, "Seek must not inflate background listening")
+                cycle++
+            }
+            native.setPlaying(false); native.flushListeningStats()
+            assertTrue((native.getTrackListeningStats(track.id)?.totalSeconds ?: 0) >= seconds / 2)
+            assertTrue(cycle >= 5)
+            println("Background soak: requestedSeconds=$seconds, cycles=$cycle, listeningSeconds=${native.getTrackListeningStats(track.id)?.totalSeconds}")
+        } finally {
+            services?.close(); ListeningStatsRepository.release(directory)
+            if (previous == null) System.clearProperty("RESONANCE_DATA") else System.setProperty("RESONANCE_DATA", previous)
+            removeFixture(directory)
+        }
+    }
+
     @Test fun platformRecordsWithoutComposeAndDeduplicatesNearEndPauseResume() = runBlocking {
         enabled()
         val directory = Files.createTempDirectory("resonance-native-test-")
@@ -89,7 +134,7 @@ class DesktopAudioOutputIntegrationTest {
             native.setVolume(0f)
             val started = System.nanoTime()
             native.play(track, listOf(track), false, RepeatMode.Off)
-            assertTrue(native.awaitSynchronizedReady(track.id), "Native decoder/output must become ready before measuring accounting")
+            assertTrue(native.awaitPlaybackReady(track.id), "Native decoder/output must become ready before measuring accounting")
             try {
                 await("Statistics must advance with no App composition") { (native.getTrackListeningStats(track.id)?.totalSeconds ?: 0) >= 2 }
             } catch (failure: AssertionError) {

@@ -1,5 +1,17 @@
 # 2026-11-05 — Resonance 文档入口与开发变更索引
 
+本次发布进行中：[0.6.7 助手联网与独立播放三端正式版](changes/2026-11-05-43-publish-0.6.7-harness-release.md)。用户已授权构建并推送官网和 GitHub；使用隔离源码快照和本次实际产物，最终公开状态见记录。
+
+最新助手能力：[移植 DeepSeek Harness 网页搜索／正文抓取并接入原生 Markdown 回答](changes/2026-11-05-42-harness-web-research-and-native-replies.md)。复用官方 Search／Fetch 路径，当前官方连接按能力开放；可点击来源、可选文字及真实检索步骤使用成熟 Compose 组件和现有任务记录。实际验证、计费及未安装限制见记录。
+
+最新助手修复：[检索进展识别、受阻后的最终回答与错误去重](changes/2026-11-05-41-assistant-search-progress-and-final-answer.md)。新检索结果计入进展；连续空结果／重复失败改为结束工具阶段并只请求一次文字回答；普通播客推荐可直接回答，明确现有搜索能力。具体回归与未安装限制见记录。
+
+最新播放修复：[自动切歌后按钮状态与真实播放同步](changes/2026-11-05-40-auto-next-playback-state.md)。用户已确认“显示播放三角形，音乐继续”；自动切歌读取原生当前曲目及播放快照，音量／响度加载不再重置按钮或误发暂停。本次验证与设备限制见记录。
+
+本轮播放器优化：[歌词校准面板](changes/2026-11-05-34-lyrics-tools-scroll-and-layering.md)、[空闲开销与歌词索引](changes/2026-11-05-35-playback-idle-work-and-lyric-index.md)、[设备失败恢复／后台验证](changes/2026-11-05-36-resume-playback-after-device-failure.md)、[截图草稿恢复](changes/2026-11-05-37-persist-screenshot-import-drafts.md)、[批量音频重新定位](changes/2026-11-05-38-batch-relink-missing-audio.md)、[本地BPM筛选](changes/2026-11-05-39-offline-bpm-analysis-and-filtering.md)。当前源码与本次验证见[统一验收](audit/2026-11-05/player-improvements/VALIDATION.md)，版本保持0.6.6／40，未安装或发布。
+
+最新功能调整：[移除一起听、房间网络与服务器部署依赖](changes/2026-11-05-33-remove-listen-together.md)。Android／Windows／Linux 源码移除房间、邀请、聊天通知及远端播放同步；主导航保留音乐库、音乐助手、工具。本轮验证和未发布限制见记录；下方一起听相关内容仅为历史。
+
 最新发布：[0.6.6三端正式发布](changes/2026-11-05-29-publish-three-platform-release.md)已完成GitHub公开与官网受控上线，含Android APK、Windows EXE、Linux便携包/DEB及本次实际SHA。[官网介绍/五张截图/下载页](changes/2026-11-05-30-refresh-website-release-pages.md)已更新；公开Range与源站校验通过。普通页面Cloudflare缓存按用户选择等待自然更新，可立即访问[新版首页](https://leonard.asia/?v=0.6.6)及[下载](https://leonard.asia/downloads?v=0.6.6)。最终CI、构建及平台限制见发布记录。
 
 最新修复验收：[本次缺陷修复与重新验收](audit/2026-11-05/FIX-VALIDATION.md)。处理前轮12项问题及手机失败项，本次有效589项：575通过、0失败、14条件跳过；Q07明确BPM尚未接入筛选。完整双端编译及独立手机包验收通过，未升版。各独立原因、代码和限制见下方18—28号记录；[191项功能清单](audit/2026-11-05/FUNCTION-CHECKLIST.md)与[原手机结果](audit/2026-11-05/ANDROID-DEVICE-REPORT.md)保留修复前历史。
@@ -123,6 +135,16 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-05 | 构建并发布 0.6.7 助手联网与独立播放三端正式版 | [具体记录](changes/2026-11-05-43-publish-0.6.7-harness-release.md) |
+| 2026-11-05 | 移植 DeepSeek Harness Search／Fetch，接入原生 Markdown、来源链接与检索过程 | [具体记录](changes/2026-11-05-42-harness-web-research-and-native-replies.md) |
+| 2026-11-05 | 助手新检索结果计入进展，受阻时单次文字收束，明确播客推荐能力并去重错误 | [具体记录](changes/2026-11-05-41-assistant-search-progress-and-final-answer.md) |
+| 2026-11-05 | 本地BPM分析、来源校验缓存与真实节拍筛选 | [具体记录](changes/2026-11-05-39-offline-bpm-analysis-and-filtering.md) |
+| 2026-11-05 | 批量预览并重新定位失效音频路径 | [具体记录](changes/2026-11-05-38-batch-relink-missing-audio.md) |
+| 2026-11-05 | 截图歌单草稿、编辑及勾选跨进程保留 | [具体记录](changes/2026-11-05-37-persist-screenshot-import-drafts.md) |
+| 2026-11-05 | 音频设备失败后保留进度重试与后台连续验收 | [具体记录](changes/2026-11-05-36-resume-playback-after-device-failure.md) |
+| 2026-11-05 | 减少暂停及悬浮歌词后台开销并索引歌词时间戳 | [具体记录](changes/2026-11-05-35-playback-idle-work-and-lyric-index.md) |
+| 2026-11-05 | 歌词工具独立滚动与校准面板层级 | [具体记录](changes/2026-11-05-34-lyrics-tools-scroll-and-layering.md) |
+| 2026-11-05 | 移除一起听入口、房间网络、后台同步与服务器部署依赖，保留独立播放和本机数据 | [具体记录](changes/2026-11-05-33-remove-listen-together.md) |
 | 2026-11-05 | 配对重连回归等待持久化状态刷新 | [具体记录](changes/2026-11-05-32-await-companion-restoration-in-regression.md) |
 | 2026-11-05 | FFmpeg 4.4整轨响度参数兼容 | [具体记录](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md) |
 | 2026-11-05 | 官网以当前真实原生截图更新首页/介绍/三端下载，修复预览切换并补DEB说明 | [具体记录](changes/2026-11-05-30-refresh-website-release-pages.md) |

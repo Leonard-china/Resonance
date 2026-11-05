@@ -1,9 +1,7 @@
-"""Bounded, loopback-only deployment benchmark. Run with the relay venv as root.
+"""Bounded, loopback-only deployment benchmark. Run with the website venv as root.
 
-Uses GET requests against the staging site. Nginx, relay data, TLS fixture and
-relay unit are private test instances; production budgets and DNS are untouched.
+Uses GET requests against the staging site. Nginx and TLS fixtures are private test instances; production services and DNS are untouched.
 """
-import asyncio
 import concurrent.futures
 import contextlib
 import fcntl
@@ -98,72 +96,6 @@ def mixed_downloads(base, context):
         return dict(pages=pages, downloads=[job.result() for job in downloads])
 
 
-async def relay_pair(url, context, mode="burst"):
-    from websockets.asyncio.client import connect
-    route = secrets.token_hex(32)
-    started = time.perf_counter()
-    async with connect(url, ssl=context, proxy=None, compression=None, max_size=65536, max_queue=4) as host:
-        await host.send(json.dumps(dict(version=1, role="host", route=route)).encode())
-        if b"waiting" not in await host.recv():
-            raise ValueError("Host not admitted")
-        async with connect(url, ssl=context, proxy=None, compression=None, max_size=65536, max_queue=4) as guest:
-            await guest.send(json.dumps(dict(version=1, role="guest", route=route)).encode())
-            if b"paired" not in await host.recv() or b"paired" not in await guest.recv():
-                raise ValueError("Guest not paired")
-            paired_ms = (time.perf_counter() - started) * 1000
-            times, sent, received, ticks = {}, 0, 0, []
-            target_bytes = 0 if mode == "idle" else 512 * 1024 if mode == "paced" else 8 * MIB
-            async def echo():
-                async for frame in guest:
-                    await guest.send(frame)
-            async def consume():
-                nonlocal received
-                while received < target_bytes or len(ticks) < 20:
-                    frame = await host.recv()
-                    if frame.startswith(b"P:"):
-                        ticks.append((time.perf_counter() - times.pop(frame)) * 1000)
-                    elif frame == b"D" * 65536:
-                        received += len(frame)
-                    else:
-                        raise ValueError("Corrupt forwarded bytes")
-            async def bulk():
-                nonlocal sent
-                while sent < target_bytes:
-                    await host.send(b"D" * 65536)
-                    sent += 65536
-                    if mode == "paced":
-                        await asyncio.sleep(.25)
-            async def probes():
-                for i in range(20):
-                    frame = f"P:{i}".encode()
-                    times[frame] = time.perf_counter()
-                    await host.send(frame)
-                    await asyncio.sleep(.05)
-            echo_task = asyncio.create_task(echo())
-            transfer_started = time.perf_counter()
-            try:
-                await asyncio.wait_for(asyncio.gather(bulk(), probes(), consume()), 15)
-            finally:
-                echo_task.cancel()
-                await asyncio.gather(echo_task, return_exceptions=True)
-            return dict(pairing_ms=round(paired_ms, 3), bytes_round_trip=received,
-                        # The interval also includes the deliberate 1-second probe schedule.
-                        sustained_round_trip_mib_per_second=round(received / MIB / (time.perf_counter() - transfer_started), 2),
-                        **stats(ticks))
-
-
-async def measure_relay(url, context, steady=False):
-    stages = []
-    profiles = ((1, "idle"), (6, "paced")) if steady else ((1, "burst"), (3, "burst"), (6, "burst"))
-    for pairs, mode in profiles:
-        rows = await asyncio.gather(*(relay_pair(url, context, mode) for _ in range(pairs)), return_exceptions=True)
-        good = [row for row in rows if isinstance(row, dict)]
-        stages.append(dict(pairs=pairs, mode=mode, errors=len(rows) - len(good),
-                           error_types=sorted({type(row).__name__ for row in rows if not isinstance(row, dict)}),
-                           results=good))
-    return stages
-
-
 def run(*args):
     return subprocess.run(args, check=True, capture_output=True, text=True).stdout.strip()
 
@@ -220,23 +152,17 @@ def main():
     os.umask(0o077)
     process_lock = open("/run/lock/resonance-benchmark.lock", "a")
     fcntl.flock(process_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    for port in (18443, 45912):
+    for port in (18443,):
         with socket.socket() as probe:
             probe.bind(("127.0.0.1", port))
     signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(TimeoutError("Benchmark time limit")))
     signal.alarm(100)
     account = pwd.getpwnam("resonance")
     before = {name: run("systemctl", "show", name, "-p", "ActiveState", "-p", "NRestarts")
-              for name in ("resonance-site", "resonance-relay", "resonance-mail", "nginx")}
-    live_budget = Path("/var/lib/resonance-relay/budget.json")
-    budget_before = live_budget.read_bytes() if live_budget.exists() else None
+              for name in ("resonance-site", "resonance-mail", "nginx")}
     name = "resonance-benchmark-" + secrets.token_hex(4)
-    report = dict(kind="server-loopback-https-wss", user_audio_used=False, public_listener_created=False,
-                  client_generator_on_same_host=True, website=[], downloads=[], relay=[])
-    profile = os.environ.get("RESONANCE_BENCHMARK_PROFILE", "full")
-    if profile not in ("full", "steady-relay"):
-        raise ValueError("Unknown benchmark profile")
-    report["profile"] = profile
+    report = dict(kind="server-loopback-https", user_audio_used=False, public_listener_created=False,
+                  client_generator_on_same_host=True, website=[], downloads=[])
     destination = Path("/root/resonance-migration") / (name + ".json")
     nginx = sampler = None
     with tempfile.TemporaryDirectory(prefix=name + "-", dir="/var/lib") as temporary:
@@ -250,27 +176,19 @@ def main():
             source = source.replace("listen 443 ssl;", "listen 127.0.0.1:18443 ssl;").replace("listen [::]:443 ssl;", "")
             source = source.replace("/etc/letsencrypt/live/leonard.asia/fullchain.pem", str(work / "test.crt"))
             source = source.replace("/etc/letsencrypt/live/leonard.asia/privkey.pem", str(work / "test.key"))
-            source = source.replace("127.0.0.1:45902", "127.0.0.1:45912")
             (work / "site.conf").write_text(source)
             (work / "nginx.conf").write_text(f"user resonance;\nworker_processes 1;\npid {work}/nginx.pid;\nerror_log {work}/nginx.log warn;\nevents {{ worker_connections 256; }}\nhttp {{ access_log off; client_body_temp_path {work}/body; proxy_temp_path {work}/proxy; fastcgi_temp_path {work}/fastcgi; uwsgi_temp_path {work}/uwsgi; scgi_temp_path {work}/scgi; include {work}/site.conf; }}\n")
-            run("systemd-run", "--quiet", "--collect", "--unit=" + name, "--property=User=resonance", "--property=Group=resonance",
-                "--property=MemoryMax=128M", "--property=MemorySwapMax=0", "--property=TasksMax=32", "--property=RuntimeMaxSec=110",
-                str(ROOT / "services/relay/.venv/bin/python"), str(ROOT / "services/relay/websocket_server.py"), "--port", "45912",
-                "--budget-file", str(work / "budget.json"), "--daily-bytes", "2147483648", "--trust-nginx")
-            wait_port(45912)
             run("nginx", "-t", "-p", str(work), "-c", str(work / "nginx.conf"))
             nginx = subprocess.Popen(["nginx", "-p", str(work), "-c", str(work / "nginx.conf"), "-g", "daemon off;"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             wait_port(18443)
             context = ssl.create_default_context(cafile=str(work / "test.crt"))
             base = "https://localhost:18443"
-            sampler = Sampler(("resonance-site", "resonance-relay", name))
+            sampler = Sampler(("resonance-site",))
             sampler.thread.start()
-            if profile == "full":
-                for concurrency, count in ((1, 30), (4, 80), (12, 120)):
-                    report["website"].append(measure_web(base, context, concurrency, count))
-                report["downloads"] = [download(base, context, platform) for platform in ("android", "windows")]
-                report["mixed"] = mixed_downloads(base, context)
-            report["relay"] = asyncio.run(measure_relay("wss://localhost:18443/resonance-relay/v1", context, profile == "steady-relay"))
+            for concurrency, count in ((1, 30), (4, 80), (12, 120)):
+                report["website"].append(measure_web(base, context, concurrency, count))
+            report["downloads"] = [download(base, context, platform) for platform in ("android", "windows")]
+            report["mixed"] = mixed_downloads(base, context)
         except Exception as error:
             report["failure"] = type(error).__name__
         finally:
@@ -283,12 +201,9 @@ def main():
                 except subprocess.TimeoutExpired:
                     nginx.kill()
                     nginx.wait()
-            with contextlib.suppress(Exception):
-                run("systemctl", "stop", name)
     report["services_unchanged"] = before == {unit: run("systemctl", "show", unit, "-p", "ActiveState", "-p", "NRestarts") for unit in before}
-    report["production_budget_unchanged"] = budget_before == (live_budget.read_bytes() if live_budget.exists() else None)
     report["test_listeners_removed"] = True
-    for port in (18443, 45912):
+    for port in (18443,):
         try:
             with socket.create_connection(("127.0.0.1", port), .3):
                 report["test_listeners_removed"] = False
@@ -297,11 +212,11 @@ def main():
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(json.dumps(report, indent=2))
     print(json.dumps(report, separators=(",", ":")), flush=True)
-    stages = report["website"] + report["relay"]
+    stages = list(report["website"])
     if "mixed" in report:
         stages.append(report["mixed"]["pages"])
     if ("failure" in report or any(stage["errors"] for stage in stages)
-            or not all(report[key] for key in ("services_unchanged", "production_budget_unchanged", "test_listeners_removed"))):
+            or not all(report[key] for key in ("services_unchanged", "test_listeners_removed"))):
         raise SystemExit(1)
 
 

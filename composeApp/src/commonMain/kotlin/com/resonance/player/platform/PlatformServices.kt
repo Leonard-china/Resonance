@@ -17,15 +17,6 @@ import kotlinx.coroutines.flow.StateFlow
 
 /** Compatibility facade composed from focused native capabilities. */
 interface PlatformServices : PlaybackServices, LibraryServices, PreferenceServices, AppearanceServices, LyricsServices {
-    val listenTogether: ListenTogetherService? get() = null
-    val togetherInvitations: StateFlow<String?> get() = MutableStateFlow(null)
-    /** Null means this platform has no runtime notification permission to request. */
-    val togetherNotificationsBlocked: StateFlow<Boolean>? get() = null
-    fun requestTogetherNotifications() {}
-    fun dismissTogetherInvitation() {}
-    /** Returns false when this platform has no native text share sheet. */
-    fun shareTogetherInvitation(text: String): Boolean = false
-    val managesTogetherPlayback: Boolean get() = false
     val supportsKgg: Boolean get() = false
     val supportsWebLogin: Boolean get() = false
     val musicAssistant: MusicAssistantServices? get() = null
@@ -34,9 +25,6 @@ interface PlatformServices : PlaybackServices, LibraryServices, PreferenceServic
     suspend fun configureBackgroundRecommendations(settings: com.resonance.player.model.MusicFeatureSettings) {}
     val supportsKeyboardShortcuts: Boolean get() = false
     suspend fun automaticRecommendationAllowed(unmeteredOnly: Boolean): Boolean = true
-    var togetherLocalSnapshot: Any?
-        get() = null
-        set(_) {}
     fun formatDateTime(epochMillis: Long): String = epochMillis.toString()
     suspend fun chooseMusicSourceFile(): String? = null
     suspend fun setTrackFavorite(trackId: String, favorite: Boolean)

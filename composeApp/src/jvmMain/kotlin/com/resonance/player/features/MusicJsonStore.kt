@@ -8,8 +8,9 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.security.MessageDigest
 
 /** Each update holds the same per-path monitor, including separate foreground/worker instances. */
-class MusicJsonStore(val directory: Path) {
-    private val file = directory.resolve("music-assistant.json")
+class MusicJsonStore(val directory: Path, fileName: String = "music-assistant.json") {
+    init { require(fileName in setOf("music-assistant.json", "audio-features.json")) }
+    private val file = directory.resolve(fileName)
     private val monitor get() = file.toAbsolutePath().normalize().toString().intern()
     @Suppress("NOTHING_TO_INLINE")
     fun read(): JSONObject = synchronized(monitor) { readUnlocked() }

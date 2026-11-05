@@ -32,24 +32,7 @@ class PlaybackSession(
     private var request: Job? = null
     private var generation = 0L
     fun close() { ++generation; request?.cancel() }
-    fun allowLocalPlayback(): Boolean {
-        if (services.listenTogether?.state?.value?.isGuest == true) {
-            message("一起听时请使用共享队列；退出房间后可独立播放本地音乐。", false)
-            return false
-        }
-        return true
-    }
-    fun requestTogetherToggle(): Boolean {
-        val together = services.listenTogether ?: return false
-        if (!together.state.value.isGuest) return false
-        if (together.state.value.localAudioPaused) {
-            together.resumeGuestAudio()
-            if (together.remotePlayback.value?.playing != true) together.requestControl(TogetherControl.Play)
-        } else together.requestControl(if (state.player.isPlaying) TogetherControl.Pause else TogetherControl.Play)
-        return true
-    }
     fun startTrack(track: Track, newQueue: List<Track>? = null, shuffle: Boolean = state.player.shuffleEnabled) {
-        if (!allowLocalPlayback()) return
         val selected = ++generation
         request?.cancel()
         request = scope.launch {
@@ -70,14 +53,13 @@ class PlaybackSession(
             services.setPlaying(false)
             state.player = state.player.copy(isPlaying = false, shuffleEnabled = shuffle)
             playback.activate(track, playlist, expectNativeTrack = true, prepare = {
-                if (!track.isTogetherTrack()) writes.run {
-                    services.savePlaybackSnapshot(PlaybackSnapshot(track.id, queue.filterNot { it.isTogetherTrack() }.map(Track::id), playlistId = playlist))
+                writes.run {
+                    services.savePlaybackSnapshot(PlaybackSnapshot(track.id, queue.map(Track::id), playlistId = playlist))
                 }
             }) { services.play(track, queue, shuffle, state.player.repeatMode) }
         }
     }
     fun startShufflePlayback(tracks: List<Track>) {
-        if (!allowLocalPlayback()) return
         val playable = tracks.filter { it.sourceUri != null }
         val pick = playable.takeIf { it.isNotEmpty() }?.random() ?: return
         if (!state.player.shuffleEnabled) {
@@ -88,16 +70,7 @@ class PlaybackSession(
         startTrack(pick, playable, true)
     }
     fun moveInQueue(direction: Int, automatic: Boolean = false) {
-        val together = services.listenTogether
-        if (together?.state?.value?.isGuest == true) {
-            if (!automatic) {
-                if (direction > 0) together.requestControl(TogetherControl.Next)
-                else if (together.state.value.equalControls) together.requestControl(TogetherControl.Previous)
-                else message("对方使用旧版，暂不支持共同切换上一首。", false)
-            }
-            return
-        }
-        if (!allowLocalPlayback() || state.queue.isEmpty()) return
+        if (state.queue.isEmpty()) return
         val queue = state.queue
         val player = state.player
         val current = player.currentTrack ?: queue.first()
@@ -119,11 +92,6 @@ class PlaybackSession(
         message("已将「${track.title}」设为下一首播放", true)
     }
     fun removeFromQueue(track: Track) {
-        val together = services.listenTogether
-        if (together?.state?.value?.role == TogetherRole.Host) {
-            together.hostQueue.value?.publicIds?.get(track.id)?.let(together::removeSharedTrack)
-            return
-        }
         val queue = state.queue
         val index = queue.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
         val remaining = buildRemoveFromQueue(queue, track)
@@ -143,15 +111,6 @@ class PlaybackSession(
         if (current == null) { close(); services.setPlaying(false); playback.clearCurrentTrack() }
     }
     fun moveTrackInQueue(from: Int, to: Int) {
-        val together = services.listenTogether
-        if (together?.state?.value?.role == TogetherRole.Host) {
-            val ids = together.hostQueue.value?.publicIds.orEmpty()
-            val id = state.queue.getOrNull(from)?.id?.let(ids::get) ?: return
-            val target = state.queue.getOrNull(to)?.id?.let(ids::get) ?: return
-            val destination = together.state.value.sharedQueue.indexOfFirst { it.id == target }
-            if (destination >= 0) together.moveSharedTrack(id, destination)
-            return
-        }
         state.customQueue = buildReorderedQueue(state.queue, from, to)
     }
 }

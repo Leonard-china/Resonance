@@ -13,14 +13,11 @@ def main():
     p.add_argument("--serial", required=True)
     p.add_argument("--theme", choices=["light", "dark"], required=True)
     p.add_argument("--output", type=Path, required=True)
-    p.add_argument("--scene", choices=["player", "features"], default="player")
     p.add_argument("--package", default="com.resonance.player.codex", choices=["com.resonance.player.codex", "com.resonance.player.debug"])
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=True)
     base = [a.adb, "-s", a.serial]
-    take = "features" if a.scene == "features" else a.theme
-    if a.scene == "features" and a.package != "com.resonance.player.codex":
-        p.error("The real AI/companion camera requires the isolated .codex package")
+    take = a.theme
     remote = f"/sdcard/resonance-promo-{take}-{uuid.uuid4().hex}.mp4"
     old_rotation = {key: subprocess.check_output(base + ["shell", "settings", "get", "system", key], text=True).strip()
                     for key in ("accelerometer_rotation", "user_rotation")}
@@ -38,8 +35,8 @@ def main():
         raise RuntimeError("Could not identify the owned screen recorder")
     try:
         time.sleep(1)
-        rig = "PromoFeaturesCaptureDeviceTest" if a.scene == "features" else "PromoCaptureDeviceTest"
-        flag = "captureFeatures" if a.scene == "features" else "capturePromo"
+        rig = "PromoCaptureDeviceTest"
+        flag = "capturePromo"
         result = subprocess.run(base + ["shell", "am", "instrument", "-w", "-r", "-e", "class", "com.resonance.player." + rig, "-e", flag, "true", "-e", "promoTheme", a.theme, a.package + ".test/androidx.test.runner.AndroidJUnitRunner"], capture_output=True, text=True, encoding="utf-8", timeout=240)
         (a.output / f"capture-{take}.log").write_text(result.stdout + result.stderr, encoding="utf-8")
         if "OK (1 test)" not in result.stdout:
@@ -56,14 +53,9 @@ def main():
         for key, value in old_rotation.items():
             subprocess.run(base + ["shell", "settings", "put", "system", key, value], capture_output=True)
     subprocess.run(base + ["pull", remote, str(a.output / f"raw-{take}.mp4")], check=True)
-    if a.scene == "features":
-        for name in ("promo-features-marks.csv", "promo-ai-proof.json"):
-            data = subprocess.check_output(base + ["exec-out", "run-as", a.package, "cat", "files/" + name])
-            (a.output / name).write_bytes(data)
-    else:
-        subprocess.run(base + ["pull", f"/sdcard/Android/data/{a.package}/files/promo-{take}-marks.csv", str(a.output)], check=True)
+    subprocess.run(base + ["pull", f"/sdcard/Android/data/{a.package}/files/promo-{take}-marks.csv", str(a.output)], check=True)
     subprocess.run(base + ["shell", "rm", remote], check=True)
-    (a.output / f"capture-{take}.json").write_text(json.dumps({"serial": a.serial, "theme": a.theme, "package": a.package, "recorder_start_uptime": uptime, "capture": "native Compose; real AI response, native audio, encrypted chat and pairing" if a.scene == "features" else "native Compose controls, original fixture data", "ai_live_reply": a.scene == "features"}, indent=2), encoding="utf-8")
+    (a.output / f"capture-{take}.json").write_text(json.dumps({"serial": a.serial, "theme": a.theme, "package": a.package, "recorder_start_uptime": uptime, "capture": "native Compose controls, original fixture data", "ai_live_reply": False}, indent=2), encoding="utf-8")
     print(f"Native {take} take saved to {a.output}")
 
 

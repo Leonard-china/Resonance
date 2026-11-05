@@ -4,6 +4,11 @@ import com.resonance.player.model.*
 import kotlin.test.*
 
 class AssistantMusicLinksTest {
+    @Test fun assistantWebLinksOnlyAllowExplicitHttpPages() {
+        assertTrue(isAssistantWebLink("https://example.com/programme?episode=1"))
+        for (value in listOf("file:///tmp/song", "javascript:alert(1)", "intent://example", "resonance://track/1",
+            "https://user:secret@example.com/", "not a URL")) assertFalse(isAssistantWebLink(value), value)
+    }
     private fun track(id: String, source: String? = "fixture://$id") =
         Track(id, "Song $id", "Artist", "Album", "3:00", 1, sourceUri = source)
 

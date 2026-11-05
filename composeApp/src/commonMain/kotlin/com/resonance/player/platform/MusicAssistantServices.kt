@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface MusicAssistantServices {
     val state: StateFlow<MusicAssistantState>
+    suspend fun refreshAudioFeatures(tracks: List<Track>) {}
+    suspend fun analyzeAudioFeatures(tracks: List<Track>) { error("当前平台不支持本地节拍分析") }
     suspend fun settings(): MusicFeatureSettings
     suspend fun saveSettings(settings: MusicFeatureSettings)
     suspend fun testConnection(connection: AiConnection): String
@@ -13,6 +15,7 @@ interface MusicAssistantServices {
     suspend fun chat(message: String, images: List<AiImage> = emptyList())
     suspend fun confirmAudioDeletion(requestId: String, confirmed: Boolean) { error("当前助手不支持音频删除确认") }
     suspend fun confirmScreenshotImport(draftId: String, playlists: List<ScreenshotPlaylistDraft>)
+    suspend fun saveScreenshotImportDraft(draft: ScreenshotImportDraft) {}
     suspend fun discardScreenshotImport()
     suspend fun inspectVideo(link: String): BilibiliVideo
     suspend fun importVideo(request: VideoImportRequest): Track

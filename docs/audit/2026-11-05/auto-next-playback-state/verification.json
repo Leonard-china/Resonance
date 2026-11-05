@@ -1,0 +1,47 @@
+{
+  "date": "2026-11-05",
+  "version": "0.6.6 / 40",
+  "status": "passed",
+  "testSummary": {
+    "tests": 49,
+    "failures": 0,
+    "ignored": 0,
+    "assumptions": 0,
+    "milliseconds": 1176,
+    "classes": 7,
+    "incomplete": 0
+  },
+  "sourceCompilation": {
+    "desktopProductionFiles": 186,
+    "androidProductionFiles": 178,
+    "desktopTestFiles": 92,
+    "androidInstrumentedTestFiles": 29,
+    "result": "passed"
+  },
+  "stateRegression": {
+    "tests": 25,
+    "newTests": 10,
+    "result": "passed"
+  },
+  "beforeFix": {
+    "result": "expected assertion failure confirmed",
+    "output": "nativeIsPlaying=true; uiIsPlaying=false",
+    "fixtureCorrection": "First reproduction passed null mimeType; fixed to audio/mpeg before accepting the targeted assertion failure."
+  },
+  "command": "python3 build/auto-next-state-2026-11-05/final_validation.py",
+  "compiler": "Kotlin / Compose 2.3.20 CLI, full current source sets, no old application JAR on test runtime classpath",
+  "sourceHashesUnchangedDuringValidation": true,
+  "resourceLimits": {
+    "MemoryMaxBytes": 2147483648,
+    "MemoryHighBytes": 1610612736,
+    "MemorySwapMaxBytes": 0,
+    "hostReserveMiB": 1536,
+    "sharedBuildLock": true
+  },
+  "unexecuted": [
+    "Android device tests: adb devices -l empty",
+    "Physical Windows playback",
+    "Release packaging / installation / publishing"
+  ],
+  "notes": "Initial desktop compilation passed; its remaining Android compile was stopped to add the post-start loudness-failure correction. Counts above use the final complete recompile only."
+}

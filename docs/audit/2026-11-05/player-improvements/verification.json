@@ -1,0 +1,24 @@
+{
+  "date": "2026-11-05",
+  "version": "0.6.6 / 40",
+  "desktopProductionSources": 185,
+  "androidProductionSources": 177,
+  "desktopTestSources": 92,
+  "androidTestSources": 29,
+  "uniqueTests": 143,
+  "statusCounts": {
+    "passed": 143,
+    "failed": 0,
+    "skipped": 0,
+    "ignored": 0
+  },
+  "soakSeconds": 306,
+  "soakCycles": 37,
+  "soakListeningSeconds": 252,
+  "lookupLinearMedianNs": 60831179,
+  "lookupIndexedMedianNs": 1048777,
+  "phoneConnected": false,
+  "releaseBuilt": false,
+  "installed": false,
+  "published": false
+}

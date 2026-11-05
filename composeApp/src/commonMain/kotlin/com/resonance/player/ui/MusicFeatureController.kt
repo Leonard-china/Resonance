@@ -7,6 +7,7 @@ import kotlinx.coroutines.*
 
 class MusicFeatureController(val services: PlatformServices, private val scope: CoroutineScope) {
     private val settingsWriter = com.resonance.player.data.PersistenceQueue(scope) { message = "设置保存失败：${it.message}" }
+    var hiddenScreenshotDraftId by mutableStateOf<String?>(null)
     var settings by mutableStateOf(MusicFeatureSettings())
     var loaded by mutableStateOf(false)
     var message by mutableStateOf("")

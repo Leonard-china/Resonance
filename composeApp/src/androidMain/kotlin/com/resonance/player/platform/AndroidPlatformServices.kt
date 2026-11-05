@@ -78,51 +78,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 class AndroidPlatformServices(private val activity: ComponentActivity) : PlatformServices {
-    override val togetherInvitations = MutableStateFlow<String?>(null)
-    fun offerTogetherInvitation(value: String) {
-        if (listenTogether.inspectInvitation(value) != null) togetherInvitations.value = value
-    }
-    override fun dismissTogetherInvitation() { togetherInvitations.value = null }
-    override fun shareTogetherInvitation(text: String): Boolean {
-        if (text.length > 4096) return false
-        return runCatching {
-            activity.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_TEXT, text)
-            }, "邀请朋友一起听"))
-            true
-        }.getOrDefault(false)
-    }
-    override val listenTogether by lazy {
-        com.resonance.player.together.AndroidTogetherRuntime.get(activity).service
-    }
-    override var togetherLocalSnapshot: Any?
-        get() = com.resonance.player.together.AndroidTogetherRuntime.get(activity).localPlaybackSnapshot
-        set(value) { com.resonance.player.together.AndroidTogetherRuntime.get(activity).localPlaybackSnapshot = value }
-    override val managesTogetherPlayback: Boolean get() = true
-
-    override fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
-        beginPlaybackRequest()
-        stopAudioPreview()
-        withPlayer { activePlayer ->
-            val position = (com.resonance.player.model.durationTextToSeconds(track.durationText) * 1000L * progress.coerceIn(0f, 1f)).toLong()
-            activePlayer.setMediaItems(listOf(mediaItemFor(track)), 0, position)
-            applyPlaybackMode(activePlayer, false, RepeatMode.Off)
-            activePlayer.setPlaybackSpeed(speed)
-            activePlayer.playWhenReady = playing
-            activePlayer.prepare()
-        }
-    }
-    override suspend fun awaitSynchronizedReady(trackId: String): Boolean = kotlinx.coroutines.withTimeoutOrNull(15_000) {
-        while (true) {
-            val ready = withContext(Dispatchers.Main.immediate) {
-                player?.let { it.currentMediaItem?.mediaId == trackId && it.playbackState == Player.STATE_READY } == true
-            }
-            if (ready) return@withTimeoutOrNull true
-            delay(25)
-        }
-        @Suppress("UNREACHABLE_CODE") false
-    } ?: false
     override val supportsWebLogin: Boolean get() = true
     private val currentImport = java.util.concurrent.atomic.AtomicReference<com.resonance.player.io.ImportControl?>()
     private var conversionSession: Long? = null
@@ -187,6 +142,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override fun updateFloatingLyrics(player: PlayerState, lyrics: LyricsUiState, settings: MusicFeatureSettings) {
         com.resonance.player.features.AndroidOverlayBus.frame.value = com.resonance.player.features.OverlayFrame(player, lyrics, settings)
     }
+    override val persistsNativePlaybackSnapshot: Boolean get() = true
     private val loudnessAnalyzer = com.resonance.player.audio.AndroidLoudnessAnalyzer(activity)
     override suspend fun loadPlaybackSnapshot() = withContext(Dispatchers.IO) {
         com.resonance.player.playback.PlaybackSnapshotCodec.decode(
@@ -225,27 +181,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         }
     }
     override val foreground = MutableStateFlow(false)
-    override val togetherNotificationsBlocked = MutableStateFlow(areTogetherNotificationsBlocked())
-    private var togetherNotificationRequested = false
-    private fun areTogetherNotificationsBlocked(): Boolean =
-        !androidx.core.app.NotificationManagerCompat.from(activity).areNotificationsEnabled() ||
-            (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) ||
-            activity.getSystemService(android.app.NotificationManager::class.java)
-                ?.getNotificationChannel("together-messages")?.importance == android.app.NotificationManager.IMPORTANCE_NONE
-    override fun requestTogetherNotifications() {
-        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(activity, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
-            (!togetherNotificationRequested || ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS))) {
-            togetherNotificationRequested = true
-            requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
-        } else {
-            val channel = activity.getSystemService(android.app.NotificationManager::class.java)?.getNotificationChannel("together-messages")
-            val intent = Intent(if (channel?.importance == android.app.NotificationManager.IMPORTANCE_NONE)
-                android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS else android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, activity.packageName)
-            if (channel != null) intent.putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, channel.id)
-            runCatching { activity.startActivity(intent) }
-        }
-    }
     override val systemReduceMotion: Boolean get() = false
     override fun updateSystemBars(isDark: Boolean) {
         androidx.core.view.WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
@@ -255,7 +190,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
     private val foregroundObserver = LifecycleEventObserver { _, event ->
         foreground.value = activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-        if (event == Lifecycle.Event.ON_RESUME) togetherNotificationsBlocked.value = areTogetherNotificationsBlocked()
         if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
             cancelVolumeCalibration()
         }
@@ -282,7 +216,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 pendingAudioCommands.clear()
                 pendingAudioTimeouts.values.forEach { it.cancel() }
                 pendingAudioTimeouts.clear()
-                if (listenTogether.state.value.isGuest) listenTogether.pauseGuestAudio("播放连接已中断，本机声音已暂停")
                 errorEvents.tryEmit(PlaybackIssue("播放器连接已中断，请重新打开应用后重试", requestId = playbackRequest))
             }
         }
@@ -316,7 +249,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         pendingAudioPermissionResult = null
     }
     private val requestNotificationPermission = activity.registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        togetherNotificationsBlocked.value = areTogetherNotificationsBlocked()
         pendingNotificationPermissionResult?.invoke(granted)
         pendingNotificationPermissionResult = null
     }
@@ -390,6 +322,31 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     override fun formatDateTime(epochMillis: Long): String = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
     private var replacementResult: ((Uri?) -> Unit)? = null
     private val replacementPicker = activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> replacementResult?.invoke(uri); replacementResult = null }
+    override suspend fun chooseRelinkDirectory(): List<AudioRelinkCandidate>? {
+        val uri = withContext(Dispatchers.Main.immediate) { suspendCancellableCoroutine<Uri?> { continuation ->
+            pendingTreeResult = { if (continuation.isActive) continuation.resume(it) }
+            continuation.invokeOnCancellation { pendingTreeResult = null }
+            openMusicTree.launch(null)
+        } } ?: return null
+        activity.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        return withContext(Dispatchers.IO) {
+            val directory = DocumentFile.fromTreeUri(activity, uri) ?: error("无法读取所选目录")
+            val result = mutableListOf<AudioRelinkCandidate>(); var visited = 0
+            suspend fun scan(folder: DocumentFile, prefix: String, depth: Int) {
+                check(depth <= 32) { "目录层级过深，请选择更小的音乐目录" }
+                for (file in folder.listFiles()) {
+                    ensureActive(); check(++visited <= 50_000) { "目录超过50000项，请选择更小的音乐目录" }
+                    val name = file.name ?: continue
+                    val relative = if (prefix.isEmpty()) name else "$prefix/$name"
+                    if (file.isDirectory) scan(file, relative, depth + 1)
+                    else if (file.isFile && (file.type?.startsWith("audio/") == true || name.substringAfterLast('.').lowercase() in setOf("mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape"))) {
+                        result += AudioRelinkCandidate(file.uri.toString(), name, relative)
+                    }
+                }
+            }
+            scan(directory, "", 0); result
+        }
+    }
     override suspend fun chooseReplacementAudio(track: Track): Track? {
         val uri = withContext(Dispatchers.Main.immediate) { suspendCancellableCoroutine<Uri?> { continuation ->
             replacementResult = { if (continuation.isActive) continuation.resume(it) }
@@ -441,6 +398,16 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             capabilities.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED) && (!unmeteredOnly || !manager.isActiveNetworkMetered)
     }
     override val playbackPositionMs: Long? get() = player?.currentPosition?.coerceAtLeast(0L)
+    override val currentPlaybackState: com.resonance.player.playback.NativePlaybackState?
+        get() {
+            val controller = player ?: return null
+            val id = controller.currentMediaItem?.mediaId?.takeIf(String::isNotBlank) ?: return null
+            val position = controller.currentPosition.coerceAtLeast(0L)
+            return com.resonance.player.playback.NativePlaybackState(
+                id, controller.isPlaying, controller.playWhenReady, controller.playbackState == Player.STATE_BUFFERING,
+                if (controller.duration > 0) (position.toFloat() / controller.duration).coerceIn(0f, 1f) else 0f, position,
+            )
+        }
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     private val isBufferingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
@@ -475,11 +442,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                     if (!playWhenReady) isBufferingEvents.tryEmit(false)
-                    if (!playWhenReady && reason in setOf(Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS,
-                            Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) && listenTogether.state.value.isGuest) {
-                        // A remote heartbeat must never undo a call interruption or unplugged headphones.
-                        if (!listenTogether.state.value.localAudioPaused) listenTogether.pauseGuestAudio("音频输出已改变，本机跟听已暂停")
-                    }
                 }
 
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {

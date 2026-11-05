@@ -77,7 +77,7 @@ class DesktopPcmPlayer private constructor(
             // Never hold the command wakeup monitor while calling a native device.
             target.output?.stop()
             target.frames = target.output?.framePosition ?: target.frames
-            synchronized(wake) { while (active(target) && !target.playing) wake.wait(50) }
+            synchronized(wake) { while (active(target) && !target.playing) wake.wait() }
             if (active(target)) target.output?.start()
         }
         return active(target)
@@ -213,7 +213,7 @@ class DesktopPcmPlayer private constructor(
     fun snapshot(): PlayerState = session?.let(::snapshot) ?: PlayerState()
     @Synchronized fun setPlaying(playing: Boolean) {
         val target = session ?: run { onPlayingChanged(false); return }
-        if (playing && target.closed.get()) { play(target.track); return }
+        if (playing && target.closed.get()) { play(target.track, initialProgress = snapshot(target).progress.takeIf { it < .99f } ?: 0f); return }
         target.playing = playing
         signal()
         publish(target, DesktopPlaybackEvent.Kind.Playing)

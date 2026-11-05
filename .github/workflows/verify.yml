@@ -1,5 +1,11 @@
 name: Verify Android and desktop
 on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Commit SHA or ref to verify
+        required: true
+        default: main
   push:
     branches: [main]
   pull_request:
@@ -11,6 +17,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,6 +52,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref || github.sha }}
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

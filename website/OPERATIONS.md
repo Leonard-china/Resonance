@@ -4,7 +4,7 @@
 
 2026-11-04 三端发布核对：Linux 便携包加入原受控 `releases.publish` 流程，Windows／Android 仍为必需，Linux 可选；三端同时校验后事务切换。部署保留 `.env`、运行数据、原启动器及中继；先做 SQLite 在线备份和原包备份，再导入全部实际产物。成功状态需通过数据库三端哈希、公开下载页与 Range 检查确认，不能仅凭发送命令成功；本轮实际结果见[发布记录](../docs/changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。
 
-2026-11-03：正在迁移至用户新购阿里云 Ubuntu 主机。新部署使用 Nginx＋独立 systemd 官网／邮件／一起听服务，不依赖翼龙或 Tunnel；配置、源码包、数据迁移和切换步骤见 [阿里云迁移入口](../services/deploy/aliyun/README.md)。新机已恢复并验证迁移副本，官网与中继在回环运行；公开切换待备案、最终数据同步、证书／DNS。下面的容器部署保留为当前公开入口及回滚依据。
+2026-11-05：一起听已从客户端和部署源码移除，阿里云准备脚本仅保留官网／邮件两个服务，见[部署入口](../services/deploy/aliyun/README.md)。本轮未重新部署或停用远端服务；旧迁移／中继验收只作为历史，不代表当前状态。
 
 官网基线核对日期：2026-10-17；一起听共存部署补充核对：2026-11-02。官网：[leonard.asia](https://leonard.asia)，下载：[downloads](https://leonard.asia/downloads)，论坛：[forum](https://leonard.asia/forum)。本文不保存后台私有地址、密码、API Key 或 Cloudflare token。
 
@@ -49,7 +49,7 @@
 
 
 
-## 一起听独立中继（2026-11-02）
+## 历史：一起听独立中继（2026-11-02，2026-11-05 源码退役）
 
 用户明确批准后，新增 `/home/container/resonance-relay/` 独立 venv/服务和 `/home/container/resonance-relay-data/` 私有预算目录，回环 45902，每日 UTC 2 GiB 应用负载。start.sh 在原网站命令前加入独立 supervisor，网站退出时回收 relay；连续失败最多 5 次，Linux 文件锁防止重复写预算。
 

@@ -10,6 +10,7 @@ data class AudioFeatures(
     val bpm: Int,
     val energy: Int,
     val calculatedAt: Long = System.currentTimeMillis(),
+    val revision: String = "",
 )
 
 object AudioFeatureAnalyzer {
@@ -21,10 +22,11 @@ object AudioFeatureAnalyzer {
      * @param channels number of channels (1 for mono, 2 for stereo)
      */
     fun analyzePcm(bytes: ByteArray, sampleRate: Int = 48_000, channels: Int = 2): Pair<Int, Int> {
+        require(sampleRate in 1000..384000 && channels in 1..8)
         val totalSamples = bytes.size / (channels * 2)
         if (totalSamples < sampleRate * 2) {
             // Need at least 2 seconds
-            return 120 to 50
+            return 0 to 0
         }
 
         // Downsample to ~12 kHz mono for ultra fast and robust rhythm detection
@@ -53,7 +55,7 @@ object AudioFeatureAnalyzer {
         val frameRate = targetRate.toFloat() / hopSize
 
         val numFrames = (monoIdx - frameSize) / hopSize
-        if (numFrames < 100) return 120 to 50
+        if (numFrames < 100) return 0 to 0
 
         val energyEnv = FloatArray(numFrames)
         var totalEnergy = 0.0
@@ -106,7 +108,7 @@ object AudioFeatureAnalyzer {
             }
         }
 
-        if (bestLag <= 0) return 120 to normalizedEnergy
+        if (bestLag <= 0 || bestCorrelation <= 0.00000001f) return 0 to normalizedEnergy
 
         // Check half lag (octave / double-beat check)
         val halfLag = bestLag / 2

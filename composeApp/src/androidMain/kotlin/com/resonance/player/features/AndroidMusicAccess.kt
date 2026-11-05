@@ -168,7 +168,20 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
             }
         }
     }
-    override suspend fun prepareSpeechAudio(track: Track, output: Path) = withContext(Dispatchers.IO) {
+    override suspend fun prepareSpeechAudio(track: Track, output: Path) = preparePcm(track, output, 1801)
+    override suspend fun prepareAnalysisAudio(track: Track, output: Path) = preparePcm(track, output, 90)
+    override suspend fun audioRevision(track: Track): String = withContext(Dispatchers.IO) {
+        val source = track.sourceUri.orEmpty()
+        val uri = Uri.parse(source)
+        if (uri.scheme == "content") {
+            val doc = androidx.documentfile.provider.DocumentFile.fromSingleUri(context, uri)
+            "$source:${doc?.length()}:${doc?.lastModified()}"
+        } else {
+            val path = if (source.startsWith("file:")) java.nio.file.Paths.get(java.net.URI(source)) else java.nio.file.Paths.get(source)
+            "$source:${Files.size(path)}:${Files.getLastModifiedTime(path).toMillis()}"
+        }
+    }
+    private suspend fun preparePcm(track: Track, output: Path, seconds: Int) = withContext(Dispatchers.IO) {
         val source = track.sourceUri ?: error("音频文件不可用")
         val temporary = if (source.startsWith("content:")) Files.createTempFile(context.cacheDir.toPath(), "speech-source-", ".audio") else null
         try {
@@ -183,7 +196,7 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
             val input = temporary?.toString() ?: if (source.startsWith("file:")) java.nio.file.Paths.get(java.net.URI(source)).toString() else source
             withTimeout(180_000) {
                 suspendCancellableCoroutine<Unit> { continuation ->
-                    val args = arrayOf("-nostdin", "-y", "-v", "error", "-i", input, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-t", "1801", "-f", "s16le", output.toString())
+                    val args = arrayOf("-nostdin", "-y", "-v", "error", "-i", input, "-map", "0:a:0", "-vn", "-threads", "1", "-ac", "1", "-ar", "16000", "-t", seconds.toString(), "-f", "s16le", output.toString())
                     val session = FFmpegKit.executeWithArgumentsAsync(args) { done ->
                         if (continuation.isActive) {
                             if (ReturnCode.isSuccess(done.returnCode)) continuation.resume(Unit)

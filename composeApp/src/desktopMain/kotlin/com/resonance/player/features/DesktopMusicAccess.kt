@@ -64,11 +64,18 @@ internal class DesktopMusicAccess(private val store: DesktopLibraryStore, privat
             check(process.exitValue() == 0) { "音频转换失败：${Files.readString(log).takeLast(400)}" }
         } finally { process.destroyForcibly(); process.waitFor(3, TimeUnit.SECONDS); Files.deleteIfExists(log) }
     }
-    override suspend fun prepareSpeechAudio(track: Track, output: Path) = withContext(Dispatchers.IO) {
+    override suspend fun prepareSpeechAudio(track: Track, output: Path) = preparePcm(track, output, 1801)
+    override suspend fun prepareAnalysisAudio(track: Track, output: Path) = preparePcm(track, output, 90)
+    override suspend fun audioRevision(track: Track): String = withContext(Dispatchers.IO) {
+        val source = track.sourceUri.orEmpty()
+        val path = if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)
+        "$source:${Files.size(path)}:${Files.getLastModifiedTime(path).toMillis()}"
+    }
+    private suspend fun preparePcm(track: Track, output: Path, seconds: Int) = withContext(Dispatchers.IO) {
         val source = track.sourceUri ?: error("音频文件不可用")
         val input = if (source.startsWith("file:")) Path.of(java.net.URI(source)).toString() else source
         val log = Files.createTempFile("resonance-speech-", ".log")
-        val process = ProcessBuilder(FfmpegExecutable.locate(), "-nostdin", "-y", "-v", "error", "-i", input, "-map", "0:a:0", "-vn", "-ac", "1", "-ar", "16000", "-t", "1801", "-f", "s16le", output.toString())
+        val process = ProcessBuilder(FfmpegExecutable.locate(), "-nostdin", "-y", "-v", "error", "-i", input, "-map", "0:a:0", "-vn", "-threads", "1", "-ac", "1", "-ar", "16000", "-t", seconds.toString(), "-f", "s16le", output.toString())
             .redirectError(log.toFile()).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
         try {
             withTimeout(180_000) { while (!process.waitFor(200, TimeUnit.MILLISECONDS)) ensureActive() }

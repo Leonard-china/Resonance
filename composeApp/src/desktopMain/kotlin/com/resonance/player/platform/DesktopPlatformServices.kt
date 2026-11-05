@@ -47,25 +47,7 @@ import com.resonance.player.weather.WeatherClient
 class DesktopPlatformServices : PlatformServices {
     private val closed = java.util.concurrent.atomic.AtomicBoolean(false)
     var fileDialogOwner: java.awt.Component? = null
-    override val listenTogether by lazy {
-        com.resonance.player.together.JvmListenTogetherService(library.appDirectory.resolve("cache/together-audio"), { track ->
-            val source = requireNotNull(track.sourceUri)
-            require(!source.contains("://") || source.startsWith("file:")) { "一起听仅共享本机音频" }
-            val path = if (source.startsWith("file:")) java.nio.file.Paths.get(java.net.URI(source)) else java.nio.file.Paths.get(source)
-            Files.newInputStream(path)
-        }, onGuestStopped = { setPlaying(false) }, prefetchNetworkAllowed = { automaticRecommendationAllowed(unmeteredOnly = true) },
-            companionStore = com.resonance.player.together.TogetherCompanionStore(library.appDirectory.resolve("together-companions"),
-                credentialVault::encrypt,
-                credentialVault::decrypt, TogetherDefaults.RelayUrl)).apply { trackPlayerReadiness(true) }
-    }
-
-    override fun playSynchronized(track: Track, progress: Float, playing: Boolean, speed: Float) {
-        stopAudioPreview()
-        playingMusicId = track.id
-        player.setPlaybackSpeed(speed)
-        player.play(track, autoPlay = playing, initialProgress = progress.coerceIn(0f, 1f))
-    }
-    override suspend fun awaitSynchronizedReady(trackId: String): Boolean = kotlinx.coroutines.withTimeoutOrNull(15_000) {
+    suspend fun awaitPlaybackReady(trackId: String): Boolean = kotlinx.coroutines.withTimeoutOrNull(15_000) {
         while (!player.isPrepared(trackId)) kotlinx.coroutines.delay(25)
         true
     } ?: false
@@ -266,6 +248,26 @@ class DesktopPlatformServices : PlatformServices {
         library.replaceAudio(track)
     }
     override fun formatDateTime(epochMillis: Long): String = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
+    override suspend fun chooseRelinkDirectory(): List<AudioRelinkCandidate>? = withContext(Dispatchers.IO) {
+        val selected = AtomicReference<Path?>()
+        SwingUtilities.invokeAndWait {
+            val picker = JFileChooser().apply { dialogTitle = "选择音乐的新位置"; fileSelectionMode = JFileChooser.DIRECTORIES_ONLY }
+            if (picker.showOpenDialog(fileDialogOwner) == JFileChooser.APPROVE_OPTION) selected.set(picker.selectedFile.toPath())
+        }
+        val directory = selected.get()?.toRealPath() ?: return@withContext null
+        val result = mutableListOf<AudioRelinkCandidate>()
+        Files.walk(directory, 32).use { paths ->
+            val iterator = paths.iterator(); var visited = 0
+            while (iterator.hasNext()) {
+                ensureActive(); check(++visited <= 50_000) { "目录超过50000项，请选择更小的音乐目录" }
+                val path = iterator.next()
+                if (!Files.isSymbolicLink(path) && Files.isRegularFile(path) && path.fileName.toString().substringAfterLast('.').lowercase() in DESKTOP_AUDIO_EXTENSIONS) {
+                    result += AudioRelinkCandidate(path.toString(), path.fileName.toString(), directory.relativize(path).toString())
+                }
+            }
+        }
+        result
+    }
     override suspend fun chooseReplacementAudio(track: Track): Track? = withContext(Dispatchers.IO) {
         val chosen = AtomicReference<java.io.File?>()
         SwingUtilities.invokeAndWait {
@@ -317,8 +319,6 @@ class DesktopPlatformServices : PlatformServices {
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
-    @Volatile private var hostShuffle = false
-    @Volatile private var hostRepeat = RepeatMode.Off
     private val errorEvents = MutableSharedFlow<PlaybackIssue>(extraBufferCapacity = 8)
     override val playbackErrors: Flow<String> get() = playbackIssues.map { it.message }
     override val playbackIssues: Flow<PlaybackIssue> get() = merge(errorEvents,
@@ -329,7 +329,7 @@ class DesktopPlatformServices : PlatformServices {
         onEnded = {
             playingMusicId = null
             isPlayingEvents.tryEmit(false)
-            if (!sleep.trackEnded() && !(listenTogether.state.value.role == TogetherRole.Host && togetherHostDriver.trackEnded())) endedEvents.tryEmit(Unit)
+            if (!sleep.trackEnded()) endedEvents.tryEmit(Unit)
         },
         onProgress = { progressEvents.tryEmit(it) },
         onPlayingChanged = { isPlayingEvents.tryEmit(it) },
@@ -337,46 +337,6 @@ class DesktopPlatformServices : PlatformServices {
         onError = { errorEvents.tryEmit(it) },
         stats = listeningStatsRepository.recorder(),
     )
-    override var togetherLocalSnapshot: Any? = null
-    override val managesTogetherPlayback: Boolean get() = true
-    private val togetherPlaybackScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
-    private val togetherHostDriver by lazy {
-        com.resonance.player.playback.TogetherHostPlaybackDriver(listenTogether, togetherPlaybackScope,
-            current = { player.snapshot().copy(shuffleEnabled = hostShuffle, repeatMode = hostRepeat) },
-            replaceQueue = { tracks, target ->
-                val current = player.snapshot()
-                if (tracks.isEmpty()) {
-                    if (current.currentTrack != null) { player.close(); playingMusicId = null; isPlayingEvents.tryEmit(false) }
-                } else if (tracks.none { it.id == current.currentTrack?.id }) {
-                    val wanted = player.playWhenReady
-                    tracks.firstOrNull { it.id == target }?.let {
-                        playingMusicId = it.id
-                        player.play(it, autoPlay = wanted)
-                    }
-                }
-            }, select = { track, _, autoPlay ->
-                stopAudioPreview(); playingMusicId = track.id
-                player.play(track, autoPlay = autoPlay)
-            }, playing = ::setPlaying, seek = ::seekTo, onError = listenTogether::reportHostPlaybackFailure)
-    }
-    private val togetherDriver by lazy {
-        com.resonance.player.playback.TogetherPlaybackDriver(listenTogether, togetherPlaybackScope,
-            current = { player.snapshot() }, prepare = { frame -> frame.track?.let { playSynchronized(it, frame.progress, false, frame.speed) } },
-            seek = ::seekTo, playing = ::setPlaying, speed = ::setPlaybackSpeed, ready = ::awaitSynchronizedReady)
-    }
-    init {
-        togetherPlaybackScope.launch {
-            togetherDriver
-            togetherHostDriver
-            while (kotlinx.coroutines.currentCoroutineContext().isActive) {
-                  val room = listenTogether.state.value
-                  val hosting = room.role == TogetherRole.Host
-                  if (hosting) listenTogether.publishNativePlayback(player.snapshot(), room.roomSessionId)
-                  kotlinx.coroutines.delay(if (hosting) 100 else 500)
-            }
-        }
-    }
-
     override val playbackEnded: Flow<Unit> = endedEvents
     private val sleep: com.resonance.player.playback.PlaybackSleepTimer = com.resonance.player.playback.PlaybackSleepTimer(assistantScope, onExpire = { player.setPlaying(false); isPlayingEvents.tryEmit(false) })
     override val sleepTimer get() = sleep.state
@@ -392,6 +352,14 @@ class DesktopPlatformServices : PlatformServices {
         runCatching { Files.isRegularFile(if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)) }.getOrDefault(false)
     }
     override val playbackPositionMs: Long? get() = player.positionMs
+    override val currentPlaybackState: com.resonance.player.playback.NativePlaybackState?
+        get() {
+            val current = player.snapshot()
+            val id = current.currentTrack?.id ?: return null
+            return com.resonance.player.playback.NativePlaybackState(
+                id, current.isPlaying, player.playWhenReady, current.isBuffering, current.progress, current.positionMs,
+            )
+        }
     override val playbackProgress: Flow<Float> = progressEvents
     override val isPlayingChanges: Flow<Boolean> = isPlayingEvents
     private val isBufferingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
@@ -617,7 +585,6 @@ class DesktopPlatformServices : PlatformServices {
 
     override fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode) {
         stopAudioPreview()
-        hostShuffle = shuffle; hostRepeat = repeatMode
         playingMusicId = track.id
         player.play(track)
     }
@@ -627,9 +594,7 @@ class DesktopPlatformServices : PlatformServices {
         player.setPlaying(isPlaying)
     }
 
-    override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {
-        hostShuffle = shuffle; hostRepeat = repeatMode
-    }
+    override fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {}
 
     override fun setVolume(volume: Float) = player.setVolume(volume)
 
@@ -697,10 +662,6 @@ class DesktopPlatformServices : PlatformServices {
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
         cancelImport()
-        togetherDriver.close()
-        togetherHostDriver.close()
-        togetherPlaybackScope.cancel()
-        listenTogether.close()
         sleep.close()
         stopAudioPreview()
         assistantScope.cancel()

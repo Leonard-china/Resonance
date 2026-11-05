@@ -1,9 +1,0 @@
-# For the existing locally managed leonard-web tunnel (cloudflared 2026.10.7).
-# Install only after confirming there is no existing default configuration.
-# The existing launcher supplies authentication; no credentials belong here.
-ingress:
-  - hostname: leonard.asia
-    path: ^/resonance-relay/v1$
-    service: http://127.0.0.1:45902
-  # Preserve the launcher's previous single-origin fallback for all other paths.
-  - service: http://127.0.0.1:50034

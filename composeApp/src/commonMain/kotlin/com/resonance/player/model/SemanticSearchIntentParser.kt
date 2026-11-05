@@ -25,8 +25,10 @@ object SemanticSearchIntentParser {
 
         // BPM resolution
         val bpmRegex = Regex("(\\d{2,3})\\s*bpm", RegexOption.IGNORE_CASE)
+        val rangeMatch = Regex("(\\d{2,3})\\s*[-–—~～至到]\\s*(\\d{2,3})\\s*bpm", RegexOption.IGNORE_CASE).find(q)
         val bpmMatch = bpmRegex.find(q)
         val bpmRange = when {
+            rangeMatch != null -> rangeMatch.groupValues[1].toInt().coerceIn(30, 240)..rangeMatch.groupValues[2].toInt().coerceIn(30, 240)
             bpmMatch != null -> {
                 val target = bpmMatch.groupValues[1].toIntOrNull() ?: 120
                 (target - 15)..(target + 15)
@@ -38,7 +40,7 @@ object SemanticSearchIntentParser {
         }
 
         // Remaining keywords
-        var remainder = rawQuery
+        var remainder = if (rangeMatch != null) rawQuery.replace(rangeMatch.value, " ", ignoreCase = true) else rawQuery
         for (w in foundGenres + foundMoods + foundScenes) {
             remainder = remainder.replace(w, " ", ignoreCase = true)
         }

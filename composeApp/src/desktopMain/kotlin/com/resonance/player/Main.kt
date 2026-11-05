@@ -3,18 +3,15 @@ package com.resonance.player
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.window.Tray
-import androidx.compose.ui.window.Notification
 import androidx.compose.ui.window.rememberTrayState
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.resonance.player.platform.DesktopPlatformServices
-import kotlinx.coroutines.flow.collect
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.resonance.player.application.ApplicationLifetime
@@ -28,11 +25,6 @@ fun main() = application {
     fun requestExit() { visible = false; scope.launch { lifetime.close().join(); exitApplication() } }
     if (java.awt.SystemTray.isSupported()) {
         val trayState = rememberTrayState()
-        LaunchedEffect(services, trayState) {
-            services.listenTogether.chatMessageEvents.collect {
-                trayState.sendNotification(Notification("Resonance", "朋友发来一条一起听消息", Notification.Type.Info))
-            }
-        }
         Tray(icon = appIcon, state = trayState, tooltip = "Resonance · 后台播放与推荐", onAction = { if (!lifetime.isClosing) visible = true }) {
             Item("打开 Resonance", onClick = { if (!lifetime.isClosing) visible = true })
             Item("退出", onClick = { requestExit() })

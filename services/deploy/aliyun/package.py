@@ -14,9 +14,6 @@ def package():
     for name in rules["DIRECTORIES"]:
         paths.extend(path for path in (site / name).rglob("*")
                      if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc")
-    relay = ROOT / "services/relay"
-    paths.extend(relay / name for name in (
-        "websocket_server.py", "requirements.txt", "test_websocket_server.py", "deploy/resonance-relay.service"))
     paths.extend(Path(__file__).parent / name for name in (
         "package.py", "prepare.sh", "README.md", "benchmark.py", "test_benchmark.py",
         "resonance-site.override.conf", "resonance-mail.override.conf"))

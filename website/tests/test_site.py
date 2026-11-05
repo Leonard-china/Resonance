@@ -101,6 +101,8 @@ class SiteTest(unittest.TestCase):
 
     def test_home_and_forum_announcement_link_and_content(self):
         home = self.client.get('/').get_data(as_text=True)
+        self.assertNotIn('一起听', home)
+        self.assertIn('获取在线歌词、音乐来源和AI功能需要网络', home)
         self.assertIn('/forum#announcement', home)
         self.assertIn('详细介绍在“论坛公告”（点击就能跳转）', home)
         forum = self.client.get('/forum').get_data(as_text=True)

@@ -70,26 +70,7 @@ class PlaybackService : MediaSessionService() {
             setHandleAudioBecomingNoisy(true)
             addListener(object : Player.Listener {
                 override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
-                    if (playWhenReady) {
-                        val together = com.resonance.player.together.AndroidTogetherRuntime.get(this@PlaybackService).service
-                        if (together.state.value.isGuest && together.state.value.localAudioPaused) {
-                            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) together.resumeGuestAudio()
-                            else { pause(); return }
-                        }
-                    }
                     if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM && sleep.trackEnded()) sleepTimerStoppedAtEnd = true
-                    if (!playWhenReady && reason in setOf(Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS,
-                            Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY)) {
-                        val together = com.resonance.player.together.AndroidTogetherRuntime.get(this@PlaybackService).service
-                        if (together.state.value.isGuest) together.pauseGuestAudio(
-                            if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY) "音频输出已改变，本机声音已暂停" else "其它应用正在使用声音，本机跟听已暂停")
-                    }
-                }
-                override fun onPlaybackSuppressionReasonChanged(playbackSuppressionReason: Int) {
-                    if (playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS) {
-                        val together = com.resonance.player.together.AndroidTogetherRuntime.get(this@PlaybackService).service
-                        if (together.state.value.isGuest) together.pauseGuestAudio("其它应用正在使用声音，本机跟听已暂停")
-                    }
                 }
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) stats.finish()
@@ -160,7 +141,6 @@ class PlaybackService : MediaSessionService() {
                 }
             }).build()
         overlay = com.resonance.player.features.AndroidLyricsOverlay(this, player, audioScope)
-        com.resonance.player.together.AndroidTogetherRuntime.get(this).bind(player)
         handler.post(snapshotTick)
         handler.post(listeningTick)
     }
@@ -217,7 +197,6 @@ class PlaybackService : MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
     override fun onDestroy() {
-        com.resonance.player.together.AndroidTogetherRuntime.get(this).unbind(mediaSession?.player)
         sleep.close()
         persistPlayback()
         handler.removeCallbacks(snapshotTick)

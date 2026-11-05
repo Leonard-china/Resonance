@@ -67,6 +67,7 @@ data class MusicFeatureSettings(
     val bilibiliFallback: Boolean = true,
     val preferredBilibiliUids: String = "",
     val recommendationsUnmeteredOnly: Boolean = false,
+    val assistantWebSearchEnabled: Boolean = true,
 )
 
 enum class RecommendationMode(val label: String) { Source("歌源推荐 · 不调用模型"), Ai("AI 精选") }
@@ -98,7 +99,7 @@ data class MusicTaskEntry(
     val parentId: String = "",
 )
 data class ScreenshotPlaylistDraft(val name: String, val tracks: List<SongRequest>)
-data class ScreenshotImportDraft(val id: String, val playlists: List<ScreenshotPlaylistDraft>, val recognition: String)
+data class ScreenshotImportDraft(val id: String, val playlists: List<ScreenshotPlaylistDraft>, val recognition: String, val selectedTracks: Set<String>? = null)
 data class BilibiliVideo(val bvid: String, val cid: Long, val title: String, val uploader: String, val coverUrl: String, val durationSeconds: Int, val page: Int = 1, val uploaderId: Long = 0)
 data class VideoImportRequest(val link: String, val title: String, val artist: String, val album: String, val cover: String = "", val playlistId: String? = null, val preserveAudio: Boolean = false)
 data class SongRequest(val title: String, val artist: String, val album: String = "", val reason: String = "")
@@ -118,11 +119,14 @@ data class MusicAssistantState(
     val origins: Map<String, MediaOrigin> = emptyMap(),
     val actions: List<AssistantAction> = emptyList(),
     val recommendationFeedback: Map<String, RecommendationFeedback> = emptyMap(),
+    val audioBpms: Map<String, Int> = emptyMap(),
     val screenshotDraft: ScreenshotImportDraft? = null,
     /** Ephemeral and consumed once; never encoded into music-assistant.json. */
     val pendingAudioDeletion: AudioDeletionRequest? = null,
     val recommendationHistory: List<RecommendationHistoryItem> = emptyList(),
     val releasedDownloadIds: Set<String> = emptySet(),
+    /** Current chat's task root; ephemeral so another session never shows its research steps. */
+    val assistantTaskId: String = "",
 )
 data class RecommendationHistoryItem(val title: String, val artist: String, val album: String = "", val recommendedAt: Long = 0)
 

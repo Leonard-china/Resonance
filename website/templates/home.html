@@ -23,7 +23,7 @@
     <div class="story-copy"><h2 id="assistant-title">把整理，交给助手。</h2><p>核对歌单截图、整理歌曲信息、寻找音乐。助手选出的歌曲可以直接点播，想删除音频时，会先请你确认具体文件。</p><p>AI功能需自行配置支持的模型与API，费用和可用性取决于服务商。本地播放无需配置AI。</p></div>
     <figure data-ui><img src="{{ url_for('static', filename='assets/assistant-preview.webp') }}" width="780" height="1688" alt="Resonance音乐助手，展示对话、真实歌曲附件和发送输入框" loading="lazy" decoding="async"><figcaption>音乐助手 · 对话与可点播歌曲</figcaption></figure>
   </section>
-  <section class="release-faq" aria-labelledby="questions-title"><h2 id="questions-title">开始听之前。</h2><div class="faq-columns"><div><h3>支持哪些系统？</h3><p>Android 8.0及以上、Windows 64位与Linux x86_64。Linux便携包自带Java运行时，需要安装系统FFmpeg。</p></div><div><h3>本地播放要联网吗？</h3><p>本地音频可直接播放。获取在线歌词、音乐来源、AI功能和一起听等服务需要网络。</p></div><div><h3>在哪里反馈问题？</h3><p>到匿名论坛留下使用情况，或在GitHub查看源码、发布记录和历史版本。</p><a href="{{ url_for('forum') }}">去论坛聊聊 →</a></div></div></section>
+  <section class="release-faq" aria-labelledby="questions-title"><h2 id="questions-title">开始听之前。</h2><div class="faq-columns"><div><h3>支持哪些系统？</h3><p>Android 8.0及以上、Windows 64位与Linux x86_64。Linux便携包自带Java运行时，需要安装系统FFmpeg。</p></div><div><h3>本地播放要联网吗？</h3><p>本地音频可直接播放。获取在线歌词、音乐来源和AI功能需要网络。</p></div><div><h3>在哪里反馈问题？</h3><p>到匿名论坛留下使用情况，或在GitHub查看源码、发布记录和历史版本。</p><a href="{{ url_for('forum') }}">去论坛聊聊 →</a></div></div></section>
   <section class="release-close" aria-labelledby="start-title"><div><h2 id="start-title">下一首，听你的。</h2><p>选择设备，下载原生版本。</p></div><a class="release-download" href="{{ url_for('downloads') }}">选择你的版本 →</a></section>
 </main>
 {% endblock %}

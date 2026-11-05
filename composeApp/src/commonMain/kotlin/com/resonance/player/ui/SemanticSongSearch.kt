@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.model.*
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SemanticSongSearch(
     query: String,
@@ -44,62 +45,24 @@ fun SemanticSongSearch(
     }
 
     val intent = remember(query) { SemanticSearchIntentParser.parse(query) }
-    val localMatches = remember(query, libraryTracks) {
-        val list = mutableListOf<SemanticTrackMatch>()
-        for (track in libraryTracks) {
-            val text = (track.title + " " + track.artist + " " + track.album).lowercase()
-            var score = 0f
-            val reasons = mutableListOf<String>()
-
-            for (kw in intent.keywords) {
-                if (text.contains(kw.lowercase())) {
-                    score += 40f
-                    reasons.add("命中关键词“$kw”")
-                }
-            }
-            for (genre in intent.genres) {
-                if (text.contains(genre)) {
-                    score += 30f
-                    reasons.add("曲风契合：$genre")
-                }
-            }
-            for (mood in intent.moods) {
-                if (text.contains(mood)) {
-                    score += 25f
-                    reasons.add("情绪契合：$mood")
-                }
-            }
-            for (scene in intent.scenes) {
-                if (text.contains(scene)) {
-                    score += 25f
-                    reasons.add("场景契合：$scene")
-                }
-            }
-
-            if (score > 0f) {
-                list.add(
-                    SemanticTrackMatch(
-                        track = track,
-                        sourceSong = null,
-                        title = track.title,
-                        artist = track.artist,
-                        album = track.album,
-                        reason = reasons.distinct().joinToString(" · "),
-                        confidence = score,
-                        isLocal = true,
-                    )
-                )
-            }
-        }
-        list.sortedByDescending { it.confidence }
+    val feature = LocalMusicFeatures.current
+    val assistantState = feature?.assistant?.state?.collectAsState()?.value
+    var cacheReady by remember(libraryTracks) { mutableStateOf(false) }
+    LaunchedEffect(libraryTracks, feature?.assistant) {
+        try { feature?.assistant?.refreshAudioFeatures(libraryTracks) }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+        catch (error: Exception) { feature?.message = "节拍缓存读取失败：${error.message}" }
+        finally { cacheReady = true }
     }
+    val bpms = if (cacheReady) assistantState?.audioBpms.orEmpty() else emptyMap()
+    val localMatches = remember(intent, libraryTracks, bpms) { matchLocalSemanticTracks(intent, libraryTracks, bpms) }
 
     Column(modifier.fillMaxSize()) {
         // Intent Pills Bar
-        Row(
+        FlowRow(
             Modifier.fillMaxWidth().padding(vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text("意图识别：", fontSize = 12.sp, color = ResonanceColors.Dim)
             for (scene in intent.scenes) {
@@ -119,9 +82,15 @@ fun SemanticSongSearch(
             }
         }
 
-        if (intent.bpmRange != null) Text(
-            "已识别节拍范围；本地目前仅按歌名、歌手、专辑文字匹配，尚不支持BPM筛选。请补充文字关键词。",
-            color = ResonanceColors.Muted, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+        if (intent.bpmRange != null) {
+            Text("每首分析前90秒，BPM为本地估算；未分析或节拍不明确的歌曲不计入结果。", color = ResonanceColors.Muted, fontSize = 13.sp)
+            if (assistantState?.task?.running == true && assistantState.task.progress.stage == "本地节拍分析") {
+                MusicTaskProgress(assistantState.task.progress) { feature?.assistant?.cancel() }
+            }
+            if (feature != null) TextButton(enabled = assistantState?.task?.running != true, onClick = {
+                feature.launch { feature.assistant?.analyzeAudioFeatures(libraryTracks) }
+            }) { Text(if (assistantState?.task?.running == true) "正在处理，可在任务列表查看" else "分析本地曲库节拍 · 不联网") }
+        }
         if (localMatches.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("本地曲库未命中符合该意图的歌曲，可切换“在线”在歌源中查找", color = ResonanceColors.Muted, fontSize = 13.sp)
@@ -131,7 +100,7 @@ fun SemanticSongSearch(
                 Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(localMatches, key = { it.track?.id ?: it.title }) { match ->
+                items(localMatches, key = { it.track?.id ?: it.title }, contentType = { "match" }) { match ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -1,0 +1,324 @@
+[
+  {
+    "ignored": 0,
+    "milliseconds": 112,
+    "tests": 1,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "blockedOldWriteCannotOverwriteLastActionAndCloseDrains",
+        "class": "com.resonance.player.PlaybackModeWriterTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackModeWriterTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 38,
+    "tests": 7,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "fallsBackToFullLibraryWhenCustomQueueIsNull",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "selectedDownloadIsIncludedEvenBeforeLibraryReloadReachesTheUi",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeQueueUsesTheSelectedAudioInsteadOfAnOlderCopyWithTheSameId",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "scopesPlaybackToSpecificPlaylist",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "fallsBackToFullLibraryWhenAllCustomTracksAreUnplayable",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "filtersOutUnplayableTracksInCustomQueue",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      },
+      {
+        "name": "recommendationQueueKeepsItsOrderAndSkipsEntriesWithoutAudio",
+        "class": "com.resonance.player.PlaybackQueueResolutionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackQueueResolutionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 163,
+    "tests": 4,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "clearingAnEmptyQueueCancelsAFileCheckThatFinishesLate",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "consecutiveQueueCommandsReadTheCommittedInMemoryState",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidRequestsRejectAnObsoleteNonCancellableFileCheck",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "removingCurrentTrackCannotRestoreItThroughTheOldCapturedQueue",
+        "class": "com.resonance.player.PlaybackSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.PlaybackSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 580,
+    "tests": 7,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "preparedPausedPlaybackWaitsForResumeAndIsNotAStalledDevice",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "outputThatMakesNoProgressBacksOffAndReportsOneBoundedFailure",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeCleanupDoesNotBlockStopOrTheNextPlayCommand",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "pausingDuringAPartialWriteStopsRetriesUntilResume",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "retryAfterOutputFailureRetainsThePlayedPosition",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "replacementRejectsAnOldDecoderWhichFinishesAfterTheNewRequest",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingEndsOnlyWhenPcmArrivesRatherThanWhenDeviceOpens",
+        "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.audio.DesktopPcmPlayerSessionTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 62,
+    "tests": 3,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "countdownUsesDeadlineAndExpiresOnlyOnce",
+        "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "status": "passed"
+      },
+      {
+        "name": "replacingAndCancellingTimersNeverPausesFromOldDeadline",
+        "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "status": "passed"
+      },
+      {
+        "name": "endOfTrackStopsOnceWithoutStartingAnotherQueueItem",
+        "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackSleepTimerTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 39,
+    "tests": 2,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "persistsCurrentTrackQueuePositionAndPlaylist",
+        "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+        "status": "passed"
+      },
+      {
+        "name": "malformedSnapshotDoesNotPreventStartup",
+        "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackSnapshotTest",
+    "assumptions": 0,
+    "exit": 0
+  },
+  {
+    "ignored": 0,
+    "milliseconds": 182,
+    "tests": 25,
+    "failures": 0,
+    "cases": [
+      {
+        "name": "audioRefreshDuringNativeTransitionPreservesPauseAndPosition",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "nextNativeTransitionCanReplacePendingGainWork",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "disposedStateRejectsLateAudioResults",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "rapidSwitchIgnoresLegacyCalibrationAndAppliesOnlyLatestBalancedGain",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "obsoleteOrUnacknowledgedNativeSnapshotsCannotReplaceUserSelection",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "lateAnalysisCannotOverwriteNewSong",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeSnapshotOverridesAnOldPausedUiOnAutoAdvance",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "explicitPauseDuringNativeGainLoadingRemainsPaused",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "volumeAndCachedGainAreAppliedBeforePlaybackStarts",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "clearingTemporaryPlaybackCancelsAStartThatFinishesAfterLeavingTheRoom",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "gainReadFailureCannotMarkAnAudibleNativeTrackPaused",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "manualVolumeAndGainWinOverPendingReadsAndAnalysis",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "nativeAutoAdvanceKeepsPlayingWithoutAnotherPlayingEvent",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "loudnessFailureAfterPlaybackStartsCannotFalselyPauseTheButton",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "previousNativePauseCannotCancelASingleTrackSelection",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "pauseWhilePreparingPreventsPlaybackStartOnReady",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingTransitionsReflectInPlayerStateAndClearOnPlayback",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "failureExitsPreparingAndBufferingStates",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "bufferingNativeTransitionDoesNotTurnIntoAPauseAfterGainLoads",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "switchingDuringQueuePreparationCannotStartThePreviousTrack",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "pausedNativeTransitionIsAdoptedWithoutRestartOrPauseCommands",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "oldNativeTrackEventsCannotCancelTheLatestPlaybackRequest",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "refreshingAudioWhileLoadingKeepsThePendingPlaybackRequest",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "audioRefreshPreservesProtectionFromPreviousNativeStatus",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      },
+      {
+        "name": "previousNativePlayingCannotUndoAnExplicitPauseDuringPreparation",
+        "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+        "status": "passed"
+      }
+    ],
+    "class": "com.resonance.player.playback.PlaybackStateStoreTest",
+    "assumptions": 0,
+    "exit": 0
+  }
+]
