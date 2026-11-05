@@ -1,13 +1,29 @@
-{% extends 'base.html' %}{% from '_macros.html' import icon %}
+{% extends 'base.html' %}
 {% block body_class %}home-page{% endblock %}
-{% block header %}{% endblock %}
 {% block main %}
-<main id="main" class="home-shell">
-  <section class="home-hero" aria-labelledby="home-title"><div class="home-intro"><h1 id="home-title">Resonance</h1><h2>本地音乐播放器</h2><p>支持 Windows、Android 和 Linux{% if release %}<span class="hero-version">v{{ release.version }}</span>{% endif %}</p><div class="home-announcement-callout"><a href="{{ url_for('forum') }}#announcement" class="announcement-banner-link">{{ icon('megaphone') }}<span>详细介绍在“论坛公告”（点击就能跳转）</span>{{ icon('chevron-right') }}</a></div></div><img class="hero-icon" src="{{ url_for('static', filename='assets/icon.webp') }}" width="144" height="144" alt="Resonance 蓝绿音符图标"></section>
-  <nav class="home-actions" aria-label="主要入口"><a class="button primary" href="{{ url_for('downloads') }}">{{ icon('download') }}下载</a><a class="button" href="{{ url_for('forum') }}">{{ icon('messages') }}论坛</a><a class="button" href="{{ github }}" target="_blank" rel="noopener noreferrer">{{ icon('github') }}<span>开源地址 <span class="latin">GitHub</span></span></a><a class="button" href="{{ url_for('support') }}">{{ icon('heart') }}充电</a></nav>
-  <section class="showcase" aria-labelledby="showcase-title"><div class="section-heading"><h2 id="showcase-title">软件界面</h2><div class="preview-switch" role="tablist" aria-label="界面预览"><button role="tab" id="desktop-tab" aria-controls="desktop-preview" aria-selected="true" data-preview="desktop">{{ icon('monitor') }}电脑端</button><button role="tab" id="mobile-tab" aria-controls="mobile-preview" aria-selected="false" data-preview="mobile">{{ icon('phone') }}手机端</button></div></div>
-    <div class="preview-grid" data-preview-mode="desktop"><figure class="desktop-preview" id="desktop-preview" role="tabpanel" aria-labelledby="desktop-tab"><figcaption>{{ icon('monitor') }}电脑端</figcaption><div class="desktop-screen"><img src="{{ url_for('static', filename='assets/desktop-preview.webp') }}" width="1600" height="860" alt="Resonance Windows 播放器测试界面，含专辑封面、播放进度与播放控制" decoding="async"></div></figure><figure class="phone-preview" id="mobile-preview" role="tabpanel" aria-labelledby="mobile-tab"><figcaption>{{ icon('phone') }}手机端</figcaption><div class="phone-screen"><img src="{{ url_for('static', filename='assets/mobile-preview.webp') }}" width="540" height="1200" alt="Resonance Android 播放器测试界面，含封面、歌词入口与播放控制" decoding="async"></div></figure></div>
+<main id="main" class="release-home">
+  <section class="release-hero" aria-labelledby="home-title">
+    <div class="release-heading"><h1 id="home-title">Resonance</h1><div class="hero-copy"><h2>音乐，留在身边。</h2><p>Android、Windows 与 Linux 原生本地音乐播放器。听自己的音乐，让歌词跟着这一刻走。</p></div></div>
+    <div class="hero-links"><a class="release-download" href="{{ url_for('downloads') }}">下载 Resonance{% if release %} <span>v{{ release.version }}</span>{% endif %}</a><a href="{{ url_for('forum') }}#announcement" class="announcement-banner-link">详细介绍在“论坛公告”（点击就能跳转）</a></div>
+    <div class="preview-heading"><p>封面与同步歌词</p><div class="preview-switch" role="tablist" aria-label="界面预览"><button role="tab" id="desktop-tab" aria-controls="desktop-preview" aria-selected="true" data-preview="desktop">电脑端</button><button role="tab" id="mobile-tab" aria-controls="mobile-preview" aria-selected="false" data-preview="mobile">手机端</button></div></div>
+    <div class="release-previews" data-preview-mode="desktop">
+      <figure id="desktop-preview" role="tabpanel" aria-labelledby="desktop-tab" data-ui><img src="{{ url_for('static', filename='assets/desktop-preview.webp') }}" width="1440" height="960" alt="Resonance桌面原生播放页：左侧封面与播放控制，右侧同步双语歌词" fetchpriority="high" decoding="async"><figcaption>桌面播放页 · 封面、同步歌词与播放控制</figcaption></figure>
+      <figure id="mobile-preview" role="tabpanel" aria-labelledby="mobile-tab" data-ui><img src="{{ url_for('static', filename='assets/mobile-preview.webp') }}" width="632" height="1364" alt="Resonance Android原生播放页：专辑封面、当前歌词和播放控制" decoding="async"><figcaption>Android播放页 · 封面与当前歌词</figcaption></figure>
+    </div>
   </section>
-  <section class="home-features" aria-label="主要功能"><div>{{ icon('music') }}<div><h3>本地播放</h3><p>扫描本地音乐，直接播放。</p></div></div><div>{{ icon('list') }}<div><h3>歌单整理</h3><p>创建歌单、收藏和管理歌曲。</p></div></div><div>{{ icon('lyrics') }}<div><h3>双语歌词</h3><p>歌词翻译与悬浮歌词。</p></div></div><div>{{ icon('sparkles') }}<div><h3>音乐助手</h3><p>整理音乐、识别歌单截图。</p></div></div></section>
+  <section class="home-story lyrics-story" aria-labelledby="lyrics-title">
+    <div class="story-copy"><h2 id="lyrics-title">听到哪，读到哪。</h2><p>同步歌词连续跟随播放，当前句清楚高亮。切换双语显示，或打开完整歌词，让音乐和文字在同一刻相遇。</p><a href="{{ url_for('downloads') }}">看看你的设备版本 →</a></div>
+    <figure data-ui><img src="{{ url_for('static', filename='assets/lyrics-preview.webp') }}" width="632" height="1364" alt="Android完整歌词页，当前句居中高亮并展示译文" loading="lazy" decoding="async"><figcaption>完整歌词 · 当前句与双语显示</figcaption></figure>
+  </section>
+  <section class="home-story library-story" aria-labelledby="library-title">
+    <figure data-ui><img src="{{ url_for('static', filename='assets/library-preview.webp') }}" width="780" height="1688" alt="Resonance原生音乐库，展示歌曲、歌单、专辑、歌手与收藏" loading="lazy" decoding="async"><figcaption>音乐库 · 收藏与自己的歌单</figcaption></figure>
+    <div class="story-copy"><h2 id="library-title">喜欢的，放进歌单。</h2><p>按歌曲、专辑或歌手浏览。收藏常听的旋律，整理自己的歌单；桌面可把音乐文件、目录和歌单包直接拖进窗口。</p><p>换一台设备，用 <span class="archive-name">.resonance</span> 歌单包带上音频和歌单关系。</p></div>
+  </section>
+  <section class="home-story assistant-story" aria-labelledby="assistant-title">
+    <div class="story-copy"><h2 id="assistant-title">把整理，交给助手。</h2><p>核对歌单截图、整理歌曲信息、寻找音乐。助手选出的歌曲可以直接点播，想删除音频时，会先请你确认具体文件。</p><p>AI功能需自行配置支持的模型与API，费用和可用性取决于服务商。本地播放无需配置AI。</p></div>
+    <figure data-ui><img src="{{ url_for('static', filename='assets/assistant-preview.webp') }}" width="780" height="1688" alt="Resonance音乐助手，展示对话、真实歌曲附件和发送输入框" loading="lazy" decoding="async"><figcaption>音乐助手 · 对话与可点播歌曲</figcaption></figure>
+  </section>
+  <section class="release-faq" aria-labelledby="questions-title"><h2 id="questions-title">开始听之前。</h2><div class="faq-columns"><div><h3>支持哪些系统？</h3><p>Android 8.0及以上、Windows 64位与Linux x86_64。Linux便携包自带Java运行时，需要安装系统FFmpeg。</p></div><div><h3>本地播放要联网吗？</h3><p>本地音频可直接播放。获取在线歌词、音乐来源、AI功能和一起听等服务需要网络。</p></div><div><h3>在哪里反馈问题？</h3><p>到匿名论坛留下使用情况，或在GitHub查看源码、发布记录和历史版本。</p><a href="{{ url_for('forum') }}">去论坛聊聊 →</a></div></div></section>
+  <section class="release-close" aria-labelledby="start-title"><div><h2 id="start-title">下一首，听你的。</h2><p>选择设备，下载原生版本。</p></div><a class="release-download" href="{{ url_for('downloads') }}">选择你的版本 →</a></section>
 </main>
 {% endblock %}

@@ -27,7 +27,8 @@ function initInteractive(root = document) {
   const preview = root.querySelector ? root.querySelector('[data-preview-mode]:not([data-bound])') : null;
   if (preview) {
     preview.dataset.bound = '1';
-    const previewButtons = [...preview.querySelectorAll('[data-preview]')];
+    preview.classList.add('preview-ready');
+    const previewButtons = [...(preview.closest('section') || root).querySelectorAll('[data-preview]')];
     const narrow = matchMedia('(max-width: 720px)');
     let chosen = false;
     const select = (mode, focus = false) => {

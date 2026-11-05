@@ -162,6 +162,9 @@ class TogetherCompanionTest {
             host.host(0)
             guest.join(host.invitation("127.0.0.1"))
             waitFor { host.companion.value.connected && guest.companion.value.connected }
+            // attach publishes the connection before refreshing persisted partner/history state.
+            waitFor { host.companion.value.paired && guest.companion.value.paired &&
+                host.companion.value.messages.size == 2 }
             assertEquals(hostId, guest.companion.value.peerId)
             assertEquals(guestId, host.companion.value.peerId)
             assertTrue(host.companion.value.paired && guest.companion.value.paired)

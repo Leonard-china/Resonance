@@ -5,7 +5,9 @@ import org.json.JSONObject
 /** Shared whole-track BS.1770/R128 measurements; automatic gain never exceeds true-peak headroom. */
 object LoudnessAnalysis {
     const val CACHE_VERSION = "r128-v1"
-    const val FILTER = "loudnorm=I=-14:TP=-1:LRA=50:print_format=json"
+    // FFmpeg 4.4 (Ubuntu 22.04) accepts LRA only up to 20. We consume input
+    // measurements, so this output target does not change our gain calculation.
+    const val FILTER = "loudnorm=I=-14:TP=-1:LRA=20:print_format=json"
 
     fun gainFromOutput(output: String): Float? {
         return try {

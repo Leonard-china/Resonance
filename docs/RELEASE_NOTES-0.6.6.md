@@ -15,11 +15,12 @@
 - 改进桌面配置备份恢复、Android设置保存失败反馈，以及应用退出、快速切歌和持久化任务的边界。
 - 修复Android导出选项卡顿，导出过程显示处理状态、真实保存位置与文件名；按歌单命名并保留已有文件。
 - Linux提供包含Java运行时的便携包及DEB安装包；Windows提供完整EXE安装包，Android提供正式签名APK。
+- 修复Linux旧版FFmpeg的响度测量参数兼容，继续限制增益与峰值余量。
 - 官网导航按最后一次点击提交，避免较慢的旧页面覆盖当前页面；更新新版介绍、界面预览与三端下载说明。
 
 ## 安装与升级
 
-Android使用正式签名APK覆盖安装；Windows运行EXE安装包。Linux便携包完整解压后运行 `Resonance/bin/Resonance`，或安装DEB；Linux需要系统FFmpeg。不要只复制桌面包里的单个启动文件。
+Android使用正式签名APK覆盖安装；Windows运行EXE安装包。Linux便携包完整解压后运行 `Resonance/bin/Resonance`，或在提供t64系统库的发行版安装DEB；Linux需要系统FFmpeg。不要只复制桌面包里的单个启动文件。
 
 保留曲库、歌单与偏好格式，不自动清理用户音频。Linux凭据保护与Windows DPAPI不互通，换系统需重新配置账号。删除真实音频仍不可撤销。
 

@@ -698,7 +698,11 @@ AI 元数据工具改曲库覆盖值，不宣称所有平台均写回原文件�
 
 <a id="website"></a>
 
+2026-11-05 发布回归核对：响度分析的loudnorm目标LRA使用20，以兼容Ubuntu 22.04的FFmpeg 4.4；增益仍仅取input_i/input_tp，不改变缓存及峰值限制。配对重连测试有界等待连接后的配对和历史刷新，见[兼容修复](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md)。
+
 ## 16. 独立官网与匿名论坛（发布能力核对 2026-11-04）
+
+2026-11-05页面核对：首页使用五张当前原生回归截图、三端介绍及清楚的下载入口；预览绑定在同一section查找按钮，图/选中状态一致，点击、键盘、缩放及无JS回退经过浏览器验证。下载页Linux仍通过原三端资产模型提供便携包，DEB直达本次GitHub同版本资产并提示t64依赖，不新增数据库平台类型。论坛、后台、订阅和用户运行数据保持原服务。见[页面记录](changes/2026-11-05-30-refresh-website-release-pages.md)。
 
 2026-11-05导航核对：`site.js` 每次navigate（含缓存/popstate）递增navigationGeneration，异步响应和ViewTransition提交前核对代次，只有当前导航能改DOM/history或触发原生回退；前进后退不pushState。执行 `node --test website/tests/test_navigation.cjs` 覆盖六种乱序/缓存/过渡/失败/点击当前页面场景，未发布现网。见[导航修复](changes/2026-11-05-26-website-latest-navigation-wins.md)。
 

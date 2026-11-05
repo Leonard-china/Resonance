@@ -1,5 +1,7 @@
 # Resonance 官网
 
+2026-11-05 页面核对：首页按当前原生界面更新五张实际UI预览，保留灰绿品牌；下载页补Linux DEB入口和t64依赖边界。桌面/手机切换支持实际点击、键盘、缩放后保留选择，关闭JS时两张预览都能阅读。素材来自本轮合成数据回归，不含用户音乐/账号；本次构建与上线结果见[三端发布](../docs/changes/2026-11-05-29-publish-three-platform-release.md)及[页面记录](../docs/changes/2026-11-05-30-refresh-website-release-pages.md)。
+
 2026-11-04 发布能力核对：官网支持 Windows EXE、Android APK 与可选 Linux x86_64 TAR.GZ，一次校验成功后事务切换；旧双端发布继续兼容。`manage.py import-release --linux <实际便携包路径>` 可一并导入三端。Linux 也显示真实大小、SHA-256、镜像与官网直连，详见[0.6.6 本轮发布记录](../docs/changes/2026-11-04-20-publish-0.6.6-three-platforms.md)。作者发布总请求上限调整为 1280 MiB，每个包仍最多 400 MiB，公开表单沿用原小请求限制；外部代理仍可能限制大请求，大包优先用服务器本地 CLI 导入，不为发布自动群发邮件。
 
 2026-11-03：正在迁移至用户新购阿里云 Ubuntu 主机。新部署使用 Nginx＋独立 systemd 官网／邮件／一起听服务，不依赖翼龙或 Tunnel；配置、源码包、数据迁移和切换步骤见 [阿里云迁移入口](../services/deploy/aliyun/README.md)。新机已恢复并验证迁移副本，官网与中继在回环运行；公开切换待备案、最终数据同步、证书／DNS。下面的容器部署保留为当前公开入口及回滚依据。
