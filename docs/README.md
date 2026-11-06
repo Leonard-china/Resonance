@@ -136,6 +136,8 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-06 | 音乐助手下载指引和 0.6.8 三端发布 | [具体记录](changes/2026-11-06-02-publish-0.6.8-assistant-release.md) |
+| 2026-11-06 | 用当前助手提示词构建本地 Android Release 试用包，核对 DEX 与正式签名 | [具体记录](changes/2026-11-06-01-android-assistant-trial-apk.md) |
 | 2026-11-05 | 构建并发布 0.6.7 助手联网与独立播放三端正式版 | [具体记录](changes/2026-11-05-43-publish-0.6.7-harness-release.md) |
 | 2026-11-05 | 移植 DeepSeek Harness Search／Fetch，接入原生 Markdown、来源链接与检索过程 | [具体记录](changes/2026-11-05-42-harness-web-research-and-native-replies.md) |
 | 2026-11-05 | 助手新检索结果计入进展，受阻时单次文字收束，明确播客推荐能力并去重错误 | [具体记录](changes/2026-11-05-41-assistant-search-progress-and-final-answer.md) |
