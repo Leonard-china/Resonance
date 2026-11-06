@@ -16,6 +16,11 @@
 
 <!-- GENERATED-CHECKSUMS -->
 
-实际产物生成后填入本次 SHA-256，并随 GitHub Release 提供 `SHA256SUMS.txt`、源码快照提交与本说明；不复用 0.6.8 的安装包或校验值。
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| `Resonance-0.6.9-release.apk` | 167539412 | `44a4a134c59b29cddf3e1ff6c20f94715681ebfc8928cf8fa2fa0e4668e97681` |
+| `Resonance-0.6.9.exe` | 276278784 | `9e79c1f988dd5ef9fa95d4bccefa4e9b92d752c0b9406c1b9f990a3c471874ac` |
+| `Resonance-0.6.9-linux-x86_64.tar.gz` | 267109404 | `f80873d4f327d0a6b3cbb0576e82cc93c7d773248ac61a6e3d27e4a9f2de6b55` |
+| `Resonance-0.6.9-linux-x86_64.deb` | 246096182 | `5f285d858dad2fcf80dc788ddcb15bab2fc46fd414b7e8d2d64c906dfcfd9388` |
 
 <!-- END-GENERATED-CHECKSUMS -->
