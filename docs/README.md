@@ -1,6 +1,6 @@
 # 2026-11-06 — Resonance 文档入口与开发变更索引
 
-0.6.7 三端正式版已于 2026-11-06 公开。Android APK、Windows EXE、Linux 便携包和 DEB 均为本次构建，官网三端下载已验证。[GitHub v0.6.7](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.7) · [官网下载](https://leonard.asia/downloads) · [本轮发布记录](changes/2026-11-05-43-publish-0.6.7-harness-release.md)
+0.6.8 三端正式版已于 2026-11-06 公开，纳入音乐助手的下载指引。Android APK、Windows EXE、Linux 便携包和 DEB 的实际校验值见发布记录。[GitHub v0.6.8](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.8) · [官网下载](https://leonard.asia/downloads) · [本轮发布记录](changes/2026-11-06-02-publish-0.6.8-assistant-release.md)
 
 最新助手能力：[移植 DeepSeek Harness 网页搜索／正文抓取并接入原生 Markdown 回答](changes/2026-11-05-42-harness-web-research-and-native-replies.md)。复用官方 Search／Fetch 路径，当前官方连接按能力开放；可点击来源、可选文字及真实检索步骤使用成熟 Compose 组件和现有任务记录。实际验证、计费及未安装限制见记录。
 
@@ -84,7 +84,7 @@
 
 第一批双主题/一起听 UI、第二批统计/偏好/错误归属修复、第三批加载与缓冲全链路状态已实施，并完成 MuMu 帧率实测与 Windows 真实桌面窗口验收。服务器已经用户批准上线；独立跨网蜂窝真机、多人平权及长时压力验收仍待后续环境具备。准确进度见 [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md)；[PRODUCT_AUDIT.md](PRODUCT_AUDIT.md) 保留原始审计，不代表所有待办已完成。
 
-当前版本为 **0.6.7 / 41**，唯一版本来源为 `version.properties`。普通构建默认沿用当前版本。[0.6.7 发布说明](RELEASE_NOTES-0.6.7.md)
+当前版本为 **0.6.8 / 42**，唯一版本来源为 `version.properties`。普通构建默认沿用当前版本。[0.6.8 发布说明](RELEASE_NOTES-0.6.8.md)
 
 已按[三项特色规划](changes/2026-10-30-01-product-positioning-and-listen-together-plan.md)和[陪伴房间需求](changes/2026-10-30-07-companion-room-chat-and-partner-scope.md)实施。新版 MuMu 七项聊天/配对/邀请、五项音频会话及反向原生通过，可选寻址完成本地互通。本次最终针对性桌面 70 项中 66 通过、4 项显式跳过，Android Release 48 项通过；[本次双端 Release 已保存并核验](changes/2026-10-31-13-current-release-artifacts-and-device-verification.md)，Windows 同次原生运行时启动通过，四份软件/校验/说明文件已向自己的[微信文件传输助手上传结束](changes/2026-10-31-14-windows-startup-and-wechat-transfer.md)。两小时 Windows/MuMu 原生和聊天验收已通过，正式 Android 包安装/启动成功但非冷启动；新宣传片的模型配置失败待修复。维护者此后新增[跨网、多人平权、卡顿与提醒需求](changes/2026-10-31-15-multiplayer-equal-control-and-cross-network-plan.md)，该新需求尚未完成。
 
@@ -111,6 +111,7 @@
 | [组件/外部服务/凭据](THIRD_PARTY.md) | 新模型、B站、WorkManager/JNA、请求内容与加密/兼容 |
 | [项目使用说明](../README.md) | 用户入口与设置/推荐删除语义 |
 | [官网运行与 Ubuntu 部署](../website/README.md) | 响应式官网、匿名论坛、下载发布、邮箱订阅、作者后台及备份 |
+| [0.6.8 发布说明](RELEASE_NOTES-0.6.8.md) | 音乐助手下载指引三端正式版 |
 | [0.6.7 发布说明](RELEASE_NOTES-0.6.7.md) | 助手联网检索、原生回答与独立播放修复三端正式版 |
 | [0.6.5 发布说明](RELEASE_NOTES-0.6.5.md) | 全新播放队列深度管理、下一首播放置顶、曲库即时排序筛选与双语歌词舞台双端正式版 |
 | [0.6.4 发布说明](RELEASE_NOTES-0.6.4.md) | Mineradio 沉浸音乐舞台、端到端加密双人一起听与自适应封面氛围双端正式版 |

@@ -1,5 +1,7 @@
 # leonard.asia 现网运维
 
+2026-11-06 已受控发布 0.6.8。官网备份数据库及旧包，在候选副本通过 45 项测试后事务切换三端下载。源站和公网 Range 校验通过。[发布记录](../docs/changes/2026-11-06-02-publish-0.6.8-assistant-release.md)
+
 2026-11-06 已受控发布 0.6.7。服务器从 GitHub 下载三端安装包并核对 SHA-256，备份 SQLite 和旧包，在候选副本通过 45 项回归后事务切换下载。公网首页、下载页、论坛以及三端 Range 响应均已核对。[发布记录](../docs/changes/2026-11-05-43-publish-0.6.7-harness-release.md)
 
 2026-11-05：0.6.6已公开GitHub并受控切换官网三端，首页/五图/下载页更新，备份及公开校验见[本轮发布](../docs/changes/2026-11-05-29-publish-three-platform-release.md)。仅HUP Gunicorn master，保留Java启动器、Tunnel、中继和运行数据；未发邮件。服务器默认临时盘约56MiB不足发布保护的100MiB，候选回归须将TMPDIR/TEMP/TMP指向网站数据所在文件系统的独立目录，45项通过后再切换。普通首页/下载页缓存仍可能旧版，用户选择等待自然更新，不把源站上线写成全网已刷新；即时检查使用`/?v=0.6.6`及`/downloads?v=0.6.6`。

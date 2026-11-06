@@ -1,6 +1,8 @@
 # 2026-11-05 — Resonance 详细开发说明：应用会话、独立播放与平台边界
 
-2026-11-06 发布核对。当前版本为 **0.6.7 / 41**，三端正式产物已公开，官网同批文件通过分段下载校验。联合 CI 使用 `verify.yml` 的 `workflow_dispatch` 和 `source_ref` 核对固定源码提交，Windows 正式包由 `release-windows.yml` 构建。[本次发布记录](changes/2026-11-05-43-publish-0.6.7-harness-release.md)
+2026-11-06 发布核对。当前版本为 **0.6.8 / 42**，三端正式产物已公开，官网同批文件通过分段下载校验。联合 CI 使用 `verify.yml` 的 `workflow_dispatch` 和 `source_ref` 核对固定源码提交，Windows 正式包由 `release-windows.yml` 构建。[本次发布记录](changes/2026-11-06-02-publish-0.6.8-assistant-release.md)
+
+2026-11-06 的 [Android 本地试用包](changes/2026-11-06-01-android-assistant-trial-apk.md) 使用 0.6.7 / 41，保留为本地验收记录。
 
 2026-11-05 播放器优化核对：歌词工具改为独立有界滚动面板，歌词容器裁剪；暂停／悬浮关闭减少空闲唤醒，单调歌词采用时间戳索引，Android原生服务独占周期快照；桌面设备失败后保留进度重试。截图核对草稿、编辑与勾选保存到本机，可从任务页继续；智能管家支持选目录、预览后批量重新定位失效音频；意图找歌接入真实本地BPM分析与缓存校验。每首最多前90秒，不上传／不调用模型。独立变更34—39号及[本次验收](audit/2026-11-05/player-improvements/VALIDATION.md)记录当前范围，手机未连接，未安装／发布。
 
