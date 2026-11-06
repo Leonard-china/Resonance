@@ -247,6 +247,10 @@ class DesktopPlatformServices : PlatformServices {
         check(audioFileAvailable(track)) { "所选音频已不可读取，未替换来源" }
         library.replaceAudio(track)
     }
+    override suspend fun saveReplacementAudioBatch(matches: List<AudioRelinkMatch>): Pair<Int, List<String>> = withContext(Dispatchers.IO) {
+        val context = kotlinx.coroutines.currentCoroutineContext()
+        library.replaceAudioBatch(matches) { context.ensureActive() }
+    }
     override fun formatDateTime(epochMillis: Long): String = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
     override suspend fun chooseRelinkDirectory(): List<AudioRelinkCandidate>? = withContext(Dispatchers.IO) {
         val selected = AtomicReference<Path?>()

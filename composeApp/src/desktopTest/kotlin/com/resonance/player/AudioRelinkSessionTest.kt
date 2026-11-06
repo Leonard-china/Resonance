@@ -8,6 +8,24 @@ import java.lang.reflect.Proxy
 import kotlin.test.*
 
 class AudioRelinkSessionTest {
+    @Test fun largeBatchLoadsCatalogOnceAndSubmitsOneCommit() = runBlocking {
+        val tracks = (1..1000).map { Track("$it", "Song $it", "Artist", "Album", "3:00", it, sourceUri = "/old/$it.mp3") }
+        var reads = 0
+        var commits = 0
+        val services = Proxy.newProxyInstance(LibraryServices::class.java.classLoader, arrayOf(LibraryServices::class.java)) { _, method, args ->
+            when (method.name) {
+                "loadLibrary" -> { reads++; tracks }
+                "audioFileAvailable" -> (args!![0] as Track).sourceUri?.startsWith("/new/") == true
+                "saveReplacementAudioBatch" -> { commits++; (args!![0] as List<*>).size to emptyList<String>() }
+                else -> error("Unexpected ${method.name}")
+            }
+        } as LibraryServices
+        val result = AudioRelinkSession(services).apply(tracks.map { AudioRelinkMatch(it, AudioRelinkCandidate("/new/${it.id}.mp3", "${it.id}.mp3", "${it.id}.mp3")) })
+        assertEquals(1000, result.first)
+        assertTrue(result.second.isEmpty())
+        assertEquals(1, reads)
+        assertEquals(1, commits)
+    }
     @Test fun savingNewSourcePreservesCurrentMetadataAndRejectsChangedSources() = runBlocking {
         val old = Track("id", "Original", "Artist", "Album", "4:00", 0, isFavorite = true, sourceUri = "/old/a.flac")
         var current = old.copy(title = "Recently edited")
@@ -16,7 +34,12 @@ class AudioRelinkSessionTest {
             when (method.name) {
                 "loadLibrary" -> listOf(current)
                 "audioFileAvailable" -> (args!![0] as Track).sourceUri?.startsWith("/new/") == true
-                "saveReplacementAudio" -> { val track = args!![0] as Track; saved += track; current = track; Unit }
+                "saveReplacementAudioBatch" -> {
+                    @Suppress("UNCHECKED_CAST") val matches = args!![0] as List<AudioRelinkMatch>
+                    val (updates, errors) = prepareAudioRelinkUpdates(matches, listOf(current), { it.sourceUri?.startsWith("/new/") == true })
+                    saved += updates; updates.lastOrNull()?.let { current = it }
+                    updates.size to errors
+                }
                 else -> error("Unexpected ${method.name}")
             }
         } as LibraryServices

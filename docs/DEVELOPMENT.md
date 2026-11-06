@@ -1,8 +1,8 @@
 # 2026-11-05 — Resonance 详细开发说明：应用会话、独立播放与平台边界
 
-2026-11-06 发布核对。当前版本为 **0.6.8 / 42**，三端正式产物已公开，官网同批文件通过分段下载校验。联合 CI 使用 `verify.yml` 的 `workflow_dispatch` 和 `source_ref` 核对固定源码提交，Windows 正式包由 `release-windows.yml` 构建。[本次发布记录](changes/2026-11-06-02-publish-0.6.8-assistant-release.md)
+2026-11-06 发布核对。当前版本为 **0.6.9 / 43**，三端正式产物已公开，官网同批文件通过分段下载校验。联合 CI 使用 `verify.yml` 的 `workflow_dispatch` 和 `source_ref` 核对固定源码提交，Windows 正式包由 `release-windows.yml` 构建。[本次发布记录](changes/2026-11-06-07-publish-0.6.9-release.md)
 
-2026-11-06 的 [Android 本地试用包](changes/2026-11-06-01-android-assistant-trial-apk.md) 使用 0.6.7 / 41，保留为本地验收记录。
+2026-11-06 Android 本地试用包使用当前工作区的助手提示词，版本为 0.6.7 / 41，签名与公开版一致，APK 内的提示词已核对。产物、分段构建日志与验收范围见[本地构建记录](changes/2026-11-06-01-android-assistant-trial-apk.md)。
 
 2026-11-05 播放器优化核对：歌词工具改为独立有界滚动面板，歌词容器裁剪；暂停／悬浮关闭减少空闲唤醒，单调歌词采用时间戳索引，Android原生服务独占周期快照；桌面设备失败后保留进度重试。截图核对草稿、编辑与勾选保存到本机，可从任务页继续；智能管家支持选目录、预览后批量重新定位失效音频；意图找歌接入真实本地BPM分析与缓存校验。每首最多前90秒，不上传／不调用模型。独立变更34—39号及[本次验收](audit/2026-11-05/player-improvements/VALIDATION.md)记录当前范围，手机未连接，未安装／发布。
 
@@ -78,7 +78,7 @@
 | 设备/LAN/二维码同步、酷狗歌单链接 | 已删除 | 已删除 | 不删除历史歌单；酷狗补全和 KGG 密钥读取仍在 |
 | 睡眠定时 | 原生播放服务 | 桌面运行作用域 | 15／30／45／60 分钟或曲终停止；后台继续，完全退出不恢复 |
 | 歌词整体偏移/原文件写回 | 偏移已接入，写回有限 | 偏移已接入，写回有限 | 单曲偏移独立持久化，不宣称完整原文件写回 UI |
-| 自然语言意图找歌（2026-11-05 核对） | 本地文本＋BPM | 本地文本＋BPM | 场景／情绪／曲风按标题、歌手、专辑文字匹配；BPM来自显式本地前90秒分析，范围会实际筛选；无模型或服务器请求，未知节拍不伪造 |
+| 自然语言意图找歌（2026-11-06 核对） | 本地文本＋BPM | 本地文本＋BPM | 场景／情绪／曲风按标题、歌手、专辑文字匹配；明确歌名/歌手关键词和曲风文字必须与BPM同时匹配，场景/情绪提示用于节拍建议及排序；BPM来自显式本地前90秒分析，无模型或服务器请求，未知节拍不伪造 |
 | 本地曲库智能管家 | 已接入 | 已接入 | 一键体检、垃圾字符清理、标题歌手分离、未知专辑规范与多版本音质去重 |
 | 实时伴奏消除与音效预设 | 已接入 | 已接入 | 统一 PCM DSP（原声/人声/低音/流行/摇滚/3D环绕/伴奏消音），全屏与歌曲详情一键切换 |
 | 听歌时长与播放频次统计 | 已接入 | 已接入 | 单曲与全库累计听歌时长、完播次数、最后收听记录，原子持久化并在详情与画像展示 |
@@ -193,6 +193,8 @@ PersistenceQueue.submit 是顺序屏障，submitLatest 按键合并待写值，r
 
 ## 6. 扫描、转换与歌单
 
+2026-11-06 批量音频重新定位：`AudioRelinkSession` 一次读取曲库并检查候选，经 `LibraryServices.saveReplacementAudioBatch` 一次提交。Android `AndroidMusicAccess`、Windows/Linux `DesktopLibraryStore` 在各自库锁内复核旧来源及新文件，合并最新元数据/收藏，仅原子写一次库索引。两端歌单按 ID 从库读取来源，故不重写歌单快照；单曲替换入口保持。回归见 `AudioRelinkSessionTest`、`AudioRelinkBatchTest`、`AudioRelinkDeviceTest`；设备执行状态见本轮记录。
+
 2026-11-05 质量修复核对：读取桌面/Android受管索引保留暂时不可用记录，编辑其他曲目不会借读取过滤丢失离线歌曲/收藏/关系。真实删除先确认物理操作结果；文件IO或提供者拒绝时保留可重试记录，批次通过 `DeleteTrackReport.removedTrackIds` 仅移除实际成功项。删除音频不再顺带删除共享/用户封面，可能留下未回收封面。见[离线记录](changes/2026-11-05-19-retain-unavailable-library-tracks.md)、[删除结果与封面](changes/2026-11-05-24-delete-failures-and-shared-artwork.md)。
 
 2026-11-05 歌单包补修核对：普通桌面选择器及 `DesktopMusicScanner.scan` 同时识别音频和 `.resonance`（忽略扩展名大小写），目录、单文件及窗口拖放复用真实路径去重。归档交给现有 `PlainSyncPackage.import` 校验和恢复，不参与 MP3 转换；坏包按文件隔离。`ImportReport.playlists/importedPackageCount` 仅是内存结果；`DesktopLibraryStore.mergeImported` 保存轨道和按 ID 合并歌单，`LibraryImportUseCase` 对包结果重载已合并歌单，防止旧 UI 列表覆盖，空歌单也刷新。详见[歌单包导入记录](changes/2026-11-05-04-linux-resonance-package-import.md)。
@@ -217,6 +219,8 @@ AndroidMusicAccess 共用 filesDir 锁，读取托管索引+App 曲库快照，�
 <a id="playback"></a>
 
 ## 7. 播放、音量平衡与恢复
+
+2026-11-06 暂停准备后恢复：`PlaybackStateStore.StartAction.prepared` 保留已准备但未提交的选中曲目。App 的播放器/键盘/悬浮歌词/助手统一调用 `requestPlaying`；准备未完只记录意图，准备已完则先提交新曲，后续才走原生恢复。换曲、清空、失败和退出清理过期动作，音量刷新保留待启动动作；原生自动切歌附着不变。回归见 `PausedPreparationTest` 和原 `PlaybackStateStoreTest`。
 
 2026-11-05 播放用例：`PlaybackSession` 拥有待执行文件检查及请求代次；UI state bridge 每次读取最新有效队列。删除当前曲目直接把缩减后的队列交给下一请求，清空时取消文件检查并清 PlaybackStateStore，避免迟到请求复活已删除条目。播放、切歌、队列编辑均直接控制本机播放器，不再经过房间角色或控制请求。
 
@@ -482,7 +486,7 @@ Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装
 
 2026-11-05 新增 `OfflineLibraryImprovementsTest`、`AudioRelinkSessionTest`、`OfflineRecoveryTest`、`DesktopAnalysisDecodeTest`、`LyricTimelineBenchmarkTest` 和 `LyricsToolsDeviceTest`；原生后台soak通过 `RESONANCE_PLAYBACK_SOAK_SECONDS=60..7200` 显式开启，默认跳过。新增 `LibraryServices.chooseRelinkDirectory`、`MusicAssistantServices.saveScreenshotImportDraft/analyzeAudioFeatures/refreshAudioFeatures`，两端实现已检查。
 
-新存储：`music-assistant.json.screenshotDraft`保留核对文字、编辑和选中项，300ms去抖，显式关闭先保存；确认／丢弃先移除磁盘草稿。`audio-features.json`保存BPM／energy／calculatedAt／revision，来源、大小、修改时间匹配才复用，0表示未知；旧无revision缓存重新分析。两者共用MusicJsonStore的路径锁、原子文件和有效备份恢复，失败不静默。
+新存储：`music-assistant.json.screenshotDraft`保留核对文字、编辑和选中项，300ms去抖，显式关闭先保存；2026-11-06起确认会先保存已选项并轮换ID，成功项逐首移出，失败/取消后保留剩余项；全部成功或显式丢弃才移除磁盘草稿。`audio-features.json`保存BPM／energy／calculatedAt／revision，来源、大小、修改时间匹配才复用，0表示未知；旧无revision缓存重新分析。两者共用MusicJsonStore的路径锁、原子文件和有效备份恢复，失败不静默。
 
 
 2026-11-05测试契约核对：转场像素检查透明混合/裁剪及终态，推荐关闭时卡片隐藏但设置可达；教程先滚动到入口；房间专用测试已随功能移除。`MusicStageFrameMetricsTest` 明确驱动80次进度变化后采集窗口FrameMetrics，不把静止时长换算FPS；只作Debug诊断。`UiVisualContractTest` 保留70场景渲染/尺寸检查，PNG及360帧媒体导出需 `RESONANCE_UI_ARTIFACTS=1`；逐方法隔离避免累计类超时。新增归档回退、离线记录、实际删除失败、偏好写失败和本机确认回归。本次真实结果及边界见[修复验收](audit/2026-11-05/FIX-VALIDATION.md)。
@@ -596,7 +600,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 
 `SongIdentityResolver` 检测末尾省略号，结合本地完整曲名、QQ音乐/iTunes公开目录，必要时结合有歌手证据和书名号等明确边界的 B 站标题核对；多候选/无证据报告未完成，不生成缺失文字。确认结果进入 `VideoImportRequest`，两端新 MP3 标签与曲库使用同一完整信息。没有批量修改历史曲库；重新导入已存在同一视频时，仅修正原截断曲库覆盖值/歌单快照，不重编码旧音频。
 
-图片选择 → 区域分片 → 后端/备注/内容 hash 查 OCR 缓存 → 本地 OCR 布局整理或视觉 API 返回歌单名/歌名/歌手 JSON → 重叠去重 → 确定 ID 截图歌单 → 本地匹配 → B 站搜索/下载 → 逐曲保存。单歌单最多300首，一次20歌单，错误列出具体歌曲。当前先生成 ScreenshotImportDraft，允许批量勾选并编辑歌单名、歌名、歌手与专辑，确认后才创建歌单和导入；取消不下载。草稿仅在内存，重启后重新识别，OCR 缓存仍可复用。
+图片选择 → 区域分片 → 后端/备注/内容 hash 查 OCR 缓存 → 本地 OCR 布局整理或视觉 API 返回歌单名/歌名/歌手 JSON → 重叠去重 → 确定 ID 截图歌单 → 本地匹配 → B 站搜索/下载 → 逐曲保存。单歌单最多300首，一次20歌单，错误列出具体歌曲。当前先生成 ScreenshotImportDraft，允许批量勾选并编辑歌单名、歌名、歌手与专辑，确认后才创建歌单和导入；取消不下载。2026-11-06 核对：草稿持久化在 `music-assistant.json/screenshotDraft`，兼容旧字段。确认前保存完整已选文字并轮换 ID，成功一首就保存剩余项，失败/取消/重启后可继续；全部成功或显式丢弃才移除。运行时隐藏编辑器，旧 ID 保存不能复活已完成项。若入库后检查点前退出，重试复用本地音频和歌单 ID 去重。已有草稿须先处理或丢弃才识别新截图。
 
 固定 SYSTEM/工具 schema、稳定排序库摘要在消息前缀，聊天在后；摘要按歌手/歌名去重并含最多120首、歌手统计和歌单，工具可搜索大库。支持多会话隔离管理（最多持久化 30 个会话），首条消息自动截取前 20 字生成会话标题，各会话聊天独立落盘；请求严格仅取当前会话最近 16 条上下文，切换或新建会话 0 Token 消耗，彻底避免跨话题 Prompt 膨胀。消息气泡清晰标注回复模型（如 `回复自 通义千问 (qwen3-vl-flash)`），API 设置页提供常用主流模型 Chip 预选与一键恢复默认地址/模型按钮。OCR/翻译持久缓存避免重复成本。
 
@@ -644,6 +648,9 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | 翻译/时间轴/音频识别 | ParaformerLyricsClient、AudioLyricAlignment、GeneratedLyricsStore、原生positionMs | AudioLyricAlignmentTest / MusicAssistantTest / FloatingLyricsTest |
 | 任务重试/中断 | MusicTaskJournal、JvmMusicAssistant.step/retryTask | 持久恢复、封面重试、推荐pending取消回归 |
 | 后台歌词/桌面黑框 | PlaybackService/AndroidLyricsOverlay、App(mainWindow)、DesktopFloatingLyrics/Main | FloatingLyricsTest、DesktopWindowLifecycleTest（真实图形会话显式开启）；主窗隐藏/更新/锁定/关闭/重开、持久化与实屏分开验收 |
+| 截图导入失败/取消后继续 | JvmMusicAssistant.confirmScreenshotImport、ScreenshotImportDialog | ScreenshotImportRecoveryTest、OfflineRecoveryTest、MusicAssistantTest |
+| BPM 与明确文字联合筛选 | SemanticSearchModels.matchLocalSemanticTracks | SemanticSearchConstraintsTest、OfflineLibraryImprovementsTest |
+| 批量音频路径重定位 | AudioRelinkSession、prepareAudioRelinkUpdates、两端 saveReplacementAudioBatch | AudioRelinkSessionTest、AudioRelinkBatchTest、LibraryPersistenceTest、AudioRelinkDeviceTest |
 | 数据恢复/旧值覆盖 | PersistenceQueue、Store锁、AtomicPropertiesFile、MusicJsonStore | PersistenceQueueTest、LibraryPersistenceTest、MusicJsonStoreTest |
 | 补全未命中 | MetadataEnricher、当前模型/公共源 | MetadataEnricherTest；未命中无常驻横幅 |
 | 构建/签名/FFmpeg/Linux | Gradle、version.properties、scripts/build-linux.sh、DesktopPaths、DesktopCredentialVault、FfmpegExecutable、CI | SDK/JDK/实际二进制/LinuxDesktopSupportTest/不自动升版 |

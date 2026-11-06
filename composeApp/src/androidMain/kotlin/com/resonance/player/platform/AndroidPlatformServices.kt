@@ -319,6 +319,10 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         // Unlike metadata-only updateTracks, this also adopts previously external catalog entries.
         com.resonance.player.features.AndroidMusicAccess(activity).update(track)
     }
+    override suspend fun saveReplacementAudioBatch(matches: List<AudioRelinkMatch>): Pair<Int, List<String>> = withContext(Dispatchers.IO) {
+        val context = kotlinx.coroutines.currentCoroutineContext()
+        com.resonance.player.features.AndroidMusicAccess(activity).replaceAudioBatch(matches, cachedTracks) { context.ensureActive() }
+    }
     override fun formatDateTime(epochMillis: Long): String = java.time.Instant.ofEpochMilli(epochMillis).atZone(java.time.ZoneId.systemDefault()).format(java.time.format.DateTimeFormatter.ofPattern("MM-dd HH:mm"))
     private var replacementResult: ((Uri?) -> Unit)? = null
     private val replacementPicker = activity.registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> replacementResult?.invoke(uri); replacementResult = null }

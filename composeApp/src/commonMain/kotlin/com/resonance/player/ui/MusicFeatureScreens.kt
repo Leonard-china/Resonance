@@ -572,7 +572,7 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
 internal fun MusicFeatureDialogs() {
     val feature = LocalMusicFeatures.current ?: return
     val assistantState = feature.assistant?.state?.collectAsState()?.value
-    assistantState?.screenshotDraft?.takeUnless { it.id == feature.hiddenScreenshotDraftId }?.let { ScreenshotImportDialog(it) }
+    assistantState?.screenshotDraft?.takeUnless { assistantState.task.running || it.id == feature.hiddenScreenshotDraftId }?.let { ScreenshotImportDialog(it) }
     if (feature.showVideoImport) VideoImportDialog(feature)
     if (feature.showOverlayPermissionPrompt) {
         AlertDialog(

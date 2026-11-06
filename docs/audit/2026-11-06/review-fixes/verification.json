@@ -1,0 +1,33 @@
+{
+  "date": "2026-11-06",
+  "timezone": "Asia/Shanghai",
+  "version": "0.6.8 / 42",
+  "desktop_production_source_files": 188,
+  "desktop_test_source_files": 11,
+  "desktop_tests": {
+    "run": 110,
+    "failed": 0,
+    "classes": {
+      "PlaybackStateStoreTest": 25,
+      "PausedPreparationTest": 5,
+      "PlaybackSessionTest": 4,
+      "OfflineRecoveryTest": 4,
+      "ScreenshotImportRecoveryTest": 4,
+      "OfflineLibraryImprovementsTest": 3,
+      "SemanticSearchConstraintsTest": 4,
+      "AudioRelinkSessionTest": 2,
+      "AudioRelinkBatchTest": 3,
+      "LibraryPersistenceTest": 6,
+      "MusicAssistantTest": 50
+    }
+  },
+  "android_production_source_files": 180,
+  "android_instrumented_test_source_files": 30,
+  "android_device_tests": "not_run_no_connected_device",
+  "windows_native_validation": "not_run",
+  "packaging_installation_publication": "not_run",
+  "source_sha256_unchanged_after_validation": true,
+  "memory_max_bytes": 2147483648,
+  "memory_high_bytes": 1610612736,
+  "memory_swap_max_bytes": 0
+}

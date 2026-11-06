@@ -534,9 +534,7 @@ fun App(
                 "pause", "resume" -> {
                     check(player.currentTrack != null) { "请先选择歌曲" }
                     val playing = action.kind == "resume"
-                    playback.setUserPlayIntent(playing)
-                    services.setPlaying(playing)
-                    player = player.copy(isPlaying = playing)
+                    playback.requestPlaying(playing)
                 }
                 "next" -> moveInQueue(direction = 1)
                 "previous" -> moveInQueue(direction = -1)
@@ -562,8 +560,7 @@ fun App(
         if (!stopping) FloatingLyricsHost(player, displayLyrics, features.settings, features::save,
             onTogglePlay = {
                 val nextPlaying = !player.isPlaying
-                playback.setUserPlayIntent(nextPlaying)
-                services.setPlaying(nextPlaying)
+                playback.requestPlaying(nextPlaying)
             }, onPrevious = { moveInQueue(-1) }, onNext = { moveInQueue(1) })
         mainWindow {
         CompositionLocalProvider(LocalMusicFeatures provides features, LocalTutorial provides tutorial) {
@@ -588,7 +585,7 @@ fun App(
                         event.isCtrlPressed && event.key == Key.DirectionLeft -> { moveInQueue(-1); true }
                         event.key == Key.Escape -> { features.instantNavigation = true; com.resonance.player.platform.KeyboardBackNavigation.handle() }
                         event.key == Key.Spacebar && !event.isCtrlPressed && !event.isAltPressed && !event.isMetaPressed && !event.isShiftPressed && player.currentTrack != null -> {
-                            if (pressedShortcuts.add(event.key)) { val playing = !player.isPlaying; playback.setUserPlayIntent(playing); services.setPlaying(playing); player = player.copy(isPlaying = playing) }; true
+                            if (pressedShortcuts.add(event.key)) { val playing = !player.isPlaying; playback.requestPlaying(playing) }; true
                         }
                         else -> false
                     }
@@ -611,9 +608,7 @@ fun App(
                         lyricsState = displayLyrics,
                         onTogglePlay = {
                             val nextPlaying = !player.isPlaying
-                            playback.setUserPlayIntent(nextPlaying)
-                            services.setPlaying(nextPlaying)
-                            player = player.copy(isPlaying = nextPlaying)
+                            playback.requestPlaying(nextPlaying)
                         },
                         onTrackSelected = { track, queue ->
                             startTrack(track, queue)

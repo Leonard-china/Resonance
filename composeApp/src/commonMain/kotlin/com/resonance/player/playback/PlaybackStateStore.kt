@@ -29,6 +29,7 @@ class PlaybackStateStore(
         val ready: () -> Unit,
         val startsNativePlayback: Boolean,
         val controlsPlayback: Boolean,
+        var prepared: Boolean = false,
     )
     private var pendingStart: StartAction? = null
     private var closed = false
@@ -88,15 +89,15 @@ class PlaybackStateStore(
                 if (request != generation) return@launch
                 state.value = state.value.copy(isPreparing = false)
                 started = true
-                pendingStart = null
+                start.prepared = true
                 if (start.controlsPlayback) {
                     if (userPlayIntent) {
-                        onReady()
+                        startPreparedPlayback(start)
                     } else {
                         // User requested pause or lost focus while preparing; do not resume playback on ready.
                         services.setPlaying(false)
                     }
-                }
+                } else pendingStart = null
                 if (analyzeLoudness && !track.id.startsWith("together:") && calibrated == null && automatic && cached == null) {
                     val analyzed = services.analyzeAndCacheLoudnessGain(track)
                     coroutineContext.ensureActive()
@@ -134,6 +135,30 @@ class PlaybackStateStore(
         userPlayIntent = playing
         if (!playing) {
             state.value = state.value.copy(isPlaying = false)
+        }
+    }
+
+    /** A resume must submit the selected media before it can resume the native player. */
+    fun requestPlaying(playing: Boolean) {
+        if (closed) return
+        setUserPlayIntent(playing)
+        val pending = pendingStart
+        if (playing && pending?.controlsPlayback == true) {
+            if (pending.prepared) startPreparedPlayback(pending)
+            // While preparing, remember the intent without resuming the previous native item.
+        } else services.setPlaying(playing)
+    }
+
+    private fun startPreparedPlayback(start: StartAction) {
+        if (pendingStart !== start || !start.prepared) return
+        pendingStart = null // Native callbacks may be synchronous.
+        try { start.ready() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (error: Exception) {
+            expectedNativeTrack = null
+            userPlayIntent = false
+            state.value = state.value.copy(isPlaying = false, isPreparing = false, isBuffering = false)
+            onError(error)
         }
     }
 
@@ -226,6 +251,9 @@ class PlaybackStateStore(
     }
 
     fun playbackFailed() {
+        ++generation
+        audioJob?.cancel()
+        pendingStart = null
         expectedNativeTrack = null
         userPlayIntent = false
         state.value = state.value.copy(isPlaying = false, isBuffering = false, isPreparing = false)

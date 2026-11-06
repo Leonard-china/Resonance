@@ -34,6 +34,27 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
             else java.io.File(if (source.startsWith("file:")) java.net.URI(source).path else source).isFile
         } catch (_: Exception) { false }
     }
+    fun replaceAudioBatch(matches: List<AudioRelinkMatch>, catalog: List<Track>, checkActive: () -> Unit): Pair<Int, List<String>> = synchronized(lock(context)) {
+        val managed = readManaged(context)
+        val data = json.read()
+        val removed = data.optJSONArray("removedIds")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()
+        val favorites = context.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE).getStringSet("ids", emptySet()).orEmpty()
+        val current = (MusicFeatureCodec.tracks(data.optJSONArray("librarySnapshot")) + catalog + managed)
+            .associateBy(Track::id).values.filterNot { it.id in removed }.map { it.copy(isFavorite = it.id in favorites) }
+        val (updates, errors) = prepareAudioRelinkUpdates(matches, current, available = { track ->
+            val source = track.sourceUri
+            if (source == null) false else runCatching {
+                if (source.startsWith("content:")) context.contentResolver.openAssetFileDescriptor(Uri.parse(source), "r")?.use { true } ?: false
+                else java.io.File(if (source.startsWith("file:")) java.net.URI(source).path else source).let { it.isFile && it.canRead() }
+            }.getOrDefault(false)
+        }, checkActive = checkActive)
+        if (updates.isNotEmpty()) {
+            checkActive()
+            // Source URIs live only in the managed index. Playlist IDs and catalog metadata stay valid.
+            writeManaged(context, (managed + updates).associateBy(Track::id).values.toList())
+        }
+        updates.size to errors
+    }
     private fun tracksNow(): List<Track> = synchronized(lock(context)) {
         val managed = readManaged(context)
         val removed = json.read().optJSONArray("removedIds")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()

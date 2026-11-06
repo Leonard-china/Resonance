@@ -28,7 +28,9 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
         kotlinx.coroutines.delay(300)
         try { assistant.saveScreenshotImportDraft(snapshot()) }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-        catch (error: Exception) { feature.message = "草稿保存失败：${error.message}" }
+        catch (error: Exception) {
+            if (assistant.state.value.screenshotDraft?.id == draft.id) feature.message = "草稿保存失败：${error.message}"
+        }
     }
     fun dismiss() { if (!state.task.running) feature.launch { assistant.saveScreenshotImportDraft(snapshot()); feature.hiddenScreenshotDraftId = draft.id } }
     Dialog(onDismissRequest = ::dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
@@ -69,7 +71,10 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     TextButton(onClick = { feature.launch { assistant.discardScreenshotImport() } }, enabled = !state.task.running) { Text("丢弃草稿") }
                     TextButton(onClick = ::dismiss, enabled = !state.task.running) { Text("稍后继续") }
-                    Button(onClick = { feature.launch { assistant.confirmScreenshotImport(draft.id, chosen); feature.onReload() } }, enabled = valid && !state.task.running) { Text("确认导入 ${selected.size} 首") }
+                    Button(onClick = { feature.launch {
+                        try { assistant.confirmScreenshotImport(draft.id, chosen) }
+                        finally { kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { feature.onReload() } }
+                    } }, enabled = valid && !state.task.running) { Text("确认导入 ${selected.size} 首") }
                 }
             }
         }

@@ -160,6 +160,25 @@ internal class DesktopLibraryStore(
         savePlaylists(loadPlaylists().map { playlist -> playlist.copy(tracks = playlist.tracks.map { if (it.id == track.id) track else it }) })
     }
 
+    /** Source-only repair: playlist snapshots resolve sources through library IDs. */
+    @Synchronized
+    fun replaceAudioBatch(matches: List<AudioRelinkMatch>, checkActive: () -> Unit = {}): Pair<Int, List<String>> {
+        val tracks = load()
+        val (updates, errors) = prepareAudioRelinkUpdates(matches, tracks, available = { track ->
+            runCatching {
+                val source = track.sourceUri ?: return@runCatching false
+                val path = if (source.startsWith("file:")) Path.of(java.net.URI(source)) else Path.of(source)
+                Files.isRegularFile(path) && Files.isReadable(path)
+            }.getOrDefault(false)
+        }, checkActive = checkActive)
+        if (updates.isNotEmpty()) {
+            val byId = updates.associateBy(Track::id)
+            checkActive()
+            save(tracks.map { byId[it.id] ?: it })
+        }
+        return updates.size to errors
+    }
+
     @Synchronized
     fun updateTracks(updated: List<Track>) {
         val updatedById = updated.associateBy(Track::id)

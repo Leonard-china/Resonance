@@ -1096,6 +1096,7 @@ class JvmMusicAssistant(
         catch (error: Exception) { this@JvmMusicAssistant.message("assistant", "处理未完成：${error.message}", model = "本地执行反馈 · $activeModelTag"); throw error }
     }
     private suspend fun importScreenshots(instruction: String, images: List<AiImage>) {
+        check(state.value.screenshotDraft == null) { "请先完成或丢弃已有截图草稿，再识别新截图" }
         require(images.size <= 40 && images.sumOf { it.bytes.size.toLong() } <= 30_000_000) { "截图过多或过大，请分批选择" }
         val config = cachedSettings ?: settings()
         val local = config.screenshotRecognition == ScreenshotRecognition.LocalOcr
@@ -1150,30 +1151,49 @@ class JvmMusicAssistant(
         require(draft?.id == draftId) { "识别结果已过期，请重新选择截图" }
         require(playlists.size in 1..20 && playlists.all { it.tracks.size in 1..300 }) { "请选择有效歌曲，每个歌单最多 300 首" }
         require(playlists.all { it.name.isNotBlank() && it.name.length <= 80 && it.tracks.all { song -> song.title.isNotBlank() && song.artist.isNotBlank() && song.title.length <= 180 && song.artist.length <= 180 && song.album.length <= 180 } }) { "请补全歌单名、歌名和歌手，并检查文字长度" }
-        // Consume on disk before any import; process restart must never repeat a confirmed draft.
-        store.update { it.remove("screenshotDraft") }
-        mutableState.value = mutableState.value.copy(screenshotDraft = null)
         var added = 0
         var processed = 0
         val uniqueLists = playlists.map { list -> list.copy(tracks = list.tracks.distinctBy { RecommendationPolicy.identity(it.title, it.artist) }) }
+        // Rotate the identity so delayed edits from the confirmation dialog cannot restore old work.
+        // Keep the exact confirmed payload durable before any library/network operation.
+        var remaining = draft.copy(id = java.util.UUID.randomUUID().toString(), playlists = uniqueLists, selectedTracks = null)
+        fun checkpoint() {
+            val pending = remaining.copy(playlists = remaining.playlists.filter { it.tracks.isNotEmpty() })
+                .takeIf { it.playlists.isNotEmpty() }
+            store.update { root ->
+                if (pending == null) root.remove("screenshotDraft")
+                else root.put("screenshotDraft", ScreenshotDraftCodec.encode(pending))
+            }
+            mutableState.value = mutableState.value.copy(screenshotDraft = pending)
+        }
+        checkpoint()
         val total = uniqueLists.sumOf { it.tracks.size }
         val errors = mutableListOf<String>()
         val rootId = activeStep.get()?.rootId ?: error("任务上下文已丢失")
-        for (list in uniqueLists) {
+        for ((listIndex, list) in uniqueLists.withIndex()) {
             val name = list.name.trim()
             val id = "playlist-ocr-${MusicJsonStore.hash(name).take(16)}"
             if (library.playlists().none { it.id == id }) library.savePlaylists(library.playlists() + Playlist(id, name, "截图导入", emptyList(), id.hashCode()))
-            list.tracks.distinctBy { RecommendationPolicy.identity(it.title, it.artist) }.forEach { song ->
+            list.tracks.forEach { song ->
                 currentCoroutineContext().ensureActive()
                 status(ImportProgress("导入截图歌单", "${song.artist} - ${song.title}", processed, total, processed.toFloat() / total))
-                try {
+                val completed = try {
                     step("歌曲 · ${song.artist} - ${song.title}", "song", payload = JSONObject().put("title", song.title).put("artist", song.artist).put("album", song.album).put("playlistId", id)) {
                         addToPlaylist(id, listOf(obtain(song)))
                     }
-                    added++
+                    true
                 }
                 catch (cancelled: CancellationException) { throw cancelled }
-                catch (error: Exception) { errors += "${song.title}：${error.message}" }
+                catch (error: Exception) { errors += "${song.title}：${error.message}"; false }
+                if (completed) {
+                    remaining = remaining.copy(playlists = remaining.playlists.mapIndexed { index, pending ->
+                        if (index == listIndex) pending.copy(tracks = pending.tracks.filterNot { it == song }) else pending
+                    })
+                    // Stop on checkpoint failure. Replaying the previous checkpoint reuses local
+                    // audio and deduplicates playlist IDs rather than downloading completed songs.
+                    checkpoint()
+                    added++
+                }
                 processed++
                 journal.update(rootId, progress = ImportProgress("导入截图歌单", completed = processed, total = total, fraction = processed.toFloat() / total,
                     detail = "成功 $added 首 · 未完成 ${errors.size} 首"))

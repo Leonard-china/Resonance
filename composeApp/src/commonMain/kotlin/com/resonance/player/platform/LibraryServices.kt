@@ -27,6 +27,9 @@ interface LibraryServices {
     suspend fun chooseRelinkDirectory(): List<com.resonance.player.model.AudioRelinkCandidate>? = null
     suspend fun chooseReplacementAudio(track: Track): Track? = null
     suspend fun saveReplacementAudio(track: Track) { updateTracks(listOf(track)) }
+    /** Recheck sources under the store lock and atomically persist all valid replacements once. */
+    suspend fun saveReplacementAudioBatch(matches: List<com.resonance.player.model.AudioRelinkMatch>): Pair<Int, List<String>> =
+        error("当前平台不支持批量音频重新定位")
     suspend fun loadLibrary(): List<Track>
     suspend fun loadPlaylists(): List<Playlist>
     suspend fun savePlaylists(playlists: List<Playlist>)
