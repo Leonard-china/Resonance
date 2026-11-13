@@ -1,5 +1,7 @@
 # 2026-11-05 — Resonance 详细开发说明：应用会话、独立播放与平台边界
 
+2026-11-13 发布核对。当前公开版本为 **0.6.10 / 44**，含窄屏与短视口歌词字号修复。三端产物、签名及官网 Range 校验见[本次发布记录](changes/2026-11-13-02-publish-0.6.10-release.md)。
+
 2026-11-06 发布核对。当前版本为 **0.6.9 / 43**，三端正式产物已公开，官网同批文件通过分段下载校验。联合 CI 使用 `verify.yml` 的 `workflow_dispatch` 和 `source_ref` 核对固定源码提交，Windows 正式包由 `release-windows.yml` 构建。[本次发布记录](changes/2026-11-06-07-publish-0.6.9-release.md)
 
 2026-11-06 Android 本地试用包使用当前工作区的助手提示词，版本为 0.6.7 / 41，签名与公开版一致，APK 内的提示词已核对。产物、分段构建日志与验收范围见[本地构建记录](changes/2026-11-06-01-android-assistant-trial-apk.md)。
