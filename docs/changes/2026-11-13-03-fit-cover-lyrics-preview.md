@@ -37,6 +37,14 @@
 - 本机 `:composeApp:desktopTest` 通过 443 项，跳过 10 项。双语截图覆盖五种尺寸，检查播放前后跳转。Android Debug 和 Release JVM 单测分别通过 79 和 79 项。
 - 最终安装包、签名及官网验收见[发布记录](2026-11-13-04-publish-0.6.11-release.md)。
 
+复核入口：本机在隔离源码副本、共享资源锁和 2 GiB 进程树限额内执行 `:composeApp:desktopTest :composeApp:testDebugUnitTest :composeApp:testReleaseUnitTest`。Android 仪器测试使用以下命令，22 项组覆盖六个测试类；其余三个窗口配置单独运行双语用例。
+
+```bash
+adb -s emulator-5562 shell am instrument -w -r -e class \
+  com.resonance.player.LyricsPlayerRegressionDeviceTest,com.resonance.player.LyricsPreviewMotionDeviceTest,com.resonance.player.LyricsScrollDeviceTest,com.resonance.player.LyricsToolsDeviceTest,com.resonance.player.LyricsTranslationDeviceTest,com.resonance.player.MusicStageDeviceTest \
+  com.resonance.player.debug.test/androidx.test.runner.AndroidJUnitRunner
+```
+
 ## 限制与后续
 
 Android UI 验证使用模拟器和合成歌词，未安装到用户真机。特别长的歌词在空间不足时由预览入口打开完整歌词查看。
