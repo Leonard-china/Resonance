@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import com.resonance.player.design.ResonanceTheme
 import com.resonance.player.model.*
@@ -24,16 +25,19 @@ class LyricsPlayerRegressionTest {
     private val track = Track("player-lyrics-regression", "此刻的旋律", "测试歌手", "测试专辑", "0:30", 0)
     private val lyrics = Lyrics(track.id, (0..5).map { LyricLine(it * 5000L, "原创旋律第 $it 句") }, true, false, "测试夹具")
 
-    private fun ImageComposeScene.nodes(): List<SemanticsNode> {
+    private fun ImageComposeScene.nodes(unmerged: Boolean = false): List<SemanticsNode> {
         fun walk(node: SemanticsNode): List<SemanticsNode> = listOf(node) + node.children.flatMap(::walk)
-        return semanticsOwners.flatMap { walk(it.rootSemanticsNode) + walk(it.unmergedRootSemanticsNode) }
+        return semanticsOwners.flatMap {
+            val unmergedNodes = walk(it.unmergedRootSemanticsNode)
+            if (unmerged) unmergedNodes else walk(it.rootSemanticsNode) + unmergedNodes
+        }
     }
 
     private fun ImageComposeScene.tag(tag: String) = nodes().firstOrNull {
         it.config.getOrNull(SemanticsProperties.TestTag) == tag
     } ?: error("Missing $tag")
 
-    private fun ImageComposeScene.label(label: String) = nodes().firstOrNull {
+    private fun ImageComposeScene.label(label: String, unmerged: Boolean = false) = nodes(unmerged).firstOrNull {
         it.config.getOrNull(SemanticsProperties.Text)?.any { text -> text.text == label } == true ||
             it.config.getOrNull(SemanticsProperties.ContentDescription)?.contains(label) == true
     } ?: error("Missing $label")
@@ -110,6 +114,52 @@ class LyricsPlayerRegressionTest {
                     assertEquals(false, scene.tag("lyric-line-2").config.getOrNull(SemanticsProperties.Selected))
                     assertEquals(beforeHeight, scene.tag("lyric-line-2").size.height)
                 } finally { scene.close() }
+            }
+        }
+    }
+
+    @Test fun coverPreviewFitsWrappedBilingualTextAndTracksSeekAcrossWindowSizes() {
+        val line = LyricLine(5000L, "Hey, what are you doing so far away from home?",
+            "嘿，你怎么独自走到了离家这么远的地方？")
+        val fixture = lyrics.copy(lines = lyrics.lines.toMutableList().apply { this[1] = line })
+        SwingUtilities.invokeAndWait {
+            for ((width, height, scale) in listOf(
+                Triple(390, 844, 1f), Triple(360, 780, 1f), Triple(360, 640, 1.5f), Triple(780, 360, 1f), Triple(1280, 800, 1f),
+            )) {
+                val position = mutableStateOf(5000L)
+                val scene = playerScene(width, height, scale, fixture) { position.value }
+                try {
+                    var time = 0L
+                    fun settle() { repeat(20) { scene.render(time).close(); time += 16_000_000L } }
+                    settle()
+                    scene.click("封面")
+                    settle()
+                    val viewport = scene.tag("hero-lyrics-list").boundsInRoot
+                    val row = scene.tag("hero-lyric-1")
+                    scene.capture(time, "$width-$height-$scale-cover-bilingual")
+                    val context = "$width/$height at ${scale}×, row ${row.size}, viewport $viewport"
+                    assertEquals(true, row.config.getOrNull(SemanticsProperties.Selected))
+                    assertTrue(abs(row.boundsInRoot.height - row.size.height) <= 1f, context)
+                    for (text in listOf(line.text, line.translation!!)) {
+                        val node = scene.label(text, unmerged = true)
+                        val layouts = mutableListOf<TextLayoutResult>()
+                        assertTrue(assertNotNull(node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action)(layouts))
+                        val layout = layouts.single()
+                        val visible = node.boundsInRoot
+                        assertFalse(layout.hasVisualOverflow, "$text must wrap without ellipsis. $context")
+                        assertTrue(visible.height >= node.size.height - 1 &&
+                            visible.top >= viewport.top - 1 && visible.bottom <= viewport.bottom + 1,
+                            "$text must fit in the preview. Bounds $visible, node ${node.size}, text layout ${layout.size}. $context")
+                    }
+                    position.value = 25_000
+                    settle()
+                    assertEquals(true, scene.tag("hero-lyric-5").config.getOrNull(SemanticsProperties.Selected))
+                    position.value = 0
+                    settle()
+                    assertEquals(true, scene.tag("hero-lyric-0").config.getOrNull(SemanticsProperties.Selected))
+                } finally {
+                    scene.close()
+                }
             }
         }
     }

@@ -610,8 +610,10 @@ private fun PaneContent(
     ) { active ->
         when (active) {
             PlayerPane.Cover -> BoxWithConstraints(Modifier.fillMaxSize()) {
-                // Allocate the preview from the space left after a useful cover, not the reverse.
-                val previewHeight = (maxHeight - 220.dp).coerceAtLeast(50.dp * LocalDensity.current.fontScale)
+                // Keep room for a wrapped lyric and translation before measuring the artwork.
+                val minimumPreviewHeight = 112.dp * LocalDensity.current.fontScale
+                val previewHeight = (maxHeight - 220.dp).coerceAtLeast(minimumPreviewHeight)
+                    .coerceAtMost((maxHeight - 48.dp).coerceAtLeast(0.dp))
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,

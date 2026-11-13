@@ -1,0 +1,43 @@
+# 2026-11-13 — 修复封面预览截断双语歌词
+
+- 修改日期：2026-11-13（Asia/Shanghai）
+- 类型：Bug 修复
+- 适用版本：0.6.11 / 45
+- 影响平台：Android、Windows、Linux 的共享原生播放页
+- 关联：[0.6.10 完整歌词页修复](2026-11-13-01-fit-long-player-lyrics.md)
+
+## 需求或问题
+
+手机封面页下方的一条英文歌词折成两行后占满预览框，译文被底部裁掉。用户要求在推送前完整测试。
+
+## 原因与依据
+
+封面预览和完整歌词页分别布局。封面给预览设置固定高度，原文、译文、行距和内边距的总高度可以超过它。旧布局另外限制了原文和译文的最大行数。预览禁止纵向滚动，因此被遮住的内容无法在这里看完。
+
+## 具体修改
+
+| 文件 | 关键符号 | 修改 |
+| --- | --- | --- |
+| [NowPlayingOverlay.kt](../../composeApp/src/commonMain/kotlin/com/resonance/player/ui/NowPlayingOverlay.kt) | 封面分栏 | 在控件测量后的空间内为双语歌词预留高度，并保留封面空间。 |
+| [SyncedLyricsPreview.kt](../../composeApp/src/commonMain/kotlin/com/resonance/player/ui/SyncedLyricsPreview.kt) | `SyncedLyricsPreview`、`PreviewLyricRow` | 用实际宽高测量原文和译文，含换行、行距和内边距。优先使用常规字阶，其次紧凑字阶。 |
+| [Android 回归](../../composeApp/src/androidInstrumentedTest/kotlin/com/resonance/player/LyricsPlayerRegressionDeviceTest.kt)、[桌面回归](../../composeApp/src/desktopTest/kotlin/com/resonance/player/ui/LyricsPlayerRegressionTest.kt) | 真实播放器布局 | 检查实际文字布局无省略号、整条文字在视口内、点击打开完整歌词、超长句可滑动读完，并检查前后跳转。 |
+
+## 修改前后行为
+
+旧预览可能显示半行或省略号。新预览在可用空间内显示完整原文和译文，特别长的歌词提供「查看完整歌词」入口。点按预览打开完整歌词并定位当前句，长条目仍可滚动阅读。系统字号与当前句同步行为沿用原有设置。
+
+## 平台与数据影响
+
+三端共享显示修复，歌词文本、歌词偏移、翻译缓存、音乐文件及权限沿用原有数据格式。测试使用合成歌词及隔离设备数据。
+
+## 验证
+
+待填写本轮实测结果。
+
+## 限制与后续
+
+待填写验收边界。
+
+## 同步更新的文档
+
+[文档索引](../README.md)和[歌词开发说明](../DEVELOPMENT.md#lyrics)。
