@@ -1,5 +1,7 @@
 # 2026-11-13 — Resonance 文档入口与开发变更索引
 
+2026-11-13 发布 0.6.11 封面歌词修复。Android、Windows、Linux 正式包均已公开，官网三端下载已切换。[GitHub v0.6.11](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.11) · [官网下载](https://leonard.asia/downloads?v=0.6.11) · [发布记录](changes/2026-11-13-04-publish-0.6.11-release.md)
+
 2026-11-13 发布 0.6.10 窄屏歌词修复。Android、Windows、Linux 正式包均已公开，官网三端下载已切换。[GitHub v0.6.10](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.10) · [官网下载](https://leonard.asia/downloads?v=0.6.10) · [发布记录](changes/2026-11-13-02-publish-0.6.10-release.md)
 
 2026-11-13 播放页歌词修复。窄屏或短窗口自动采用较紧凑的歌词字号，让长句和译文更容易完整显示。[变更记录](changes/2026-11-13-01-fit-long-player-lyrics.md)
