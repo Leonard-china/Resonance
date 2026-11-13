@@ -1181,6 +1181,21 @@ internal fun LyricsContent(
         if (toolsExpanded) LyricsToolsDialog(lyrics, activeIndex, onAdjustOffset) { toolsExpanded = false }
         BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
             val centerPadding = if (lyrics.synchronized) maxHeight / 2 else 8.dp
+            val short = maxHeight < 240.dp
+            val compact = maxWidth < 480.dp || maxHeight < 300.dp
+            val typography = MaterialTheme.typography
+            val lyricStyle = when {
+                !stage -> typography.titleLarge
+                short -> typography.titleLarge.copy(fontSize = 18.sp, lineHeight = 22.sp)
+                compact -> typography.headlineSmall.copy(fontSize = 22.sp, lineHeight = 28.sp)
+                else -> typography.headlineSmall.copy(fontSize = 34.sp, lineHeight = 44.sp)
+            }
+            val translationStyle = when {
+                !stage -> typography.bodySmall
+                short -> typography.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp)
+                compact -> typography.bodyMedium.copy(fontSize = 14.sp, lineHeight = 20.sp)
+                else -> typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 26.sp)
+            }
 
             LazyColumn(
                 state = listState,
@@ -1194,6 +1209,8 @@ internal fun LyricsContent(
                         line = line,
                         active = isActive,
                         synchronized = lyrics.synchronized,
+                        lyricStyle = lyricStyle,
+                        translationStyle = translationStyle,
                         modifier = Modifier.testTag("lyric-line-$index").semantics { selected = isActive },
                         contextDistance = if (stage && lyrics.synchronized && !browsing && activeIndex >= 0) kotlin.math.abs(index - activeIndex) else 0,
                         onClick = line.timestampMs?.takeIf { lyrics.synchronized }?.let { timestamp ->
@@ -1242,7 +1259,16 @@ internal fun LyricsContent(
 }
 
 @Composable
-private fun LyricRow(line: LyricLine, active: Boolean, synchronized: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier, contextDistance: Int = 0) {
+private fun LyricRow(
+    line: LyricLine,
+    active: Boolean,
+    synchronized: Boolean,
+    lyricStyle: TextStyle,
+    translationStyle: TextStyle,
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    contextDistance: Int = 0,
+) {
     val stage = LocalLyricStage.current
     val interactionSource = remember { MutableInteractionSource() }
     val color by animateColorAsState(
@@ -1272,15 +1298,14 @@ private fun LyricRow(line: LyricLine, active: Boolean, synchronized: Boolean, on
         Column(Modifier.blur(if (stage && !LocalReducedMotion.current) minOf(contextDistance * 1.5f, 4f).dp else 0.dp)) {
         Text(
             if (display == com.resonance.player.model.LyricDisplay.Translation) line.translation ?: line.text else line.text,
-            style = if (stage) MaterialTheme.typography.headlineSmall.copy(fontSize = 34.sp, lineHeight = 44.sp)
-                else MaterialTheme.typography.titleLarge,
+            style = lyricStyle,
             fontWeight = if (stage) FontWeight.Bold else FontWeight.Medium,
             color = color,
         )
         if (display == com.resonance.player.model.LyricDisplay.Bilingual && !line.translation.isNullOrBlank()) {
             Text(
                 line.translation,
-                style = if (stage) MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 26.sp) else MaterialTheme.typography.bodySmall,
+                style = translationStyle,
                 color = if (active) color else color.copy(alpha = color.alpha * 0.85f),
                 modifier = Modifier.padding(top = 4.dp),
             )

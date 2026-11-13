@@ -136,6 +136,26 @@ typography:
     fontSize: 17sp
     fontWeight: 400
     lineHeight: 26sp
+  lyric-stage-compact:
+    fontFamily: sans-serif
+    fontSize: 22sp
+    fontWeight: 700
+    lineHeight: 28sp
+  lyric-stage-translation-compact:
+    fontFamily: sans-serif
+    fontSize: 14sp
+    fontWeight: 400
+    lineHeight: 20sp
+  lyric-stage-short:
+    fontFamily: sans-serif
+    fontSize: 18sp
+    fontWeight: 700
+    lineHeight: 22sp
+  lyric-stage-translation-short:
+    fontFamily: sans-serif
+    fontSize: 12sp
+    fontWeight: 400
+    lineHeight: 16sp
 rounded:
   button: 12dp
   artwork-small: 8dp
@@ -274,7 +294,7 @@ Android、Windows、Linux 共用 Compose UI，并保留各自平台能力。独�
 - `headline-large`／`headline-medium` 用于主要页面与工具页标题，`title-large`／`title-medium` 用于区块和内容标题。
 - `body-large`／`body-medium`／`body-small` 用于正文与说明，`label-large`／`label-medium`／`label-small` 用于控件和辅助标签。
 - 正文与列表向左对齐；播放控制和适合居中的歌词预览保持居中。不为装饰增加英文标签。
-- 沉浸歌词原文使用 `lyric-stage`，译文使用 `lyric-stage-translation`；所有行保持同一 Bold 原文字阶。普通独立歌词仍使用 `title-large`、Medium，译文使用 `body-small`，保留原强调色与淡底。两条路径均按换行后的真实高度滚动。
+- 沉浸歌词原文使用 `lyric-stage`，译文使用 `lyric-stage-translation`。歌词视口高不足 240dp 时使用对应的 `short` 字阶，其余宽不足 480dp 或高不足 300dp 的视口使用 `compact` 字阶。所有原文行在同一视口使用同一 Bold 字阶。普通独立歌词使用 `title-large`、Medium，译文使用 `body-small`，保留原强调色与淡底。两条路径均按换行后的真实高度滚动，并遵循系统字体缩放。
 
 **The Stable Lyrics Rule.** 原文与译文共同表达当前行；焦点变化不改变字号、字重、行高或排版尺寸。
 

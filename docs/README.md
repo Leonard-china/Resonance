@@ -1,4 +1,6 @@
-# 2026-11-06 — Resonance 文档入口与开发变更索引
+# 2026-11-13 — Resonance 文档入口与开发变更索引
+
+2026-11-13 播放页歌词修复。窄屏或短窗口自动采用较紧凑的歌词字号，让长句和译文更容易完整显示。[变更记录](changes/2026-11-13-01-fit-long-player-lyrics.md)
 
 0.6.9 三端正式版已于 2026-11-06 公开，包含曲库批量重新定位单次提交、截图导入草稿检查点恢复、暂停换曲后恢复选中曲目与语义搜索文字/BPM联合筛选。Android APK、Windows EXE、Linux 便携包和 DEB 的实际校验值见发布记录。[GitHub v0.6.9](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.9) · [官网下载](https://leonard.asia/downloads) · [本轮发布记录](changes/2026-11-06-07-publish-0.6.9-release.md)
 
@@ -142,6 +144,7 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-13 | 播放页按歌词视口调整字阶，修复窄屏长句占满歌词区 | [具体记录](changes/2026-11-13-01-fit-long-player-lyrics.md) |
 | 2026-11-06 | 构建并发布 0.6.9 曲库与截图导入优化三端正式版 | [具体记录](changes/2026-11-06-07-publish-0.6.9-release.md) |
 | 2026-11-06 | 批量重新定位音频时一次提交曲库索引 | [具体记录](changes/2026-11-06-06-batch-audio-relink-commit.md) |
 | 2026-11-06 | 修复 BPM 搜索忽略明确歌手和文字条件 | [具体记录](changes/2026-11-06-05-semantic-search-text-and-bpm.md) |
