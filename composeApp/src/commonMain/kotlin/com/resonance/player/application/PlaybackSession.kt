@@ -56,7 +56,11 @@ class PlaybackSession(
                 writes.run {
                     services.savePlaybackSnapshot(PlaybackSnapshot(track.id, queue.map(Track::id), playlistId = playlist))
                 }
-            }) { services.play(track, queue, shuffle, state.player.repeatMode) }
+            }) {
+                // Queue edits made while preparation was suspended still belong to this selection.
+                val latestQueue = resolveTrackPlaybackQueue(track, state.queue)
+                services.play(track, latestQueue, state.player.shuffleEnabled, state.player.repeatMode)
+            }
         }
     }
     fun startShufflePlayback(tracks: List<Track>) {

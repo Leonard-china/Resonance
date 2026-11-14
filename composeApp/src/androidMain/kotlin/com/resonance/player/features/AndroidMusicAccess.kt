@@ -7,6 +7,8 @@ import android.os.Environment
 import com.resonance.player.io.AtomicPropertiesFile
 import com.resonance.player.media.Mp3Import
 import com.resonance.player.model.*
+import com.resonance.player.platform.AndroidLocalAudioIdentity
+import com.resonance.player.platform.AndroidLocalCatalog
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.ReturnCode
 import kotlinx.coroutines.*
@@ -20,7 +22,7 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
     private val root = context.filesDir.toPath()
     private val json = MusicJsonStore(root.resolve("music-assistant"))
     val musicDirectory: Path = (context.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: context.filesDir).toPath().resolve("Resonance")
-    override suspend fun tracks(): List<Track> = tracksNow()
+    override suspend fun tracks(): List<Track> = withContext(Dispatchers.IO) { catalogNow().tracks }
     override suspend fun automaticDownloadsAllowed(unmeteredOnly: Boolean): Boolean {
         val manager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
         val network = manager.activeNetwork ?: return false
@@ -55,28 +57,30 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
         }
         updates.size to errors
     }
-    private fun tracksNow(): List<Track> = synchronized(lock(context)) {
-        val managed = readManaged(context)
-        val removed = json.read().optJSONArray("removedIds")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()
+    private fun catalogNow(): AndroidLocalCatalog = synchronized(lock(context)) {
+        val data = json.read()
+        val removed = data.optJSONArray("removedIds")?.let { a -> (0 until a.length()).map(a::getString).toSet() }.orEmpty()
         val favorites = context.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE).getStringSet("ids", emptySet()).orEmpty()
-        (MusicFeatureCodec.tracks(json.read().optJSONArray("librarySnapshot")) + managed).associateBy(Track::id).values.filterNot { it.id in removed }
-            .map { it.copy(isFavorite = it.id in favorites) }
+        val tracks = (MusicFeatureCodec.tracks(data.optJSONArray("librarySnapshot")) + readManaged(context))
+            .filterNot { it.id in removed }
+        AndroidLocalAudioIdentity(context).merge(tracks, favorites, com.resonance.player.PlaybackService.activeMusicId)
     }
-    override suspend fun playlists(): List<Playlist> = playlistsNow()
+    override suspend fun playlists(): List<Playlist> = withContext(Dispatchers.IO) { playlistsNow() }
     private fun playlistsNow(): List<Playlist> = synchronized(lock(context)) {
         val current = context.getSharedPreferences("resonance_playlists", Context.MODE_PRIVATE)
         val backup = context.getSharedPreferences("resonance_playlists_backup", Context.MODE_PRIVATE)
         val p = if (current.contains("count")) current else backup
-        val tracks = tracksNow().associateBy(Track::id)
+        val catalog = catalogNow()
+        val tracks = catalog.tracks.associateBy(Track::id)
         (0 until p.getInt("count", 0).coerceIn(0, 100_000)).mapNotNull { index ->
             val prefix = "playlist.$index."
             val id = p.getString(prefix + "id", null) ?: return@mapNotNull null
             val ids = p.getString(prefix + "tracks", "").orEmpty().split(',').filter(String::isNotBlank)
             Playlist(id, p.getString(prefix + "name", "未命名歌单").orEmpty(), p.getString(prefix + "subtitle", "").orEmpty(), ids.mapIndexedNotNull { n, trackId ->
-                tracks[trackId] ?: p.getString(prefix + "catalog.$n.title", null)?.let { title ->
+                tracks[catalog.resolve(trackId)] ?: p.getString(prefix + "catalog.$n.title", null)?.let { title ->
                     Track(trackId, title, p.getString(prefix + "catalog.$n.artist", "未知歌手").orEmpty(), p.getString(prefix + "catalog.$n.album", "未知专辑").orEmpty(), p.getString(prefix + "catalog.$n.duration", "0:00").orEmpty(), p.getInt(prefix + "catalog.$n.seed", 0), artworkPath = p.getString(prefix + "catalog.$n.artwork", null))
                 }
-            }, p.getInt(prefix + "seed", 0))
+            }.distinctBy(Track::id), p.getInt(prefix + "seed", 0))
         }
     }
     override suspend fun savePlaylists(playlists: List<Playlist>) = savePlaylistsNow(playlists)
@@ -101,12 +105,16 @@ class AndroidMusicAccess(private val context: Context) : MusicLibraryAccess {
         writeManaged(context, (managed.filterNot { it.id == track.id } + track))
         savePlaylistsNow(playlistsNow().map { list -> list.copy(tracks = list.tracks.map { if (it.id == track.id) track else it }) })
     }
-    override suspend fun favorite(track: Track, value: Boolean) = synchronized(lock(context)) {
-        val prefs = context.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE)
-        val ids = prefs.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
-        if (value) ids += track.id else ids -= track.id
-        check(prefs.edit().putStringSet("ids", ids).commit())
-        writeManaged(context, readManaged(context).map { if (it.id == track.id) it.copy(isFavorite = value) else it })
+    override suspend fun favorite(track: Track, value: Boolean) = withContext(Dispatchers.IO) {
+        synchronized(lock(context)) {
+            val equivalentIds = catalogNow().equivalentIds(track.id)
+            val prefs = context.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE)
+            val ids = prefs.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
+            ids.removeAll(equivalentIds)
+            if (value) ids += track.id
+            check(prefs.edit().putStringSet("ids", ids).commit())
+            writeManaged(context, readManaged(context).map { if (it.id in equivalentIds) it.copy(isFavorite = value) else it })
+        }
     }
     override fun playingTrackId(): String? = com.resonance.player.PlaybackService.activeMusicId
     override fun hasListened(trackId: String): Boolean {

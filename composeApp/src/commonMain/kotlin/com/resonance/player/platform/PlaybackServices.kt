@@ -58,6 +58,8 @@ interface PlaybackServices {
     suspend fun loadPlaybackMode(): com.resonance.player.model.PlaybackModePreference = com.resonance.player.model.PlaybackModePreference()
     suspend fun savePlaybackMode(shuffle: Boolean, repeatMode: RepeatMode) {}
     fun play(track: Track, queue: List<Track>, shuffle: Boolean, repeatMode: RepeatMode)
+    /** Reconcile queue edits only when the native session still owns this selected track. */
+    fun updatePlaybackQueue(track: Track, queue: List<Track>) {}
     fun setPlaying(isPlaying: Boolean)
     /** Apply to the native session only; persist the captured pair separately through the ordered writer. */
     fun setPlaybackMode(shuffle: Boolean, repeatMode: RepeatMode)

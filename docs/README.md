@@ -1,5 +1,7 @@
 # 2026-11-13 — Resonance 文档入口与开发变更索引
 
+2026-11-14 准备 0.6.12，包含定时器、智能补全、Android 目录去重及歌单改进。[发布说明](RELEASE_NOTES-0.6.12.md) · [发布记录](changes/2026-11-14-06-publish-0.6.12-release.md)
+
 2026-11-13 已下载歌曲可升级专辑封面，下载、批量补全和播放器统一查词。歌曲的加入歌单窗口新增搜索与新建。[封面与歌词](changes/2026-11-13-07-video-catalog-artwork-and-lyrics.md) · [歌单选择](changes/2026-11-13-08-search-and-create-in-playlist-picker.md)
 
 2026-11-13 发布 0.6.11 封面歌词修复。Android、Windows、Linux 正式包均已公开，官网三端下载已切换。[GitHub v0.6.11](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.11) · [官网下载](https://leonard.asia/downloads?v=0.6.11) · [发布记录](changes/2026-11-13-04-publish-0.6.11-release.md)

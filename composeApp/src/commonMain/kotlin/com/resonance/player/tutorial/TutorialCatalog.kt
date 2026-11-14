@@ -49,7 +49,7 @@ object TutorialCatalog {
             "工具 → 导入音乐：扫描本机，或选择文件夹。",
             "KGMA 可以转换为 MP3，源文件会保留；KGG 转换仅 Windows 支持。",
             "B 站导入支持链接、BV 号和分 P，可修改歌名、歌手与专辑。",
-        ), listOf("导入音乐", "扫描本机音乐", "选择文件夹并转换", "从 B 站视频导入音频")),
+        ), listOf("导入音乐", "扫描本机音乐", "选择文件夹", "从 B 站视频导入音频")),
         QuickLesson("从第一首歌开始", "点选歌曲播放，点击底部播放器展开完整的听歌界面。", listOf(
             "在封面、歌词和队列之间切换，收藏喜欢的歌曲。",
             "用搜索、歌单、专辑和歌手浏览音乐。",
@@ -73,7 +73,7 @@ object TutorialCatalog {
 
     val chapters = listOf(
         TutorialChapter("first-song", "第一次听歌", "导入、播放、歌词与队列", listOf(
-            step("import", "添加第一首音乐", "点击高亮的“扫描本机音乐”，按系统提示选择或授权音频。也可选择文件夹转换 KGMA（Windows 另支持 KGG）。导入完成后继续；已有歌曲会自动跳过准备。取消或失败时可重试，也可跳过本步。", TutorialTarget.LocalImport, LibraryDestination.Import, TutorialCompletion.MusicAvailable),
+            step("import", "添加第一首音乐", "点击高亮的“扫描本机音乐”，按系统提示选择或授权音频。也可选择文件夹导入普通音频或转换 KGMA（Windows 另支持 KGG）。导入完成后继续；已有歌曲会自动跳过准备。取消或失败时可重试，也可跳过本步。", TutorialTarget.LocalImport, LibraryDestination.Import, TutorialCompletion.MusicAvailable),
             step("play", "点选一首歌曲", "点击歌曲开始播放。找不到歌曲时，先到工具中导入音乐；教程不会自动播放或下载歌曲。", TutorialTarget.TrackList, LibraryDestination.Library, TutorialCompletion.TrackSelected, tab = "Tracks"),
             step("expand", "展开播放器", "点击底部显示歌名的区域，打开完整播放器。播放按钮仍可用于暂停和继续。", TutorialTarget.MiniPlayer, LibraryDestination.Library, TutorialCompletion.PlayerOpened, true),
             step("lyrics", "查看歌词", "点击“歌词”。同步歌词跟随播放位置；纯文本歌词可手动浏览。暂时没有歌词也可以继续学习。", TutorialTarget.PlayerLyrics, LibraryDestination.Playing, TutorialCompletion.LyricsViewed, true),

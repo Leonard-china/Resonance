@@ -483,6 +483,9 @@ fun App(
         }
 
         val snapshotQueueIds = remember(playbackQueue) { playbackQueue.map(Track::id) }
+        ApplicationEffect(scope, services, playbackQueue, player.currentTrack?.id, player.isPreparing) {
+            if (!player.isPreparing) player.currentTrack?.let { services.updatePlaybackQueue(it, playbackQueue) }
+        }
         ApplicationEffect(scope, services, snapshotQueueIds, player.currentTrack?.id) {
             if (services.persistsNativePlaybackSnapshot) return@ApplicationEffect
             androidx.compose.runtime.snapshotFlow {
@@ -1106,6 +1109,18 @@ internal fun importReportMessage(report: ImportReport, conversionRequested: Bool
         if (report.skippedCount > 0) append("；${report.skippedCount} 项未处理")
         report.warnings.firstOrNull()?.let { append("；$it") }
         if (conversionRequested) append("；歌单包内音频保留原格式")
+    }
+    val converted = report.convertedTrackCount
+    if (converted != null) {
+        val details = buildList {
+            if (report.tracks.isNotEmpty()) add("已导入 ${report.tracks.size} 首音乐")
+            if (converted > 0) add("已转换 $converted 首为 MP3")
+            if (report.existingTrackCount > 0) add("${report.existingTrackCount} 首已在曲库中")
+            if (report.skippedCount > 0) add("${report.skippedCount} 首未处理")
+            report.warnings.firstOrNull()?.let(::add)
+        }
+        return if (report.cancelled) (listOf("已取消") + details + "源文件未修改").joinToString("；")
+        else details.ifEmpty { listOf("未找到支持的音频文件") }.joinToString("；")
     }
     if (report.cancelled) return "已取消；已完成 ${report.tracks.size} 首并保留，源文件未修改。"
     val completed = report.tracks.size

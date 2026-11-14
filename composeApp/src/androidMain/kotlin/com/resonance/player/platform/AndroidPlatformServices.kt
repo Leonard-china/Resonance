@@ -168,7 +168,12 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             com.resonance.player.playback.PlaybackResume(com.resonance.player.playback.PlaybackSnapshot(id,
                 (0 until controller.mediaItemCount).map { controller.getMediaItemAt(it).mediaId }, progress, saved?.playlistId),
                 controller.isPlaying, attached = true)
-        } else saved?.let { com.resonance.player.playback.PlaybackResume(it) }
+        } else saved?.let {
+            com.resonance.player.playback.PlaybackResume(it.copy(
+                trackId = localTrackAliases.resolve(it.trackId),
+                queueIds = it.queueIds.map(localTrackAliases::resolve).distinct(),
+            ))
+        }
     }
     override fun restorePausedPlayback(track: Track, queue: List<Track>, progress: Float, shuffle: Boolean, repeatMode: RepeatMode) {
         withPlayer { controller ->
@@ -263,6 +268,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         pendingDeleteConfirmationResult = null
     }
     private var cachedTracks = emptyList<Track>()
+    @Volatile private var localTrackAliases = AndroidLocalCatalog(emptyList(), emptyMap())
     private val endedEvents = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     private val progressEvents = MutableSharedFlow<Float>(extraBufferCapacity = 1)
     private val isPlayingEvents = MutableSharedFlow<Boolean>(extraBufferCapacity = 1)
@@ -479,15 +485,23 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         }
     }
 
-    override suspend fun loadLibrary(): List<Track> {
-        val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-        if (ActivityCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
-            cachedTracks = withContext(Dispatchers.IO) { applyFavorites(loadSyncedTracks()) }
-            return cachedTracks
+    private val audioReadPermission: String
+        get() = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
+
+    override suspend fun loadLibrary(): List<Track> = withContext(Dispatchers.IO) {
+        val media = scanAccessibleMedia()
+        synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
+            refreshLocalCatalog(media, loadSyncedTracks(), AndroidLocalAudioIdentity(activity))
         }
-        cachedTracks = withContext(Dispatchers.IO) {
-            applyFavorites((scanMediaStore() + loadSyncedTracks()).associateBy(Track::id).values.toList())
-        }
+    }
+
+    private fun scanAccessibleMedia(): List<Track> =
+        if (ActivityCompat.checkSelfPermission(activity, audioReadPermission) == PackageManager.PERMISSION_GRANTED) scanMediaStore()
+        else emptyList()
+
+    private fun refreshLocalCatalog(media: List<Track>, managed: List<Track>, identity: AndroidLocalAudioIdentity): List<Track> {
+        localTrackAliases = identity.merge(media + managed, favoriteIds(), PlaybackService.activeMusicId)
+        cachedTracks = localTrackAliases.tracks
         return cachedTracks
     }
 
@@ -510,7 +524,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                 subtitle = preferences.getString(prefix + "subtitle", null) ?: "${trackIds.size} 首",
                 tracks = trackIds.mapIndexedNotNull { trackIndex, trackId ->
                     val snapshot = readCatalogTrack(preferences, prefix, trackIndex, trackId)
-                    val resolved = tracksById[trackId]?.let { local ->
+                    val resolved = tracksById[localTrackAliases.resolve(trackId)]?.let { local ->
                         local.copy(
                             artworkPath = local.artworkPath ?: snapshot?.artworkPath,
                             artworkSeed = if (local.artworkPath == null && snapshot != null) snapshot.artworkSeed else local.artworkSeed,
@@ -519,7 +533,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                     resolved?.let { track ->
                         if (track.id in favorites && !track.isFavorite) track.copy(isFavorite = true) else track
                     }
-                },
+                }.distinctBy(Track::id),
                 artworkSeed = preferences.getInt(prefix + "seed", id.hashCode()),
             )
         }
@@ -927,16 +941,18 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
         val preferences = activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
         val ids = preferences.getStringSet("ids", emptySet()).orEmpty().toMutableSet()
-        if (favorite) ids += trackId else ids -= trackId
+        val equivalentIds = localTrackAliases.equivalentIds(trackId)
+        ids.removeAll(equivalentIds)
+        if (favorite) ids += localTrackAliases.resolve(trackId)
         check(preferences.edit().putStringSet("ids", ids).commit()) { "收藏保存失败" }
         val synced = loadSyncedTracks()
-        if (synced.any { it.id == trackId }) {
+        if (synced.any { it.id in equivalentIds }) {
             saveSyncedTracks(synced.map { track ->
-                if (track.id == trackId) track.copy(isFavorite = favorite) else track
+                if (track.id in equivalentIds) track.copy(isFavorite = favorite) else track
             })
         }
         cachedTracks = cachedTracks.map { track ->
-            if (track.id == trackId) track.copy(isFavorite = favorite) else track
+            if (track.id in equivalentIds) track.copy(isFavorite = favorite) else track
         }
         Unit
         }
@@ -999,12 +1015,6 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     private fun favoriteIds(): Set<String> =
         activity.getSharedPreferences("resonance_favorites", android.content.Context.MODE_PRIVATE)
             .getStringSet("ids", emptySet()).orEmpty()
-
-    private fun applyFavorites(tracks: List<Track>): List<Track> {
-        val ids = favoriteIds()
-        if (ids.isEmpty()) return tracks
-        return tracks.map { track -> if (track.id in ids && !track.isFavorite) track.copy(isFavorite = true) else track }
-    }
 
     override suspend fun exportSyncPackage(playlistId: String?): SyncReport = withContext(Dispatchers.IO) {
         val allPlaylists = loadPlaylists()
@@ -1093,31 +1103,40 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             val treeUri = pickMusicTree() ?: return ImportReport(emptyList())
             val control = com.resonance.player.io.ImportControl()
             check(currentImport.compareAndSet(null, control)) { "已有导入任务正在运行" }
-            val report = try { withContext(Dispatchers.IO) { scanDocumentTree(treeUri) } }
-                finally { currentImport.set(null); importProgress.value = null }
-
-            withContext(Dispatchers.IO) { mergeSyncedTracks(report.tracks) }
-            return report
-        }
-        val permission = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
-        if (ActivityCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED) {
-            if (!requestAudioPermission(permission)) {
-                return ImportReport(emptyList(), warnings = listOf("未获得系统音频读取权限；请在系统设置中允许应用读取音频，或使用“选择文件夹”授权音乐目录"))
+            return try {
+                withContext(Dispatchers.IO) { importMusicTree(treeUri) }
+            } finally {
+                currentImport.set(null)
+                importProgress.value = null
             }
         }
-        val mediaTracks = withContext(Dispatchers.IO) { scanMediaStore() }
-        val syncedTracks = withContext(Dispatchers.IO) { loadSyncedTracks() }
-        val combined = (mediaTracks + syncedTracks).associateBy(Track::id).values.toList()
-        cachedTracks = withContext(Dispatchers.IO) { applyFavorites(combined) }
-        val warnings = if (cachedTracks.isEmpty()) {
+        if (ActivityCompat.checkSelfPermission(activity, audioReadPermission) != PackageManager.PERMISSION_GRANTED &&
+            !requestAudioPermission(audioReadPermission)) {
+            return ImportReport(emptyList(), warnings = listOf("未获得系统音频读取权限；请在系统设置中允许应用读取音频，或使用“选择文件夹”授权音乐目录"))
+        }
+        val tracks = loadLibrary()
+        val warnings = if (tracks.isEmpty()) {
             listOf("未在系统媒体库中扫描到音频；若音乐存放在下载目录、微信/QQ或特定文件夹，请点击“选择文件夹”授权扫描该目录")
         } else {
             emptyList()
         }
         return ImportReport(
-            tracks = cachedTracks,
+            tracks = tracks,
             warnings = warnings,
         )
+    }
+
+    private fun importMusicTree(treeUri: Uri): ImportReport {
+        val report = scanDocumentTree(treeUri)
+        val media = scanAccessibleMedia()
+        val identity = AndroidLocalAudioIdentity(activity)
+        return synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
+            val managed = loadSyncedTracks()
+            val known = (media + managed).mapTo(hashSetOf(), identity::key)
+            val imported = report.tracks.filter { known.add(identity.key(it)) }
+            if (imported.isNotEmpty()) saveSyncedTracks((managed + imported).distinctBy(Track::id))
+            report.copy(tracks = imported, existingTrackCount = report.tracks.size - imported.size)
+        }
     }
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {
@@ -1144,19 +1163,21 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         } catch (error: Exception) {
             return@withContext DeleteTrackReport(false, false, "未能删除「${track.title}」，曲库记录已保留：${error.message.orEmpty()}")
         }
+        val removedIds = localTrackAliases.equivalentIds(track.id)
         try {
             synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
-                saveSyncedTracks(loadSyncedTracks().filterNot { it.id == track.id })
-                cachedTracks = cachedTracks.filterNot { it.id == track.id }
-                savePlaylistsNow(loadPlaylistsNow().map { it.copy(tracks = it.tracks.filterNot { t -> t.id == track.id }) })
+                val playlists = loadPlaylistsNow()
+                saveSyncedTracks(loadSyncedTracks().filterNot { it.id in removedIds })
+                cachedTracks = cachedTracks.filterNot { it.id in removedIds }
+                savePlaylistsNow(playlists.map { it.copy(tracks = it.tracks.filterNot { t -> t.id in removedIds }) })
                 val prefs = activity.getSharedPreferences("resonance_favorites", Context.MODE_PRIVATE)
-                prefs.edit().putStringSet("ids", prefs.getStringSet("ids", emptySet()).orEmpty() - track.id).commitChecked("收藏更新失败")
+                prefs.edit().putStringSet("ids", prefs.getStringSet("ids", emptySet()).orEmpty() - removedIds).commitChecked("收藏更新失败")
             }
         } catch (error: Exception) {
             return@withContext DeleteTrackReport(false, fileDeleted, "音频处理后曲库更新失败：${error.message.orEmpty()}")
         }
         // Shared directory artwork and user-selected images are retained; no ownership inference.
-        DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地音频文件" else "音频已不存在，已移除曲库记录", setOf(track.id))
+        DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地音频文件" else "音频已不存在，已移除曲库记录", removedIds)
     }
 
     private val enricher by lazy {
@@ -1319,6 +1340,13 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             applyPlaybackMode(activePlayer, shuffle, repeatMode)
             activePlayer.prepare()
             activePlayer.play()
+        }
+    }
+
+    override fun updatePlaybackQueue(track: Track, queue: List<Track>) {
+        withPlayer { controller ->
+            val desired = queue.filter { !it.sourceUri.isNullOrBlank() }.distinctBy(Track::id).map(::mediaItemFor)
+            updateNativePlaybackQueue(controller, track.id, desired)
         }
     }
 
@@ -1557,6 +1585,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         var skipped = 0
         val queue = ArrayDeque<DocumentFile>().apply { add(root) }
         val kgmaFiles = mutableListOf<DocumentFile>()
+        var converted = 0
         val seenDocumentIds = hashSetOf<String>()
         var visited = 0
         val control = currentImport.get()
@@ -1587,8 +1616,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             if (control?.isCancelled == true) break
             importProgress.value = ImportProgress("转换音频", document.name.orEmpty(), index, kgmaFiles.size, index.toFloat() / kgmaFiles.size.coerceAtLeast(1))
             runCatching { decryptKgmaMp3(document) }
-                .onSuccess { converted ->
-                    tracks += converted
+                .onSuccess { track ->
+                    tracks += track
+                    converted++
                 }
                 .onFailure {
                     skipped++
@@ -1601,6 +1631,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             skippedCount = skipped,
             warnings = warnings,
             cancelled = control?.isCancelled == true,
+            convertedTrackCount = converted,
         )
     }
 

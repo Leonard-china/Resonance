@@ -554,8 +554,13 @@ internal fun ImportScreen(
         )
         SettingRow(
             icon = Icons.Default.FolderOpen,
-            title = if (LocalMusicFeatures.current?.services?.supportsKgg == true) "选择文件并转换 KGMA/KGG" else "选择文件夹并转换 KGMA",
-            subtitle = "递归转换为 320 kbps MP3，保留源文件",
+            title = when {
+                LocalMusicFeatures.current?.services?.supportsKeyboardShortcuts != true -> "选择文件夹"
+                LocalMusicFeatures.current?.services?.supportsKgg == true -> "选择文件并转换 KGMA/KGG"
+                else -> "选择文件夹并转换 KGMA"
+            },
+            subtitle = if (LocalMusicFeatures.current?.services?.supportsKeyboardShortcuts == true)
+                "递归转换为 320 kbps MP3，保留源文件" else "导入目录中的音乐，遇到 KGMA 时转换为 MP3",
             onClick = onConvert,
         )
 

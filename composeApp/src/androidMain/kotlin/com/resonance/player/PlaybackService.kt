@@ -87,6 +87,9 @@ class PlaybackService : MediaSessionService() {
                     persistPlayback()
                 }
                 override fun onIsPlayingChanged(isPlaying: Boolean) { persistPlayback() }
+                override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+                    if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) persistPlayback()
+                }
                 override fun onEvents(player: Player, events: Player.Events) { sampleListening(player) }
                 override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
                     if (reason == Player.DISCONTINUITY_REASON_SEEK || reason == Player.DISCONTINUITY_REASON_SEEK_ADJUSTMENT) {

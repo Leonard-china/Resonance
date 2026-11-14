@@ -29,9 +29,11 @@ class PlaybackStateStore(
         val ready: () -> Unit,
         val startsNativePlayback: Boolean,
         val controlsPlayback: Boolean,
+        val retry: () -> Unit,
         var prepared: Boolean = false,
     )
     private var pendingStart: StartAction? = null
+    private var retryStart: (() -> Unit)? = null
     private var closed = false
     private var expectedNativeTrack: String? = null
 
@@ -47,6 +49,7 @@ class PlaybackStateStore(
         onReady: () -> Unit = {},
     ) {
         if (closed) return
+        retryStart = null
         userPlayIntent = autoPlay
         if (expectNativeTrack) expectedNativeTrack = track.id
         else if (expectedNativeTrack != track.id) expectedNativeTrack = null
@@ -55,7 +58,8 @@ class PlaybackStateStore(
         val volumeVersion = volumeRevision
         val gainVersion = gainRevision
         audioJob?.cancel()
-        val start = StartAction(prepare, onReady, startsNativePlayback = expectNativeTrack, controlsPlayback = nativePlayback == null)
+        val start = StartAction(prepare, onReady, startsNativePlayback = expectNativeTrack, controlsPlayback = nativePlayback == null,
+            retry = { activate(track, playlistId, resetGain, expectNativeTrack, true, prepare, analyzeLoudness, nativePlayback, onReady) })
         pendingStart = start
         state.value = state.value.copy(
             currentTrack = track,
@@ -92,7 +96,7 @@ class PlaybackStateStore(
                 start.prepared = true
                 if (start.controlsPlayback) {
                     if (userPlayIntent) {
-                        startPreparedPlayback(start)
+                        if (!startPreparedPlayback(start)) return@launch
                     } else {
                         // User requested pause or lost focus while preparing; do not resume playback on ready.
                         services.setPlaying(false)
@@ -116,7 +120,8 @@ class PlaybackStateStore(
                     if (!started) {
                         // Persistence/preparation failures must not start an obsolete queue.
                         pendingStart = null
-                        expectedNativeTrack = null
+                        retryStart = start.retry
+                        userPlayIntent = false
                     }
                     onError(error)
                 }
@@ -142,6 +147,7 @@ class PlaybackStateStore(
     fun requestPlaying(playing: Boolean) {
         if (closed) return
         setUserPlayIntent(playing)
+        if (playing) retryStart?.let { retry -> retryStart = null; retry(); return }
         val pending = pendingStart
         if (playing && pending?.controlsPlayback == true) {
             if (pending.prepared) startPreparedPlayback(pending)
@@ -149,16 +155,17 @@ class PlaybackStateStore(
         } else services.setPlaying(playing)
     }
 
-    private fun startPreparedPlayback(start: StartAction) {
-        if (pendingStart !== start || !start.prepared) return
+    private fun startPreparedPlayback(start: StartAction): Boolean {
+        if (pendingStart !== start || !start.prepared) return false
         pendingStart = null // Native callbacks may be synchronous.
-        try { start.ready() }
+        try { start.ready(); return true }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (error: Exception) {
-            expectedNativeTrack = null
+            retryStart = start.retry
             userPlayIntent = false
             state.value = state.value.copy(isPlaying = false, isPreparing = false, isBuffering = false)
             onError(error)
+            return false
         }
     }
 
@@ -166,7 +173,7 @@ class PlaybackStateStore(
         if (closed) return
         // Until onReady submits the new track, native status still belongs to the previous media.
         // Explicit user actions go through setUserPlayIntent and must remain authoritative.
-        if (pendingStart?.startsNativePlayback == true) return
+        if (pendingStart?.startsNativePlayback == true || retryStart != null) return
         userPlayIntent = playing
         state.value = state.value.copy(
             isPlaying = playing,
@@ -186,6 +193,7 @@ class PlaybackStateStore(
         audioJob?.cancel()
         audioJob = null
         pendingStart = null
+        retryStart = null
         expectedNativeTrack = null
         services.setPlaying(false)
         state.value = state.value.copy(
@@ -221,6 +229,8 @@ class PlaybackStateStore(
     }
 
     fun refreshAudio(playlistId: String?) {
+        // Retry must still prepare the selected media, even if its audio preferences were changed.
+        if (retryStart != null) return
         val current = state.value
         current.currentTrack?.let {
             val pending = pendingStart
@@ -243,6 +253,7 @@ class PlaybackStateStore(
     /** Ignore old controller events until the latest user-requested track is acknowledged. */
     fun acceptNativeTrack(trackId: String): Boolean {
         if (closed) return false
+        if (retryStart != null) return false
         expectedNativeTrack?.let { expected ->
             if (trackId != expected) return false
             expectedNativeTrack = null
@@ -254,6 +265,7 @@ class PlaybackStateStore(
         ++generation
         audioJob?.cancel()
         pendingStart = null
+        retryStart = null
         expectedNativeTrack = null
         userPlayIntent = false
         state.value = state.value.copy(isPlaying = false, isBuffering = false, isPreparing = false)
@@ -264,6 +276,7 @@ class PlaybackStateStore(
         ++generation
         userPlayIntent = false
         pendingStart = null
+        retryStart = null
         expectedNativeTrack = null
         audioJob?.cancel()
         state.value = state.value.copy(isPreparing = false, isBuffering = false, isPlaying = false)

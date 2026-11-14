@@ -33,6 +33,9 @@ data class ImportReport(
     /** Playlists restored from archives during this import; not a persisted report. */
     val playlists: List<Playlist> = emptyList(),
     val importedPackageCount: Int = 0,
+    /** Actual conversions when the importer distinguishes them from ordinary audio reads. */
+    val convertedTrackCount: Int? = null,
+    val existingTrackCount: Int = 0,
 )
 
 data class DeleteTrackReport(

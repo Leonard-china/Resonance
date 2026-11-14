@@ -23,6 +23,7 @@
 
 - 共享桌面上先检查可用内存和残留构建，同一时刻只运行一项重量级验证；不要将 Android 编译与桌面 ProGuard/Release 打包合并执行。
 - 当前 Linux 电脑的 Gradle/Kotlin/打包验证须限制整个进程树，默认 `MemoryMax=2G`、`MemoryHigh=1536M`、`MemorySwapMax=0`，并使用单 worker、短生命周期 Gradle 及进程内 Kotlin 编译。分别设置 JVM 堆上限不等于总内存限额。具体方式见 [协作流程](docs/AI-WORKFLOW.md#本机资源预算)。
+- 当前 Ubuntu 开发机后续的 APK 安装、启动和可在模拟器覆盖的 Android 回归，默认使用专用 AVD `resonance-api36`。先完成构建再按[本机 APK 测试流程](docs/DEVELOPMENT.md#本机-android-apk-测试)启动设备，ADB 命令显式指定序列号。
 - 达到限额时记录构建受阻，保留日志并调整验证范围；不得无上限重试、自动放宽总内存或关闭用户应用腾内存。普通构建不改系统 swap、仓库或全局 Gradle 默认配置。
 
 ## 每次功能开发或 Bug 修复的交付要求

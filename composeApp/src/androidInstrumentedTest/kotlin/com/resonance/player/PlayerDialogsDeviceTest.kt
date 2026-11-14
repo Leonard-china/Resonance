@@ -8,13 +8,44 @@ import com.resonance.player.design.LocalGlassState
 import dev.chrisbanes.haze.rememberHazeState
 import com.resonance.player.model.*
 import com.resonance.player.ui.NowPlayingOverlay
+import com.resonance.player.ui.SleepTimerDialog
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 
 /** Native dialog windows over the real player's backdrop; generated metadata, no audio or accounts. */
 class PlayerDialogsDeviceTest {
     @get:Rule val ui = createAndroidComposeRule<PromoCaptureActivity>()
+
+    @Test(timeout = 60_000) fun sleepTimerWindowDoesNotObserveHostGlass() {
+        var showing by mutableStateOf(false)
+        var option by mutableStateOf(SleepTimerOption.Off)
+        var seconds by mutableIntStateOf(899)
+        ui.setContent {
+            CompositionLocalProvider(LocalGlassState provides rememberHazeState()) {
+                ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                    androidx.compose.material3.TextButton(onClick = { showing = true }) {
+                        androidx.compose.material3.Text("打开定时器")
+                    }
+                    if (showing) SleepTimerDialog(option, seconds, { showing = false }, { option = it })
+                }
+            }
+        }
+        ui.onNodeWithText("打开定时器").performClick()
+        ui.onNode(isDialog(), useUnmergedTree = true).assertExists()
+        val timerTitle = ui.onNodeWithText("睡眠定时器", useUnmergedTree = true).fetchSemanticsNode()
+        val layouts = generateSequence(timerTitle.layoutInfo) { it.parentInfo }
+        assertFalse(layouts.flatMap { it.getModifierInfo().asSequence() }
+            .any { it.modifier.javaClass.simpleName == "HazeEffectNodeElement" })
+        ui.onNodeWithText(SleepTimerOption.Min15.label).performClick()
+        ui.onNodeWithText("打开定时器").performClick()
+        ui.onNodeWithText("剩余时间：14:59").assertIsDisplayed()
+        ui.runOnIdle { seconds = 898 }
+        ui.onNodeWithText("剩余时间：14:58").assertIsDisplayed()
+        ui.onNodeWithText("取消").performClick()
+        ui.onNodeWithText("打开定时器").assertIsDisplayed()
+    }
 
     @Test(timeout = 60_000) fun audioEffectsOpenSelectAndCloseWithoutStoppingPlayerControls() {
         val track = Track("dialog-fixture", "弹窗测试", "测试歌手", "测试专辑", "4:01", 0)

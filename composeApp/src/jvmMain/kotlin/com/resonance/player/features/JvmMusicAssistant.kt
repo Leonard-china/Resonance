@@ -308,9 +308,14 @@ class JvmMusicAssistant(
         restoreState()
     }
 
-    override suspend fun createSession(title: String): String = withContext(Dispatchers.IO) {
+    private suspend fun <T> editSession(action: () -> T): T = withContext(Dispatchers.IO) {
+        check(mutex.tryLock()) { "音乐任务正在运行，请等待完成或取消后再切换对话" }
+        try { action() } finally { mutex.unlock() }
+    }
+
+    override suspend fun createSession(title: String): String = editSession {
         mutableState.value = mutableState.value.copy(pendingAudioDeletion = null, assistantTaskId = "")
-        val id = "session-" + System.currentTimeMillis()
+        val id = "session-" + java.util.UUID.randomUUID()
         val now = System.currentTimeMillis()
         store.update { j ->
             val rootState = mutableState.value
@@ -336,7 +341,7 @@ class JvmMusicAssistant(
         id
     }
 
-    override suspend fun switchSession(sessionId: String) = withContext(Dispatchers.IO) {
+    override suspend fun switchSession(sessionId: String) = editSession {
         mutableState.value = mutableState.value.copy(pendingAudioDeletion = null, assistantTaskId = "")
         store.update { j ->
             j.put("currentSessionId", sessionId)
@@ -352,13 +357,13 @@ class JvmMusicAssistant(
         restoreState()
     }
 
-    override suspend fun deleteSession(sessionId: String) = withContext(Dispatchers.IO) {
+    override suspend fun deleteSession(sessionId: String) = editSession {
         mutableState.value = mutableState.value.copy(pendingAudioDeletion = null, assistantTaskId = "")
         store.update { j ->
             val rootState = mutableState.value
             val remaining = rootState.sessions.filterNot { it.id == sessionId }
             val nextSessions = if (remaining.isEmpty()) {
-                val id = "session-" + System.currentTimeMillis()
+                val id = "session-" + java.util.UUID.randomUUID()
                 val now = System.currentTimeMillis()
                 listOf(AssistantSession(id, "新对话", now, now, emptyList()))
             } else remaining
@@ -392,7 +397,7 @@ class JvmMusicAssistant(
         restoreState()
     }
 
-    override suspend fun clearCurrentSession() = withContext(Dispatchers.IO) {
+    override suspend fun clearCurrentSession() = editSession {
         mutableState.value = mutableState.value.copy(pendingAudioDeletion = null, assistantTaskId = "")
         val currentId = mutableState.value.currentSessionId
         store.update { j ->
