@@ -5,6 +5,7 @@ import com.resonance.player.model.LyricLine
 import com.resonance.player.model.Lyrics
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.Track
+import com.resonance.player.model.catalogTrackTitle
 import com.resonance.player.model.durationTextToSeconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,8 +34,9 @@ class LrclibLyricsRepository(
         customLyricsFolder: String? = null,
         aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
         sourceFallback: (suspend (Track) -> LyricsFetchResult)? = null,
+        allowRemote: Boolean = true,
     ): LyricsFetchResult {
-        val result = fetchOriginal(track, forceRefresh, customLyricsFolder, aiFallback, sourceFallback)
+        val result = fetchOriginal(track, forceRefresh, customLyricsFolder, aiFallback, sourceFallback, allowRemote)
         return if (result is LyricsFetchResult.Found) LyricsFetchResult.Found(LyricOffsetStore.apply(cacheDirectory, track, result.lyrics)) else result
     }
     private suspend fun fetchOriginal(
@@ -43,10 +45,13 @@ class LrclibLyricsRepository(
         customLyricsFolder: String? = null,
         aiFallback: (suspend (Track) -> LyricsFetchResult?)? = null,
         sourceFallback: (suspend (Track) -> LyricsFetchResult)? = null,
+        allowRemote: Boolean = true,
     ): LyricsFetchResult = withContext(Dispatchers.IO) {
         if (!forceRefresh) GeneratedLyricsStore.read(cacheDirectory.parent.resolve("music-assistant/generated-lyrics"), track)?.let {
             return@withContext LyricsFetchResult.Found(it)
         }
+        if (!allowRemote) return@withContext findLocalLyrics(track, customLyricsFolder)
+            ?: LyricsFetchResult.Unavailable("视频标注了不同录音版本，请先核对歌名或导入此版本的歌词", false)
         // Keep readable text while looking for a real timeline. A plain-text hit is not a sync hit.
         var plainFallback: LyricsFetchResult.Found? = null
         if (!forceRefresh) {
@@ -67,7 +72,7 @@ class LrclibLyricsRepository(
         }
 
         val remote: LyricsFetchResult = try {
-            fetchRemote(track)
+            fetchRemote(track.copy(title = catalogTrackTitle(track.title, track.artist)))
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (error: Throwable) {

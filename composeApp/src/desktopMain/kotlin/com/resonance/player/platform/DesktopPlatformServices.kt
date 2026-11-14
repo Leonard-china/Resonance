@@ -451,13 +451,7 @@ class DesktopPlatformServices : PlatformServices {
     }
 
     override suspend fun loadLyrics(track: Track, forceRefresh: Boolean): LyricsFetchResult =
-        lyricsRepository.fetch(
-            track = track,
-            forceRefresh = forceRefresh,
-            customLyricsFolder = library.loadCustomLyricsFolder(),
-            aiFallback = null,
-            sourceFallback = musicAssistant::findSourceLyrics,
-        )
+        musicAssistant.resolveLyrics(track, forceRefresh, loadCustomLyricsFolder())
 
     override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
         val config = loadDeepSeekConfig()
@@ -534,11 +528,14 @@ class DesktopPlatformServices : PlatformServices {
         } finally { currentImport.set(null); importProgress.value = null }
     }
 
-    private val enricher = com.resonance.player.enrich.MetadataEnricher(
+    private val enricher by lazy { com.resonance.player.enrich.MetadataEnricher(
         artworkDirectory = library.artworkDirectory,
         lyricsRepository = lyricsRepository,
         deepSeekClient = deepSeekClient,
-    )
+        lyricsLookup = musicAssistant::resolveBatchLyrics,
+        needsArtwork = musicAssistant::needsCoverEnrichment,
+        artworkEnrichment = musicAssistant::enrichArtwork,
+    ) }
 
     override suspend fun updateTracks(tracks: List<Track>): Unit = withContext(Dispatchers.IO) {
         library.updateTracks(tracks)
@@ -551,11 +548,7 @@ class DesktopPlatformServices : PlatformServices {
     ): com.resonance.player.model.BatchEnrichReport = withContext(Dispatchers.IO) {
         val config = loadDeepSeekConfig()
         val customFolder = library.loadCustomLyricsFolder()
-        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress) { updated -> library.updateTracks(listOf(updated)) }
-        if (report.updatedTracks.isNotEmpty()) {
-            library.updateTracks(report.updatedTracks)
-        }
-        report
+        enricher.batchEnrich(options, tracks, config, customFolder, onProgress) { updated -> library.updateTracks(listOf(updated)) }
     }
 
     override suspend fun deleteLocalTrack(track: Track): DeleteTrackReport = withContext(Dispatchers.IO) {

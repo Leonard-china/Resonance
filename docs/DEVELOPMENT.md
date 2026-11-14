@@ -256,6 +256,8 @@ PlaybackSnapshot 保存曲目、队列、进度、歌单。冷启动暂停恢复
 
 ## 8. 歌词、翻译和补全
 
+2026-11-13（0.6.11 / 45）补全核对：`JvmMusicAssistant.resolveLyrics` 连接下载、两端播放器和批量补全，优先本地及有效同步歌词，再用已启用歌源补足。`needsCatalogArtwork` 识别视频缩略图和旧下载索引，自选封面保留。标注为其他录音版本的 B 站视频提示核对。参见[变更记录](changes/2026-11-13-07-video-catalog-artwork-and-lyrics.md)。
+
 2026-11-13 封面歌词预览核对。同步歌词预览按实际宽高测量原文和译文的换行高度，优先显示完整内容。空间不足时使用紧凑字阶，仍放不下则显示「查看完整歌词」，可进入当前句并继续滚动。详见[本次修复](changes/2026-11-13-03-fit-cover-lyrics-preview.md)。
 
 2026-11-13 播放页歌词字号核对。`LyricsContent` 按歌词列表视口选字阶。高不足 240dp 时，主歌词使用 18sp、22sp 行高，双语译文使用 12sp、16sp 行高。其余宽不足 480dp 或高不足 300dp 的视口使用 22sp、28sp 行高和 14sp、20sp 行高。空间充足时使用 34sp、44sp 行高和 17sp、26sp 行高。字号跟随系统字体缩放，歌词换行后按实际行高定位。特别长的句子仍可纵向滚动查看。[本次修复记录](changes/2026-11-13-01-fit-long-player-lyrics.md)
@@ -360,6 +362,8 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 <a id="ui"></a>
 
 ## 11. UI、封面与悬浮歌词
+
+2026-11-13（0.6.11 / 45）歌曲菜单的“加入歌单…”进入 `TrackPlaylistDialog`。可搜索名称，保留未显示的勾选，并在完成时新建歌单并加入歌曲。取消时丢弃草稿。补全弹窗的配置、进度和结果均隔离宿主 Haze。参见[歌单选择](changes/2026-11-13-08-search-and-create-in-playlist-picker.md)与[窗口隔离](changes/2026-11-13-05-isolate-batch-enrich-dialog.md)。
 
 2026-11-05质量修复核对：封面页按真实可用高度限制同步歌词预览，正常高竖屏保留180dp封面验收；小窗/大字优先保证控制可达，完整歌词页与连续跟随保留。智能管家按完整版本歌名+歌手+时长找“疑似重复”，未知歌手不成组、默认不选删除；容器格式不等于音质。清理把整批明细送入一次批量确认，确认层在页面之后绘制，取消不删除。当轮语义搜索只说明BPM未接入；该历史边界已由本轮39号记录的本地分析与范围筛选替代。见[封面与预览](changes/2026-11-05-28-player-cover-preview-height-budget.md)、[清理](changes/2026-11-05-22-smart-cleanup-safe-batch.md)、[BPM边界](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md)。
 
@@ -660,7 +664,7 @@ candidateScore 要求标题命中、偏好歌手/官方/原版；自动候选硬
 | BPM 与明确文字联合筛选 | SemanticSearchModels.matchLocalSemanticTracks | SemanticSearchConstraintsTest、OfflineLibraryImprovementsTest |
 | 批量音频路径重定位 | AudioRelinkSession、prepareAudioRelinkUpdates、两端 saveReplacementAudioBatch | AudioRelinkSessionTest、AudioRelinkBatchTest、LibraryPersistenceTest、AudioRelinkDeviceTest |
 | 数据恢复/旧值覆盖 | PersistenceQueue、Store锁、AtomicPropertiesFile、MusicJsonStore | PersistenceQueueTest、LibraryPersistenceTest、MusicJsonStoreTest |
-| 补全未命中 | MetadataEnricher、当前模型/公共源 | MetadataEnricherTest；未命中无常驻横幅 |
+| 封面升级／歌词未命中 | JvmMusicAssistant.resolveLyrics、AlbumCoverRepository、MetadataEnricher | MusicCompletionTest、LyricsAcquisitionTest、AlbumCoverRepositoryTest |
 | 构建/签名/FFmpeg/Linux | Gradle、version.properties、scripts/build-linux.sh、DesktopPaths、DesktopCredentialVault、FfmpegExecutable、CI | SDK/JDK/实际二进制/LinuxDesktopSupportTest/不自动升版 |
 | 官网/论坛/下载发布/订阅 | website/README.md、app.py、releases.py、mailing.py | website/tests/test_site.py；桌面/手机浏览器；Ubuntu/SMTP 部署单独验证 |
 

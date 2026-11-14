@@ -1,5 +1,7 @@
 # 2026-11-13 — Resonance 文档入口与开发变更索引
 
+2026-11-13 已下载歌曲可升级专辑封面，下载、批量补全和播放器统一查词。歌曲的加入歌单窗口新增搜索与新建。[封面与歌词](changes/2026-11-13-07-video-catalog-artwork-and-lyrics.md) · [歌单选择](changes/2026-11-13-08-search-and-create-in-playlist-picker.md)
+
 2026-11-13 发布 0.6.11 封面歌词修复。Android、Windows、Linux 正式包均已公开，官网三端下载已切换。[GitHub v0.6.11](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.11) · [官网下载](https://leonard.asia/downloads?v=0.6.11) · [发布记录](changes/2026-11-13-04-publish-0.6.11-release.md)
 
 2026-11-13 发布 0.6.10 窄屏歌词修复。Android、Windows、Linux 正式包均已公开，官网三端下载已切换。[GitHub v0.6.10](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.10) · [官网下载](https://leonard.asia/downloads?v=0.6.10) · [发布记录](changes/2026-11-13-02-publish-0.6.10-release.md)
@@ -148,6 +150,10 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-13 | 加入歌单窗口内搜索与新建 | [具体记录](changes/2026-11-13-08-search-and-create-in-playlist-picker.md) |
+| 2026-11-13 | 升级 B 站视频封面并统一三处歌词查询 | [具体记录](changes/2026-11-13-07-video-catalog-artwork-and-lyrics.md) |
+| 2026-11-13 | 合并歌曲菜单的歌单操作 | [具体记录](changes/2026-11-13-06-collapse-track-playlist-menu.md) |
+| 2026-11-13 | 隔离智能补全弹窗与宿主毛玻璃状态 | [具体记录](changes/2026-11-13-05-isolate-batch-enrich-dialog.md) |
 | 2026-11-13 | 构建并发布 0.6.11 封面歌词修复三端版本 | [具体记录](changes/2026-11-13-04-publish-0.6.11-release.md) |
 | 2026-11-13 | 修复播放页封面下方的双语歌词预览裁切 | [具体记录](changes/2026-11-13-03-fit-cover-lyrics-preview.md) |
 | 2026-11-13 | 构建并发布 0.6.10 窄屏歌词修复三端版本 | [具体记录](changes/2026-11-13-02-publish-0.6.10-release.md) |

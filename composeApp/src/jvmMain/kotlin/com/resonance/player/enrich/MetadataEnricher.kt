@@ -27,6 +27,9 @@ class MetadataEnricher(
     private val artworkDirectory: Path,
     private val lyricsRepository: LrclibLyricsRepository,
     private val deepSeekClient: DeepSeekClient = DeepSeekClient(),
+    private val lyricsLookup: (suspend (Track, Boolean, String?) -> LyricsFetchResult)? = null,
+    private val needsArtwork: (suspend (Track, Boolean) -> Boolean)? = null,
+    private val artworkEnrichment: (suspend (Track, Boolean) -> Track?)? = null,
 ) {
 
     data class OnlineSearchResult(
@@ -41,6 +44,7 @@ class MetadataEnricher(
         val track: Track,
         val modified: Boolean,
         val aiCalled: Boolean = false,
+        val lyricsFound: Boolean = false,
     )
 
     suspend fun enrichTrack(
@@ -54,7 +58,8 @@ class MetadataEnricher(
         var modified = false
         var aiCalled = false
 
-        val needCover = options.enrichCover && (options.forceRefresh || currentTrack.isMissingCover)
+        val needCover = options.enrichCover && (needsArtwork?.invoke(currentTrack, options.forceRefresh)
+            ?: (options.forceRefresh || currentTrack.isMissingCover))
         val needArtistOrAlbum = options.enrichArtistAndAlbum && (options.forceRefresh || currentTrack.isMissingArtist || currentTrack.isMissingAlbum)
         val needLyrics = options.enrichLyrics
 
@@ -66,7 +71,7 @@ class MetadataEnricher(
 
         // 1. 尝试免费公开接口检索（iTunes Search & 酷狗）
         var onlineResult: OnlineSearchResult? = null
-        if (needCover || needArtistOrAlbum) {
+        if ((needCover && artworkEnrichment == null) || needArtistOrAlbum) {
             onStatus("正在免费检索 iTunes / 酷狗官方曲库…")
             val cleanTitle = cleanTrackTitle(currentTrack.title)
             val searchArtist = if (currentTrack.isMissingArtist) "" else currentTrack.artist
@@ -96,7 +101,7 @@ class MetadataEnricher(
             }
 
             var updatedArtworkPath = currentTrack.artworkPath
-            if (needCover && !onlineResult.artworkUrl.isNullOrBlank()) {
+            if (needCover && artworkEnrichment == null && !onlineResult.artworkUrl.isNullOrBlank()) {
                 onStatus("正在下载高分辨率专辑封面…")
                 val localCover = downloadAndSaveArtwork(currentTrack.id, onlineResult.artworkUrl)
                 if (localCover != null) {
@@ -115,24 +120,25 @@ class MetadataEnricher(
             }
         }
 
-        // 3. 歌词处理（先走本地与 LRCLIB，免 Token）
+        if (needCover && artworkEnrichment != null) {
+            onStatus("正在匹配真实专辑封面…")
+            val matched = try { artworkEnrichment.invoke(currentTrack, options.forceRefresh) }
+            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+            catch (_: Exception) { null }
+            if (matched != null) {
+                modified = modified || matched != currentTrack
+                currentTrack = matched
+            }
+        }
+
+        // 3. 歌词处理（本地、LRCLIB 与可用歌源；不调用模型）
         var lyricsFound = false
         if (needLyrics) {
-            onStatus("正在匹配本地与 LRCLIB 歌词…")
-            val existingLyrics = if (!options.forceRefresh) lyricsRepository.readCache(currentTrack) else null
-            if (existingLyrics is LyricsFetchResult.Found) {
-                lyricsFound = true
-            } else {
-                val fetched = lyricsRepository.fetch(
-                    track = currentTrack,
-                    forceRefresh = options.forceRefresh,
-                    customLyricsFolder = customLyricsFolder,
-                    aiFallback = null, // 先不调用 AI，保持免费
-                )
-                if (fetched is LyricsFetchResult.Found) {
-                    lyricsFound = true
-                }
-            }
+            onStatus("正在匹配本地、歌词库与可用歌源…")
+            val fetched = lyricsLookup?.invoke(currentTrack, options.forceRefresh, customLyricsFolder)
+                ?: lyricsRepository.fetch(track = currentTrack, forceRefresh = options.forceRefresh,
+                    customLyricsFolder = customLyricsFolder, aiFallback = null)
+            lyricsFound = fetched is LyricsFetchResult.Found
         }
 
         // 4. AI 兜底（仅在用户开启且有未解决项时调用，节省 Token！）
@@ -173,7 +179,7 @@ class MetadataEnricher(
                 )
 
                 // 如果 AI 推断出了新的歌手/歌名，并且仍缺封面，用推断后的信息再在免费官方库搜一次封面
-                if (stillNeedsCover) {
+                if (stillNeedsCover && artworkEnrichment == null) {
                     val secondaryOnline = searchItunes(updatedTitle, updatedArtist)
                         ?: searchKugou(updatedTitle, updatedArtist)
                     if (secondaryOnline?.artworkUrl != null) {
@@ -197,7 +203,7 @@ class MetadataEnricher(
         }
 
         onStatus("处理完成")
-        SingleEnrichResult(currentTrack, modified || lyricsFound || aiCalled, aiCalled)
+        SingleEnrichResult(currentTrack, modified || lyricsFound || aiCalled, aiCalled, lyricsFound)
     }
 
     suspend fun batchEnrich(
@@ -216,7 +222,6 @@ class MetadataEnricher(
 
         tracks.forEachIndexed { index, track ->
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            val hadCover = !track.isMissingCover
             val hadArtist = !track.isMissingArtist
             val hadAlbum = !track.isMissingAlbum
 
@@ -248,9 +253,9 @@ class MetadataEnricher(
             val enrichedTrack = enrichResult.track
             if (enrichResult.aiCalled) aiCallsCount++
 
-            if (!hadCover && !enrichedTrack.isMissingCover) coversEnriched++
+            if (!enrichedTrack.isMissingCover && enrichedTrack.artworkPath != track.artworkPath) coversEnriched++
             if (!hadArtist && !enrichedTrack.isMissingArtist || (!hadAlbum && !enrichedTrack.isMissingAlbum)) metadataEnriched++
-            if (options.enrichLyrics && lyricsRepository.readCache(enrichedTrack) is LyricsFetchResult.Found) lyricsEnriched++
+            if (enrichResult.lyricsFound) lyricsEnriched++
 
             if (enrichedTrack != track) onTrackProcessed(enrichedTrack)
             updatedList.add(enrichedTrack)

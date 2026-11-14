@@ -36,6 +36,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.resonance.player.design.LocalGlassState
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.design.ResonanceShapes
 import com.resonance.player.design.resonanceGlass
@@ -58,6 +61,7 @@ import com.resonance.player.model.BatchEnrichOptions
 import com.resonance.player.model.BatchEnrichProgress
 import com.resonance.player.model.BatchEnrichReport
 import com.resonance.player.model.Track
+import com.resonance.player.model.needsCatalogArtwork
 
 @Composable
 fun BatchEnrichDialog(
@@ -76,70 +80,75 @@ fun BatchEnrichDialog(
     var useAiFallback by remember { mutableStateOf(hasDeepSeekConfigured) }
     var forceRefresh by remember { mutableStateOf(false) }
 
-    val missingCoverCount = remember(selectedTracks) { selectedTracks.count { it.isMissingCover } }
+    val origins = LocalMusicFeatures.current?.assistant?.state?.collectAsState()?.value?.origins.orEmpty()
+    val missingCoverCount = remember(selectedTracks, origins) { selectedTracks.count { needsCatalogArtwork(it, origins[it.id]) } }
     val missingArtistCount = remember(selectedTracks) { selectedTracks.count { it.isMissingArtist } }
     val missingAlbumCount = remember(selectedTracks) { selectedTracks.count { it.isMissingAlbum } }
 
-    Dialog(
-        onDismissRequest = { if (!isRunning) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.92f)
-                .padding(vertical = 24.dp)
-                .resonanceGlass(
-                    shape = RoundedCornerShape(22.dp),
-                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                    shadowElevation = 16.dp,
-                ),
+    // A native dialog owns a separate window. Its config, progress and result surfaces
+    // must not subscribe to the host window's Haze source during state transitions.
+    CompositionLocalProvider(LocalGlassState provides null) {
+        Dialog(
+            onDismissRequest = { if (!isRunning) onDismiss() },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
+                    .fillMaxWidth(0.92f)
+                    .padding(vertical = 24.dp)
+                    .resonanceGlass(
+                        shape = RoundedCornerShape(22.dp),
+                        borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
+                        shadowElevation = 16.dp,
+                    ),
             ) {
-                if (report != null) {
-                    // 完成状态
-                    EnrichCompletedView(report = report, onFinish = onDismiss)
-                } else if (isRunning) {
-                    // 运行中进度状态
-                    EnrichRunningView(
-                        progress = progress,
-                        totalCount = selectedTracks.size,
-                        onCancel = onCancel,
-                    )
-                } else {
-                    // 初始配置状态
-                    EnrichConfigView(
-                        totalTracks = selectedTracks.size,
-                        missingCoverCount = missingCoverCount,
-                        missingArtistCount = missingArtistCount,
-                        missingAlbumCount = missingAlbumCount,
-                        enrichCover = enrichCover,
-                        onEnrichCoverChange = { enrichCover = it },
-                        enrichLyrics = enrichLyrics,
-                        onEnrichLyricsChange = { enrichLyrics = it },
-                        enrichArtistAndAlbum = enrichArtistAndAlbum,
-                        onEnrichArtistAndAlbumChange = { enrichArtistAndAlbum = it },
-                        useAiFallback = useAiFallback,
-                        onUseAiFallbackChange = { useAiFallback = it },
-                        forceRefresh = forceRefresh,
-                        onForceRefreshChange = { forceRefresh = it },
-                        hasDeepSeekConfigured = hasDeepSeekConfigured,
-                        onDismiss = onDismiss,
-                        onStart = {
-                            onStartEnrich(
-                                BatchEnrichOptions(
-                                    enrichCover = enrichCover,
-                                    enrichLyrics = enrichLyrics,
-                                    enrichArtistAndAlbum = enrichArtistAndAlbum,
-                                    useAiFallback = useAiFallback && hasDeepSeekConfigured,
-                                    forceRefresh = forceRefresh,
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                ) {
+                    if (report != null) {
+                        // 完成状态
+                        EnrichCompletedView(report = report, onFinish = onDismiss)
+                    } else if (isRunning) {
+                        // 运行中进度状态
+                        EnrichRunningView(
+                            progress = progress,
+                            totalCount = selectedTracks.size,
+                            onCancel = onCancel,
+                        )
+                    } else {
+                        // 初始配置状态
+                        EnrichConfigView(
+                            totalTracks = selectedTracks.size,
+                            missingCoverCount = missingCoverCount,
+                            missingArtistCount = missingArtistCount,
+                            missingAlbumCount = missingAlbumCount,
+                            enrichCover = enrichCover,
+                            onEnrichCoverChange = { enrichCover = it },
+                            enrichLyrics = enrichLyrics,
+                            onEnrichLyricsChange = { enrichLyrics = it },
+                            enrichArtistAndAlbum = enrichArtistAndAlbum,
+                            onEnrichArtistAndAlbumChange = { enrichArtistAndAlbum = it },
+                            useAiFallback = useAiFallback,
+                            onUseAiFallbackChange = { useAiFallback = it },
+                            forceRefresh = forceRefresh,
+                            onForceRefreshChange = { forceRefresh = it },
+                            hasDeepSeekConfigured = hasDeepSeekConfigured,
+                            onDismiss = onDismiss,
+                            onStart = {
+                                onStartEnrich(
+                                    BatchEnrichOptions(
+                                        enrichCover = enrichCover,
+                                        enrichLyrics = enrichLyrics,
+                                        enrichArtistAndAlbum = enrichArtistAndAlbum,
+                                        useAiFallback = useAiFallback && hasDeepSeekConfigured,
+                                        forceRefresh = forceRefresh,
+                                    )
                                 )
-                            )
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -201,7 +210,7 @@ private fun EnrichConfigView(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceAround,
         ) {
-            StatBadge("缺封面", "$missingCoverCount 首", Icons.Default.Image)
+            StatBadge("待匹配封面", "$missingCoverCount 首", Icons.Default.Image)
             StatBadge("缺歌手/专辑", "${maxOf(missingArtistCount, missingAlbumCount)} 首", Icons.Default.Person)
             StatBadge("歌词库检索", "$totalTracks 首", Icons.Default.GraphicEq)
         }
@@ -215,14 +224,14 @@ private fun EnrichConfigView(
         checked = enrichCover,
         onCheckedChange = onEnrichCoverChange,
         title = "补全专辑封面",
-        description = "从 iTunes / 酷狗官方高清库下载并保存本地",
+        description = "匹配真实专辑封面，升级视频缩略图并保留自选封面",
     )
 
     EnrichOptionItem(
         checked = enrichLyrics,
         onCheckedChange = onEnrichLyricsChange,
         title = "匹配 / 检索同步歌词",
-        description = "自动扫描本地与 LRCLIB 精准 LRC 同步歌词",
+        description = "查询本地、歌词库与可用歌源，优先匹配同步歌词",
     )
 
     EnrichOptionItem(
@@ -370,9 +379,9 @@ private fun EnrichCompletedView(
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ResultRow("已处理歌曲", "${report.totalProcessed} 首")
                 ResultRow("补全专辑封面", "${report.coversEnriched} 个")
-                ResultRow("获取同步歌词", "${report.lyricsEnriched} 份")
+                ResultRow("找到歌词", "${report.lyricsEnriched} 份")
                 ResultRow("修正歌手与专辑", "${report.metadataEnriched} 条")
-                ResultRow("Token 节省模式", "已优先使用免 Token 官方源")
+                ResultRow("AI 调用", "${report.aiCallsCount} 次")
             }
         }
 

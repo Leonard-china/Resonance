@@ -477,6 +477,49 @@ class JvmMusicAssistant(
         cachedSettings = MusicFeatureCodec.settings(store.read().optJSONObject("settings"), decrypt)
         ask(JSONArray(messages.map { JSONObject().put("role", it.role).put("content", it.content) }), maxTokens = maxTokens, purpose = "text").optString("content")
     }
+    suspend fun resolveLyrics(track: Track, forceRefresh: Boolean = false, customLyricsFolder: String? = null): LyricsFetchResult =
+        withContext(Dispatchers.IO) {
+            lyricSource?.invoke(track) ?: lyricsRepository.fetch(
+                track, forceRefresh = forceRefresh, customLyricsFolder = customLyricsFolder,
+                sourceFallback = ::findSourceLyrics, allowRemote = !hasUnidentifiedVideoVersion(track),
+            )
+        }
+
+    suspend fun resolveBatchLyrics(track: Track, forceRefresh: Boolean, customLyricsFolder: String?): LyricsFetchResult =
+        withContext(Dispatchers.IO) {
+            val result = resolveLyrics(track, forceRefresh, customLyricsFolder)
+            if (result is LyricsFetchResult.Unavailable && !hasUnidentifiedVideoVersion(track)) {
+                val failure = journal.begin("歌词获取 · ${track.title}", "lyrics", track.id)
+                journal.update(failure, outcome = MusicTaskOutcome.Failed, message = result.message)
+                restoreState()
+            }
+            result
+        }
+
+    private fun hasUnidentifiedVideoVersion(track: Track): Boolean {
+        val origin = store.read().optJSONObject("mediaOrigins")?.optJSONObject(track.id) ?: return false
+        return origin.optString("sourceId") == "bilibili" && hasRecordingVariant(origin.optString("evidence")) &&
+            !hasRecordingVariant(track.title)
+    }
+
+    suspend fun needsCoverEnrichment(track: Track, forceRefresh: Boolean = false): Boolean = withContext(Dispatchers.IO) {
+        val root = store.read()
+        val origin = root.optJSONObject("mediaOrigins")?.optJSONObject(track.id)?.let(MediaOriginCodec::decode)
+        val legacyVideo = origin == null && root.optJSONObject("videoOrigins")?.let { origins ->
+            origins.keys().asSequence().any { origins.optString(it) == track.id }
+        } == true
+        needsCatalogArtwork(track, origin, forceRefresh,
+            root.optJSONObject("customCovers")?.optBoolean(track.id) == true, legacyVideo)
+    }
+
+    suspend fun enrichArtwork(track: Track, forceRefresh: Boolean): Track? = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            if (!needsCoverEnrichment(track, forceRefresh)) return@withLock null
+            // A user-requested upgrade of a video thumbnail must bypass yesterday's miss cache.
+            coverStep(track, forceRefresh || !track.isMissingCover)
+        }
+    }
+
     suspend fun findSourceLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
         builtinStartup?.await()
         sources.findLyrics(track)
@@ -744,7 +787,9 @@ class JvmMusicAssistant(
             managedStorage.checkBudget(Files.size(raw) * 2, recommendationAcquiring, config.temporaryStorageMb)
             val manualCover = request.cover.isNotBlank() && request.cover != video.coverUrl
             var coverFailure = "未找到可信的专辑封面"
-            val albumCover = if (!manualCover) try {
+            val canMatchCover = !hasRecordingVariant(video.title) || hasRecordingVariant(request.title)
+            if (!canMatchCover) coverFailure = "视频标注了不同录音版本，请先核对歌名"
+            val albumCover = if (!manualCover && canMatchCover) try {
                 withTimeoutOrNull(12_000) { artworkSource.find(SongRequest(request.title, request.artist, request.album), false) }
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (error: Exception) { coverFailure = error.message ?: coverFailure; null } else null
@@ -785,7 +830,7 @@ class JvmMusicAssistant(
                     } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
                 } else null
                 val lyricsJob = async {
-                    try { withTimeoutOrNull(12_000) { fetchLyricsStep(track) } }
+                    try { withTimeout(75_000) { fetchLyricsStep(track) } }
                     catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
                 }
                 coverJob?.await()
@@ -855,11 +900,13 @@ class JvmMusicAssistant(
         val origins = root.optJSONObject("videoOrigins")
         val ids = origins?.keys()?.asSequence()?.map { origins.optString(it) }?.toSet().orEmpty()
         val manual = root.optJSONObject("customCovers") ?: JSONObject()
-        val tracks = library.tracks().filter { it.id in ids && !manual.optBoolean(it.id) }
+        val originsByTrack = MediaOriginCodec.all(root)
+        val tracks = library.tracks().filter { it.id in ids &&
+            needsCatalogArtwork(it, originsByTrack[it.id], customCover = manual.optBoolean(it.id), legacyVideo = true) }
         tracks.forEachIndexed { n, track ->
             currentCoroutineContext().ensureActive()
             status(ImportProgress("匹配已下载歌曲封面", track.title, n, tracks.size, n.toFloat() / tracks.size.coerceAtLeast(1)))
-            try { coverStep(track, false) }
+            try { coverStep(track, true) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { /* Each miss retains a retryable child, without replacing the current cover. */ }
         }
@@ -884,13 +931,20 @@ class JvmMusicAssistant(
     }
     private suspend fun coverStep(track: Track, force: Boolean): Track = step("封面匹配 · ${track.title}", "cover", track.id) {
         status(ImportProgress("匹配真实专辑封面", track.title))
+        check(!hasUnidentifiedVideoVersion(track)) { "视频标注了不同录音版本，请先核对歌名；已保留现有封面" }
         val cover = artworkSource.find(SongRequest(track.title, track.artist, track.album), force) ?: error("未找到可信的专辑封面，已保留现有封面")
         currentCoroutineContext().ensureActive()
         if (force) com.resonance.player.platform.ArtworkMemoryCache.invalidate(cover.path.toString())
         val updated = track.copy(artworkPath = cover.path.toString(), album = if (track.isMissingAlbum || track.album in setOf("单曲", "B 站音乐")) cover.album.ifBlank { track.album } else track.album)
         library.update(updated)
-        val origin = MediaOriginCodec.all(store.read())[track.id] ?: MediaOrigin()
-        recordOrigin(updated, origin.copy(album = updated.album, coverKind = "目录专辑封面", coverSource = cover.source))
+        store.update { root ->
+            val origins = root.optJSONObject("mediaOrigins") ?: JSONObject()
+            val origin = origins.optJSONObject(track.id)?.let(MediaOriginCodec::decode) ?: MediaOrigin()
+            root.put("mediaOrigins", origins.put(track.id, MediaOriginCodec.encode(
+                origin.copy(album = updated.album, coverKind = "目录专辑封面", coverSource = cover.source),
+            )))
+        }
+        restoreState()
         updated
     }
     override suspend fun setCover(track: Track, path: String): Track = task("设置自定义封面") {
@@ -907,9 +961,9 @@ class JvmMusicAssistant(
     }
     private suspend fun fetchLyricsStep(track: Track, force: Boolean = false): Lyrics = step("歌词获取 · ${track.title}", "lyrics", track.id) {
         status(ImportProgress("匹配歌曲版本与歌词", track.title))
-        val result = lyricSource?.invoke(track) ?: lyricsRepository.fetch(track, forceRefresh = force)
+        val result = resolveLyrics(track, forceRefresh = force)
         val lyrics = (result as? LyricsFetchResult.Found)?.lyrics ?: error((result as? LyricsFetchResult.Unavailable)?.message ?: "暂无歌词")
-        lyricsRepository.writeCache(track, LyricsFetchResult.Found(lyrics))
+        if (lyricSource != null) lyricsRepository.writeCache(track, LyricsFetchResult.Found(lyrics))
         lyrics
     }
     override suspend fun cachedSynchronizedLyrics(track: Track): Lyrics? = withContext(Dispatchers.IO) {

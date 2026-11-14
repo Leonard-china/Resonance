@@ -250,11 +250,13 @@ fun App(
         }
 
         fun startBatchEnrich(tracks: List<Track>, options: com.resonance.player.model.BatchEnrichOptions) {
+            if (batchEnrichRunning) return
             batchEnrichRunning = true
             batchEnrichProgress = null
             batchEnrichReport = null
             batchEnrichJob = scope.launch {
                 try {
+                    persistence.run {}
                     val report = services.batchEnrichTracks(options, tracks) { p ->
                         batchEnrichProgress = p
                     }
@@ -270,8 +272,11 @@ fun App(
                             player = player.copy(currentTrack = updatedCurr)
                         }
                     }
-                } catch (error: Throwable) {
-                    importMessage = "智能补全已停止或遇到问题：${error.message ?: error::class.simpleName.orEmpty()}"
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    importMessage = "智能补全已停止，已完成的结果保留"
+                    throw cancelled
+                } catch (error: Exception) {
+                    importMessage = "智能补全未完成：${error.message ?: error::class.simpleName.orEmpty()}"
                 } finally {
                     batchEnrichRunning = false
                 }
@@ -991,10 +996,10 @@ fun App(
                             startBatchEnrich(candidateTracks, options)
                         },
                         onCancel = {
-                            batchEnrichJob?.cancel()
-                            batchEnrichJob = null
-                            batchEnrichRunning = false
+                            val stopping = batchEnrichJob
+                            stopping?.cancel()
                             scope.launch {
+                                stopping?.join()
                                 val loadedTracks = services.loadLibrary()
                                 val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
                                 importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)

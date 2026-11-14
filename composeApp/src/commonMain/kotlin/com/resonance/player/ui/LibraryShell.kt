@@ -2328,6 +2328,7 @@ private fun TrackRow(
         else -> "尚未匹配"
     }
     var menuExpanded by remember(track.id) { mutableStateOf(false) }
+    var showPlaylistDialog by remember(track.id) { mutableStateOf(false) }
     val dividerIndent = if (isMultiSelectMode) 44.dp else if (index != null) 34.dp else 58.dp
     val rowInteraction = remember { MutableInteractionSource() }
     val rowHighlight = when {
@@ -2514,33 +2515,14 @@ private fun TrackRow(
                                 },
                             )
                         }
-                        if (userPlaylists.isEmpty()) {
-                            DropdownMenuItem(
-                                text = { Text("先新建一个歌单") },
-                                onClick = { menuExpanded = false },
-                                enabled = false,
-                            )
-                        } else {
-                            userPlaylists.forEach { playlist ->
-                                val included = playlist.tracks.any { it.id == track.id }
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            if (included) "从「${playlist.name}」移出" else "加入「${playlist.name}」",
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    },
-                                    leadingIcon = if (included) {
-                                        { Icon(Icons.Default.CheckCircle, contentDescription = null, tint = ResonanceColors.Primary) }
-                                    } else null,
-                                    onClick = {
-                                        onPlaylistMembershipChange(track, playlist.id, !included)
-                                        menuExpanded = false
-                                    },
-                                )
-                            }
-                        }
+                        DropdownMenuItem(
+                            text = { Text("加入歌单…") },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null) },
+                            onClick = {
+                                menuExpanded = false
+                                showPlaylistDialog = true
+                            },
+                        )
                         if (available && !track.sourceUri.isNullOrBlank()) {
                             HorizontalDivider()
                             DropdownMenuItem(
@@ -2560,6 +2542,20 @@ private fun TrackRow(
             color = ResonanceColors.Divider,
             thickness = Dp.Hairline,
             modifier = Modifier.padding(start = dividerIndent),
+        )
+    }
+    if (showPlaylistDialog) {
+        TrackPlaylistDialog(
+            track = track,
+            playlists = userPlaylists,
+            onDismiss = { showPlaylistDialog = false },
+            onMembershipChange = onPlaylistMembershipChange,
+            onCreatePlaylist = if (feature?.assistant == null) null else { name ->
+                feature.launch {
+                    feature.assistant?.saveToPlaylist(listOf(track.id), newName = name)
+                    feature.onReload()
+                }
+            },
         )
     }
 }

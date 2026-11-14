@@ -166,14 +166,14 @@ internal class MusicSourceRegistry(
     /** Search metadata and fetch the source's published lyrics; never download or upload audio. */
     suspend fun findLyrics(track: Track): LyricsFetchResult = coroutineScope {
         if (track.title.isBlank() || track.isMissingArtist) return@coroutineScope LyricsFetchResult.Unavailable("请先补充准确的歌名和歌手，再查找歌词", false)
-        val request = SongRequest(track.title, track.artist, track.album)
+        val request = SongRequest(catalogTrackTitle(track.title, track.artist), track.artist, track.album)
         val duration = durationTextToSeconds(track.durationText)
         val candidates = list().filter { it.enabled && "search" in it.capabilities && "getLyric" in it.capabilities }.take(8)
         val results = candidates.map { source -> async {
             var plainFallback: Lyrics? = null
             try {
                 withTimeoutOrNull(8_000) {
-                    val songs = parseSongs(source.id, call(source.id, "search", JSONArray().put("${track.title} ${track.artist}".take(180)).put(1).put("music")))
+                    val songs = parseSongs(source.id, call(source.id, "search", JSONArray().put("${request.title} ${request.artist}".take(180)).put(1).put("music")))
                         .filter { SongIdentityResolver.matches(request, SongRequest(it.title, it.artist, it.album)) }
                         .filter { duration <= 0 || it.durationSeconds <= 0 || kotlin.math.abs(it.durationSeconds - duration) <= maxOf(8, duration / 25) }
                         .sortedBy { if (duration > 0 && it.durationSeconds > 0) kotlin.math.abs(it.durationSeconds - duration) else Int.MAX_VALUE }

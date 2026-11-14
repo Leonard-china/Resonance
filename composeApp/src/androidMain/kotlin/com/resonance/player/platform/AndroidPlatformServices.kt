@@ -985,13 +985,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     }
 
     override suspend fun loadLyrics(track: Track, forceRefresh: Boolean): LyricsFetchResult =
-        lyricsRepository.fetch(
-            track = track,
-            forceRefresh = forceRefresh,
-            customLyricsFolder = resolveLyricsFolder(),
-            aiFallback = null,
-            sourceFallback = musicAssistant::findSourceLyrics,
-        )
+        musicAssistant.resolveLyrics(track, forceRefresh, resolveLyricsFolder())
 
     override suspend fun requestAiLyrics(track: Track): LyricsFetchResult = withContext(Dispatchers.IO) {
         val config = loadDeepSeekConfig()
@@ -1170,6 +1164,9 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             artworkDirectory = activity.filesDir.toPath().resolve("artwork"),
             lyricsRepository = lyricsRepository,
             deepSeekClient = deepSeekClient,
+            lyricsLookup = musicAssistant::resolveBatchLyrics,
+            needsArtwork = musicAssistant::needsCoverEnrichment,
+            artworkEnrichment = musicAssistant::enrichArtwork,
         )
     }
 
@@ -1206,11 +1203,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
     ): com.resonance.player.model.BatchEnrichReport = withContext(Dispatchers.IO) {
         val config = loadDeepSeekConfig()
         val customFolder = resolveLyricsFolder()
-        val report = enricher.batchEnrich(options, tracks, config, customFolder, onProgress) { updated -> updateTracks(listOf(updated)) }
-        if (report.updatedTracks.isNotEmpty()) {
-            updateTracks(report.updatedTracks)
-        }
-        report
+        enricher.batchEnrich(options, tracks, config, customFolder, onProgress) { updated -> updateTracks(listOf(updated)) }
     }
 
     override suspend fun batchDeleteTracks(tracks: List<Track>): DeleteTrackReport = withContext(Dispatchers.IO) {
