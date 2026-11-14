@@ -1,6 +1,6 @@
 # 2026-11-05 — Resonance 详细开发说明：应用会话、独立播放与平台边界
 
-2026-11-14 准备 0.6.12，包含定时器、智能补全、Android 目录去重及歌单改进。[发布说明](RELEASE_NOTES-0.6.12.md) · [发布记录](changes/2026-11-14-06-publish-0.6.12-release.md)
+2026-11-14 发布核对。当前公开版本为 **0.6.12 / 46**。三端构建、Android 覆盖安装及官网验收见[发布记录](changes/2026-11-14-06-publish-0.6.12-release.md)。
 
 2026-11-13 发布核对。当前公开版本为 **0.6.11 / 45**，含封面双语歌词预览修复。三端产物、签名及官网 Range 校验见[本次发布记录](changes/2026-11-13-04-publish-0.6.11-release.md)。
 
@@ -199,6 +199,8 @@ PersistenceQueue.submit 是顺序屏障，submitLatest 按键合并待写值，r
 
 ## 6. 扫描、转换与歌单
 
+2026-11-14 核对：Android「选择文件夹」同时支持普通音频和 KGMA。可确认属于同一系统媒体条目的 SAF 与 MediaStore 曲目只显示一次，新导入跳过已入库项。旧 ID 用于解析歌单、收藏和暂停快照。不同文件即使标题相同也各自保留。结果区分入库、实际转换和已在曲库。[修复记录](changes/2026-11-14-05-deduplicate-android-folder-import.md)
+
 2026-11-06 批量音频重新定位：`AudioRelinkSession` 一次读取曲库并检查候选，经 `LibraryServices.saveReplacementAudioBatch` 一次提交。Android `AndroidMusicAccess`、Windows/Linux `DesktopLibraryStore` 在各自库锁内复核旧来源及新文件，合并最新元数据/收藏，仅原子写一次库索引。两端歌单按 ID 从库读取来源，故不重写歌单快照；单曲替换入口保持。回归见 `AudioRelinkSessionTest`、`AudioRelinkBatchTest`、`AudioRelinkDeviceTest`；设备执行状态见本轮记录。
 
 2026-11-05 质量修复核对：读取桌面/Android受管索引保留暂时不可用记录，编辑其他曲目不会借读取过滤丢失离线歌曲/收藏/关系。真实删除先确认物理操作结果；文件IO或提供者拒绝时保留可重试记录，批次通过 `DeleteTrackReport.removedTrackIds` 仅移除实际成功项。删除音频不再顺带删除共享/用户封面，可能留下未回收封面。见[离线记录](changes/2026-11-05-19-retain-unavailable-library-tracks.md)、[删除结果与封面](changes/2026-11-05-24-delete-failures-and-shared-artwork.md)。
@@ -365,6 +367,8 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 
 ## 11. UI、封面与悬浮歌词
 
+2026-11-14 核对：播放页睡眠定时器的原生弹窗在独立窗口使用静态毛玻璃底色。窗口不订阅宿主 Haze 状态，定时器仍使用原有播放会话和倒计时。[修复记录](changes/2026-11-14-04-isolate-sleep-timer-window.md)
+
 2026-11-13（0.6.11 / 45）歌曲菜单的“加入歌单…”进入 `TrackPlaylistDialog`。可搜索名称，保留未显示的勾选，并在完成时新建歌单并加入歌曲。取消时丢弃草稿。补全弹窗的配置、进度和结果均隔离宿主 Haze。参见[歌单选择](changes/2026-11-13-08-search-and-create-in-playlist-picker.md)与[窗口隔离](changes/2026-11-13-05-isolate-batch-enrich-dialog.md)。
 
 2026-11-05质量修复核对：封面页按真实可用高度限制同步歌词预览，正常高竖屏保留180dp封面验收；小窗/大字优先保证控制可达，完整歌词页与连续跟随保留。智能管家按完整版本歌名+歌手+时长找“疑似重复”，未知歌手不成组、默认不选删除；容器格式不等于音质。清理把整批明细送入一次批量确认，确认层在页面之后绘制，取消不删除。当轮语义搜索只说明BPM未接入；该历史边界已由本轮39号记录的本地分析与范围筛选替代。见[封面与预览](changes/2026-11-05-28-player-cover-preview-height-budget.md)、[清理](changes/2026-11-05-22-smart-cleanup-safe-batch.md)、[BPM边界](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md)。
@@ -485,7 +489,53 @@ adb shell am instrument -w -r com.resonance.player.debug.test/androidx.test.runn
 
 `allTests` 不等同于连接设备的 instrumentation；成功构建不等同于设备播放、蓝牙、标签写回、真实大曲库或 UI 通过。部分 FFmpeg/KGG 测试有依赖文件/环境的条件返回，查看实现与报告确认关键场景是否实际运行，不能只看总任务绿色。
 
-### 12.2.1 Linux 桌面版（2026-11-03 核对）
+<a id="本机-android-apk-测试"></a>
+
+### 12.2.1 本机 Android APK 测试（2026-11-14 核对）
+
+本仓库在当前 Ubuntu 开发机上默认用专用 AVD `resonance-api36` 验证 APK（Android 16 / API 36、x86_64、KVM）。[ApkStart](https://github.com/RoutineMiku/apkstart) 提供 Windows 启动器，它使用 Android Emulator 和 ADB 作为运行时工具。Ubuntu 上直接用这两个 SDK 工具。若另一台开发机已装相同系统镜像，可用以下命令创建同名 AVD。
+
+```bash
+avdmanager create avd --name resonance-api36 \
+  --package 'system-images;android-36;default;x86_64' --device pixel_7
+```
+
+先按[本机资源预算](AI-WORKFLOW.md#本机资源预算)分开构建与模拟器验证。启动前检查无其他重量级任务、宿主 `MemAvailable` 至少为 5036 MiB、端口 5560 和 5561 空闲，并在持有 `build/resonance-heavy-validation.lock` 的 shell 中完成以下步骤。测试期间保留至少 1536 MiB 宿主可用内存，低于此值就停止本次启动的模拟器。
+
+```bash
+mkdir -p build/android-apk-validation
+flock -n build/resonance-heavy-validation.lock bash
+```
+
+以下命令在上一步进入的持锁 shell 中执行。先核对 `flock` 成功进入 shell，再启动模拟器。
+
+```bash
+systemd-run --user --unit=resonance-android-avd-host \
+  -p MemoryHigh=3200M -p MemoryMax=3500M -p MemorySwapMax=0 \
+  -p RuntimeMaxSec=15min -p TimeoutStopSec=10s -p LimitCORE=0 \
+  -p "StandardOutput=append:$PWD/build/android-apk-validation/emulator.log" \
+  -p StandardError=inherit --setenv="ANDROID_HOME=$ANDROID_HOME" \
+  "$(command -v emulator)" -avd resonance-api36 -port 5560 \
+  -memory 1280 -cores 2 -gpu host -feature -Vulkan \
+  -skin 540x1200 -no-window -no-boot-anim -no-snapshot
+
+adb -s emulator-5560 emu avd name
+adb -s emulator-5560 shell getprop sys.boot_completed
+```
+
+确认 AVD 名为 `resonance-api36` 且 `sys.boot_completed` 返回 `1` 后，安装本次构建的 Debug APK 并检查启动。用本次实际产物替换 `APK_PATH` 的值。录制或手动交互时可去掉 `-no-window`，再观察该次运行的资源占用。
+
+```bash
+APK_PATH=/path/to/current-debug.apk
+adb -s emulator-5560 install -r "$APK_PATH"
+adb -s emulator-5560 shell am start -W -n com.resonance.player.debug/com.resonance.player.MainActivity
+adb -s emulator-5560 exec-out screencap -p >build/android-apk-validation/screenshot.png
+adb -s emulator-5560 logcat -b crash -d
+```
+
+需要 Android 设备回归时，按上一节安装匹配本次构建的 `androidTest` APK，并用同一 ADB 序列号运行 `am instrument`。测试结束执行 `adb -s emulator-5560 emu kill`，必要时用 `systemctl --user stop resonance-android-avd-host` 收尾，再 `exit` 退出持锁的 shell。模拟器启动与截图、instrumentation 和真机功能应分别记录。真机特有的音频输出、硬件或系统行为仍需对应设备验证。[部署与实际验证记录](changes/2026-11-14-02-local-android-apk-testing.md)
+
+### 12.2.2 Linux 桌面版（2026-11-03 核对）
 
 Linux 复用 desktopMain 与原生 Compose/JVM UI，首批构建 x86_64；安装、构建和差异见 [Linux 说明](LINUX.md)，实际验证见 [Linux 记录](changes/2026-11-03-04-linux-desktop-support.md)。现有能力表的 Windows 列所列共享桌面逻辑亦用于 Linux，系统差异以本段为准，不能把 Windows 历史验收当成 Linux 已通过。
 

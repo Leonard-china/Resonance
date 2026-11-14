@@ -9,5 +9,13 @@
 
 ## 安装包校验
 
-<!-- GENERATED-CHECKSUMS:START -->
-<!-- GENERATED-CHECKSUMS:END -->
+<!-- GENERATED-CHECKSUMS -->
+
+| 文件 | 字节 | SHA-256 |
+| --- | ---: | --- |
+| `Resonance-0.6.12-release.apk` | 167569414 | `fe47841b28e1a0be92da2315f098694a9c3c2062e9f8a3548a8ea5ca3cf8d4a6` |
+| `Resonance-0.6.12.exe` | 276340224 | `0eaf02c353cb73f3e927b51005879ea012aaac98c4fc0ee7d95f9359766e832e` |
+| `Resonance-0.6.12-linux-x86_64.tar.gz` | 267181148 | `77a9f89ffe9d6bd355895abfe5d5499885dcb9235f2b2b44e43ccc4074f1d294` |
+| `Resonance-0.6.12-linux-x86_64.deb` | 246124530 | `c32946104c731dfed8a81d0555e8de8ed3981eb3439c669de25c0ca9264cf384` |
+
+<!-- END-GENERATED-CHECKSUMS -->

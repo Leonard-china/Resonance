@@ -1,6 +1,6 @@
-# 2026-11-13 — Resonance 文档入口与开发变更索引
+# 2026-11-14 — Resonance 文档入口与开发变更索引
 
-2026-11-14 准备 0.6.12，包含定时器、智能补全、Android 目录去重及歌单改进。[发布说明](RELEASE_NOTES-0.6.12.md) · [发布记录](changes/2026-11-14-06-publish-0.6.12-release.md)
+2026-11-14 发布 0.6.12，修复睡眠定时器、智能补全弹窗和 Android 重复导入。Android、Windows、Linux 已发布，官网三端下载已切换。[GitHub v0.6.12](https://github.com/Leonard-china/Resonance/releases/tag/v0.6.12) · [官网下载](https://leonard.asia/downloads?v=0.6.12) · [发布记录](changes/2026-11-14-06-publish-0.6.12-release.md)
 
 2026-11-13 已下载歌曲可升级专辑封面，下载、批量补全和播放器统一查词。歌曲的加入歌单窗口新增搜索与新建。[封面与歌词](changes/2026-11-13-07-video-catalog-artwork-and-lyrics.md) · [歌单选择](changes/2026-11-13-08-search-and-create-in-playlist-picker.md)
 
@@ -152,6 +152,11 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-14 | 构建并发布 0.6.12 三端正式包 | [具体记录](changes/2026-11-14-06-publish-0.6.12-release.md) |
+| 2026-11-14 | 合并 Android 同一音频的媒体库与文件夹导入记录 | [具体记录](changes/2026-11-14-05-deduplicate-android-folder-import.md) |
+| 2026-11-14 | 隔离睡眠定时器弹窗并回归 Android 无响应 | [具体记录](changes/2026-11-14-04-isolate-sleep-timer-window.md) |
+| 2026-11-14 | Android 实测复现弹窗 ANR 和曲库重复导入 | [具体记录](changes/2026-11-14-03-android-exploratory-testing.md) |
+| 2026-11-14 | 配置本机 Android 16 APK 测试设备与协作流程 | [具体记录](changes/2026-11-14-02-local-android-apk-testing.md) |
 | 2026-11-13 | 加入歌单窗口内搜索与新建 | [具体记录](changes/2026-11-13-08-search-and-create-in-playlist-picker.md) |
 | 2026-11-13 | 升级 B 站视频封面并统一三处歌词查询 | [具体记录](changes/2026-11-13-07-video-catalog-artwork-and-lyrics.md) |
 | 2026-11-13 | 合并歌曲菜单的歌单操作 | [具体记录](changes/2026-11-13-06-collapse-track-playlist-menu.md) |
