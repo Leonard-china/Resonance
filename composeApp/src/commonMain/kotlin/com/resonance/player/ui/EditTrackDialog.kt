@@ -1,5 +1,7 @@
 package com.resonance.player.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -53,15 +55,13 @@ fun EditTrackDialog(
     var embedLyrics by remember { mutableStateOf(hasLyrics) }
 
     Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.runtime.CompositionLocalProvider(com.resonance.player.design.LocalGlassState provides null) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .resonanceGlass(
-                    shape = RoundedCornerShape(22.dp),
-                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                    shadowElevation = 16.dp,
-                ),
+                .background(ResonanceColors.CanvasElevated, RoundedCornerShape(22.dp))
+                .border(1.dp, ResonanceColors.Divider, RoundedCornerShape(22.dp)),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(22.dp),
@@ -181,7 +181,7 @@ fun EditTrackDialog(
                         shape = ResonanceShapes.Button,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ResonanceColors.Primary,
-                            contentColor = androidx.compose.ui.graphics.Color.White,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                         ),
                         modifier = Modifier.resonancePressable(saveInteraction),
                         interactionSource = saveInteraction,
@@ -190,6 +190,7 @@ fun EditTrackDialog(
                     }
                 }
             }
+        }
         }
     }
 }

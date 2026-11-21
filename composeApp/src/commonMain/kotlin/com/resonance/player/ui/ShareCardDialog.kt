@@ -50,12 +50,14 @@ fun ShareCardDialog(
     var copied by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
+        CompositionLocalProvider(com.resonance.player.design.LocalGlassState provides null) {
         Surface(
             shape = RoundedCornerShape(24.dp),
-            color = androidx.compose.ui.graphics.Color.Transparent,
+            color = ResonanceColors.CanvasElevated,
+            border = androidx.compose.foundation.BorderStroke(1.dp, ResonanceColors.Divider),
             modifier = Modifier
                 .widthIn(max = 420.dp)
-                .padding(16.dp).resonanceGlass(shape = RoundedCornerShape(24.dp)),
+                .padding(16.dp),
         ) {
             Column(
                 Modifier
@@ -122,7 +124,7 @@ fun ShareCardDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ResonanceColors.Primary,
-                            contentColor = ResonanceColors.Canvas,
+                            contentColor = MaterialTheme.colorScheme.onPrimary,
                         ),
                     ) {
                         Icon(if (copied) Icons.Default.Check else Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -131,6 +133,7 @@ fun ShareCardDialog(
                     }
                 }
             }
+        }
         }
     }
 }

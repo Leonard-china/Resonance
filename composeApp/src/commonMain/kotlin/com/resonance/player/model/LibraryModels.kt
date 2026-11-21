@@ -58,6 +58,16 @@ data class ExportedPackage(
     val directory: String,
     val openLocationLabel: String? = null,
     val locationUri: String? = null,
+    val shareUri: String? = null,
+)
+
+/** Transient entry describing an already-exported local `.resonance` archive discovered in the export folder. */
+data class LocalSyncPackage(
+    val fileName: String,
+    val sizeBytes: Long,
+    val modifiedAtMs: Long,
+    val uriOrPath: String,
+    val directory: String,
 )
 
 data class Playlist(

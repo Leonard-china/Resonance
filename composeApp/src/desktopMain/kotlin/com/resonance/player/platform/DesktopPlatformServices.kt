@@ -509,14 +509,16 @@ class DesktopPlatformServices : PlatformServices {
             selectedPlaylists.flatMap(Playlist::tracks).map { track -> byId[track.id] ?: track }.distinctBy(Track::id)
         }
         require(tracks.isNotEmpty()) { "所选歌单没有可导出的本地音频" }
-        PlainSyncPackage().export(
+        val exported = PlainSyncPackage().export(
             target = target,
             tracks = tracks,
             playlists = selectedPlaylists,
-            openAudio = { track -> track.sourceUri?.let(Path::of)?.takeIf(Files::isRegularFile)?.let(Files::newInputStream) },
+            openAudio = { track -> openTrackSource(track.sourceUri) },
             openArtwork = { track -> openArtworkSource(track.artworkPath) },
         )
-        SyncReport(true, "已导出到 $target", tracks.size, selectedPlaylists.size,
+        require(exported.tracks.isNotEmpty()) { "所选歌单中的本地音频均无法读取，请确认原文件未被移动" }
+        val skippedNote = if (exported.skippedTrackCount > 0) "（跳过 ${exported.skippedTrackCount} 首无法读取的离线条目）" else ""
+        SyncReport(true, "已导出 ${exported.tracks.size} 首歌曲到 $target$skippedNote", exported.tracks.size, exported.playlists.size,
             exportedPackage = ExportedPackage(target.fileName.toString(), target.toAbsolutePath().parent.toString(), "打开文件夹"))
     }
 
@@ -531,12 +533,42 @@ class DesktopPlatformServices : PlatformServices {
         }.getOrDefault(false)
     }
 
+    override suspend fun listLocalSyncPackages(): List<com.resonance.player.model.LocalSyncPackage> = withContext(Dispatchers.IO) {
+        val dir = library.managedMusicDirectory.parent ?: return@withContext emptyList()
+        if (!Files.isDirectory(dir)) return@withContext emptyList()
+        runCatching {
+            Files.list(dir).use { stream ->
+                stream.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".resonance", ignoreCase = true) }
+                    .sorted(compareByDescending<Path> { runCatching { Files.getLastModifiedTime(it).toMillis() }.getOrDefault(0L) })
+                    .limit(30)
+                    .map { file ->
+                        com.resonance.player.model.LocalSyncPackage(
+                            fileName = file.fileName.toString(),
+                            sizeBytes = runCatching { Files.size(file) }.getOrDefault(0L),
+                            modifiedAtMs = runCatching { Files.getLastModifiedTime(file).toMillis() }.getOrDefault(0L),
+                            uriOrPath = file.toAbsolutePath().toString(),
+                            directory = dir.toAbsolutePath().toString(),
+                        )
+                    }.toList()
+            }
+        }.getOrDefault(emptyList())
+    }
+
     override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
         val source = chooseSyncPackageOnEdt(save = false) ?: return@withContext SyncReport(false, "已取消导入", cancelled = true)
+        importSyncPackagePath(source)
+    }
+
+    override suspend fun importSyncPackageFrom(uriOrPath: String): SyncReport = withContext(Dispatchers.IO) {
+        importSyncPackagePath(Path.of(uriOrPath))
+    }
+
+    private suspend fun importSyncPackagePath(source: Path): SyncReport {
         val importContext = kotlin.coroutines.coroutineContext
         val imported = PlainSyncPackage().import(source, library.managedMusicDirectory,
             onCommit = { library.mergeImported(it.tracks, it.playlists) }, checkCancelled = { importContext.ensureActive() })
-        SyncReport(true, "歌单文件导入完成", imported.tracks.size, imported.playlists.size)
+        val name = source.fileName?.toString() ?: "歌单文件"
+        return SyncReport(true, "已导入 $name（${imported.tracks.size} 首歌曲 · ${imported.playlists.size} 个歌单）", imported.tracks.size, imported.playlists.size)
     }
 
     override suspend fun importMusic(convertToMp3: Boolean): ImportReport =
@@ -566,6 +598,17 @@ class DesktopPlatformServices : PlatformServices {
         artworkDirectory = library.artworkDirectory,
         lyricsRepository = lyricsRepository,
         deepSeekClient = deepSeekClient,
+        hasReadableCover = { track ->
+            val path = track.artworkPath?.takeIf(String::isNotBlank)
+            when {
+                path == null -> false
+                path.startsWith("https://") || path.startsWith("http://") -> true
+                else -> runCatching {
+                    val file = if (path.startsWith("file://")) Path.of(java.net.URI(path)) else Path.of(path)
+                    Files.isRegularFile(file) && Files.size(file) >= 12
+                }.getOrDefault(false)
+            }
+        },
     )
 
     override suspend fun updateTracks(tracks: List<Track>): Unit = withContext(Dispatchers.IO) {
@@ -710,16 +753,23 @@ class DesktopPlatformServices : PlatformServices {
         }
     }
 
-    private fun openArtworkSource(value: String?): java.io.InputStream? {
+    private fun openTrackSource(value: String?): java.io.InputStream? = runCatching {
+        value ?: return null
+        val path = if (value.startsWith("file://")) Path.of(java.net.URI(value)) else Path.of(value)
+        path.takeIf(Files::isRegularFile)?.let(Files::newInputStream)
+    }.getOrNull()
+
+    private fun openArtworkSource(value: String?): java.io.InputStream? = runCatching {
         value ?: return null
         if (value.startsWith("https://")) {
-            return java.net.URL(value).openConnection().apply {
+            return@runCatching java.net.URL(value).openConnection().apply {
                 connectTimeout = 8_000
                 readTimeout = 12_000
             }.getInputStream().buffered()
         }
-        return runCatching { Path.of(value) }.getOrNull()?.takeIf(Files::isRegularFile)?.let(Files::newInputStream)
-    }
+        val path = if (value.startsWith("file://")) Path.of(java.net.URI(value)) else Path.of(value)
+        path.takeIf(Files::isRegularFile)?.let(Files::newInputStream)
+    }.getOrNull()
 
     private fun chooseMusicOnEdt(): List<Path> {
         fun choose(): List<Path> {

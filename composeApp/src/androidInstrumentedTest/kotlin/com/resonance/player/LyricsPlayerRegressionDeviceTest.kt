@@ -19,6 +19,7 @@ import kotlin.math.abs
 /** Real phone/player surface with synthetic lyrics, no library access or audio requests. */
 class LyricsPlayerRegressionDeviceTest {
     @get:Rule val ui = createAndroidComposeRule<PromoCaptureActivity>()
+    private val offsetMs = mutableStateOf(0L)
     private val position = mutableStateOf(5000L)
     private val track = Track("native-player-lyrics", "此刻的旋律", "测试歌手", "测试专辑", "0:30", 0)
     private val lyrics = Lyrics(track.id, (0..5).map { LyricLine(it * 5000L, "原创旋律第 $it 句") }, true, false, "测试夹具")
@@ -30,7 +31,8 @@ class LyricsPlayerRegressionDeviceTest {
             CompositionLocalProvider(LocalDensity provides Density(density.density, scale)) {
                 ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
                     NowPlayingOverlay(playerState = PlayerState(currentTrack = track, positionMs = position.value),
-                        queue = listOf(track), lyricsState = LyricsUiState.Ready(lyrics), onDismiss = {},
+                        queue = listOf(track), lyricsState = LyricsUiState.Ready(lyrics.copy(offsetMs = offsetMs.value)),
+                        onAdjustLyricsOffset = { offsetMs.value += it }, onDismiss = {},
                         onTogglePlay = {}, onPrevious = {}, onNext = {}, onToggleShuffle = {}, onCycleRepeat = {},
                         onSeek = {}, onTrackSelected = {}, onToggleFavorite = {}, onRefreshLyrics = {})
                 }
@@ -76,6 +78,24 @@ class LyricsPlayerRegressionDeviceTest {
         ui.onNodeWithContentDescription("歌词").performClick(); settle(); assertImmersiveBand(2)
         ui.runOnIdle { position.value = 15_000 }; settle(); assertImmersiveBand(3)
         ui.onNodeWithTag("lyric-line-2").assertIsNotSelected()
+    }
+
+    @Test fun timingButtonsAndLiveLyricStayVisibleAtLargeText() {
+        show(scale = 1.6f)
+        ui.onNodeWithContentDescription("歌词").performClick()
+        settle()
+        ui.onNodeWithText("校准").performClick()
+        settle()
+        ui.onNodeWithText("延后").assertIsDisplayed().performClick()
+        settle()
+        ui.onNodeWithTag("lyric-line-0").assertIsSelected().assertIsDisplayed()
+        ui.onNodeWithContentDescription("播放").assertIsDisplayed()
+        ui.onNodeWithText("重置").assertIsEnabled().performClick()
+        settle()
+        ui.onNodeWithTag("lyric-line-1").assertIsSelected().assertIsDisplayed()
+        ui.onNodeWithContentDescription("完成校准").performClick()
+        settle()
+        ui.onNodeWithText("校准").assertIsDisplayed()
     }
 
     @Test fun largeTextKeepsCoverPreviewAndTransportReachable() {

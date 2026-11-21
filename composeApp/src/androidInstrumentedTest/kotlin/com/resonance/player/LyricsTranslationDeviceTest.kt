@@ -56,9 +56,10 @@ class LyricsTranslationDeviceTest {
     @Test fun clickingTranslateShowsBilingualLyricsFromOriginalOnlyMode() {
         show()
         ui.onNodeWithText("翻译为中文").performClick()
+        ui.onNodeWithText("重译").assertIsDisplayed()
+        ui.onNodeWithText("关闭").performClick()
         ui.onNodeWithText("你好").assertIsDisplayed()
         ui.onNodeWithText("Hello").assertIsDisplayed()
-        ui.onNodeWithText("重译").assertIsDisplayed()
     }
 
     @Test fun failedRequestShowsErrorBesideControlsAndAllowsRetry() {
@@ -66,10 +67,14 @@ class LyricsTranslationDeviceTest {
         show()
         ui.onNodeWithText("翻译为中文").performClick()
         ui.onNodeWithTag("lyrics-translation-error").assertIsDisplayed().assertTextContains("请先配置音乐助手模型与 API Key", substring = true)
+        ui.onNodeWithText("关闭").performClick()
         ui.onNodeWithText("Hello").assertIsDisplayed()
+        ui.onNodeWithTag("lyric-tools").performClick()
         ui.runOnIdle { fail = false }
         ui.onNodeWithText("翻译为中文").assertIsEnabled().performClick()
-        ui.onNodeWithText("你好").assertIsDisplayed()
+        ui.onNodeWithText("重译").assertIsDisplayed()
         ui.onNodeWithTag("lyrics-translation-error").assertDoesNotExist()
+        ui.onNodeWithText("关闭").performClick()
+        ui.onNodeWithText("你好").assertIsDisplayed()
     }
 }

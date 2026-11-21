@@ -102,4 +102,64 @@ class MetadataEnricherTest {
         assertTrue(missingAlbum.isMissingAlbum)
         assertTrue(missingAlbum.isMissingAnyMetadata)
     }
+
+    @Test
+    fun parsesQqCatalogAndTreatsUnreadableMediaStoreCoverAsMissing() = runBlocking {
+        val root = Files.createTempDirectory("resonance-enrich-qq-")
+        try {
+            var checkedCover = false
+            val enricher = MetadataEnricher(
+                artworkDirectory = root.resolve("art"),
+                lyricsRepository = LrclibLyricsRepository(root.resolve("lyrics")),
+                hasReadableCover = { track ->
+                    checkedCover = true
+                    track.artworkPath?.startsWith("content://media/external/audio/albumart/") != true
+                },
+            )
+            val qqJson = """
+                {
+                  "code": 0,
+                  "data": {
+                    "song": {
+                      "list": [
+                        {
+                          "songname": "晴天",
+                          "albumname": "叶惠美",
+                          "albummid": "000MkMni19ClKG",
+                          "singer": [{"name": "周杰伦"}]
+                        }
+                      ]
+                    }
+                  }
+                }
+            """.trimIndent()
+            val parsed = enricher.parseQqSearch(qqJson, "晴天", "周杰伦", "叶惠美")
+            assertEquals("叶惠美", parsed?.album)
+            assertEquals("周杰伦", parsed?.artist)
+            assertEquals("https://y.gtimg.cn/music/photo_new/T002R800x800M000000MkMni19ClKG.jpg", parsed?.artworkUrl)
+
+            val mediaStoreTrack = Track(
+                id = "ms-1",
+                title = "不存在的冷门测试曲xyz987654",
+                artist = "测试歌手xyz",
+                album = "测试专辑xyz",
+                durationText = "3:00",
+                artworkSeed = 1,
+                artworkPath = "content://media/external/audio/albumart/999999",
+            )
+            var lastStatus = ""
+            val report = enricher.batchEnrich(
+                options = BatchEnrichOptions(enrichCover = true, enrichLyrics = false, enrichArtistAndAlbum = false, useAiFallback = false, forceRefresh = false),
+                tracks = listOf(mediaStoreTrack),
+                config = DeepSeekConfig(),
+                onProgress = { lastStatus = it.statusText },
+            )
+            assertTrue(checkedCover, "hasReadableCover probe must run for tracks with non-blank artworkPath")
+            assertEquals(0, report.coversEnriched)
+            assertTrue(report.message.contains("未匹配到新的"), "Must honestly report zero updates instead of false success: ${report.message}")
+            assertTrue(lastStatus != "元数据完整，跳过", "Unreadable MediaStore albumart must not be skipped as complete")
+        } finally {
+            Files.walk(root).use { it.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
+        }
+    }
 }

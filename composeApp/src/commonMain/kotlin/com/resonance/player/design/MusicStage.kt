@@ -45,4 +45,4 @@ fun MusicStageBackdrop(seed: Int, playing: Boolean, modifier: Modifier = Modifie
 fun Modifier.musicSleevePerspective(): Modifier = this
 
 @Composable
-fun Modifier.musicDock() = resonanceGlass(shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp), shadowElevation = 8.dp)
+fun Modifier.musicDock() = atelierCard(shape = ResonanceShapes.Card)

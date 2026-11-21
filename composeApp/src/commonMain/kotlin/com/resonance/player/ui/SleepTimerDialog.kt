@@ -44,15 +44,14 @@ fun SleepTimerDialog(
     onSelectOption: (SleepTimerOption) -> Unit,
 ) {
     Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.runtime.CompositionLocalProvider(com.resonance.player.design.LocalGlassState provides null) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
-                .resonanceGlass(
-                    shape = RoundedCornerShape(22.dp),
-                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                    shadowElevation = 16.dp,
-                ),
+                // Native dialog uses its own window; keep surface static instead of cross-window Haze.
+                .background(ResonanceColors.CanvasElevated, RoundedCornerShape(22.dp))
+                .border(1.dp, ResonanceColors.Divider, RoundedCornerShape(22.dp)),
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(22.dp),
@@ -141,6 +140,7 @@ fun SleepTimerDialog(
                     }
                 }
             }
+        }
         }
     }
 }

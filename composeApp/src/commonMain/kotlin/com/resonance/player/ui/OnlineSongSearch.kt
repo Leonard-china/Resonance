@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.*
 
 @Composable
@@ -48,7 +50,7 @@ internal fun OnlineSongSearch(query: String, modifier: Modifier = Modifier) {
             }
             items(shown, key = { it.sourceId + ":" + it.id }) { song ->
                 val key = song.sourceId + ":" + song.id
-                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
+                Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(song.title, style = MaterialTheme.typography.titleMedium)
                         Text(song.artist + " · " + song.album.ifBlank { "专辑未提供" })

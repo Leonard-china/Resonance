@@ -53,7 +53,7 @@ internal class ManagedMusicStorage(
             group.size > 1 && group.any { it.track.id == entry.track.id }
         }?.map { it.track.id }?.filterNot { it == entry.track.id }.orEmpty()) }
         val counted = decorated.distinctBy { owners.optJSONObject(it.track.id)?.optString("path") }
-        val free = runCatching { Files.createDirectories(directory); Files.getFileStore(directory).usableSpace }.getOrDefault(0)
+        val free = runCatching { Files.createDirectories(directory); com.resonance.player.io.usableSpaceBytes(directory) }.getOrDefault(0L)
         return MusicStorageReport(decorated, counted.sumOf { it.bytes }, counted.filterNot { it.saved }.sumOf { it.bytes },
             counted.filter { it.saved }.sumOf { it.bytes }, free)
     }

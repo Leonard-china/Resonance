@@ -1,6 +1,7 @@
 package com.resonance.player.design
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,22 +28,52 @@ import androidx.compose.ui.unit.dp
 fun GlassSegmentedControl(labels: List<String>, selectedIndex: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier,
     tabModifier: @Composable (Int) -> Modifier = { Modifier }) {
     if (labels.isEmpty()) return
-    BoxWithConstraints(modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(16.dp))
-        .background(ResonanceColors.Soft.copy(alpha = .62f)).padding(4.dp).selectableGroup()) {
+    val outerShape = RoundedCornerShape(14.dp)
+    val innerShape = RoundedCornerShape(10.dp)
+    val shadowTint = ResonanceColors.Shadow.copy(alpha = if (ResonanceColors.isDark) 0.32f else 0.08f)
+    BoxWithConstraints(
+        modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clip(outerShape)
+            .background(ResonanceColors.Soft)
+            .border(1.dp, ResonanceColors.Divider.copy(alpha = if (ResonanceColors.isDark) 0.65f else 0.85f), outerShape)
+            .padding(4.dp)
+            .selectableGroup()
+    ) {
         val cell = maxWidth / labels.size
-        val position = animateDpAsState(cell * selectedIndex.coerceIn(labels.indices),
-            tween(if (LocalInputModeManager.current.inputMode == InputMode.Keyboard) 0 else motionDuration(180),
-                easing = ResonanceMotionTokens.ExitEasing), label = "segmentSelection")
-        Box(Modifier.offset { IntOffset(position.value.roundToPx(), 0) }.width(cell).fillMaxHeight()
-            .shadow(2.dp, RoundedCornerShape(12.dp)).background(ResonanceColors.GlassUltra, RoundedCornerShape(12.dp))
-            .border(1.dp, ResonanceColors.GlassBorder, RoundedCornerShape(12.dp)))
+        val instant = LocalInputModeManager.current.inputMode == InputMode.Keyboard || LocalReducedMotion.current
+        val position = animateDpAsState(
+            cell * selectedIndex.coerceIn(labels.indices),
+            if (instant) tween(0) else spring(dampingRatio = 0.82f, stiffness = 420f),
+            label = "segmentSelection",
+        )
+        Box(
+            Modifier
+                .offset { IntOffset(position.value.roundToPx(), 0) }
+                .width(cell)
+                .fillMaxHeight()
+                .shadow(if (ResonanceColors.isDark) 2.dp else 1.5.dp, innerShape, spotColor = shadowTint, ambientColor = shadowTint)
+                .background(ResonanceColors.Raised, innerShape)
+                .border(1.dp, if (ResonanceColors.isDark) ResonanceColors.GlassBorderSubtle else ResonanceColors.Divider.copy(alpha = 0.55f), innerShape)
+        )
         Row(Modifier.fillMaxSize()) {
             labels.forEachIndexed { index, label ->
-                Box(Modifier.weight(1f).fillMaxHeight().then(tabModifier(index)).selectable(index == selectedIndex, role = Role.Tab,
-                    onClick = { onSelect(index) }), contentAlignment = Alignment.Center) {
-                    Text(label, style = MaterialTheme.typography.labelLarge,
-                        fontWeight = if (index == selectedIndex) FontWeight.SemiBold else FontWeight.Medium,
-                        color = if (index == selectedIndex) ResonanceColors.Primary else ResonanceColors.Muted)
+                val selected = index == selectedIndex
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .then(tabModifier(index))
+                        .selectable(selected, role = Role.Tab, onClick = { onSelect(index) }),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (selected) ResonanceColors.Primary else ResonanceColors.Muted,
+                    )
                 }
             }
         }

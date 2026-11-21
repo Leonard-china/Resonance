@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.*
 import com.resonance.player.platform.ResonanceBackHandler
 
@@ -56,11 +58,13 @@ fun SmartManagerScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Transparent)
+            .background(androidx.compose.ui.graphics.Color.Transparent),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Top Bar
         Row(
             Modifier
+                .widthIn(max = 1100.dp)
                 .fillMaxWidth()
                 .padding(horizontal = pagePadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -71,23 +75,22 @@ fun SmartManagerScreen(
             Spacer(Modifier.width(8.dp))
             Text(
                 "曲库智能管家",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = ResonanceColors.TextPrimary,
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
             FilledTonalButton(
                 onClick = ::runAudit,
-                shape = RoundedCornerShape(12.dp),
+                shape = ResonanceShapes.Button,
                 colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = ResonanceColors.Raised,
+                    containerColor = ResonanceColors.PrimarySoft,
                     contentColor = ResonanceColors.Primary,
                 ),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
             ) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("重新体检", fontSize = 13.sp)
+                Text("重新体检", style = MaterialTheme.typography.labelMedium)
             }
         }
 
@@ -100,17 +103,17 @@ fun SmartManagerScreen(
         }
 
         // Summary Card
-        Card(
+        Box(
             modifier = Modifier
+                .widthIn(max = 1100.dp)
                 .fillMaxWidth()
-                .padding(horizontal = pagePadding, vertical = 8.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
+                .padding(horizontal = pagePadding, vertical = 8.dp)
+                .atelierCard(shape = ResonanceShapes.Card),
         ) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(18.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
             ) {
                 SummaryStat("已体检曲目", "${currentReport.totalScanned}")
@@ -122,6 +125,7 @@ fun SmartManagerScreen(
         // Tabs
         PrimaryTabRow(
             selectedTabIndex = selectedTab,
+            modifier = Modifier.widthIn(max = 1100.dp).fillMaxWidth().padding(horizontal = pagePadding),
             containerColor = androidx.compose.ui.graphics.Color.Transparent,
             contentColor = ResonanceColors.Primary,
             divider = { HorizontalDivider(color = ResonanceColors.Divider) },
@@ -145,7 +149,7 @@ fun SmartManagerScreen(
                     onApplyTagClean(draftsToApply)
                     runAudit()
                 },
-                modifier = Modifier.weight(1f).padding(horizontal = pagePadding),
+                modifier = Modifier.weight(1f).widthIn(max = 1100.dp).fillMaxWidth().padding(horizontal = pagePadding),
             )
         } else {
             DuplicateCleaningView(
@@ -154,7 +158,7 @@ fun SmartManagerScreen(
                     onCleanDuplicates(tracksToClean)
                     runAudit()
                 },
-                modifier = Modifier.weight(1f).padding(horizontal = pagePadding),
+                modifier = Modifier.weight(1f).widthIn(max = 1100.dp).fillMaxWidth().padding(horizontal = pagePadding),
             )
         }
     }
@@ -207,10 +211,10 @@ private fun TagCleaningView(
         ) {
             items(drafts, key = { it.trackId }) { draft ->
                 val checked = selectionMap[draft.trackId] ?: false
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .atelierCard(shape = ResonanceShapes.Button),
                 ) {
                     Row(
                         Modifier.padding(12.dp),
@@ -226,14 +230,14 @@ private fun TagCleaningView(
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(draft.suggestedTitle, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                                Text(draft.suggestedTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
                                 Spacer(Modifier.width(8.dp))
-                                Text(draft.reason, fontSize = 10.sp, color = ResonanceColors.Primary, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(ResonanceColors.Primary.copy(alpha = 0.15f)).padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text(draft.reason, style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Primary, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(ResonanceColors.PrimarySoft).padding(horizontal = 6.dp, vertical = 2.dp))
                             }
                             Spacer(Modifier.height(4.dp))
-                            Text("歌手：${draft.suggestedArtist} · 专辑：${draft.suggestedAlbum}", fontSize = 12.sp, color = ResonanceColors.Muted)
+                            Text("歌手：${draft.suggestedArtist} · 专辑：${draft.suggestedAlbum}", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
                             Spacer(Modifier.height(4.dp))
-                            Text("原标题：${draft.originalTitle} (${draft.originalArtist})", fontSize = 11.sp, color = ResonanceColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("原标题：${draft.originalTitle} (${draft.originalArtist})", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }
@@ -248,10 +252,10 @@ private fun TagCleaningView(
             },
             enabled = selectedCount > 0,
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = ResonanceShapes.Button,
             colors = ButtonDefaults.buttonColors(
                 containerColor = ResonanceColors.Primary,
-                contentColor = ResonanceColors.Canvas,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
             ),
         ) {
             Icon(Icons.Default.CleaningServices, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -295,14 +299,14 @@ private fun DuplicateCleaningView(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             items(groups, key = { it.key }) { group ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .atelierCard(shape = ResonanceShapes.Card),
                 ) {
                     Column(Modifier.padding(14.dp)) {
                         val first = group.tracks.first()
-                        Text("${first.title} - ${first.artist}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                        Text("${first.title} - ${first.artist}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
                         Spacer(Modifier.height(8.dp))
 
                         for (track in group.tracks) {
@@ -326,16 +330,16 @@ private fun DuplicateCleaningView(
                                 Spacer(Modifier.width(8.dp))
                                 Column(Modifier.weight(1f)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(track.durationText, fontSize = 12.sp, color = ResonanceColors.TextPrimary)
+                                        Text(track.durationText, style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"), color = ResonanceColors.TextPrimary)
                                         Spacer(Modifier.width(8.dp))
-                                        Text(track.mimeType.substringAfter("/").uppercase(), fontSize = 10.sp, color = ResonanceColors.Dim, modifier = Modifier.clip(RoundedCornerShape(3.dp)).background(ResonanceColors.Divider).padding(horizontal = 4.dp, vertical = 1.dp))
+                                        Text(track.mimeType.substringAfter("/").uppercase(), style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(ResonanceColors.Soft).padding(horizontal = 5.dp, vertical = 1.dp))
                                         if (isRecommendedKeep) {
                                             Spacer(Modifier.width(6.dp))
-                                            Text("推荐保留", fontSize = 10.sp, color = ResonanceColors.Positive, fontWeight = FontWeight.Bold)
+                                            Text("推荐保留", style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Positive, fontWeight = FontWeight.Bold)
                                         }
                                     }
                                     if (!track.sourceUri.isNullOrBlank()) {
-                                        Text(track.sourceUri.substringAfterLast("/"), fontSize = 10.sp, color = ResonanceColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(track.sourceUri.substringAfterLast("/"), style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
                             }
@@ -352,10 +356,10 @@ private fun DuplicateCleaningView(
             onClick = { onClean(toCleanTracks) },
             enabled = toCleanTracks.isNotEmpty(),
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = ResonanceShapes.Button,
             colors = ButtonDefaults.buttonColors(
-                containerColor = ResonanceColors.Notice,
-                contentColor = ResonanceColors.Canvas,
+                containerColor = ResonanceColors.Danger,
+                contentColor = if (ResonanceColors.isDark) androidx.compose.ui.graphics.Color(0xFF141315) else androidx.compose.ui.graphics.Color.White,
             ),
         ) {
             Icon(Icons.Default.DeleteSweep, contentDescription = null, modifier = Modifier.size(18.dp))

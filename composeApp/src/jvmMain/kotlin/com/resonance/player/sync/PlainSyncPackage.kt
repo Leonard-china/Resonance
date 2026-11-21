@@ -1,6 +1,7 @@
 package com.resonance.player.sync
 
 import com.resonance.player.io.readUpTo
+import com.resonance.player.io.usableSpaceBytes
 import com.resonance.player.model.Playlist
 import com.resonance.player.model.Track
 import java.io.InputStream
@@ -16,12 +17,15 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
 /**
- * 明文 Zip 歌单文件：直接把 manifest.properties、audio 目录下的 MP3、art 目录下的封面
- * 写入标准 Zip，不做口令加密。本地 MP3 没有保密需求，省去输入密码的步骤。
+ * 明文 Zip 歌单文件：直接把 manifest.properties、audio 目录下的音频、art 目录下的封面
+ * 写入标准 Zip，不做口令加密。本地音频没有保密需求，省去输入密码的步骤。
  * 仍然保留 SHA-256 完整性校验与路径白名单，防止损坏或恶意压缩包。
  */
-class PlainSyncPackage {
+class PlainSyncPackage(
+    private val usableSpaceProvider: (Path) -> Long = ::usableSpaceBytes,
+) {
     data class Imported(val tracks: List<Track>, val playlists: List<Playlist>)
+    data class Exported(val tracks: List<Track>, val playlists: List<Playlist>, val skippedTrackCount: Int = 0)
 
     fun export(
         target: Path,
@@ -29,17 +33,18 @@ class PlainSyncPackage {
         playlists: List<Playlist>,
         openAudio: (Track) -> InputStream?,
         openArtwork: (Track) -> InputStream?,
-    ) {
+    ): Exported {
         target.parent?.let(Files::createDirectories)
         val temporary = target.resolveSibling(".${target.fileName}.part")
         Files.deleteIfExists(temporary)
         try {
-            Files.newOutputStream(temporary).buffered().use { output ->
+            val exported = Files.newOutputStream(temporary).buffered().use { output ->
                 ZipOutputStream(output).use { zip ->
                     writeArchive(zip, tracks, playlists, openAudio, openArtwork)
                 }
             }
             moveIntoPlace(temporary, target)
+            return exported
         } catch (error: Throwable) {
             Files.deleteIfExists(temporary)
             throw error
@@ -48,7 +53,10 @@ class PlainSyncPackage {
 
     fun import(source: Path, managedDirectory: Path): Imported = import(source, managedDirectory, onCommit = {})
 
-    fun import(source: Path, managedDirectory: Path, onCommit: (Imported) -> Unit,
+    fun import(
+        source: Path,
+        managedDirectory: Path,
+        onCommit: (Imported) -> Unit,
         checkCancelled: () -> Unit = {},
     ): Imported {
         checkCancelled()
@@ -84,7 +92,8 @@ class PlainSyncPackage {
                 require(!Files.isSymbolicLink(target)) { "歌单文件目标不能是符号链接" }
             }
             val backupBytes = targets.filter(Files::isRegularFile).sumOf(Files::size)
-            require(Files.getFileStore(managed).usableSpace >= backupBytes + MIN_FREE_BYTES) { "空间不足，无法保留导入回退副本" }
+            val freeSpace = usableSpaceProvider(managed)
+            require(freeSpace >= backupBytes + MIN_FREE_BYTES) { "空间不足，无法保留导入回退副本" }
             checkCancelled()
             return com.resonance.player.io.FileRollback.run(targets) {
                 commitTracks(pendingTracks, checkCancelled)
@@ -103,20 +112,33 @@ class PlainSyncPackage {
         playlists: List<Playlist>,
         openAudio: (Track) -> InputStream?,
         openArtwork: (Track) -> InputStream?,
-    ) {
+    ): Exported {
+        val uniqueTracks = tracks.distinctBy(Track::id)
         val exportedTracks = mutableListOf<Track>()
         val audioHashes = mutableMapOf<String, String>()
         val artworkEntries = mutableSetOf<String>()
-        tracks.distinctBy(Track::id).forEach { track ->
-            val audio = openAudio(track) ?: return@forEach
+        var skipped = 0
+        uniqueTracks.forEach { track ->
+            val audio = runCatching { openAudio(track) }.getOrNull()
+            if (audio == null) {
+                skipped++
+                return@forEach
+            }
             val audioEntry = "audio/${safeId(track.id)}.${audioExtension(track)}"
             zip.putNextEntry(ZipEntry(audioEntry))
             audio.use { audioHashes[track.id] = copyAndDigest(it, zip) }
             zip.closeEntry()
-            openArtwork(track)?.use { artwork ->
+            // Buffer artwork safely before writing entry so broken cover streams never abort audio export.
+            val artworkBytes = runCatching {
+                openArtwork(track)?.use { stream ->
+                    val bytes = stream.readUpTo(MAX_ARTWORK_BYTES + 1)
+                    bytes.takeIf { it.isNotEmpty() && it.size <= MAX_ARTWORK_BYTES }
+                }
+            }.getOrNull()
+            if (artworkBytes != null) {
                 val artworkEntry = "art/${safeId(track.id)}.cover"
                 zip.putNextEntry(ZipEntry(artworkEntry))
-                artwork.copyTo(zip)
+                zip.write(artworkBytes)
                 zip.closeEntry()
                 artworkEntries += track.id
             }
@@ -131,6 +153,7 @@ class PlainSyncPackage {
         zip.putNextEntry(ZipEntry(MANIFEST_ENTRY))
         manifest.store(zip, "Resonance sync package")
         zip.closeEntry()
+        return Exported(exportedTracks, exportedPlaylists, skipped)
     }
 
     private fun createManifest(
@@ -265,15 +288,16 @@ class PlainSyncPackage {
             var entries = 0
             val seen = hashSetOf<Path>()
             var totalWritten = 0L
-            val byteBudget = minOf(MAX_ARCHIVE_BYTES, (Files.getFileStore(staging).usableSpace - MIN_FREE_BYTES).coerceAtLeast(0))
+            val byteBudget = minOf(MAX_ARCHIVE_BYTES, (usableSpaceProvider(staging) - MIN_FREE_BYTES).coerceAtLeast(0))
             while (true) {
                 checkCancelled()
                 val entry = zip.nextEntry ?: break
                 require(++entries <= MAX_ARCHIVE_ENTRIES) { "歌单文件条目数量过多" }
-                require(entry.name == MANIFEST_ENTRY || entry.name.startsWith("audio/") || entry.name.startsWith("art/")) {
+                val normalizedName = entry.name.replace('\\', '/').removePrefix("./")
+                require(normalizedName == MANIFEST_ENTRY || normalizedName.startsWith("audio/") || normalizedName.startsWith("art/")) {
                     "歌单文件包含不允许的条目"
                 }
-                val target = safeResolve(staging, entry.name)
+                val target = safeResolve(staging, normalizedName)
                 require(seen.add(target)) { "歌单文件包含重复条目" }
                 if (entry.isDirectory) { zip.closeEntry(); continue }
                 require(entry.size <= byteBudget || entry.size < 0) { "可用空间不足以解压歌单文件" }
@@ -289,9 +313,10 @@ class PlainSyncPackage {
                         totalWritten += read
                         require(written <= MAX_ENTRY_BYTES) { "歌单文件中的单个文件过大" }
                         require(totalWritten <= byteBudget) { "歌单文件解压后过大或可用空间不足" }
-                        if (entry.name == MANIFEST_ENTRY) require(written <= MAX_MANIFEST_BYTES) { "歌单清单过大" }
-                        if (written % (4 * 1024 * 1024) < buffer.size)
-                            require(Files.getFileStore(staging).usableSpace >= MIN_FREE_BYTES + read) { "可用空间不足" }
+                        if (normalizedName == MANIFEST_ENTRY) require(written <= MAX_MANIFEST_BYTES) { "歌单清单过大" }
+                        if (written % (4 * 1024 * 1024) < buffer.size) {
+                            require(usableSpaceProvider(staging) >= MIN_FREE_BYTES + read) { "可用空间不足" }
+                        }
                         output.write(buffer, 0, read)
                     }
                 }
@@ -333,16 +358,22 @@ class PlainSyncPackage {
     }
 
     private fun safeId(id: String): String = MessageDigest.getInstance("SHA-256")
-            .digest(id.toByteArray(StandardCharsets.UTF_8)).take(12).toByteArray().hex()
+        .digest(id.toByteArray(StandardCharsets.UTF_8)).take(12).toByteArray().hex()
 
     private fun audioExtension(track: Track): String {
-        val extension = track.sourceUri.orEmpty().substringBefore('?').substringAfterLast('.', "").lowercase()
+        val extension = track.sourceUri.orEmpty()
+            .substringBefore('?')
+            .substringBefore('#')
+            .substringAfterLast('.', "")
+            .lowercase()
         if (extension in AUDIO_EXTENSIONS) return extension
-        return when (track.mimeType) {
+        return when (track.mimeType.lowercase()) {
             "audio/flac", "audio/x-flac" -> "flac"
-            "audio/mp4", "audio/aac" -> "m4a"
-            "audio/wav", "audio/x-wav" -> "wav"
-            "audio/ogg", "audio/opus" -> "ogg"
+            "audio/mp4", "audio/aac", "audio/x-m4a", "audio/mp4a-latm" -> "m4a"
+            "audio/wav", "audio/x-wav", "audio/vnd.wave" -> "wav"
+            "audio/ogg", "audio/opus", "application/ogg" -> "ogg"
+            "audio/x-ms-wma" -> "wma"
+            "audio/ape", "audio/x-ape" -> "ape"
             else -> "mp3"
         }
     }
@@ -365,6 +396,7 @@ class PlainSyncPackage {
         val AUDIO_EXTENSIONS = setOf("mp3", "flac", "m4a", "aac", "ogg", "opus", "wav", "wma", "ape")
         val ENCRYPTED_MAGIC = "RESONPKG".toByteArray(StandardCharsets.US_ASCII)
         const val MANIFEST_ENTRY = "manifest.properties"
+        const val MAX_ARTWORK_BYTES = 16 * 1024 * 1024
         const val MAX_ITEMS = 100_000
         const val MAX_REFERENCES = 1_000_000L
         const val MAX_MANIFEST_BYTES = 16L * 1024 * 1024

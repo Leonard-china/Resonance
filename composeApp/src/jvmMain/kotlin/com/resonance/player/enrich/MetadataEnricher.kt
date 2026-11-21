@@ -3,17 +3,15 @@ package com.resonance.player.enrich
 import com.resonance.player.ai.DeepSeekClient
 import com.resonance.player.io.readUpTo
 import com.resonance.player.lyrics.LrclibLyricsRepository
-import com.resonance.player.model.AiEnrichResult
 import com.resonance.player.model.BatchEnrichOptions
 import com.resonance.player.model.BatchEnrichProgress
 import com.resonance.player.model.BatchEnrichReport
 import com.resonance.player.model.DeepSeekConfig
 import com.resonance.player.model.LyricsFetchResult
 import com.resonance.player.model.Track
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
@@ -27,6 +25,12 @@ class MetadataEnricher(
     private val artworkDirectory: Path,
     private val lyricsRepository: LrclibLyricsRepository,
     private val deepSeekClient: DeepSeekClient = DeepSeekClient(),
+    /**
+     * Platform-aware cover readability check. On Android, MediaStore assigns a non-blank
+     * `content://media/external/audio/albumart/<id>` URI even when no cover image actually
+     * exists, so callers can probe readability rather than trusting non-blank strings alone.
+     */
+    private val hasReadableCover: (Track) -> Boolean = { !it.isMissingCover },
 ) {
 
     data class OnlineSearchResult(
@@ -41,6 +45,9 @@ class MetadataEnricher(
         val track: Track,
         val modified: Boolean,
         val aiCalled: Boolean = false,
+        val coverUpdated: Boolean = false,
+        val metadataUpdated: Boolean = false,
+        val lyricsUpdated: Boolean = false,
     )
 
     suspend fun enrichTrack(
@@ -51,10 +58,13 @@ class MetadataEnricher(
         onStatus: (String) -> Unit = {},
     ): SingleEnrichResult = withContext(Dispatchers.IO) {
         var currentTrack = track
-        var modified = false
+        var coverUpdated = false
+        var metadataUpdated = false
+        var lyricsUpdated = false
         var aiCalled = false
 
-        val needCover = options.enrichCover && (options.forceRefresh || currentTrack.isMissingCover)
+        val coverMissing = currentTrack.isMissingCover || !hasReadableCover(currentTrack)
+        val needCover = options.enrichCover && (options.forceRefresh || coverMissing)
         val needArtistOrAlbum = options.enrichArtistAndAlbum && (options.forceRefresh || currentTrack.isMissingArtist || currentTrack.isMissingAlbum)
         val needLyrics = options.enrichLyrics
 
@@ -64,14 +74,13 @@ class MetadataEnricher(
             return@withContext SingleEnrichResult(currentTrack, false, false)
         }
 
-        // 1. 尝试免费公开接口检索（iTunes Search & 酷狗）
+        // 1. 尝试免费公开官方曲库（QQ 音乐目录优先，随后 iTunes Search 与酷狗，与单曲封面匹配一致）
         var onlineResult: OnlineSearchResult? = null
         if (needCover || needArtistOrAlbum) {
-            onStatus("正在免费检索 iTunes / 酷狗官方曲库…")
+            onStatus("正在免费检索 QQ / iTunes / 酷狗官方曲库…")
             val cleanTitle = cleanTrackTitle(currentTrack.title)
             val searchArtist = if (currentTrack.isMissingArtist) "" else currentTrack.artist
-            onlineResult = searchItunes(cleanTitle, searchArtist)
-                ?: searchKugou(cleanTitle, searchArtist)
+            onlineResult = searchPublicCatalog(cleanTitle, searchArtist, currentTrack.album)
         }
 
         // 2. 如果在线免费源检索到了更精准的歌手/专辑/封面
@@ -81,31 +90,34 @@ class MetadataEnricher(
             var updatedAlbum = currentTrack.album
 
             if (needArtistOrAlbum) {
-                if (!onlineResult.artist.isNullOrBlank() && (options.forceRefresh || currentTrack.isMissingArtist)) {
+                if (!onlineResult.artist.isNullOrBlank() && (options.forceRefresh || currentTrack.isMissingArtist) && onlineResult.artist != updatedArtist) {
                     updatedArtist = onlineResult.artist
-                    modified = true
+                    metadataUpdated = true
                 }
-                if (!onlineResult.album.isNullOrBlank() && (options.forceRefresh || currentTrack.isMissingAlbum)) {
+                if (!onlineResult.album.isNullOrBlank() && (options.forceRefresh || currentTrack.isMissingAlbum) && onlineResult.album != updatedAlbum) {
                     updatedAlbum = onlineResult.album
-                    modified = true
+                    metadataUpdated = true
                 }
-                if (!onlineResult.title.isNullOrBlank() && (currentTrack.title.contains(" - ") || currentTrack.title.startsWith("track", ignoreCase = true))) {
+                if (!onlineResult.title.isNullOrBlank() &&
+                    (currentTrack.title.contains(" - ") || currentTrack.title.startsWith("track", ignoreCase = true)) &&
+                    onlineResult.title != updatedTitle
+                ) {
                     updatedTitle = onlineResult.title
-                    modified = true
+                    metadataUpdated = true
                 }
             }
 
             var updatedArtworkPath = currentTrack.artworkPath
             if (needCover && !onlineResult.artworkUrl.isNullOrBlank()) {
-                onStatus("正在下载高分辨率专辑封面…")
+                onStatus("正在下载高分辨率专辑封面（${onlineResult.source}）…")
                 val localCover = downloadAndSaveArtwork(currentTrack.id, onlineResult.artworkUrl)
                 if (localCover != null) {
                     updatedArtworkPath = localCover
-                    modified = true
+                    coverUpdated = true
                 }
             }
 
-            if (modified) {
+            if (coverUpdated || metadataUpdated) {
                 currentTrack = currentTrack.copy(
                     title = updatedTitle,
                     artist = updatedArtist,
@@ -116,12 +128,12 @@ class MetadataEnricher(
         }
 
         // 3. 歌词处理（先走本地与 LRCLIB，免 Token）
-        var lyricsFound = false
+        var lyricsAvailable = false
         if (needLyrics) {
             onStatus("正在匹配本地与 LRCLIB 歌词…")
             val existingLyrics = if (!options.forceRefresh) lyricsRepository.readCache(currentTrack) else null
             if (existingLyrics is LyricsFetchResult.Found) {
-                lyricsFound = true
+                lyricsAvailable = true
             } else {
                 val fetched = lyricsRepository.fetch(
                     track = currentTrack,
@@ -130,16 +142,17 @@ class MetadataEnricher(
                     aiFallback = null, // 先不调用 AI，保持免费
                 )
                 if (fetched is LyricsFetchResult.Found) {
-                    lyricsFound = true
+                    lyricsAvailable = true
+                    lyricsUpdated = true
                 }
             }
         }
 
         // 4. AI 兜底（仅在用户开启且有未解决项时调用，节省 Token！）
-        val stillNeedsCover = needCover && currentTrack.isMissingCover
+        val stillNeedsCover = needCover && !coverUpdated
         val stillNeedsArtist = needArtistOrAlbum && currentTrack.isMissingArtist
         val stillNeedsAlbum = needArtistOrAlbum && currentTrack.isMissingAlbum
-        val stillNeedsLyrics = needLyrics && !lyricsFound
+        val stillNeedsLyrics = needLyrics && !lyricsAvailable
 
         if (options.useAiFallback && config.isConfigured && config.enabled && (stillNeedsCover || stillNeedsArtist || stillNeedsAlbum || stillNeedsLyrics)) {
             onStatus("免费源未命中，正在调用 AI 智能推断…")
@@ -152,17 +165,17 @@ class MetadataEnricher(
                 var updatedAlbum = currentTrack.album
 
                 if (stillNeedsArtist || stillNeedsAlbum) {
-                    aiResult.artist?.takeIf { it.isNotBlank() && stillNeedsArtist }?.let {
+                    aiResult.artist?.takeIf { it.isNotBlank() && stillNeedsArtist && it != updatedArtist }?.let {
                         updatedArtist = it
-                        modified = true
+                        metadataUpdated = true
                     }
-                    aiResult.album?.takeIf(String::isNotBlank)?.let {
+                    aiResult.album?.takeIf { it.isNotBlank() && (stillNeedsAlbum || options.forceRefresh) && it != updatedAlbum }?.let {
                         updatedAlbum = it
-                        modified = true
+                        metadataUpdated = true
                     }
-                    aiResult.title?.takeIf { it.isNotBlank() && stillNeedsArtist }?.let {
+                    aiResult.title?.takeIf { it.isNotBlank() && stillNeedsArtist && it != updatedTitle }?.let {
                         updatedTitle = it
-                        modified = true
+                        metadataUpdated = true
                     }
                 }
 
@@ -174,13 +187,12 @@ class MetadataEnricher(
 
                 // 如果 AI 推断出了新的歌手/歌名，并且仍缺封面，用推断后的信息再在免费官方库搜一次封面
                 if (stillNeedsCover) {
-                    val secondaryOnline = searchItunes(updatedTitle, updatedArtist)
-                        ?: searchKugou(updatedTitle, updatedArtist)
+                    val secondaryOnline = searchPublicCatalog(cleanTrackTitle(updatedTitle), updatedArtist, updatedAlbum)
                     if (secondaryOnline?.artworkUrl != null) {
                         val localCover = downloadAndSaveArtwork(currentTrack.id, secondaryOnline.artworkUrl)
                         if (localCover != null) {
                             currentTrack = currentTrack.copy(artworkPath = localCover)
-                            modified = true
+                            coverUpdated = true
                         }
                     }
                 }
@@ -190,14 +202,23 @@ class MetadataEnricher(
                     val generated = deepSeekClient.parseGeneratedLyrics(currentTrack, aiResult.lyrics, config.model, aiResult.isInstrumental)
                     if (generated is LyricsFetchResult.Found) {
                         lyricsRepository.writeCache(currentTrack, generated)
-                        lyricsFound = true
+                        lyricsAvailable = true
+                        lyricsUpdated = true
                     }
                 }
             }
         }
 
-        onStatus("处理完成")
-        SingleEnrichResult(currentTrack, modified || lyricsFound || aiCalled, aiCalled)
+        val anyUpdated = coverUpdated || metadataUpdated || lyricsUpdated
+        onStatus(if (anyUpdated) "补全成功" else "未匹配到可更新内容")
+        SingleEnrichResult(
+            track = currentTrack,
+            modified = anyUpdated,
+            aiCalled = aiCalled,
+            coverUpdated = coverUpdated,
+            metadataUpdated = metadataUpdated,
+            lyricsUpdated = lyricsUpdated,
+        )
     }
 
     suspend fun batchEnrich(
@@ -216,9 +237,6 @@ class MetadataEnricher(
 
         tracks.forEachIndexed { index, track ->
             kotlinx.coroutines.currentCoroutineContext().ensureActive()
-            val hadCover = !track.isMissingCover
-            val hadArtist = !track.isMissingArtist
-            val hadAlbum = !track.isMissingAlbum
 
             onProgress(
                 BatchEnrichProgress(
@@ -247,21 +265,25 @@ class MetadataEnricher(
             )
             val enrichedTrack = enrichResult.track
             if (enrichResult.aiCalled) aiCallsCount++
-
-            if (!hadCover && !enrichedTrack.isMissingCover) coversEnriched++
-            if (!hadArtist && !enrichedTrack.isMissingArtist || (!hadAlbum && !enrichedTrack.isMissingAlbum)) metadataEnriched++
-            if (options.enrichLyrics && lyricsRepository.readCache(enrichedTrack) is LyricsFetchResult.Found) lyricsEnriched++
+            if (enrichResult.coverUpdated) coversEnriched++
+            if (enrichResult.metadataUpdated) metadataEnriched++
+            if (enrichResult.lyricsUpdated) lyricsEnriched++
 
             if (enrichedTrack != track) onTrackProcessed(enrichedTrack)
             updatedList.add(enrichedTrack)
         }
 
-        val message = buildString {
-            append("智能补全完成：处理 ${tracks.size} 首歌曲，")
-            if (coversEnriched > 0) append("补全 $coversEnriched 个封面，")
-            if (lyricsEnriched > 0) append("获取 $lyricsEnriched 份歌词，")
-            if (metadataEnriched > 0) append("修正 $metadataEnriched 条歌手/专辑，")
-            append("优先使用公共来源，AI 调用 $aiCallsCount 次。")
+        val totalUpdates = coversEnriched + lyricsEnriched + metadataEnriched
+        val message = if (totalUpdates == 0) {
+            "已检查 ${tracks.size} 首歌曲，未匹配到新的封面、歌词或标签更新。若原曲已带系统默认封面占位，可勾选「强制刷新已有信息」后重试。"
+        } else {
+            buildString {
+                append("补全完成：处理 ${tracks.size} 首歌曲，")
+                if (coversEnriched > 0) append("补全 $coversEnriched 个封面，")
+                if (lyricsEnriched > 0) append("获取 $lyricsEnriched 份歌词，")
+                if (metadataEnriched > 0) append("修正 $metadataEnriched 条歌手/专辑，")
+                append("优先使用公共来源，AI 调用 $aiCallsCount 次。")
+            }
         }
 
         BatchEnrichReport(
@@ -275,71 +297,135 @@ class MetadataEnricher(
         )
     }
 
+    private fun searchPublicCatalog(title: String, artist: String, album: String): OnlineSearchResult? {
+        return searchQq(title, artist, album)
+            ?: searchItunes(title, artist)
+            ?: searchKugou(title, artist)
+    }
+
+    internal fun searchQq(title: String, artist: String, album: String = ""): OnlineSearchResult? = runCatching {
+        val query = if (artist.isNotBlank() && artist != "未知歌手" && artist != "未知艺术家") "$title $artist" else title
+        val uri = URI("https://c.y.qq.com/soso/fcgi-bin/client_search_cp?w=${encode(query)}&format=json&p=1&n=10")
+        val conn = uri.toURL().openConnection() as HttpURLConnection
+        try {
+            conn.connectTimeout = 6_000
+            conn.readTimeout = 8_000
+            conn.instanceFollowRedirects = false
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", USER_AGENT)
+            conn.setRequestProperty("Referer", "https://y.qq.com/")
+            if (conn.responseCode != 200) return@runCatching null
+            val body = conn.inputStream.buffered().use { it.readUpTo(1_000_000).toString(StandardCharsets.UTF_8) }
+            parseQqSearch(body, title, artist, album)
+        } finally {
+            conn.disconnect()
+        }
+    }.getOrNull()
+
+    internal fun parseQqSearch(raw: String, title: String, artist: String, album: String = ""): OnlineSearchResult? {
+        val root = JSONObject(raw)
+        if (root.optInt("code", -1) != 0) return null
+        val list = root.optJSONObject("data")?.optJSONObject("song")?.optJSONArray("list") ?: return null
+        val wantedAlbum = normalize(album)
+        return (0 until list.length()).mapNotNull { i ->
+            val item = list.optJSONObject(i) ?: return@mapNotNull null
+            val songName = item.optString("songname").takeIf(String::isNotBlank) ?: return@mapNotNull null
+            val singers = item.optJSONArray("singer")
+            val singerName = if (singers != null) {
+                (0 until singers.length()).mapNotNull { singers.optJSONObject(it)?.optString("name")?.takeIf(String::isNotBlank) }
+                    .joinToString(" / ")
+            } else ""
+            if (!candidateMatches(title, artist, songName, singerName)) return@mapNotNull null
+            val mid = item.optString("albummid").takeIf { it.matches(Regex("[A-Za-z0-9]{10,32}")) }
+            val albumName = item.optString("albumname").takeIf(String::isNotBlank)
+            OnlineSearchResult(
+                title = songName,
+                artist = singerName.takeIf(String::isNotBlank),
+                album = albumName,
+                artworkUrl = mid?.let { "https://y.gtimg.cn/music/photo_new/T002R800x800M000$it.jpg" },
+                source = "QQ音乐",
+            )
+        }.maxByOrNull { candidate ->
+            var score = 0
+            if (candidate.artworkUrl != null) score += 2
+            if (wantedAlbum.isNotBlank() && normalize(candidate.album.orEmpty()) == wantedAlbum) score += 2
+            score
+        }
+    }
+
     internal fun searchItunes(title: String, artist: String): OnlineSearchResult? = runCatching {
-        val query = if (artist.isNotBlank() && artist != "未知歌手") "$title $artist" else title
+        val query = if (artist.isNotBlank() && artist != "未知歌手" && artist != "未知艺术家") "$title $artist" else title
         val uri = URI("https://itunes.apple.com/search?term=${encode(query)}&entity=song&limit=5")
         val conn = uri.toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 6_000
-        conn.readTimeout = 8_000
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("User-Agent", USER_AGENT)
-        val body = conn.inputStream.buffered().use { it.readUpTo(1_000_000).toString(StandardCharsets.UTF_8) }
-        val root = JSONObject(body)
-        val results = root.optJSONArray("results") ?: return@runCatching null
-        if (results.length() == 0) return@runCatching null
+        try {
+            conn.connectTimeout = 6_000
+            conn.readTimeout = 8_000
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", USER_AGENT)
+            val body = conn.inputStream.buffered().use { it.readUpTo(1_000_000).toString(StandardCharsets.UTF_8) }
+            val root = JSONObject(body)
+            val results = root.optJSONArray("results") ?: return@runCatching null
+            if (results.length() == 0) return@runCatching null
 
-        val best = (0 until results.length())
-            .mapNotNull(results::optJSONObject)
-            .firstOrNull { item ->
-                candidateMatches(title, artist, item.optString("trackName"), item.optString("artistName"))
-            } ?: return@runCatching null
+            val best = (0 until results.length())
+                .mapNotNull(results::optJSONObject)
+                .firstOrNull { item ->
+                    candidateMatches(title, artist, item.optString("trackName"), item.optString("artistName"))
+                } ?: return@runCatching null
 
-        val rawArtwork = best.optString("artworkUrl100").takeIf(String::isNotBlank)
-        val hdArtwork = rawArtwork?.replace("/100x100bb.jpg", "/600x600bb.jpg")
-            ?.replace("/100x100bb.png", "/600x600bb.png")
-            ?: rawArtwork
+            val rawArtwork = best.optString("artworkUrl100").takeIf(String::isNotBlank)
+            val hdArtwork = rawArtwork?.replace("/100x100bb.jpg", "/600x600bb.jpg")
+                ?.replace("/100x100bb.png", "/600x600bb.png")
+                ?: rawArtwork
 
-        OnlineSearchResult(
-            title = best.optString("trackName").takeIf(String::isNotBlank),
-            artist = best.optString("artistName").takeIf(String::isNotBlank),
-            album = best.optString("collectionName").takeIf(String::isNotBlank),
-            artworkUrl = hdArtwork,
-            source = "iTunes",
-        )
+            OnlineSearchResult(
+                title = best.optString("trackName").takeIf(String::isNotBlank),
+                artist = best.optString("artistName").takeIf(String::isNotBlank),
+                album = best.optString("collectionName").takeIf(String::isNotBlank),
+                artworkUrl = hdArtwork,
+                source = "iTunes",
+            )
+        } finally {
+            conn.disconnect()
+        }
     }.getOrNull()
 
     internal fun searchKugou(title: String, artist: String): OnlineSearchResult? = runCatching {
-        val query = if (artist.isNotBlank() && artist != "未知歌手") "$title $artist" else title
+        val query = if (artist.isNotBlank() && artist != "未知歌手" && artist != "未知艺术家") "$title $artist" else title
         val uri = URI("https://complexsearch.kugou.com/v2/search/song?keyword=${encode(query)}&page=1&pagesize=5&plat=0")
         val conn = uri.toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = 6_000
-        conn.readTimeout = 8_000
-        conn.requestMethod = "GET"
-        conn.setRequestProperty("User-Agent", USER_AGENT)
-        val body = conn.inputStream.buffered().use { it.readUpTo(1_000_000).toString(StandardCharsets.UTF_8) }
-        val root = JSONObject(body)
-        val data = root.optJSONObject("data") ?: return@runCatching null
-        val lists = data.optJSONArray("lists") ?: return@runCatching null
-        val item = (0 until lists.length()).mapNotNull(lists::optJSONObject).firstOrNull {
-            candidateMatches(title, artist, it.optString("SongName").replace(Regex("<[^>]*>"), ""), it.optString("SingerName").replace(Regex("<[^>]*>"), ""))
-        } ?: return@runCatching null
-        val songName = item.optString("SongName").takeIf(String::isNotBlank)
-            ?.replace(Regex("<em>|</em>"), "")
-        val singerName = item.optString("SingerName").takeIf(String::isNotBlank)
-            ?.replace(Regex("<em>|</em>"), "")
-        val albumName = item.optString("AlbumName").takeIf(String::isNotBlank)
-            ?.replace(Regex("<em>|</em>"), "")
-        val rawImage = item.optString("Image").takeIf(String::isNotBlank)
-            ?.replace("{size}", "400")
-            ?.replaceFirst("http://", "https://")
+        try {
+            conn.connectTimeout = 6_000
+            conn.readTimeout = 8_000
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", USER_AGENT)
+            val body = conn.inputStream.buffered().use { it.readUpTo(1_000_000).toString(StandardCharsets.UTF_8) }
+            val root = JSONObject(body)
+            val data = root.optJSONObject("data") ?: return@runCatching null
+            val lists = data.optJSONArray("lists") ?: return@runCatching null
+            val item = (0 until lists.length()).mapNotNull(lists::optJSONObject).firstOrNull {
+                candidateMatches(title, artist, it.optString("SongName").replace(Regex("<[^>]*>"), ""), it.optString("SingerName").replace(Regex("<[^>]*>"), ""))
+            } ?: return@runCatching null
+            val songName = item.optString("SongName").takeIf(String::isNotBlank)
+                ?.replace(Regex("<em>|</em>"), "")
+            val singerName = item.optString("SingerName").takeIf(String::isNotBlank)
+                ?.replace(Regex("<em>|</em>"), "")
+            val albumName = item.optString("AlbumName").takeIf(String::isNotBlank)
+                ?.replace(Regex("<em>|</em>"), "")
+            val rawImage = item.optString("Image").takeIf(String::isNotBlank)
+                ?.replace("{size}", "400")
+                ?.replaceFirst("http://", "https://")
 
-        OnlineSearchResult(
-            title = songName,
-            artist = singerName,
-            album = albumName,
-            artworkUrl = rawImage,
-            source = "Kugou",
-        )
+            OnlineSearchResult(
+                title = songName,
+                artist = singerName,
+                album = albumName,
+                artworkUrl = rawImage,
+                source = "酷狗音乐",
+            )
+        } finally {
+            conn.disconnect()
+        }
     }.getOrNull()
 
     internal fun downloadAndSaveArtwork(trackId: String, artworkUrl: String): String? = runCatching {
@@ -347,8 +433,9 @@ class MetadataEnricher(
             return artworkUrl
         }
         Files.createDirectories(artworkDirectory)
-        val target = artworkDirectory.resolve("$trackId.cover")
-        val temporary = target.resolveSibling("$trackId.cover.tmp")
+        val safeName = trackId.replace(Regex("[^A-Za-z0-9._-]"), "_").take(96).ifBlank { trackId.hashCode().toUInt().toString(16) }
+        val target = artworkDirectory.resolve("$safeName.cover")
+        val temporary = target.resolveSibling("$safeName.cover.tmp")
 
         val connection = URI(artworkUrl).toURL().openConnection() as HttpURLConnection
         connection.connectTimeout = 8_000
@@ -357,22 +444,32 @@ class MetadataEnricher(
         try {
             val bytes = connection.inputStream.use { it.readUpTo(10_000_001) }
             require(bytes.size <= 10_000_000) { "封面超过 10 MB" }
-            require(bytes.size >= 12 && (((bytes[0].toInt() and 0xff) == 0xff && (bytes[1].toInt() and 0xff) == 0xd8) ||
-                bytes.copyOfRange(1, 4).decodeToString() == "PNG" || bytes.copyOfRange(0, 4).decodeToString() == "GIF8" ||
-                bytes.copyOfRange(0, 4).decodeToString() == "RIFF" && bytes.copyOfRange(8, 12).decodeToString() == "WEBP")) { "返回内容不是有效封面" }
+            require(
+                bytes.size >= 12 && (
+                    ((bytes[0].toInt() and 0xff) == 0xff && (bytes[1].toInt() and 0xff) == 0xd8) ||
+                        bytes.copyOfRange(1, 4).decodeToString() == "PNG" ||
+                        bytes.copyOfRange(0, 4).decodeToString() == "GIF8" ||
+                        (bytes.copyOfRange(0, 4).decodeToString() == "RIFF" && bytes.copyOfRange(8, 12).decodeToString() == "WEBP")
+                    )
+            ) { "返回内容不是有效封面" }
             Files.write(temporary, bytes)
             Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING)
         } finally {
-            connection.disconnect(); Files.deleteIfExists(temporary)
+            connection.disconnect()
+            Files.deleteIfExists(temporary)
         }
         target.toAbsolutePath().normalize().toString()
     }.getOrNull()
 
     internal fun candidateMatches(title: String, artist: String, foundTitle: String, foundArtist: String): Boolean {
-        val wanted = normalize(cleanTrackTitle(title)); val found = normalize(foundTitle)
+        val wanted = normalize(cleanTrackTitle(title))
+        val found = normalize(foundTitle)
         if (wanted.isBlank() || found.isBlank() || !(wanted.contains(found) || found.contains(wanted))) return false
-        val expectedArtist = artist.trim().takeUnless { it.isBlank() || it.lowercase() in setOf("未知歌手", "未知艺术家", "未知", "unknown", "unknown artist") } ?: return true
-        val expected = normalize(expectedArtist); val actual = normalize(foundArtist)
+        val expectedArtist = artist.trim().takeUnless {
+            it.isBlank() || it.lowercase() in setOf("未知歌手", "未知艺术家", "未知", "unknown", "unknown artist")
+        } ?: return true
+        val expected = normalize(expectedArtist)
+        val actual = normalize(foundArtist)
         return actual.isNotBlank() && (actual.contains(expected) || expected.contains(actual))
     }
 

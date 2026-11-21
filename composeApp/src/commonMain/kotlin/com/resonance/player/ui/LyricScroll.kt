@@ -45,7 +45,7 @@ internal suspend fun LazyListState.centerLyric(index: Int, animate: Boolean) {
     val delta = row.offset - lyricCenterOffset(row.size, info.viewportStartOffset, info.viewportEndOffset)
     if (abs(delta) <= 1) return
     if (animate) {
-        animateScrollBy(delta.toFloat(), ResonanceMotionTokens.PlayerSpec)
+        animateScrollBy(delta.toFloat(), ResonanceMotionTokens.LyricScrollSpec)
     } else {
         scrollBy(delta.toFloat())
     }

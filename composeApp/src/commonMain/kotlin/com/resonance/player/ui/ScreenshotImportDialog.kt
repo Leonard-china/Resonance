@@ -24,7 +24,13 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
     val valid = chosen.isNotEmpty() && chosen.all { it.name.isNotBlank() && it.tracks.all { song -> song.title.isNotBlank() && song.artist.isNotBlank() } }
     fun dismiss() { if (!state.task.running) feature.launch { assistant.discardScreenshotImport() } }
     Dialog(onDismissRequest = ::dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxWidth(0.94f).widthIn(max = 760.dp).fillMaxHeight(0.92f).resonanceGlass(shape = MaterialTheme.shapes.large), shape = MaterialTheme.shapes.large, color = androidx.compose.ui.graphics.Color.Transparent) {
+        CompositionLocalProvider(com.resonance.player.design.LocalGlassState provides null) {
+        Surface(
+            Modifier.fillMaxWidth(0.94f).widthIn(max = 760.dp).fillMaxHeight(0.92f),
+            shape = MaterialTheme.shapes.large,
+            color = com.resonance.player.design.ResonanceColors.CanvasElevated,
+            border = androidx.compose.foundation.BorderStroke(1.dp, com.resonance.player.design.ResonanceColors.Divider),
+        ) {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("核对截图歌单", style = MaterialTheme.typography.headlineSmall)
                 Text("已选择 ${selected.size} 首 · ${draft.recognition}。可编辑歌名、歌手和专辑；确认后再匹配本地或下载。", style = MaterialTheme.typography.bodySmall)
@@ -63,6 +69,7 @@ internal fun ScreenshotImportDialog(draft: ScreenshotImportDraft) {
                     Button(onClick = { feature.launch { assistant.confirmScreenshotImport(draft.id, chosen); feature.onReload() } }, enabled = valid && !state.task.running) { Text("确认导入 ${selected.size} 首") }
                 }
             }
+        }
         }
     }
 }

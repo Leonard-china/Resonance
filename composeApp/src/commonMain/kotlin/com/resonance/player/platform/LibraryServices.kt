@@ -36,7 +36,13 @@ interface LibraryServices {
     suspend fun exportSyncPackage(playlistId: String?): SyncReport
     /** Opens the report's platform path/URI; false leaves its display path available for copying. */
     suspend fun openExportLocation(directory: String): Boolean = false
+    /** Launches the platform share sheet for an exported `.resonance` package URI/path. */
+    suspend fun shareExportedPackage(uriOrPath: String): Boolean = false
+    /** Lists `.resonance` packages currently present in the app's default export directory. */
+    suspend fun listLocalSyncPackages(): List<com.resonance.player.model.LocalSyncPackage> = emptyList()
     suspend fun importSyncPackage(): SyncReport
+    /** Imports a specific `.resonance` package URI/path directly without opening the system file picker. */
+    suspend fun importSyncPackageFrom(uriOrPath: String): SyncReport = importSyncPackage()
     suspend fun importMusic(convertToMp3: Boolean = false): ImportReport
     suspend fun deleteLocalTrack(track: Track): DeleteTrackReport
     suspend fun batchDeleteTracks(tracks: List<Track>): DeleteTrackReport

@@ -41,6 +41,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -103,6 +105,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -169,6 +172,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
 import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonancePressable
 import com.resonance.player.ui.common.FluidAmbientCanvas
@@ -205,30 +209,65 @@ internal fun ProfileScreen(
 ) {
     val features = LocalMusicFeatures.current
     val pagePadding = if (compact) 20.dp else 40.dp
+    val gridGap = if (compact) 12.dp else 16.dp
     Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding)
         .verticalScroll(rememberScrollState()).padding(top = 12.dp, bottom = 24.dp)) {
         Text(
             "工具",
             style = MaterialTheme.typography.headlineLarge,
             color = ResonanceColors.TextPrimary,
-            modifier = Modifier.padding(top = 14.dp, bottom = 10.dp),
+            modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
         )
-        SectionHeader("音乐管理")
-        SettingRow(
-            icon = Icons.Default.LibraryMusic,
-            title = "导入音乐",
-            subtitle = if (features?.services?.supportsKgg == true) "扫描本机、转换 KGMA/KGG、B 站音频" else "扫描本机、转换 KGMA、B 站音频",
-            onClick = onOpenImport,
+        Text(
+            "导入曲库、备份歌单与整理你的本地音乐资产。",
+            style = MaterialTheme.typography.bodySmall,
+            color = ResonanceColors.Muted,
+            modifier = Modifier.padding(bottom = 16.dp),
         )
-        SettingRow(
-            icon = Icons.Outlined.Sync,
-            title = "歌单导入与导出",
-            subtitle = "完整保存音频、封面与歌单信息",
-            onClick = onOpenSync,
-        )
-        SettingRow(Icons.Default.CleaningServices, "曲库智能管家", "智能洗歌、标签清洗与版本去重", { features?.onNavigate?.invoke(LibraryDestination.SmartManager) })
-        SectionHeader("聆听与偏好")
-        SettingRow(Icons.Default.AutoAwesome, "音乐品味画像", "六维品味雷达图与听歌性格分析", { features?.onNavigate?.invoke(LibraryDestination.TasteRadar) })
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(gridGap),
+        ) {
+            ProfileBentoTile(
+                icon = Icons.Default.LibraryMusic,
+                title = "导入音乐",
+                subtitle = if (features?.services?.supportsKgg == true) "本机、KGMA/KGG、B 站" else "本机、KGMA、B 站音频",
+                accent = ResonanceColors.Primary,
+                onClick = onOpenImport,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+            ProfileBentoTile(
+                icon = Icons.Outlined.Sync,
+                title = "歌单导入与导出",
+                subtitle = "一键打包分享与合并",
+                accent = ResonanceColors.Info,
+                onClick = onOpenSync,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+        }
+        Spacer(Modifier.height(gridGap))
+        Row(
+            Modifier.fillMaxWidth().height(IntrinsicSize.Max),
+            horizontalArrangement = Arrangement.spacedBy(gridGap),
+        ) {
+            ProfileBentoTile(
+                icon = Icons.Default.CleaningServices,
+                title = "曲库智能管家",
+                subtitle = "标签清洗与版本去重",
+                accent = ResonanceColors.Positive,
+                onClick = { features?.onNavigate?.invoke(LibraryDestination.SmartManager) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+            ProfileBentoTile(
+                icon = Icons.Default.AutoAwesome,
+                title = "音乐品味画像",
+                subtitle = "六维雷达与性格分析",
+                accent = ResonanceColors.Info,
+                onClick = { features?.onNavigate?.invoke(LibraryDestination.TasteRadar) },
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
+        }
+        SectionHeader("扩展与设置")
         SettingRow(Icons.Default.LibraryMusic, "歌源", "搜索专辑单曲 · 导入 MusicFree 源", { features?.onNavigate?.invoke(LibraryDestination.Sources) })
         SettingRow(Icons.Default.FolderOpen, "下载与空间", "管理下载、临时空间和重复文件", { features?.onNavigate?.invoke(LibraryDestination.Storage) })
         SettingRow(
@@ -243,6 +282,70 @@ internal fun ProfileScreen(
             subtitle = "版本 v$APP_VERSION · 本地优先",
             onClick = onOpenAbout,
         )
+    }
+}
+
+@Composable
+private fun ProfileBentoTile(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val dark = ResonanceColors.isDark
+    val wash = Brush.linearGradient(
+        listOf(
+            accent.copy(alpha = if (dark) 0.18f else 0.10f),
+            Color.Transparent,
+        )
+    )
+    Column(
+        modifier = modifier
+            .resonancePressable(interaction, pressedScale = 0.97f)
+            .atelierCard(shape = ResonanceShapes.Card)
+            .background(wash)
+            .clickable(interactionSource = interaction, indication = ripple(), role = Role.Button, onClick = onClick)
+            .heightIn(min = 112.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(ResonanceShapes.Button)
+                    .background(accent.copy(alpha = if (dark) 0.22f else 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = ResonanceColors.Dim, modifier = Modifier.size(18.dp))
+        }
+        Spacer(Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = ResonanceColors.TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = ResonanceColors.Muted,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -272,16 +375,24 @@ internal fun AboutScreen(compact: Boolean, onBack: () -> Unit) {
         )
 
         SectionHeader("应用信息")
-        Surface(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            shape = MaterialTheme.shapes.medium,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Resonance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
-                Text("版本：v$APP_VERSION", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Primary)
-                Text("平台：Android / Windows / Linux 原生跨平台 (Kotlin Multiplatform + Compose)", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
-                Text("架构模式：Local-First · Zero Cloud Dependency · High Fidelity", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+        Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).atelierCard(shape = ResonanceShapes.Card)) {
+            Row(Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ResonanceBrandMark(size = 46.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Resonance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                        Text(
+                            "v$APP_VERSION",
+                            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+                            color = ResonanceColors.Primary,
+                            modifier = Modifier
+                                .clip(ResonanceShapes.Capsule)
+                                .background(ResonanceColors.PrimarySoft)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
+                    Text("Android / Windows / Linux 原生跨平台 · 本地优先", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
+                }
             }
         }
 
@@ -569,6 +680,13 @@ internal fun ImportScreen(
     }
 }
 
+private fun formatArchiveBytes(bytes: Long): String = when {
+    bytes >= 1024L * 1024L * 1024L -> "%.2f GB".format(bytes / (1024.0 * 1024.0 * 1024.0))
+    bytes >= 1024L * 1024L -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    bytes >= 1024L -> "%.0f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
+}
+
 @Composable
 internal fun SyncScreen(
     compact: Boolean,
@@ -577,15 +695,39 @@ internal fun SyncScreen(
     onImportSync: () -> Unit,
     message: String?,
     operationInProgress: Boolean = false,
+    playlists: List<Playlist> = emptyList(),
+    onQuickExportPlaylist: ((String?) -> Unit)? = null,
+    onQuickImportSyncPackage: ((String) -> Unit)? = null,
 ) {
+    val features = LocalMusicFeatures.current
+    val services = features?.services
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    var localPackages by remember { mutableStateOf<List<com.resonance.player.model.LocalSyncPackage>>(emptyList()) }
+    LaunchedEffect(message, operationInProgress) {
+        if (services != null && !operationInProgress) {
+            localPackages = runCatching { services.listLocalSyncPackages() }.getOrDefault(emptyList())
+        }
+    }
+    val userPlaylists = remember(playlists) {
+        playlists.filterNot { it.id == com.resonance.player.model.DAILY_PLAYLIST_ID }
+    }
+
     ToolPage(title = "歌单导入与导出", onBack = onBack, compact = compact) {
+        if (operationInProgress) {
+            LinearProgressIndicator(
+                modifier = Modifier.fillMaxWidth().clip(ResonanceShapes.Capsule),
+                color = ResonanceColors.Primary,
+                trackColor = ResonanceColors.Soft,
+            )
+            Spacer(Modifier.height(12.dp))
+        }
         if (message != null) {
-            Surface(color = ResonanceColors.PrimarySoft, shape = RoundedCornerShape(10.dp), modifier = Modifier.fillMaxWidth()) {
+            Surface(color = ResonanceColors.PrimarySoft, shape = ResonanceShapes.Button, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     message,
                     color = ResonanceColors.Primary,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -594,17 +736,111 @@ internal fun SyncScreen(
         SettingRow(
             icon = Icons.Default.FolderOpen,
             title = "导出歌单",
-            subtitle = "将歌曲音频、封面和歌单打包为 .resonance",
+            subtitle = "将歌曲音频、封面和歌单打包为 .resonance，支持直接分享给其他设备",
             onClick = onExportSync.takeUnless { operationInProgress },
             modifier = Modifier.tutorialTarget(TutorialTarget.ExportArchive),
         )
+        if (onQuickExportPlaylist != null && !operationInProgress) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+                Text(
+                    "一键快速导出",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ResonanceColors.Muted,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+                )
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilledTonalButton(
+                        onClick = { onQuickExportPlaylist(null) },
+                        shape = ResonanceShapes.Capsule,
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                    ) {
+                        Text("整个音乐库", style = MaterialTheme.typography.labelMedium)
+                    }
+                    userPlaylists.forEach { playlist ->
+                        OutlinedButton(
+                            onClick = { onQuickExportPlaylist(playlist.id) },
+                            shape = ResonanceShapes.Capsule,
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        ) {
+                            Text(
+                                "${playlist.name} (${playlist.tracks.size})",
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
         SettingRow(
             icon = Icons.AutoMirrored.Filled.QueueMusic,
             title = "导入歌单",
-            subtitle = "校验完整性后合并到本机音乐库",
+            subtitle = "选择 .resonance 文件，校验完整性后安全合并到本机音乐库",
             onClick = onImportSync.takeUnless { operationInProgress },
             modifier = Modifier.tutorialTarget(TutorialTarget.ImportArchive),
         )
+        if (localPackages.isNotEmpty()) {
+            SectionHeader("本机已导出的歌单文件")
+            localPackages.forEach { pkg ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .atelierCard(shape = ResonanceShapes.Artwork)
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(ResonanceColors.PrimarySoft),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Outlined.Sync, null, tint = ResonanceColors.Primary, modifier = Modifier.size(19.dp))
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            pkg.fileName,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium,
+                            color = ResonanceColors.TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            "${formatArchiveBytes(pkg.sizeBytes)} · ${pkg.directory}",
+                            style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
+                            color = ResonanceColors.Muted,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    if (onQuickImportSyncPackage != null) {
+                        FilledTonalButton(
+                            onClick = { onQuickImportSyncPackage(pkg.uriOrPath) },
+                            enabled = !operationInProgress,
+                            shape = ResonanceShapes.Capsule,
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        ) {
+                            Text("导入", style = MaterialTheme.typography.labelMedium)
+                        }
+                    }
+                    if (services != null) {
+                        AccessibleIconButton("分享 ${pkg.fileName}", onClick = {
+                            coroutineScope.launch { services.shareExportedPackage(pkg.uriOrPath) }
+                        }) {
+                            Icon(Icons.Default.Share, null, Modifier.size(18.dp), tint = ResonanceColors.Primary)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -786,26 +1022,32 @@ internal fun ThemeOption(
         animationSpec = tween(motionDuration(160)),
         label = "themeOptionBg",
     )
+    val border by animateColorAsState(
+        if (selected) ResonanceColors.Primary else ResonanceColors.Divider,
+        animationSpec = tween(motionDuration(160)),
+        label = "themeOptionBorder",
+    )
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(ResonanceShapes.Button)
             .background(background)
             .selectable(selected, onClick = onClick, role = Role.RadioButton)
-            .border(1.dp, if (selected) ResonanceColors.Primary else Color.Transparent, RoundedCornerShape(10.dp))
+            .border(if (selected) 1.5.dp else 1.dp, border, ResonanceShapes.Button)
             .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(
             icon,
             contentDescription = null,
-            tint = if (selected) ResonanceColors.Primary else ResonanceColors.Dim,
+            tint = if (selected) ResonanceColors.Primary else ResonanceColors.Muted,
             modifier = Modifier.size(20.dp),
         )
-        Spacer(Modifier.height(5.dp))
+        Spacer(Modifier.height(6.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelMedium,
-            color = if (selected) ResonanceColors.Primary else ResonanceColors.Muted,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            color = if (selected) ResonanceColors.Primary else ResonanceColors.TextPrimary,
         )
     }
 }
@@ -814,9 +1056,10 @@ internal fun ThemeOption(
 internal fun SectionHeader(title: String) {
     Text(
         title,
-        style = MaterialTheme.typography.titleSmall,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
         color = ResonanceColors.Muted,
-        modifier = Modifier.padding(top = 24.dp, bottom = 8.dp),
+        modifier = Modifier.padding(top = 22.dp, bottom = 8.dp, start = 4.dp),
     )
 }
 
@@ -825,25 +1068,54 @@ internal fun SettingRow(icon: ImageVector, title: String, subtitle: String, onCl
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val hovered by interaction.collectIsHoveredAsState()
-    val background by animateColorAsState(if (focused || hovered) ResonanceColors.Soft else ResonanceColors.Raised,
-        tween(motionDuration(160)), label = "settingRowBackground")
-    Column(modifier.padding(bottom = 2.dp)) {
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(background)
-            .then(if (onClick != null) Modifier.clickable(interactionSource = interaction, indication = ripple(),
-                role = Role.Button, onClick = onClick) else Modifier)
-            .border(1.5.dp, if (focused) ResonanceColors.Primary else Color.Transparent, RoundedCornerShape(14.dp))
-            .heightIn(min = 72.dp).padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = ResonanceColors.Primary, modifier = Modifier.size(24.dp))
+    val background by animateColorAsState(
+        if (focused || hovered) ResonanceColors.SurfaceSubtle else ResonanceColors.Raised,
+        tween(motionDuration(160)),
+        label = "settingRowBackground",
+    )
+    val borderColor by animateColorAsState(
+        if (focused) ResonanceColors.Primary else ResonanceColors.Divider,
+        tween(motionDuration(160)),
+        label = "settingRowBorder",
+    )
+    Column(modifier.padding(bottom = 8.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .then(if (onClick != null) Modifier.resonancePressable(interaction, pressedScale = 0.985f) else Modifier)
+                .clip(ResonanceShapes.Artwork)
+                .background(background)
+                .border(if (focused) 1.5.dp else 1.dp, borderColor, ResonanceShapes.Artwork)
+                .then(
+                    if (onClick != null) Modifier.clickable(
+                        interactionSource = interaction,
+                        indication = ripple(),
+                        role = Role.Button,
+                        onClick = onClick,
+                    ) else Modifier
+                )
+                .heightIn(min = 68.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(ResonanceColors.PrimarySoft),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = ResonanceColors.Primary, modifier = Modifier.size(20.dp))
+            }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, color = ResonanceColors.TextPrimary)
-                Spacer(Modifier.height(4.dp))
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, color = ResonanceColors.TextPrimary)
+                Spacer(Modifier.height(2.dp))
                 Text(subtitle, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
             }
             if (onClick != null) {
                 Spacer(Modifier.width(8.dp))
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = ResonanceColors.Dimmer, modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = ResonanceColors.Dim, modifier = Modifier.size(20.dp))
             }
         }
     }

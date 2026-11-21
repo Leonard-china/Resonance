@@ -20,6 +20,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.*
 
 @Composable
@@ -132,12 +134,11 @@ fun SemanticSongSearch(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(localMatches, key = { it.track?.id ?: it.title }) { match ->
-                    Card(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .atelierCard(shape = ResonanceShapes.Button)
                             .clickable { match.track?.let { onTrackSelected(it) } },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
                     ) {
                         Row(
                             Modifier.padding(14.dp),
@@ -145,7 +146,7 @@ fun SemanticSongSearch(
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = ResonanceColors.Primary.copy(alpha = 0.15f),
+                                color = ResonanceColors.PrimarySoft,
                                 modifier = Modifier.size(36.dp),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -154,13 +155,13 @@ fun SemanticSongSearch(
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(match.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(match.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(3.dp))
-                                Text(match.artist + if (match.album.isNotBlank()) " · ${match.album}" else "", fontSize = 12.sp, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(match.artist + if (match.album.isNotBlank()) " · ${match.album}" else "", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Spacer(Modifier.height(4.dp))
                                 Text(
                                     match.reason,
-                                    fontSize = 11.sp,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = ResonanceColors.Primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -178,12 +179,12 @@ fun SemanticSongSearch(
 private fun PillTag(text: String) {
     Text(
         text,
-        fontSize = 10.sp,
+        style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.Medium,
         color = ResonanceColors.Primary,
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(ResonanceColors.Primary.copy(alpha = 0.15f))
+            .background(ResonanceColors.PrimarySoft)
             .padding(horizontal = 6.dp, vertical = 3.dp),
     )
 }

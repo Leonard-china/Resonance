@@ -29,7 +29,7 @@ internal fun AssistantAudioDeletionDialog(request: AudioDeletionRequest, onDismi
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } },
-        confirmButton = { TextButton(onClick = onConfirm) { Text("确认删除这些文件") } })
+        confirmButton = { TextButton(onClick = onConfirm) { Text("确认删除这些文件", color = com.resonance.player.design.ResonanceColors.Danger) } })
 }
 
 @Composable

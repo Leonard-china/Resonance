@@ -1,4 +1,8 @@
-# 2026-11-05 — Resonance 详细开发说明：应用会话、原生播放与平台边界
+# 2026-11-21 — Resonance 详细开发说明：应用会话、原生播放与平台边界
+
+2026-11-21 清岚（Clearwater）界面升级、歌单导入/多选补全修复与 0.7.0 APK 核对：在 `0.7.0 / 70` 基线上，已去除红色主调并升级为 **Clearwater（清岚）** 清新色板、苹果式弹簧动效与歌词光学聚焦舞台及 Bento 排版（详见第 11 节、[DESIGN.md](../DESIGN.md) 与 [05 号记录](changes/2026-11-21-05-clearwater-fresh-ui-apple-motion-and-apk.md)）；同步修复 Android 歌单导入 `Files.getFileStore` 异常与多选批量补全未持久化/假封面占位/缺少 QQ 目录问题并优化快捷导出分享（详见第 8、9 节与 [04 号记录](changes/2026-11-21-04-fix-sync-import-and-batch-enrich.md)）。双端全量编译、36 项同步/补全回归、53 项 UI 回归与新版 `Resonance-0.7.0-release.apk`（debug 签名，16 KiB 对齐）均已通过；真机实测与正式证书签名边界见对应记录。
+
+2026-11-21 前轮原生 UI 重构核对：此前按 **Atelier Acoustics（声学画廊）** 体系完成共享组件重构（见 [01 号记录](changes/2026-11-21-01-atelier-acoustics-ui-redesign.md)），现已演进为上方清岚视觉与动效基线。以下历史验收与安装段落保留原日期边界。
 
 2026-11-05 全功能测试核对：[191项功能清单与总报告](audit/2026-11-05/FEATURE-TEST-REPORT.md)基于当前未提交源码；手机重连后，Android 30类79项实测为62通过、10失败、7条件跳过，首轮异常组单独复测3项通过但原始异常保留。合并前轮本机结果为541通过、10失败、14跳过，另1个桌面批量截图方法超时；前轮12项问题（5 P1、7 P2）仍未修复。未改产品代码或断言，正式包未覆盖，独立包已移除。实际失败包含旧界面/转场契约与定位不符、尺寸和帧采样验收缺口，见[Android续测](audit/2026-11-05/ANDROID-DEVICE-REPORT.md)及[17号记录](changes/2026-11-05-17-android-device-functional-regression.md)；前轮编译/本机过程保留在[16号记录](changes/2026-11-05-16-comprehensive-feature-testing.md)。Windows、真实系统入口、付费/公网和长时验收仍未补齐。
 
@@ -20,7 +24,7 @@
 
 2026-11-02 当前质量进度：第一批双主题/统计保护/默认 WSS、第二批原生统计/偏好顺序/错误归属、第三批全链路加载与缓冲状态已实现，并完成 MuMu 帧率实测与 Windows 真实桌面可见窗口验收；当前证据见 [OPTIMIZATION_REPORT.md](OPTIMIZATION_REPORT.md) 和变更 01–07。公网中继已上线并通过双端原生复测；跨蜂窝网络真机、多人平权控制及 2 小时长时压力验收仍待后续环境具备。PRODUCT_AUDIT 保留修改前基线，下文历史发布结果不能替代当前验收。
 
-源码核对日期：2026-11-05（Asia/Shanghai）；本次为核心重构，当前工作区保留此前发布设定的 **`0.6.6 / 40`**。最新核心实现与本次限制以上方重构记录为准。此前发布构建、测试、桌面安装和 GitHub 状态见[本轮独立记录](changes/2026-11-04-16-release-0.6.6-three-platforms.md)，不以历史验证代替本次结果。
+源码核对日期：2026-11-21（Asia/Shanghai，清岚 UI 动效、歌单导入/多选补全修复及 0.7.0 APK 核对）；当前工作区版本号为 `version.properties` 设定的 **`0.7.0 / 70`**。最新核心业务重构与设备发布状态以上方对应日期记录为准，不以历史验证代替本次结果。
 
 不同 AI 接手时先读本页相关章节与变更记录，再读必要源码。每个独立功能/修复必须新增带日期和具体内容的文档，见 [协作流程](AI-WORKFLOW.md)。
 
@@ -274,6 +278,8 @@ Android 通知和 Windows 托盘提醒仅为已接线且未构建验证的代码
 
 ## 8. 歌词、翻译和补全
 
+2026-11-21（0.7.0 / 70）校准交互核对。同步歌词页顶栏的「校准」切换为单行调节栏，并回到当前播放句。「延后」与「提前」每次调整 0.5 秒，中间显示本曲偏移并可重置。勾号结束校准，歌词列表和播放控制在调节期间仍可操作。已有歌词时，「歌词工具」在独立可滚动弹窗中提供生成、识别、翻译与设置，同步歌词也可从弹窗进入校准。[变更记录](changes/2026-11-21-06-lyrics-calibration-toolbar.md)
+
 2026-11-05 歌词回归核对：本地/缓存/LRCLIB 的纯文本只作为兜底，继续寻找有效同步时间轴；LRCLIB 与最多八个歌源内均先校验歌名/歌手/版本/时长，再优先同步结果。同一歌源最多尝试两条匹配候选，后续失败或超时保留已取得的文本；没有同步结果仍显示纯文本，不猜测时间戳。同步本地/缓存与已生成同步歌词继续直接复用，偏移仍独立合并。旧纯文本缓存可自动升级，失败保留原文和偏移；仍只有纯文本的歌曲再次加载可能新增免费查询。窄屏封面恢复紧凑歌词预览，沉浸完整歌词恢复白字+淡底+细边，手动浏览清晰但仍保留焦点；字号/字重/行高固定。实际播放器离屏及手机回归入口为 `LyricsPlayerRegressionTest` / `LyricsPlayerRegressionDeviceTest`；本次结果与限制见[独立记录](changes/2026-11-05-08-restore-player-lyrics-and-synchronized-priority.md)。
 
 2026-11-05 查词用例：`LyricsSession` 管理自动查词、强制刷新和已接受偏移的代次，查词返回后校验协程取消及代次；A→B→A 也拒绝第一次 A 的迟到结果，偏移不会被旧结果重置。翻译控制器和一起听原歌词来源规则继续保留。
@@ -290,7 +296,9 @@ LrclibLyricsRepository 处理本地/同名 LRC/KRC、缓存和 LRCLIB；成功�
 
 歌词滚动（2026-11-03 核对）：本次发现 10 月 29 日记录中的 helper 在当前源码未接入，已重新接入并补上预览的连续滚动。`NowPlayingOverlay.LyricsContent` 与 `ui/LyricScroll.kt` 按实际 viewport 起止坐标和测量行高居中；首次／减少动效直接定位，可见行复用 `ResonanceMotionTokens.PlayerSpec` 的 280ms 过渡，离屏行先动画进入测量范围再修正。只有换句、视口／行高／显示模式变化和显式返回触发定位，播放毫秒更新不重启动画；高亮只改变文字／淡底与细边的绘制，字号和字重稳定；焦点恢复见[歌词焦点记录](changes/2026-11-03-10-restore-lyric-focus.md)。手动拖动或滚轮输入暂停跟随，拖动及惯性结束 5 秒后恢复；「回到当前播放」和点歌词立即请求定位，暂停时也有效。翻译到达保持列表身份，换曲或原歌词时间轴变化重建；首尾留白可居中，超高行优先露出开头，纯文本从顶部浏览。歌词工具默认收起。`SyncedLyricsPreview` 用单份带稳定行标识的 LazyColumn 连续滚动，替代整组三行淡入淡出；只在绘制层做轻微焦点缩放、颜色过渡，不因高亮改变排版。针对性原生逐帧回归及本次验证限制见[连续歌词动效记录](changes/2026-11-03-01-continuous-lyrics-motion.md)，不可引用历史设备通过结果替代本次验收。
 
-MetadataEnricher 公共 iTunes/酷狗、封面、本地/LRCLIB 优先；选项允许才 AI 兜底。只缺专辑也可触发 AI；公共结果匹配标题/已知歌手，不任取首项，未知歌手可按标题检索。每首变化立即 checkpoint 落盘，批次边界取消；封面最多 10 MB 并检图像签名。结束重载/清位图缓存，报告在本次流程显示，歌曲页不再挂缺失计数。公共源与 AI 不保证全量命中/事实准确。
+2026-11-21 多选批量补全核对：`MetadataEnricher` 新增 `hasReadableCover: (Track) -> Boolean` 注入探针（Android 实流探测 MediaStore `content://media/external/audio/albumart/...` 占位 URI 是否真实可读 ≥ 12 字节，桌面端检查文件可读性），并将 QQ 音乐公共目录检索（`searchQq` / `parseQqSearch`）作为第一公共目录源置于 iTunes 与酷狗之前；仅在字段发生真实新增/变更时累加 `coversEnriched` / `metadataEnriched` / `lyricsEnriched`，0 项变更时诚实提示「未匹配到新内容」。`AndroidPlatformServices.updateTracks` 改为向 `synced-library.properties` 执行 upsert 并同步 `cachedTracks`，避免 MediaStore 曲目在批补后重载丢失。详见 [04 号记录](changes/2026-11-21-04-fix-sync-import-and-batch-enrich.md)。
+
+MetadataEnricher 公共 QQ 音乐/iTunes/酷狗、封面、本地/LRCLIB 优先；选项允许才 AI 兜底。只缺专辑也可触发 AI；公共结果匹配标题/已知歌手，不任取首项，未知歌手可按标题检索。每首变化立即 checkpoint 落盘，批次边界取消；封面最多 10 MB 并检图像签名。结束重载/清位图缓存，报告在本次流程显示，歌曲页不再挂缺失计数。公共源与 AI 不保证全量命中/事实准确。
 
 ### 音频同步歌词（2026-10-16）
 
@@ -305,6 +313,8 @@ LRCLIB 精确纯文本后继续搜索同步版本；时长偏差过大、仅0时
 <a id="sync"></a>
 
 ## 9. 歌单文件导出/导入
+
+2026-11-21 Android 导入修复与快捷传输核对：新增 `J/io/StorageSpace.kt`（`usableSpaceBytes` 优先走 `File.usableSpace` / libc `statvfs`，仅结果 ≤ 0 时回退 `Files.getFileStore`），替换 `PlainSyncPackage`、`ManagedMusicStorage` 与 `AndroidPlatformServices.importSyncPackage` 中的 `Files.getFileStore(...).usableSpace`，修复 Android 11–16 FUSE/SELinux 下 `/proc/mounts` 异常导致的导入失败。同步规范化 ZIP 条目路径、隔离损坏封面流、统一导入曲目与歌单成员的 `file://` URI、使用唯一暂存文件及真实 `DISPLAY_NAME`，并在导出后校验实际打包曲目数。平台接口 `LibraryServices` 新增默认兼容的 `shareExportedPackage`（Android `Intent.ACTION_SEND` 系统分享）、`listLocalSyncPackages` 与 `importSyncPackageFrom`；UI 侧在歌单详情顶栏新增一键「导出」，在导出结果弹窗新增「分享文件」，在 `SyncScreen` 增设「一键快速导出」歌单胶囊及「本机已导出的歌单文件」一键导入/分享列表（保持 6 参调用向后兼容）。详见 [04 号记录](changes/2026-11-21-04-fix-sync-import-and-batch-enrich.md)。
 
 2026-11-05 桌面入口核对：`.resonance` 除专用「导入歌单」外，也能通过「导入音乐」多选文件、扫描所在目录或直接拖入窗口恢复。专用包选择器绑定 `fileDialogOwner`，从 EDT 调用时直接执行。App 对普通导入和归档任务等待互斥，专用包导入前等待已接收的持久化写入；包导入完成后重载已合并歌单。包格式、安全校验和原子属性文件/备份规则不变，未新增多文件事务；现有单包解压需完成后才能响应下一次取消检查。验证边界见[补修记录](changes/2026-11-05-04-linux-resonance-package-import.md)。
 
@@ -374,6 +384,18 @@ Android 权限：音频/SAF、网络、粗定位、通知、媒体前台服务�
 <a id="ui"></a>
 
 ## 11. UI、封面与悬浮歌词
+
+2026-11-21 Clearwater（清岚）清新视觉与苹果式弹簧动效核对：依据用户真机体验反馈去除全部红色主强调色，在前轮 Atelier Acoustics 结构上升级为 **Clearwater（清岚）** 视觉与流体动效体系（现行规范见 [DESIGN.md](../DESIGN.md)，完整变更与 0.7.0 APK 校验见 [05 号记录](changes/2026-11-21-05-clearwater-fresh-ui-apple-motion-and-apk.md)）：
+- **清新色板与品牌**：浅色薄雾浅瓷 `#F3F7F6` + 纯白卡片 + 海沫青碧 `#0B7D67`，深色深海暮蓝 `#0B1214`（同步 Android `windowBackground`）+ 薄荷青 `#35D4B2`，冰蓝偏好 `#1A65C2` / `#6EB6FF`；危险红 `#B92B2B` / `#FF8585` 严格限定于删除操作；沉浸舞台转为深海青墨 `#0C1317` + 冰晶白 `#F5FAFA`；`ResonanceBrandMark` 转为 `#0D947B → #1F7AC8` 斜向青蓝渐变，8 套确定性生成封套全面转为清新自然色系。曲库顶部叠加柔和青蓝晨雾径向微光。
+- **苹果式流体弹簧动效与歌词舞台**：新增 `AppleFluidSpring`、`AppleBouncySpring` 与 `LyricScrollSpec` 弹簧常数；分段滑块、底部导航栏与全屏 `PaneSwitcher` 三栏胶囊均具备弹簧滑行透镜；主播放键与迷你播放条具备 `AnimatedContent` Play↔Pause 弹性缩放形变；收藏红心激活触发弹性跃动；全屏封面具备 `1.0f ↔ 0.92f` 弹性呼吸与专辑柔光晕轮；播放进度条按压/拖动时轨高由 `4dp` 弹性扩张至 `7dp` 并亮起圆点晕轮；沉浸背景在播放且前台时呈现 14 秒慢速漂移的双极流体光团（暂停/后台/拖动/减少动效时即时静止）。沉浸歌词改用阻尼弹簧滚动，并在绘制层（`graphicsLayer`，左中锚点）应用 `1.03f / 0.96f` Apple Music 风格光学聚焦缩放，零行高重排。
+- **Bento 排版与高频入口**：工具页顶部重构为 2×2 柔和渐变 Bento 矩阵（导入音乐、歌单导入与导出、曲库智能管家、音乐品味画像）；歌单页顶部在每日推荐可见时并排展示双列 Bento 快捷卡（收藏仍严格仅显示 `"X 首"`）。全部独立原生弹窗继续保持 `LocalGlassState provides null` 跨窗隔离。
+
+2026-11-21 前轮 Atelier Acoustics（声学画廊）原生 UI 重构核对：按用户授予的完整设计自主权，摆脱此前 Mineradio / macOS 重玻璃 / AM++ 参考约束，以全新原生设计体系重做共享 UI 与设计系统（历史记录见 [01 号记录](changes/2026-11-21-01-atelier-acoustics-ui-redesign.md)，现行配色、弹簧动效与 Bento 排版以上方清岚段落与 [DESIGN.md](../DESIGN.md) 为准）。
+- **色板与材质**：浅色转为暖雪花石纸 `#F6F4F0` + 纯白浮层 + 暖朱红 `#B83227`，深色转为声学室黑曜石 `#0E0E10` + 珊瑚红 `#F26A55`（Android `windowBackground` 同步 `#0E0E10`），冰蓝天气模式转为钴蓝 `#1F54B5` / `#8EB8FF`；新增独立 `Danger` / `DangerSoft` 语义色用于全部删除操作与确认按钮，所有前景组合通过 WCAG AA 对比度校验。新增 `Modifier.atelierCard`（`CanvasElevated` + `1dp Divider`）统一主壳与二级页面卡片；保留 `ImmersivePlayerColors` + `ImmersivePlayerColorScheme` 成对单一真源，并覆写沉浸态 `GlassBorderGlow` 为白色以消除队列项红边污染。
+- **品牌标识与封套艺术**：新增 `ui/PlaylistArtwork.kt` 提供同心声波矢量徽标 `ResonanceBrandMark` 与 2×2 拼贴封面 `PlaylistMosaicArtwork`；`GenerativeAlbumSleeve` 升级为 8 套编辑配色 × 4 种确定性声学几何封套（同心声波环、地平线波形、包豪斯拱弧、极简黑胶唱片）。
+- **主壳与导航**：手机端采用浮空 16dp 迷你播放卡片（内嵌圆角底边进度细线）+ 贴底 54dp 锚定导航栏；桌面端升级 244dp 固定侧栏（带品牌徽标、3dp 左侧竖向选中条、歌单 2×2 缩略拼贴与内联 `+` 新建）、64dp 建筑风顶栏与 76dp 全宽底部播放坞（顶边 2.5dp 进度细线 + `SoftRefinedVolumeSlider` 细轨音量条）。曲库新增实时曲库统计副标题，专辑采用 1:1 方形封面，歌手采用细边圆像，进入非多选集合详情页时隐藏上层重复「音乐库」顶栏；歌曲选中行改为无外框柔色底 + 3dp 左侧竖条，时长/曲号采用 `tnum` 等宽数字。二级页（品味画像、智能管家、任务列表、每日推荐、歌源、下载与空间、推荐历史、在线/语义搜索）统一居中 `1100dp` 视口与 `.atelierCard()`。
+- **沉浸播放器与歌词舞台**：`FrostedBackdrop` 实图柔光升级为 `saturation=0.88f / blur=72dp / scale=1.18f` 配合 4 段对比度暗幕；顶栏在可用宽度充足时采用对称留白实现数学绝对居中；封面支持播放/暂停呼吸缩放（`1.0f / 0.95f`）与顶部高光细边，曲目副标题附真实格式徽标（`FLAC`/`WAV`/`AAC`/`MP3` 等）；播放核心升级为 60dp 暖象牙白圆盘配碳黑图标（`PlayArrow` 右偏 `1.5dp` 光学居中）与真实 `SkipPrevious`/`SkipNext`；快捷区采用半透明微边胶囊（`音量`/`音效`/`定时`）与底部 `PaneSwitcher` 胶囊；沉浸歌词升级无框横向柔光 + 3dp 左侧竖条（保持行高稳定与像素回归契约）和 `DstIn` 边缘渐隐，`歌词工具` 在沉浸舞台呈现一致半透明胶囊；封面歌词预览同步加严边缘渐隐避免邻行切字。
+- **跨窗弹窗隔离与语义保护**：`SleepTimerDialog`、`EditTrackDialog`、`BatchEnrichDialog`、`ShareCardDialog`、`ScreenshotImportDialog` 与 `TogetherQueueDialog` 均补齐 `LocalGlassState provides null` 及静态 `CanvasElevated + Divider` 表面，消除 Android 独立弹窗跨窗采样隐患；全部既有语义文案、测试标签、48dp 触控区、手势展开、键盘导航与存储/播放回调完整保留。以下 2026-11-05 及更早段落保留历史参考，冲突以本段及当前源码为准。
 
 2026-11-05质量修复核对：封面页按真实可用高度限制同步歌词预览，正常高竖屏保留180dp封面验收；小窗/大字优先保证控制可达，完整歌词页与连续跟随保留。智能管家按完整版本歌名+歌手+时长找“疑似重复”，未知歌手不成组、默认不选删除；容器格式不等于音质。清理把整批明细送入一次批量确认，确认层在页面之后绘制，取消不删除。语义搜索解析BPM时明确“尚不支持BPM筛选”，现有结果仍是文字匹配，不宣称接通真实节拍分析。见[封面与预览](changes/2026-11-05-28-player-cover-preview-height-budget.md)、[清理](changes/2026-11-05-22-smart-cleanup-safe-batch.md)、[BPM边界](changes/2026-11-05-23-semantic-search-bpm-capability-copy.md)。
 

@@ -30,6 +30,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.ResonanceColors
 import com.resonance.player.model.*
@@ -318,26 +323,49 @@ internal fun AudioBalanceHelpScreen(compact: Boolean, onBack: () -> Unit) {
 
 @Composable
 private fun AssistantWelcome(onPrompt: (String) -> Unit) {
-    Column(Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            GenerativeAlbumSleeve(0, Modifier.size(52.dp), 16.dp)
-            Column {
-                Text("今天想听点什么？", style = MaterialTheme.typography.headlineSmall,
-                    color = ResonanceColors.TextPrimary, fontWeight = FontWeight.SemiBold)
+    Column(
+        Modifier.widthIn(max = 560.dp).fillMaxWidth().padding(vertical = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.padding(bottom = 8.dp),
+        ) {
+            ResonanceBrandMark(size = 48.dp)
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "今天想听点什么？",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = ResonanceColors.TextPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 Text("点击示例会填入输入框", style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
             }
         }
-        Spacer(Modifier.height(4.dp))
-        listOf("找一些适合夜晚散步的歌", "看看我的音乐品味", "如何导入歌单截图？").forEachIndexed { index, prompt ->
-            Surface(onClick = { onPrompt(prompt) }, color = Color.Transparent, shape = MaterialTheme.shapes.medium) {
-                Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 4.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(when (index) { 0 -> Icons.Default.NightsStay; 1 -> Icons.Default.FavoriteBorder; else -> Icons.Default.PhotoLibrary },
-                        null, tint = ResonanceColors.Primary, modifier = Modifier.size(22.dp))
-                    Text(prompt, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.ChevronRight, null, tint = ResonanceColors.Muted, modifier = Modifier.size(18.dp))
+        listOf(
+            "找一些适合夜晚散步的歌" to Icons.Default.NightsStay,
+            "看看我的音乐品味" to Icons.Default.FavoriteBorder,
+            "如何导入歌单截图？" to Icons.Default.PhotoLibrary,
+        ).forEach { (prompt, icon) ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .atelierCard(shape = ResonanceShapes.Artwork)
+                    .clickable(onClick = { onPrompt(prompt) })
+                    .heightIn(min = 56.dp)
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    Modifier.size(34.dp).clip(RoundedCornerShape(9.dp)).background(ResonanceColors.PrimarySoft),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, null, tint = ResonanceColors.Primary, modifier = Modifier.size(18.dp))
                 }
+                Text(prompt, style = MaterialTheme.typography.bodyLarge, color = ResonanceColors.TextPrimary, modifier = Modifier.weight(1f))
+                Icon(Icons.Default.ChevronRight, null, tint = ResonanceColors.Dim, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -426,15 +454,21 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
                     if (user) AssistantMusicContent(item.content, emptyList()) else resolveAssistantMusic(item.content, byId)
                 }
                 Column(Modifier.fillMaxWidth(), horizontalAlignment = if (user) Alignment.End else Alignment.Start) {
-                    Surface(color = if (user) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        shape = MaterialTheme.shapes.medium) {
-                        Text(music.text, Modifier.padding(horizontal = if (user) 14.dp else 0.dp, vertical = 10.dp),
-                            color = if (user) MaterialTheme.colorScheme.onPrimaryContainer else ResonanceColors.TextPrimary)
+                    Surface(
+                        color = if (user) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        shape = if (user) RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 6.dp) else MaterialTheme.shapes.medium,
+                    ) {
+                        Text(
+                            music.text,
+                            Modifier.padding(horizontal = if (user) 16.dp else 0.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (user) MaterialTheme.colorScheme.onPrimaryContainer else ResonanceColors.TextPrimary,
+                        )
                     }
                     if (music.tracks.isNotEmpty()) AssistantMusicAttachment(music.tracks,
                         onPlay = { feature.playRecommendation(it, music.tracks) }, onAppend = feature.onAppendQueue)
                     if (!user) Text("回复自 ${item.model?.takeIf(String::isNotBlank) ?: activeModelName}",
-                        style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Muted,
+                        style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim,
                         modifier = Modifier.padding(top = 6.dp))
                 }
             }
@@ -448,25 +482,41 @@ internal fun AssistantScreen(compact: Boolean, onBack: () -> Unit) {
             Text("已选择 ${images.size} 个截图片段 · ${feature.settings.screenshotRecognition.label}", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
             TextButton(onClick = { images = emptyList() }) { Text("移除图片") }
         }
-        Surface(Modifier.fillMaxWidth().resonanceGlass(shape = RoundedCornerShape(20.dp), shadowElevation = 3.dp),
-            shape = RoundedCornerShape(20.dp), color = Color.Transparent) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        val canSend = !state.task.running && (input.isNotBlank() || images.isNotEmpty())
+        Box(Modifier.fillMaxWidth().atelierCard(shape = RoundedCornerShape(22.dp), shadowElevation = 2.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 6.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { feature.launch { images = feature.services.chooseAssistantImages() } },
                     enabled = !state.task.running, modifier = Modifier.tutorialTarget(TutorialTarget.Screenshot)) {
-                    Icon(Icons.Default.AddPhotoAlternate, "歌单截图")
+                    Icon(Icons.Default.AddPhotoAlternate, "歌单截图", tint = ResonanceColors.Muted)
                 }
                 TextField(value = input, onValueChange = { input = it },
                     modifier = Modifier.weight(1f).testTag("assistant-input"), interactionSource = inputInteraction,
-                    placeholder = { Text("聊聊音乐，或整理歌单", style = MaterialTheme.typography.bodyMedium) },
+                    placeholder = { Text("聊聊音乐，或整理歌单", style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim) },
                     minLines = 1, maxLines = 4,
                     colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent))
-                IconButton(onClick = {
-                    val text = input; val attachments = images; input = ""; images = emptyList()
-                    feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) }
-                }, enabled = !state.task.running && (input.isNotBlank() || images.isNotEmpty()),
-                    modifier = Modifier.tutorialTarget(TutorialTarget.AssistantSend)) {
-                    Icon(Icons.AutoMirrored.Filled.Send, "发送", tint = if (input.isNotBlank() || images.isNotEmpty()) ResonanceColors.Notice else ResonanceColors.Muted)
+                IconButton(
+                    onClick = {
+                        val text = input; val attachments = images; input = ""; images = emptyList()
+                        feature.launch { assistant.chat(text, attachments); feature.onReload(); tutorial?.event(TutorialCompletion.ChatSent) }
+                    },
+                    enabled = canSend,
+                    modifier = Modifier.tutorialTarget(TutorialTarget.AssistantSend),
+                ) {
+                    Box(
+                        Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(if (canSend) ResonanceColors.Primary else ResonanceColors.Soft),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.Send,
+                            "发送",
+                            Modifier.size(18.dp),
+                            tint = if (canSend) MaterialTheme.colorScheme.onPrimary else ResonanceColors.Dim,
+                        )
+                    }
                 }
             }
         }
@@ -626,7 +676,7 @@ private fun VideoImportDialog(feature: MusicFeatureController) {
 }
 
 @Composable
-internal fun TranslationControls() {
+internal fun TranslationControls(onOpenAnotherScreen: () -> Unit = {}) {
     val feature = LocalMusicFeatures.current ?: return
     Column {
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -634,12 +684,12 @@ internal fun TranslationControls() {
             TextButton(onClick = feature::generateTextLyrics, enabled = localTrack != null && !feature.generatingTextLyrics && !feature.generatingLyrics) {
                 Text(if (feature.generatingTextLyrics) "AI 正在生成文本…" else "AI 生成歌词文本")
             }
-            TextButton(onClick = { feature.showGenerateLyrics = true }, enabled = localTrack != null && !feature.generatingLyrics && !feature.generatingTextLyrics) {
+            TextButton(onClick = { onOpenAnotherScreen(); feature.showGenerateLyrics = true }, enabled = localTrack != null && !feature.generatingLyrics && !feature.generatingTextLyrics) {
                 Text(if (feature.generatingLyrics) "正在识别音频…" else "音频识别同步歌词")
             }
             TextButton(onClick = { feature.translate() }, enabled = !feature.translating && !feature.generatingTextLyrics && !feature.generatingLyrics && feature.lyrics is LyricsUiState.Ready) { Text(if (feature.translating) "正在翻译…" else "翻译为${feature.settings.translationLanguage.trim()}") }
             if (feature.translated?.trackId == feature.player.currentTrack?.id) TextButton(onClick = { feature.translate(true) }, enabled = !feature.translating && !feature.generatingTextLyrics && !feature.generatingLyrics) { Text("重译") }
-            TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("语言与显示") }
+            TextButton(onClick = { onOpenAnotherScreen(); feature.onNavigate(LibraryDestination.Settings) }) { Text("语言与显示") }
         }
         Text("AI 文本可能缺失或不准确，会使用模型额度；音频识别需另行确认上传与计费。",
             style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)

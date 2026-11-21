@@ -13,6 +13,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.*
 
 private fun MusicTaskOutcome.toUserLabel(): String = when (this) {
@@ -34,20 +36,22 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
             Text("将重新上传音频到百炼语音识别，可能再次按音频时长收费。取消或失败的上次请求也可能已计费，因此用量按整曲时长保守记录；本月已预留/使用 ${state.speechSeconds} 秒，上限 ${feature.settings.monthlySpeechSeconds} 秒。")
         }, confirmButton = { TextButton(onClick = { paidRetry = null; feature.launch { assistant.retryTask(task.id); feature.reloadGeneratedLyrics() } }) { Text("开始重试") } }, dismissButton = { TextButton(onClick = { paidRetry = null }) { Text("取消") } })
     }
-    Column(Modifier.fillMaxSize().padding(if (compact) 16.dp else 28.dp)) {
+    val pagePadding = if (compact) 20.dp else 40.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding, vertical = if (compact) 12.dp else 20.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
             Text("任务列表", style = MaterialTheme.typography.headlineMedium)
         }
         TextButton(onClick = { feature.launch { assistant.matchVideoCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("匹配已下载歌曲的专辑封面") }
         TextButton(onClick = { feature.launch { assistant.matchMissingCovers(); feature.onReload() } }, enabled = !state.task.running) { Text("补齐曲库缺失封面 · 不调用模型") }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             if (state.tasks.isEmpty()) item { Text("下载、封面匹配和歌词处理的进度会显示在这里。", color = ResonanceColors.Muted) }
             items(groupMusicTasks(state.tasks), key = { it.root.id }) { group ->
                 val task = group.root
                 var expanded by remember(task.id) { mutableStateOf(false) }
-                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(task.title, style = MaterialTheme.typography.titleMedium)
                         if (task.progress.total > 0) Text("已处理 ${task.progress.completed} / ${task.progress.total} · ${task.progress.detail}", style = MaterialTheme.typography.bodySmall)
                         if (group.steps.isNotEmpty()) Text("步骤完成 ${group.steps.count { it.outcome == MusicTaskOutcome.Completed }} · 可重试异常 ${group.failures.size}", style = MaterialTheme.typography.labelMedium)
@@ -92,6 +96,7 @@ internal fun MusicTasksScreen(compact: Boolean, onBack: () -> Unit) {
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
         }
     }
+    }
 }
 
 @Composable
@@ -111,7 +116,9 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
     var commenting by remember { mutableStateOf<Track?>(null) }
     var commentDraft by remember { mutableStateOf("") }
     val busy = state.task.running
-    Column(Modifier.fillMaxSize().padding(if (compact) 16.dp else 28.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    val pagePadding = if (compact) 20.dp else 40.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding, vertical = if (compact) 12.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "返回") }
             Text("每日推荐", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
@@ -131,11 +138,11 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
         }
         if (!feature.settings.recommendationsEnabled) TextButton(onClick = { feature.onNavigate(LibraryDestination.Settings) }) { Text("未开启推荐 · 前往设置") }
         if (busy) MusicTaskProgress(state.task.progress, assistant::cancel)
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 28.dp)) {
             if (tracks.isEmpty()) item { Text("已内置歌源，开启推荐后点击“更新推荐”即可开始；也可先收藏喜欢的歌，帮助了解你的偏好。", color = ResonanceColors.Muted) }
             items(tracks, key = Track::id) { track ->
-                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (selecting) Checkbox(track.id in selected, { checked -> selected = if (checked) selected + track.id else selected - track.id }, enabled = !busy)
                             AlbumArtwork(track.artworkSeed, Modifier.size(48.dp), artworkPath = track.artworkPath, audioSource = track.sourceUri)
@@ -194,6 +201,7 @@ internal fun RecommendationsScreen(compact: Boolean, onBack: () -> Unit) {
             }
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
         }
+    }
     }
     commenting?.let { track ->
         AlertDialog(onDismissRequest = { commenting = null }, title = { Text("评价「" + track.title + "」") }, text = {

@@ -314,8 +314,10 @@ fun App(
                     importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
                     playlists = loadedPlaylists
                     services.savePlaylists(loadedPlaylists)
+                    val updatedById = report.updatedTracks.associateBy(Track::id)
+                    customQueue = customQueue?.map { updatedById[it.id] ?: it }
                     player.currentTrack?.let { curr ->
-                        report.updatedTracks.firstOrNull { it.id == curr.id }?.let { updatedCurr ->
+                        updatedById[curr.id]?.let { updatedCurr ->
                             player = player.copy(currentTrack = updatedCurr)
                         }
                     }
@@ -907,6 +909,62 @@ fun App(
                         onImport = { convertToMp3 -> scope.launch { runMusicImport(convertToMp3) } },
                         onExportSync = { if (syncInProgress == null) syncAction = SyncAction.Export },
                         onImportSync = { if (syncInProgress == null) syncAction = SyncAction.Import },
+                        onQuickExportPlaylist = { targetPlaylistId ->
+                            if (syncInProgress == null && !operationInProgress && !initialLoadInProgress) {
+                                syncAction = null
+                                syncInProgress = SyncAction.Export
+                                showSyncProgress = true
+                                importMessage = "正在导出歌单文件，请稍候…"
+                                scope.launch {
+                                    try {
+                                        val report = services.exportSyncPackage(targetPlaylistId)
+                                        importMessage = report.message
+                                        if (!report.cancelled) syncResult = com.resonance.player.ui.SyncPackageOutcome(true, report)
+                                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                        throw cancelled
+                                    } catch (error: Throwable) {
+                                        importMessage = "导出失败：${error.message ?: error::class.simpleName.orEmpty()}"
+                                        syncResult = com.resonance.player.ui.SyncPackageOutcome(true, com.resonance.player.model.SyncReport(false, importMessage.orEmpty()))
+                                    } finally {
+                                        syncInProgress = null
+                                        showSyncProgress = false
+                                    }
+                                }
+                            }
+                        },
+                        onQuickImportSyncPackage = { uriOrPath ->
+                            if (syncInProgress == null && !operationInProgress && !initialLoadInProgress) {
+                                syncAction = null
+                                syncInProgress = SyncAction.Import
+                                showSyncProgress = true
+                                importMessage = "正在导入歌单文件，请稍候…"
+                                scope.launch {
+                                    try {
+                                        persistence.run { }
+                                        val report = services.importSyncPackageFrom(uriOrPath)
+                                        importMessage = report.message
+                                        if (report.success) {
+                                            val loadedTracks = services.loadLibrary()
+                                            val loadedPlaylists = rematchCatalogTracks(services.loadPlaylists(), loadedTracks)
+                                            importedTracks = tracksWithPlaylistArtwork(loadedTracks, loadedPlaylists)
+                                            playlists = loadedPlaylists
+                                            services.savePlaylists(loadedPlaylists)
+                                            val restored = resolveSelectedPlaylistId(selectedPlaylistId, loadedPlaylists)
+                                            selectPlaylist(restored)
+                                        }
+                                        if (!report.cancelled) syncResult = com.resonance.player.ui.SyncPackageOutcome(false, report)
+                                    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                                        throw cancelled
+                                    } catch (error: Throwable) {
+                                        importMessage = "导入失败：${error.message ?: error::class.simpleName.orEmpty()}"
+                                        syncResult = com.resonance.player.ui.SyncPackageOutcome(false, com.resonance.player.model.SyncReport(false, importMessage.orEmpty()))
+                                    } finally {
+                                        syncInProgress = null
+                                        showSyncProgress = false
+                                    }
+                                }
+                            }
+                        },
                         onExitPreview = {
                             services.setPlaying(false)
                             previewMode = false
@@ -1065,8 +1123,12 @@ fun App(
                     }
                 }
                 syncResult?.let { result ->
-                    com.resonance.player.ui.SyncPackageResultDialog(result, onDismiss = { syncResult = null },
-                        onOpenLocation = services::openExportLocation)
+                    com.resonance.player.ui.SyncPackageResultDialog(
+                        outcome = result,
+                        onDismiss = { syncResult = null },
+                        onOpenLocation = services::openExportLocation,
+                        onShareExported = services::shareExportedPackage,
+                    )
                 }
 
                 com.resonance.player.ui.AssistantDeletionPrompt(features)

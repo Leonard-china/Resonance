@@ -1,4 +1,8 @@
-# 2026-11-05 — Resonance 文档入口与开发变更索引
+# 2026-11-21 — Resonance 文档入口与开发变更索引
+
+最新界面与缺陷修复交付：[清岚（Clearwater）清新界面、苹果式弹簧动效与 0.7.0 APK](changes/2026-11-21-05-clearwater-fresh-ui-apple-motion-and-apk.md)及[修复 Android 歌单导入失败与多选批量补全](changes/2026-11-21-04-fix-sync-import-and-batch-enrich.md)已完成：彻底去除红色主调转为薄雾浅瓷/深海暮蓝+海沫青碧/冰川天蓝配色，落地苹果式弹簧滑块/播放键形变/心形跃动/流体背景光团/绘制层光学聚焦歌词与工具 2×2 Bento 矩阵；修复 Android FUSE 下 `Files.getFileStore` 导致歌单导入失败、修复 MediaStore 曲目批量补全未持久化与假封面占位问题并接入 QQ 音乐目录。当前版本 `0.7.0 / 70`，Desktop/Android 全量编译、36 项同步与补全回归、53 项 UI 回归与多视口截图复检及新版 `Resonance-0.7.0-release.apk`（debug 签名，16 KiB 对齐）均已通过，真机实测与正式证书边界见记录。
+
+前轮界面升级：[Atelier Acoustics 原生 UI 全面重塑](changes/2026-11-21-01-atelier-acoustics-ui-redesign.md)已完成三端共享设计系统、主壳导航、2×2 歌单拼贴、声学几何封套、沉浸舞台与跨窗弹窗隔离重构，随后演进为上方清岚体系。
 
 最新发布：[0.6.6三端正式发布](changes/2026-11-05-29-publish-three-platform-release.md)已完成GitHub公开与官网受控上线，含Android APK、Windows EXE、Linux便携包/DEB及本次实际SHA。[官网介绍/五张截图/下载页](changes/2026-11-05-30-refresh-website-release-pages.md)已更新；公开Range与源站校验通过。普通页面Cloudflare缓存按用户选择等待自然更新，可立即访问[新版首页](https://leonard.asia/?v=0.6.6)及[下载](https://leonard.asia/downloads?v=0.6.6)。最终CI、构建及平台限制见发布记录。
 
@@ -123,6 +127,13 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-21 | 清岚 0.7.0 三端发布与本机桌面更新 | [发布记录](changes/2026-11-21-07-publish-0.7.0-and-update-desktop.md) |
+| 2026-11-21 | 同步歌词页直接校准，调节时保留当前歌词和播放控制 | [具体记录](changes/2026-11-21-06-lyrics-calibration-toolbar.md) |
+| 2026-11-21 | 清岚（Clearwater）清新界面重构（去除红色主调）、苹果式弹簧动效与歌词舞台升级、Bento 排版及新版 0.7.0 Release APK（debug 签名，167524719 字节） | [具体记录](changes/2026-11-21-05-clearwater-fresh-ui-apple-motion-and-apk.md) |
+| 2026-11-21 | 修复 Android 歌单导入失败（`Files.getFileStore` 替换 `statvfs`）与多选批量补全无生效（upsert 持久化/假封面探测/QQ 目录接入），优化歌单快捷导出与分享 | [具体记录](changes/2026-11-21-04-fix-sync-import-and-batch-enrich.md) |
+| 2026-11-21 | 升版至 0.7.0 (70) 并重新构建 Android Release APK（debug 证书签名，167491951 字节） | [具体记录](changes/2026-11-21-03-bump-to-0.7.0-and-build-release-apk.md) |
+| 2026-11-21 | 构建当前工作区 Android Release APK（未签名，167458208 字节，16 KiB 对齐通过） | [具体记录](changes/2026-11-21-02-build-release-apk.md) |
+| 2026-11-21 | Atelier Acoustics（声学画廊）三端原生 UI 全面重构与跨窗弹窗隔离 | [具体记录](changes/2026-11-21-01-atelier-acoustics-ui-redesign.md) |
 | 2026-11-05 | 配对重连回归等待持久化状态刷新 | [具体记录](changes/2026-11-05-32-await-companion-restoration-in-regression.md) |
 | 2026-11-05 | FFmpeg 4.4整轨响度参数兼容 | [具体记录](changes/2026-11-05-31-ffmpeg44-loudness-and-pairing-regression.md) |
 | 2026-11-05 | 官网以当前真实原生截图更新首页/介绍/三端下载，修复预览切换并补DEB说明 | [具体记录](changes/2026-11-05-30-refresh-website-release-pages.md) |

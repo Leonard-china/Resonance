@@ -42,6 +42,68 @@ class LyricsPlayerRegressionTest {
         assertNotNull(label(label).config.getOrNull(SemanticsActions.OnClick)?.action).invoke()
     }
 
+    @Test fun calibrationKeepsLyricsAndTransportVisibleAndAppliesTheDisplayedStep() {
+        SwingUtilities.invokeAndWait {
+            for ((width, height, scale) in listOf(Triple(390, 844, 1f), Triple(360, 640, 1.6f), Triple(720, 360, 1.5f))) {
+                val currentLyrics = mutableStateOf(lyrics)
+                val scene = ImageComposeScene(width, height, density = Density(1f, scale)) {
+                    ResonanceTheme(ThemeMode.Light, reducedMotion = true) {
+                        NowPlayingOverlay(
+                            playerState = PlayerState(currentTrack = track, positionMs = 4_800L),
+                            queue = listOf(track), lyricsState = LyricsUiState.Ready(currentLyrics.value),
+                            onAdjustLyricsOffset = { delta ->
+                                currentLyrics.value = currentLyrics.value.copy(offsetMs = currentLyrics.value.offsetMs + delta)
+                            },
+                            onDismiss = {}, onTogglePlay = {}, onPrevious = {}, onNext = {}, onToggleShuffle = {},
+                            onCycleRepeat = {}, onSeek = {}, onTrackSelected = {}, onToggleFavorite = {}, onRefreshLyrics = {},
+                        )
+                    }
+                }
+                var time = 0L
+                fun settle() { repeat(12) { scene.render(time).close(); time += 16_666_667L } }
+                fun click(label: String) { scene.click(label); settle() }
+                try {
+                    settle()
+                    click("歌词")
+                    click("校准")
+                    val viewport = scene.tag("player-lyrics-list").boundsInRoot
+                    for (label in listOf("延后", "提前", "重置", "完成校准")) {
+                        val button = scene.label(label)
+                        val bounds = button.boundsInRoot
+                        assertTrue(bounds.width >= button.size.width - 1 && bounds.height >= button.size.height - 1 &&
+                            bounds.left >= 0 && bounds.right <= width && bounds.top >= 0 && bounds.bottom <= viewport.top + 1,
+                            "$width × $height: $label $bounds, viewport $viewport")
+                    }
+                    click("提前")
+                    assertEquals(500L, currentLyrics.value.offsetMs)
+                    assertEquals(true, scene.tag("lyric-line-1").config.getOrNull(SemanticsProperties.Selected))
+                    val line = scene.tag("lyric-line-1")
+                    assertTrue(line.boundsInRoot.height >= line.size.height - 1 && line.boundsInRoot.height > 0)
+                    assertTrue(scene.label("播放").boundsInRoot.top >= 0)
+                    scene.render(time).use { image ->
+                        val file = Path.of("build/lyrics-regression/calibration-$width-$height.png")
+                        Files.createDirectories(file.parent)
+                        image.encodeToData()!!.use { Files.write(file, it.bytes) }
+                    }
+                    click("延后")
+                    click("延后")
+                    assertEquals(-500L, currentLyrics.value.offsetMs)
+                    assertEquals(true, scene.tag("lyric-line-0").config.getOrNull(SemanticsProperties.Selected))
+                    click("重置")
+                    assertEquals(0L, currentLyrics.value.offsetMs)
+                    click("完成校准")
+                    click("歌词工具")
+                    click("校准时间轴")
+                    assertNotNull(scene.label("完成校准"))
+                    currentLyrics.value = lyrics.copy(synchronized = false)
+                    settle()
+                    assertFailsWith<IllegalStateException> { scene.label("校准") }
+                    assertFailsWith<IllegalStateException> { scene.label("完成校准") }
+                } finally { scene.close() }
+            }
+        }
+    }
+
     @Test fun coverPreviewAndImmersiveFocusFollowNativePositionAtAllWindowSizes() {
         SwingUtilities.invokeAndWait {
             for ((width, height, scale) in listOf(Triple(390, 844, 1f), Triple(360, 640, 1.5f), Triple(720, 360, 1.5f), Triple(1280, 800, 1f))) {

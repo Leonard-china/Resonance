@@ -1,6 +1,7 @@
 package com.resonance.player.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,15 +85,13 @@ fun BatchEnrichDialog(
         onDismissRequest = { if (!isRunning) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
+        androidx.compose.runtime.CompositionLocalProvider(com.resonance.player.design.LocalGlassState provides null) {
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .padding(vertical = 24.dp)
-                .resonanceGlass(
-                    shape = RoundedCornerShape(22.dp),
-                    borderColors = listOf(ResonanceColors.GlassBorder, ResonanceColors.GlassBorderSubtle),
-                    shadowElevation = 16.dp,
-                ),
+                .background(ResonanceColors.CanvasElevated, RoundedCornerShape(22.dp))
+                .border(1.dp, ResonanceColors.Divider, RoundedCornerShape(22.dp)),
         ) {
             Column(
                 modifier = Modifier
@@ -142,6 +141,7 @@ fun BatchEnrichDialog(
                     )
                 }
             }
+        }
         }
     }
 }
@@ -339,6 +339,7 @@ private fun EnrichCompletedView(
     report: BatchEnrichReport,
     onFinish: () -> Unit,
 ) {
+    val anyUpdated = report.coversEnriched > 0 || report.lyricsEnriched > 0 || report.metadataEnriched > 0
     Column(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -347,13 +348,23 @@ private fun EnrichCompletedView(
             modifier = Modifier
                 .size(52.dp)
                 .clip(CircleShape)
-                .background(ResonanceColors.PrimarySoft),
+                .background(if (anyUpdated) ResonanceColors.PrimarySoft else ResonanceColors.Soft),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Default.Check, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(28.dp))
+            Icon(
+                if (anyUpdated) Icons.Default.Check else Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = if (anyUpdated) ResonanceColors.Primary else ResonanceColors.Muted,
+                modifier = Modifier.size(28.dp),
+            )
         }
         Spacer(Modifier.height(16.dp))
-        Text("补全处理完成", style = MaterialTheme.typography.titleLarge, color = ResonanceColors.TextPrimary, fontWeight = FontWeight.Bold)
+        Text(
+            if (anyUpdated) "补全处理完成" else "未匹配到新内容",
+            style = MaterialTheme.typography.titleLarge,
+            color = ResonanceColors.TextPrimary,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(6.dp))
         Text(report.message, style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Dim, modifier = Modifier.padding(horizontal = 8.dp))
         Spacer(Modifier.height(16.dp))
@@ -361,11 +372,9 @@ private fun EnrichCompletedView(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .resonanceGlass(
-                    shape = RoundedCornerShape(12.dp),
-                    borderColors = listOf(ResonanceColors.GlassBorderSubtle, ResonanceColors.GlassBorderSubtle),
-                    shadowElevation = 0.dp,
-                ),
+                .clip(RoundedCornerShape(12.dp))
+                .background(ResonanceColors.Soft)
+                .border(1.dp, ResonanceColors.Divider, RoundedCornerShape(12.dp)),
         ) {
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ResultRow("已处理歌曲", "${report.totalProcessed} 首")

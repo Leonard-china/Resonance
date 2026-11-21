@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.design.resonanceGlass
 import com.resonance.player.design.resonanceSpring
 import com.resonance.player.model.Track
@@ -87,32 +89,42 @@ internal fun TogetherRoomHero(room: TogetherState, track: Track?, playing: Boole
         }
     }
     Column(
-        Modifier.fillMaxWidth().resonanceGlass(shape = RoundedCornerShape(24.dp), shadowElevation = 3.dp)
+        Modifier
+            .fillMaxWidth()
+            .atelierCard(shape = RoundedCornerShape(20.dp), shadowElevation = 2.dp)
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             if (active && track != null) {
-                AlbumArtwork(track.artworkSeed, Modifier.size(80.dp), cornerRadius = 16.dp,
+                AlbumArtwork(track.artworkSeed, Modifier.size(80.dp), cornerRadius = 14.dp,
                     artworkPath = track.artworkPath, audioSource = track.sourceUri)
             } else {
-                Box(Modifier.size(72.dp).background(ResonanceColors.PrimarySoft, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Default.Headphones, null, Modifier.size(34.dp), tint = ResonanceColors.Primary)
+                Box(Modifier.size(68.dp).clip(RoundedCornerShape(18.dp)).background(ResonanceColors.PrimarySoft), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Headphones, null, Modifier.size(32.dp), tint = ResonanceColors.Primary)
                 }
             }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(if (active) title.ifBlank { "房间已准备好" } else "同一首歌，一起听",
                     style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold,
+                    color = ResonanceColors.TextPrimary,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(if (active) artist.ifBlank { "选首喜欢的歌，等朋友一起听" } else "创建房间，或加入朋友的邀请。",
                     style = MaterialTheme.typography.bodyMedium, color = ResonanceColors.Muted,
                     maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier
+                .clip(ResonanceShapes.Capsule)
+                .background(if (room.status == TogetherStatus.Error) ResonanceColors.DangerSoft else ResonanceColors.Soft)
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Box(Modifier.size(7.dp).background(
-                if (room.status == TogetherStatus.Error) MaterialTheme.colorScheme.error else ResonanceColors.Primary, CircleShape))
-            Text(status, style = MaterialTheme.typography.bodyMedium)
+                if (room.status == TogetherStatus.Error) ResonanceColors.Danger else ResonanceColors.Primary, CircleShape))
+            Text(status, style = MaterialTheme.typography.labelMedium, color = ResonanceColors.TextPrimary)
         }
         if (room.message.isNotBlank()) Text(room.message, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
         if (active) {
@@ -122,7 +134,7 @@ internal fun TogetherRoomHero(room: TogetherState, track: Track?, playing: Boole
                     Text("${room.memberCount} 人在房间", style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
                 }
                 if (room.verificationCode.isNotBlank()) Text("核验码 ${room.verificationCode}",
-                    style = MaterialTheme.typography.labelMedium, color = ResonanceColors.Muted)
+                    style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"), color = ResonanceColors.Muted)
             }
         }
     }
@@ -135,11 +147,11 @@ internal fun TogetherSection(
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(shape = RoundedCornerShape(20.dp), color = ResonanceColors.Glass) {
+    Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
         Column(Modifier.fillMaxWidth().animateContentSize(resonanceSpring()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = ResonanceColors.TextPrimary)
                     if (subtitle != null) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
                 }
                 action?.invoke()
@@ -187,8 +199,13 @@ internal fun TogetherQueueSummary(room: TogetherState, onOpen: () -> Unit, onAdd
 internal fun TogetherQueueDialog(room: TogetherState, service: ListenTogetherService, onDismiss: () -> Unit) {
     val list = rememberLazyListState(initialFirstVisibleItemIndex = room.sharedQueue.indexOfFirst { it.current }.coerceAtLeast(0))
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.padding(16.dp).widthIn(max = 680.dp).fillMaxWidth().fillMaxHeight(.85f).resonanceGlass(shape = RoundedCornerShape(24.dp)),
-            shape = RoundedCornerShape(24.dp), color = androidx.compose.ui.graphics.Color.Transparent) {
+        CompositionLocalProvider(com.resonance.player.design.LocalGlassState provides null) {
+        Surface(
+            Modifier.padding(16.dp).widthIn(max = 680.dp).fillMaxWidth().fillMaxHeight(.85f),
+            shape = RoundedCornerShape(24.dp),
+            color = ResonanceColors.CanvasElevated,
+            border = androidx.compose.foundation.BorderStroke(1.dp, ResonanceColors.Divider),
+        ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -209,6 +226,7 @@ internal fun TogetherQueueDialog(room: TogetherState, service: ListenTogetherSer
                 }
                 TextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("返回房间") }
             }
+        }
         }
     }
 }

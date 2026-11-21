@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -21,12 +23,21 @@ import com.resonance.player.platform.ArtworkMemoryCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.math.cos
+import kotlin.math.sin
 
-/** Album color is the material's light source, not an animated decorative overlay. */
+/**
+ * Album color is the stage's living light source.
+ * When playing (foreground & motion enabled), two soft Apple-style liquid light orbs
+ * gently orbit in the draw phase without recomposing the UI tree.
+ */
 @Composable
-fun FrostedBackdrop(track: Track?, modifier: Modifier = Modifier, immersive: Boolean = false) {
-    // The library uses the approved quiet canvas; only the player samples album imagery.
-    // This keeps the navigation surface independent of large blurred bitmap layers.
+fun FrostedBackdrop(
+    track: Track?,
+    modifier: Modifier = Modifier,
+    immersive: Boolean = false,
+    isPlaying: Boolean = false,
+) {
     if (!immersive) {
         Box(modifier.background(ResonanceColors.Canvas))
         return
@@ -44,25 +55,73 @@ fun FrostedBackdrop(track: Track?, modifier: Modifier = Modifier, immersive: Boo
         }
     }
     val canvas = ResonanceColors.Canvas
-    val dark = ResonanceColors.isDark
     val atmosphere = rememberAlbumAtmosphere(track?.artworkSeed ?: 0, track?.artworkPath, track?.sourceUri)
+    val driftPhase = rememberPlaybackVisualPhase(
+        playing = isPlaying && !LocalReducedMotion.current && LocalAppForeground.current,
+        periodMillis = 14_000,
+    )
+
     Box(modifier.clipToBounds().background(canvas)) {
-        Crossfade(artwork, animationSpec = tween(motionDuration(300)), label = "frostedAlbum",
-            modifier = Modifier.matchParentSize()) { bitmap ->
+        Crossfade(
+            artwork,
+            animationSpec = tween(motionDuration(380)),
+            label = "frostedAlbum",
+            modifier = Modifier.matchParentSize(),
+        ) { bitmap ->
             if (bitmap != null) {
-                Image(bitmap, null, contentScale = ContentScale.Crop,
-                    colorFilter = remember { androidx.compose.ui.graphics.ColorFilter.colorMatrix(
-                        androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(.65f) }) },
-                    modifier = Modifier.fillMaxSize().scale(1.14f).blur(if (immersive) 64.dp else 56.dp))
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    colorFilter = remember {
+                        androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+                            androidx.compose.ui.graphics.ColorMatrix().apply { setToSaturation(0.92f) }
+                        )
+                    },
+                    modifier = Modifier.fillMaxSize().scale(1.18f).blur(72.dp),
+                )
             } else {
-                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(
-                    listOf(atmosphere.edge.copy(alpha = .70f), atmosphere.glow.copy(alpha = .55f), canvas))))
+                Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(atmosphere.base.copy(alpha = 0.90f), canvas))))
             }
         }
-        // The text always reads over a controlled luminance range, including pre-Android-12 fallback.
-        val tint = if (immersive) { if (dark) .38f else .58f } else { if (dark) .48f else .52f }
-        Box(Modifier.matchParentSize().background(canvas.copy(alpha = tint)))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(
-            canvas.copy(alpha = .08f), canvas.copy(alpha = if (immersive) .26f else .12f)))))
+        // Living Apple Music-style drifting liquid light orbs (pure draw-phase animation).
+        Box(
+            Modifier.matchParentSize().drawBehind {
+                val angle = driftPhase.value
+                val orb1X = size.width * (0.26f + 0.14f * cos(angle))
+                val orb1Y = size.height * (0.24f + 0.10f * sin(angle))
+                val orb2X = size.width * (0.76f - 0.14f * sin(angle * 0.85f))
+                val orb2Y = size.height * (0.58f + 0.12f * cos(angle * 0.85f))
+                val orbAlpha1 = if (artwork != null) 0.24f else 0.56f
+                val orbAlpha2 = if (artwork != null) 0.18f else 0.42f
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(atmosphere.glow.copy(alpha = orbAlpha1), atmosphere.base.copy(alpha = orbAlpha1 * 0.5f), Color.Transparent),
+                        center = Offset(orb1X, orb1Y),
+                        radius = size.maxDimension * 0.82f,
+                    )
+                )
+                drawRect(
+                    Brush.radialGradient(
+                        colors = listOf(atmosphere.edge.copy(alpha = orbAlpha2), atmosphere.base.copy(alpha = orbAlpha2 * 0.4f), Color.Transparent),
+                        center = Offset(orb2X, orb2Y),
+                        radius = size.maxDimension * 0.76f,
+                    )
+                )
+            }
+        )
+        // Sculpted contrast veil: preserves rich luminous color up top while grounding controls cleanly.
+        Box(
+            Modifier.matchParentSize().background(
+                Brush.verticalGradient(
+                    colorStops = arrayOf(
+                        0.0f to canvas.copy(alpha = 0.24f),
+                        0.45f to canvas.copy(alpha = 0.38f),
+                        0.82f to canvas.copy(alpha = 0.62f),
+                        1.0f to canvas.copy(alpha = 0.74f),
+                    )
+                )
+            )
+        )
     }
 }

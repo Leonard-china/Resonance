@@ -14,6 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.*
 
 @Composable
@@ -23,7 +25,9 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
     val state by assistant.state.collectAsState()
     var address by remember { mutableStateOf("") }
     val busy = state.task.running
-    Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 16.dp else 28.dp)) {
+    val pagePadding = if (compact) 20.dp else 40.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding, vertical = if (compact) 10.dp else 18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
             Text("歌源", style = MaterialTheme.typography.headlineMedium)
@@ -58,8 +62,8 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
                 }
             }
             items(state.sources, key = MusicSourceInfo::id) { source ->
-                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp)) {
+                Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(source.name, style = MaterialTheme.typography.titleMedium)
@@ -93,6 +97,7 @@ internal fun MusicSourcesScreen(compact: Boolean, onBack: () -> Unit) {
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
         }
     }
+    }
 }
 
 private fun sourceCapabilityLabel(value: String): String = when (value) {
@@ -115,7 +120,9 @@ internal fun MusicStorageScreen(compact: Boolean, onBack: () -> Unit) {
     }
     LaunchedEffect(Unit) { refresh() }
     val busy = state.task.running || refreshing
-    Column(Modifier.fillMaxSize().padding(horizontal = if (compact) 16.dp else 28.dp)) {
+    val pagePadding = if (compact) 20.dp else 40.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding, vertical = if (compact) 10.dp else 18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
             Text("下载与空间", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
@@ -140,8 +147,8 @@ internal fun MusicStorageScreen(compact: Boolean, onBack: () -> Unit) {
                 }
             }
             items(report?.entries.orEmpty(), key = { it.track.id }) { entry ->
-                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
+                    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(entry.track.title, style = MaterialTheme.typography.titleMedium)
                         Text(entry.track.artist, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(if (entry.bytes == 0L) "本地未下载" else formatMusicBytes(entry.bytes) + " · " +
@@ -161,6 +168,7 @@ internal fun MusicStorageScreen(compact: Boolean, onBack: () -> Unit) {
             if (busy) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             if (feature.message.isNotBlank()) item { Text(feature.message, color = MaterialTheme.colorScheme.primary) }
         }
+    }
     }
     if (pending.isNotEmpty()) {
         val chosen = pending

@@ -163,4 +163,54 @@ class PlainSyncPackageTest {
             Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
         }
     }
+
+    @Test
+    fun usableSpaceHelperAndNormalizedZipEntriesRoundTripCleanly() {
+        val root = Files.createTempDirectory("resonance-plain-sync-space-")
+        try {
+            val audio = root.resolve("hello.flac")
+            Files.write(audio, "fLaC-mock-audio-stream".encodeToByteArray())
+            val track = Track("t-space", "晴天", "周杰伦", "叶惠美", "4:29", 7, sourceUri = audio.toString(), mimeType = "audio/flac")
+            val playlist = Playlist("p-space", "晴天歌单", "1 首", listOf(track), 7)
+            val pkg = root.resolve("sunny.resonance")
+
+            val exported = PlainSyncPackage().export(
+                target = pkg,
+                tracks = listOf(track),
+                playlists = listOf(playlist),
+                openAudio = { Files.newInputStream(audio) },
+                openArtwork = {
+                    object : java.io.InputStream() {
+                        override fun read(): Int = throw java.io.IOException("simulated cover stream error")
+                    }
+                },
+            )
+            assertEquals(1, exported.tracks.size)
+            assertEquals(0, exported.skippedTrackCount)
+
+            assertTrue(com.resonance.player.io.usableSpaceBytes(root.resolve("nonexistent/child/file.resonance")) > 0L)
+
+            val repacked = root.resolve("repacked.resonance")
+            ZipFile(pkg.toFile()).use { input ->
+                java.util.zip.ZipOutputStream(Files.newOutputStream(repacked)).use { output ->
+                    input.entries().asSequence().forEach { entry ->
+                        output.putNextEntry(java.util.zip.ZipEntry("./" + entry.name))
+                        input.getInputStream(entry).use { it.copyTo(output) }
+                        output.closeEntry()
+                    }
+                }
+            }
+            val imported = PlainSyncPackage().import(repacked, root.resolve("managed-repacked"))
+            assertEquals(1, imported.tracks.size)
+            assertEquals("晴天", imported.tracks.single().title)
+            assertEquals("晴天歌单", imported.playlists.single().name)
+            assertTrue(imported.tracks.single().sourceUri!!.endsWith(".flac"))
+
+            assertFailsWith<IllegalArgumentException> {
+                PlainSyncPackage(usableSpaceProvider = { 1024L }).import(repacked, root.resolve("managed-low-space"))
+            }
+        } finally {
+            Files.walk(root).use { paths -> paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists) }
+        }
+    }
 }

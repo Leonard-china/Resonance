@@ -1057,18 +1057,25 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
             selectedPlaylists.flatMap(Playlist::tracks).map { track -> byId[track.id] ?: track }.distinctBy(Track::id)
         }
         require(tracks.isNotEmpty()) { "所选歌单没有可导出的本地音频" }
-        val temporary = activity.cacheDir.toPath().resolve("Resonance-Sync.resonance")
+        val temporary = Files.createTempFile(activity.cacheDir.toPath(), "resonance-sync-", ".resonance")
         try {
-            PlainSyncPackage().export(
+            val exported = PlainSyncPackage().export(
                 target = temporary,
                 tracks = tracks,
                 playlists = selectedPlaylists,
                 openAudio = { track -> openTrackSource(track.sourceUri) },
                 openArtwork = { track -> openArtworkSource(track) },
             )
+            require(exported.tracks.isNotEmpty()) { "所选歌单中的本地音频均无法读取，请确认文件未被移动或重新授予读取权限" }
             val destination = saveToDownloads(temporary, syncPackageFileName(if (playlistId == null) null else selectedPlaylists.single().name))
-            SyncReport(true, "已导出到 ${destination.directory}：${destination.fileName}", tracks.size, selectedPlaylists.size,
-                exportedPackage = destination)
+            val skippedNote = if (exported.skippedTrackCount > 0) "（跳过 ${exported.skippedTrackCount} 首无法读取的离线条目）" else ""
+            SyncReport(
+                success = true,
+                message = "已导出 ${exported.tracks.size} 首歌曲到 ${destination.directory}：${destination.fileName}$skippedNote",
+                trackCount = exported.tracks.size,
+                playlistCount = exported.playlists.size,
+                exportedPackage = destination,
+            )
         } finally {
             Files.deleteIfExists(temporary)
         }
@@ -1079,10 +1086,113 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         openAndroidExportDirectory(activity, directory)
     }
 
+    override suspend fun shareExportedPackage(uriOrPath: String): Boolean = withContext(Dispatchers.Main) {
+        runCatching {
+            val shareUri = when {
+                uriOrPath.startsWith("content://") -> Uri.parse(uriOrPath)
+                else -> return@runCatching false
+            }
+            val send = Intent(Intent.ACTION_SEND).apply {
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_STREAM, shareUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            activity.startActivity(Intent.createChooser(send, "分享 Resonance 歌单文件"))
+            true
+        }.getOrDefault(false)
+    }
+
+    override suspend fun listLocalSyncPackages(): List<com.resonance.player.model.LocalSyncPackage> = withContext(Dispatchers.IO) {
+        val result = mutableListOf<com.resonance.player.model.LocalSyncPackage>()
+        if (Build.VERSION.SDK_INT >= 29) {
+            val relativePath = "${Environment.DIRECTORY_DOWNLOADS}/Resonance/"
+            val projection = arrayOf(
+                MediaStore.Downloads._ID,
+                MediaStore.Downloads.DISPLAY_NAME,
+                MediaStore.Downloads.SIZE,
+                MediaStore.Downloads.DATE_MODIFIED,
+            )
+            runCatching {
+                activity.contentResolver.query(
+                    MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                    projection,
+                    "${MediaStore.Downloads.RELATIVE_PATH} = ? AND ${MediaStore.Downloads.IS_PENDING} = 0",
+                    arrayOf(relativePath),
+                    "${MediaStore.Downloads.DATE_MODIFIED} DESC",
+                )?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads._ID)
+                    val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DISPLAY_NAME)
+                    val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.SIZE)
+                    val modCol = cursor.getColumnIndexOrThrow(MediaStore.Downloads.DATE_MODIFIED)
+                    while (cursor.moveToNext() && result.size < 30) {
+                        val name = cursor.getString(nameCol).orEmpty()
+                        if (!name.endsWith(".resonance", ignoreCase = true)) continue
+                        val uri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cursor.getLong(idCol))
+                        result += com.resonance.player.model.LocalSyncPackage(
+                            fileName = name,
+                            sizeBytes = cursor.getLong(sizeCol).coerceAtLeast(0L),
+                            modifiedAtMs = cursor.getLong(modCol).coerceAtLeast(0L) * 1000L,
+                            uriOrPath = uri.toString(),
+                            directory = "内部存储 / Download / Resonance",
+                        )
+                    }
+                }
+            }
+        } else {
+            val directory = (activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: activity.filesDir)
+                .toPath().resolve("Resonance")
+            if (Files.isDirectory(directory)) {
+                runCatching {
+                    Files.list(directory).use { stream ->
+                        stream.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".resonance", ignoreCase = true) }
+                            .sorted(compareByDescending<Path> { runCatching { Files.getLastModifiedTime(it).toMillis() }.getOrDefault(0L) })
+                            .limit(30)
+                            .forEach { file ->
+                                result += com.resonance.player.model.LocalSyncPackage(
+                                    fileName = file.fileName.toString(),
+                                    sizeBytes = runCatching { Files.size(file) }.getOrDefault(0L),
+                                    modifiedAtMs = runCatching { Files.getLastModifiedTime(file).toMillis() }.getOrDefault(0L),
+                                    uriOrPath = file.toAbsolutePath().toString(),
+                                    directory = directory.toAbsolutePath().toString(),
+                                )
+                            }
+                    }
+                }
+            }
+        }
+        result
+    }
+
     override suspend fun importSyncPackage(): SyncReport = withContext(Dispatchers.IO) {
-        val temporary = activity.cacheDir.toPath().resolve("Resonance-Import.resonance")
         val sourceUri = pickSyncPackage() ?: return@withContext SyncReport(false, "已取消导入", cancelled = true)
-        val sourceName = sourceUri.lastPathSegment?.substringAfterLast('/') ?: "歌单文件"
+        val sourceName = resolveDocumentDisplayName(sourceUri)
+        importSyncPackageUri(sourceUri, sourceName)
+    }
+
+    override suspend fun importSyncPackageFrom(uriOrPath: String): SyncReport = withContext(Dispatchers.IO) {
+        if (uriOrPath.startsWith("content://")) {
+            val uri = Uri.parse(uriOrPath)
+            importSyncPackageUri(uri, resolveDocumentDisplayName(uri))
+        } else {
+            val file = Paths.get(uriOrPath)
+            importSyncPackageFile(file, file.fileName?.toString() ?: "歌单文件")
+        }
+    }
+
+    private fun resolveDocumentDisplayName(uri: Uri): String {
+        runCatching {
+            DocumentFile.fromSingleUri(activity, uri)?.name?.takeIf(String::isNotBlank)?.let { return it }
+        }
+        runCatching {
+            activity.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0)?.takeIf(String::isNotBlank)?.let { return it }
+            }
+        }
+        return uri.lastPathSegment?.substringAfterLast('/')?.takeIf(String::isNotBlank) ?: "歌单文件"
+    }
+
+    private suspend fun importSyncPackageUri(sourceUri: Uri, sourceName: String): SyncReport {
+        val temporary = Files.createTempFile(activity.cacheDir.toPath(), "resonance-import-", ".resonance")
         val importContext = kotlin.coroutines.coroutineContext
         try {
             activity.contentResolver.openInputStream(sourceUri).use { input ->
@@ -1097,35 +1207,51 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                         copied += count
                         require(copied <= 512L * 1024 * 1024 * 1024) { "歌单文件过大" }
                         if (copied % (4 * 1024 * 1024) < count) {
-                            require(Files.getFileStore(temporary).usableSpace >= 16L * 1024 * 1024 + count) { "空间不足，无法暂存歌单文件" }
+                            // Use statvfs via File.usableSpace instead of Files.getFileStore (blocked by Android SELinux/FUSE).
+                            require(com.resonance.player.io.usableSpaceBytes(temporary) >= 16L * 1024 * 1024 + count) { "空间不足，无法暂存歌单文件" }
                         }
                         output.write(buffer, 0, count)
                     }
                 }
             }
-            val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
-                .toPath().resolve("Resonance")
-            val imported = synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
-                val previousCache = cachedTracks
-                try {
-                    PlainSyncPackage().import(temporary, managed, onCommit = { archive ->
-                        val managedIndex = activity.filesDir.toPath().resolve("synced-library.properties")
-                        val metadata = listOf(managedIndex, managedIndex.resolveSibling("${managedIndex.fileName}.bak"))
-                        com.resonance.player.io.FileRollback.run(metadata) {
-                            withPreferenceRollback(listOf("resonance_playlists", "resonance_playlists_backup").map {
-                                activity.getSharedPreferences(it, Context.MODE_PRIVATE)
-                            }) {
-                                mergeSyncedTracks(archive.tracks.map { it.copy(sourceUri = Paths.get(it.sourceUri!!).toUri().toString()) })
-                                mergeSyncedPlaylists(archive.playlists)
-                            }
-                        }
-                    }, checkCancelled = { importContext.ensureActive() })
-                } catch (error: Throwable) { cachedTracks = previousCache; throw error }
-            }
-            SyncReport(true, "已导入 $sourceName", imported.tracks.size, imported.playlists.size)
+            return importSyncPackageFile(temporary, sourceName)
         } finally {
             Files.deleteIfExists(temporary)
         }
+    }
+
+    private suspend fun importSyncPackageFile(sourceFile: Path, sourceName: String): SyncReport {
+        val importContext = kotlin.coroutines.coroutineContext
+        val managed = (activity.getExternalFilesDir(Environment.DIRECTORY_MUSIC) ?: activity.filesDir)
+            .toPath().resolve("Resonance")
+        val imported = synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
+            val previousCache = cachedTracks
+            try {
+                PlainSyncPackage().import(sourceFile, managed, onCommit = { archive ->
+                    val managedIndex = activity.filesDir.toPath().resolve("synced-library.properties")
+                    val metadata = listOf(managedIndex, managedIndex.resolveSibling("${managedIndex.fileName}.bak"))
+                    val normalizedTracks = archive.tracks.map { it.copy(sourceUri = Paths.get(it.sourceUri!!).toUri().toString()) }
+                    val byId = normalizedTracks.associateBy(Track::id)
+                    val normalizedPlaylists = archive.playlists.map { playlist ->
+                        playlist.copy(tracks = playlist.tracks.map { byId[it.id] ?: it })
+                    }
+                    com.resonance.player.io.FileRollback.run(metadata) {
+                        withPreferenceRollback(listOf("resonance_playlists", "resonance_playlists_backup").map {
+                            activity.getSharedPreferences(it, Context.MODE_PRIVATE)
+                        }) {
+                            mergeSyncedTracks(normalizedTracks)
+                            mergeSyncedPlaylists(normalizedPlaylists)
+                        }
+                    }
+                }, checkCancelled = { importContext.ensureActive() })
+            } catch (error: Throwable) { cachedTracks = previousCache; throw error }
+        }
+        return SyncReport(
+            success = true,
+            message = "已导入 $sourceName（${imported.tracks.size} 首歌曲 · ${imported.playlists.size} 个歌单）",
+            trackCount = imported.tracks.size,
+            playlistCount = imported.playlists.size,
+        )
     }
 
     override suspend fun importMusic(convertToMp3: Boolean): ImportReport {
@@ -1199,20 +1325,49 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
         DeleteTrackReport(true, fileDeleted, if (fileDeleted) "已删除「${track.title}」的本地音频文件" else "音频已不存在，已移除曲库记录", setOf(track.id))
     }
 
+    private fun hasReadableCoverImage(track: Track): Boolean {
+        val value = track.artworkPath?.takeIf(String::isNotBlank) ?: return false
+        return runCatching {
+            when {
+                value.startsWith("content://") -> {
+                    activity.contentResolver.openInputStream(Uri.parse(value))?.use { stream ->
+                        val probe = ByteArray(12)
+                        stream.read(probe) >= 12
+                    } ?: false
+                }
+                value.startsWith("https://") || value.startsWith("http://") -> true
+                value.startsWith("file://") -> {
+                    val path = runCatching { Paths.get(java.net.URI(value)) }.getOrElse { Paths.get(Uri.parse(value).path!!) }
+                    Files.isRegularFile(path) && Files.size(path) >= 12
+                }
+                else -> {
+                    val path = Paths.get(value)
+                    Files.isRegularFile(path) && Files.size(path) >= 12
+                }
+            }
+        }.getOrDefault(false)
+    }
+
     private val enricher by lazy {
         com.resonance.player.enrich.MetadataEnricher(
             artworkDirectory = activity.filesDir.toPath().resolve("artwork"),
             lyricsRepository = lyricsRepository,
             deepSeekClient = deepSeekClient,
+            hasReadableCover = ::hasReadableCoverImage,
         )
     }
 
     override suspend fun updateTracks(tracks: List<Track>): Unit = withContext(Dispatchers.IO) {
+        if (tracks.isEmpty()) return@withContext
         synchronized(com.resonance.player.features.AndroidMusicAccess.lock(activity)) {
         val updatedById = tracks.associateBy(Track::id)
-        val synced = loadSyncedTracks().map { current -> updatedById[current.id] ?: current }
+        // Upsert into synced-library.properties so MediaStore tracks also persist enriched covers & tags.
+        val existingSynced = loadSyncedTracks()
+        val synced = existingSynced.map { current -> updatedById[current.id] ?: current } +
+            tracks.filter { updated -> existingSynced.none { it.id == updated.id } }
         saveSyncedTracks(synced)
-        cachedTracks = cachedTracks.map { current -> updatedById[current.id] ?: current }
+        cachedTracks = cachedTracks.map { current -> updatedById[current.id] ?: current } +
+            tracks.filter { updated -> cachedTracks.none { it.id == updated.id } }
         val playlists = loadPlaylistsNow().map { playlist ->
             playlist.copy(
                 tracks = playlist.tracks.map { track ->
@@ -1850,7 +2005,7 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
                     check(cursor != null && cursor.moveToFirst()) { "无法确认导出文件名" }
                     cursor.getString(0)
                 }
-                return ExportedPackage(actualName, "内部存储 / Download / Resonance", "打开所在目录", exportDirectoryUri().toString())
+                return ExportedPackage(actualName, "内部存储 / Download / Resonance", "打开所在目录", exportDirectoryUri().toString(), shareUri = uri.toString())
             } catch (error: Throwable) {
                 activity.contentResolver.delete(uri, null, null)
                 throw error
@@ -1867,12 +2022,16 @@ class AndroidPlatformServices(private val activity: ComponentActivity) : Platfor
 
     private fun openTrackSource(value: String?): java.io.InputStream? = runCatching {
         value ?: return null
-        if (value.startsWith("content://")) {
-            activity.contentResolver.openInputStream(android.net.Uri.parse(value))
-        } else {
-            val uri = android.net.Uri.parse(value)
-            val path = if (uri.scheme == "file") Paths.get(uri.path!!) else Paths.get(value)
-            if (Files.isRegularFile(path)) Files.newInputStream(path) else null
+        when {
+            value.startsWith("content://") -> activity.contentResolver.openInputStream(android.net.Uri.parse(value))
+            value.startsWith("file://") -> {
+                val path = runCatching { Paths.get(java.net.URI(value)) }.getOrElse { Paths.get(android.net.Uri.parse(value).path!!) }
+                if (Files.isRegularFile(path)) Files.newInputStream(path) else null
+            }
+            else -> {
+                val path = Paths.get(value)
+                if (Files.isRegularFile(path)) Files.newInputStream(path) else null
+            }
         }
     }.getOrNull()
 

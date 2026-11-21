@@ -1,10 +1,16 @@
 package com.resonance.player.ui.common
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
@@ -20,6 +26,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -75,40 +82,34 @@ import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * 微拟物拟态调色板（严格参考高精度设计规范图）：
- * - 无任何生硬描边线（No wireframe borders）
- * - 柔和多层漫反射环境阴影（Ambient soft diffusion shadows）
- * - 3D 凸起拟态温润渐变盘面（Convex dome lighting gradient）
- * - 墨绿深沉典雅矢量图标与翡翠青绿高亮流光
+ * Tactile transport control tokens aligned with Clearwater / 清岚.
  */
 object SoftNeumorphicTokens {
-    // 渐变主播放晶球色彩（蓝绿流光宝石）
-    val HeroGradientStart = Color(0xFF347D79)
-    val HeroGradientMiddle = Color(0xFF286E68)
-    val HeroGradientEnd = Color(0xFF1C5F5B)
+    // Primary playback accent ramp (fresh jade-mint, all >= 5:1 contrast with white)
+    val HeroGradientStart = Color(0xFF0E947B)
+    val HeroGradientMiddle = Color(0xFF0B7D67)
+    val HeroGradientEnd = Color(0xFF086352)
 
-    // 活跃状态高亮翠绿
-    val ActiveEmerald = Color(0xFF24B88C)
-    val ActiveEmeraldGlow = Color(0xFF247B61)
+    // Active positive accent
+    val ActiveEmerald = Color(0xFF167557)
+    val ActiveEmeraldGlow = Color(0xFF115E46)
 
-    // 收藏红心高亮
-    val ActiveHeart = Color(0xFFFF385C)
+    // Favorite heart accent (soft rose coral, reserved strictly for heart icon)
+    val ActiveHeart = Color(0xFFE8566D)
 
-    // 浅色模式按键盘面凸起照明（左上向右下平滑漫射）
+    // Light tactile surface ramp
     val DiscLightGradStart = Color(0xFFFFFFFF)
-    val DiscLightGradMid = Color(0xFFF7FBF9)
-    val DiscLightGradEnd = Color(0xFFE2EBE8)
+    val DiscLightGradMid = Color(0xFFF5FAF9)
+    val DiscLightGradEnd = Color(0xFFE4EFEC)
 
-    // 深色模式按键盘面
-    val DiscDarkGradStart = Color(0xFF28393F)
-    val DiscDarkGradMid = Color(0xFF1E2C31)
-    val DiscDarkGradEnd = Color(0xFF141F23)
+    // Dark tactile surface ramp
+    val DiscDarkGradStart = Color(0xFF1E2D33)
+    val DiscDarkGradMid = Color(0xFF162227)
+    val DiscDarkGradEnd = Color(0xFF10191D)
 
-    // 浅色模式深墨绿典雅图标色彩
-    val IconPetroleumTeal = Color(0xFF193734)
-
-    // 深色模式柔光薄荷白图标色彩
-    val IconLuminousMint = Color(0xFFDCEDE7)
+    // High-contrast ink tokens
+    val IconPetroleumTeal = Color(0xFF12201E)
+    val IconLuminousMint = Color(0xFFEFF7F6)
 }
 
 /** Shallow tactile lighting; press motion stays on the graphics layer. */
@@ -139,8 +140,8 @@ fun SoftHeroPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifi
     val focused by interaction.collectIsFocusedAsState()
     val reduced = LocalReducedMotion.current || LocalInputModeManager.current.inputMode == InputMode.Keyboard
     val scale by animateFloatAsState(
-        targetValue = if (pressed && !reduced) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMedium),
+        targetValue = if (pressed && !reduced) 0.90f else 1f,
+        animationSpec = if (reduced) tween(0) else ResonanceMotionTokens.AppleBouncySpring,
         label = "playPress"
     )
     val outline = ResonanceColors.Primary
@@ -161,8 +162,23 @@ fun SoftHeroPlayButton(isPlaying: Boolean, onClick: () -> Unit, modifier: Modifi
                     modifier = Modifier.size(if (size >= 50.dp) 24.dp else 18.dp),
                 )
             } else {
-                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, null,
-                    tint = glyph, modifier = Modifier.size(if (size >= 50.dp) 28.dp else 22.dp))
+                AnimatedContent(
+                    targetState = isPlaying,
+                    transitionSpec = {
+                        if (reduced) fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                        else (scaleIn(initialScale = 0.72f, animationSpec = spring(dampingRatio = 0.62f, stiffness = 480f)) +
+                            fadeIn(tween(120))) togetherWith
+                            (scaleOut(targetScale = 0.72f, animationSpec = tween(100)) + fadeOut(tween(90)))
+                    },
+                    label = "heroPlayPauseMorph",
+                ) { playing ->
+                    Icon(
+                        if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
+                        null,
+                        tint = glyph,
+                        modifier = Modifier.size(if (size >= 50.dp) 28.dp else 22.dp).offset(x = if (playing) 0.dp else 1.dp),
+                    )
+                }
             }
         }
     }
@@ -235,9 +251,14 @@ private fun RefinedSlider(value: Float, onValueChange: (Float) -> Unit, label: S
         modifier = modifier.fillMaxWidth().height(48.dp).semantics { contentDescription = label },
         thumb = {
             // Slider measures the thumb to establish its semantic/input bounds.
+            val thumbSize by animateDpAsState(
+                if (focused || pressed || dragging) 15.dp else 12.dp,
+                tween(motionDuration(ResonanceMotionTokens.PressDuration)),
+                label = "refinedSliderThumb",
+            )
             Box(Modifier.size(20.dp, 48.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.size(16.dp).galleryShadow(CircleShape, depth = 3.dp).clip(CircleShape).background(active)
-                    .border(if (focused || pressed || dragging) 3.dp else 2.dp, MaterialTheme.colorScheme.surface, CircleShape))
+                Box(Modifier.size(thumbSize).galleryShadow(CircleShape, depth = 2.dp).clip(CircleShape).background(active)
+                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape))
             }
         },
         track = { slider ->
@@ -277,6 +298,14 @@ private fun WavySlider(
     val activePath = remember { Path() }
     val inactivePath = remember { Path() }
 
+    val reduced = LocalReducedMotion.current
+    val thumbActive = focused || pressed || dragging
+    val flatTrackHeightDp by animateDpAsState(
+        targetValue = if (thumbActive) 7.dp else 4.dp,
+        animationSpec = if (reduced) tween(0) else spring(dampingRatio = 0.74f, stiffness = 420f),
+        label = "flatScrubberHeight",
+    )
+
     Slider(
         value = displayValue,
         onValueChange = {
@@ -292,16 +321,35 @@ private fun WavySlider(
         interactionSource = interaction,
         modifier = modifier.fillMaxWidth().height(48.dp).semantics { contentDescription = label },
         thumb = {
-            val thumbActive = focused || pressed || dragging
-            val thumbSize = if (flat && !thumbActive) 4.dp else if (thumbActive) 17.dp else 14.dp
-            Box(Modifier.size(24.dp, 48.dp), contentAlignment = Alignment.Center) {
+            val targetThumb = if (flat) {
+                if (thumbActive) 15.dp else 9.dp
+            } else {
+                if (thumbActive) 16.dp else 13.dp
+            }
+            val thumbSize by animateDpAsState(
+                targetValue = targetThumb,
+                animationSpec = if (reduced) tween(0) else spring(dampingRatio = 0.65f, stiffness = 440f),
+                label = "scrubberThumbSize",
+            )
+            Box(Modifier.size(28.dp, 48.dp), contentAlignment = Alignment.Center) {
+                if (thumbActive) {
+                    Box(
+                        Modifier
+                            .size(thumbSize + 10.dp)
+                            .clip(CircleShape)
+                            .background(active.copy(alpha = 0.22f))
+                    )
+                }
                 Box(
                     Modifier
                         .size(thumbSize)
-                        .galleryShadow(CircleShape, depth = 2.dp)
+                        .galleryShadow(CircleShape, depth = if (thumbActive) 4.dp else 2.dp)
                         .clip(CircleShape)
                         .background(active)
-                        .border(2.dp, if (ResonanceColors.isDark) Color(0xFFE4ECE8) else Color.White, CircleShape)
+                        .then(
+                            if (!flat) Modifier.border(2.dp, if (ResonanceColors.isDark) Color(0xFFEFF7F6) else Color.White, CircleShape)
+                            else Modifier
+                        )
                 )
             }
         },
@@ -319,8 +367,9 @@ private fun WavySlider(
 
                 val currentX = (sliderState.value * width).coerceIn(0f, width)
                 if (flat) {
-                    drawLine(inactive, Offset(0f, centerY), Offset(width, centerY), 4.dp.toPx(), cap = StrokeCap.Round)
-                    drawLine(active, Offset(0f, centerY), Offset(currentX, centerY), 4.dp.toPx(), cap = StrokeCap.Round)
+                    val trackHeight = flatTrackHeightDp.toPx()
+                    drawLine(inactive.copy(alpha = 0.68f), Offset(0f, centerY), Offset(width, centerY), trackHeight, cap = StrokeCap.Round)
+                    drawLine(active, Offset(0f, centerY), Offset(currentX, centerY), trackHeight, cap = StrokeCap.Round)
                     return@Canvas
                 }
                 val twoPi = (2.0 * PI).toFloat()
@@ -374,13 +423,19 @@ private fun WavySlider(
 fun SoftRefinedPlaybackScrubber(progress: Float, durationText: String, onSeek: (Float) -> Unit,
     formatPosition: (String, Float) -> String, modifier: Modifier = Modifier, isPlaying: Boolean = false, flat: Boolean = false) {
     var preview by remember { mutableStateOf<Float?>(null) }
-    Column(modifier.fillMaxWidth()) {
-        WavySlider(progress, onSeek, "播放进度", onPreview = { preview = it }, isPlaying = isPlaying, flat = flat)
-        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Box(modifier.fillMaxWidth()) {
+        Row(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(top = 36.dp, start = 2.dp, end = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
             val timeStyle = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum")
             Text(formatPosition(durationText, (preview ?: progress).coerceIn(0f, 1f)), style = timeStyle, color = ResonanceColors.Muted)
             Text(durationText, style = timeStyle, color = ResonanceColors.Muted)
         }
+        WavySlider(progress, onSeek, "播放进度", onPreview = { preview = it }, isPlaying = isPlaying, flat = flat)
     }
 }
 

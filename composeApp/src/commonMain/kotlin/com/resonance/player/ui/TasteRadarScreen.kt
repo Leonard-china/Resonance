@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.resonance.player.design.ResonanceColors
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.TasteAnalyticsEngine
 import com.resonance.player.model.TasteDimensions
 import com.resonance.player.model.TastePersona
@@ -53,11 +55,13 @@ fun TasteRadarScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .background(androidx.compose.ui.graphics.Color.Transparent)
+            .background(androidx.compose.ui.graphics.Color.Transparent),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Top Bar
         Row(
             Modifier
+                .widthIn(max = 1100.dp)
                 .fillMaxWidth()
                 .padding(horizontal = pagePadding, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -68,45 +72,46 @@ fun TasteRadarScreen(
             Spacer(Modifier.width(8.dp))
             Text(
                 "音乐品味画像",
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 color = ResonanceColors.TextPrimary,
-                fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.weight(1f))
             Button(
                 onClick = { onOpenShareCard(persona) },
-                shape = RoundedCornerShape(12.dp),
+                shape = ResonanceShapes.Button,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = ResonanceColors.Primary,
-                    contentColor = ResonanceColors.Canvas,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 ),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("生成海报", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text("生成海报", style = MaterialTheme.typography.labelLarge)
             }
         }
 
         Column(
             Modifier
+                .widthIn(max = 1100.dp)
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = pagePadding, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Persona Card
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .atelierCard(shape = RoundedCornerShape(20.dp)),
             ) {
                 Column(Modifier.padding(24.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = CircleShape,
-                            color = ResonanceColors.Primary.copy(alpha = 0.2f),
-                            modifier = Modifier.size(36.dp),
+                            color = ResonanceColors.PrimarySoft,
+                            modifier = Modifier.size(38.dp),
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = ResonanceColors.Primary, modifier = Modifier.size(20.dp))
@@ -114,8 +119,8 @@ fun TasteRadarScreen(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text(persona.title, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
-                            Text(persona.subtitle, fontSize = 13.sp, color = ResonanceColors.Muted)
+                            Text(persona.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                            Text(persona.subtitle, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Muted)
                         }
                     }
 
@@ -177,7 +182,7 @@ fun TasteRadarScreen(
             // Radar Chart Section
             Text(
                 "六维听觉品味雷达",
-                fontSize = 16.sp,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = ResonanceColors.TextPrimary,
                 modifier = Modifier.fillMaxWidth(),
@@ -188,7 +193,7 @@ fun TasteRadarScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
-                    .background(ResonanceColors.Raised, RoundedCornerShape(20.dp))
+                    .atelierCard(shape = RoundedCornerShape(20.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -201,13 +206,14 @@ fun TasteRadarScreen(
             Spacer(Modifier.height(16.dp))
 
             // Dimension breakdown
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = ResonanceColors.GlassLight),
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 24.dp)
+                    .atelierCard(shape = ResonanceShapes.Card),
             ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text("维度细则", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
+                Column(Modifier.padding(18.dp)) {
+                    Text("维度细则", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ResonanceColors.TextPrimary)
                     Spacer(Modifier.height(12.dp))
                     DimensionRow("流行敏锐度", persona.dimensions.popVibrancy, "捕捉当代流行与高频律动的敏感程度")
                     DimensionRow("复古情怀", persona.dimensions.retroNostalgia, "对岁月原声、经典金曲与叙事沉淀的眷恋")
@@ -224,26 +230,41 @@ fun TasteRadarScreen(
 @Composable
 private fun InfoPill(label: String, value: String) {
     Column {
-        Text(label, fontSize = 11.sp, color = ResonanceColors.Dim)
-        Text(value, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = ResonanceColors.Primary)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = ResonanceColors.Dim)
+        Text(value, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = ResonanceColors.Primary)
     }
 }
 
 @Composable
 private fun DimensionRow(label: String, score: Int, desc: String) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+    val fraction = (score / 100f).coerceIn(0f, 1f)
+    Column(Modifier.fillMaxWidth().padding(vertical = 7.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = ResonanceColors.TextPrimary)
-            Text("$score / 100", fontSize = 12.sp, color = ResonanceColors.Primary, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium, color = ResonanceColors.TextPrimary)
+            Text(
+                "$score / 100",
+                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                color = ResonanceColors.Primary,
+                fontWeight = FontWeight.Bold,
+            )
         }
-        Spacer(Modifier.height(4.dp))
-        LinearProgressIndicator(
-            progress = { score / 100f },
-            modifier = Modifier.fillMaxWidth().height(6.dp),
-            color = ResonanceColors.Primary,
-            trackColor = ResonanceColors.Divider,
-        )
-        Text(desc, fontSize = 11.sp, color = ResonanceColors.Dim, modifier = Modifier.padding(top = 2.dp))
+        Spacer(Modifier.height(6.dp))
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .clip(CircleShape)
+                .background(ResonanceColors.Divider)
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction)
+                    .fillMaxHeight()
+                    .clip(CircleShape)
+                    .background(ResonanceColors.Primary)
+            )
+        }
+        Text(desc, style = MaterialTheme.typography.bodySmall, color = ResonanceColors.Dim, modifier = Modifier.padding(top = 4.dp))
     }
 }
 

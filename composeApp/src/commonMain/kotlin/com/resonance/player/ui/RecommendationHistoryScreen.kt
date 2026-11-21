@@ -12,6 +12,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.resonance.player.design.ResonanceShapes
+import com.resonance.player.design.atelierCard
 import com.resonance.player.model.*
 
 @Composable
@@ -36,10 +38,12 @@ internal fun RecommendationHistoryScreen(compact: Boolean, onBack: () -> Unit) {
             else -> true
         }
     }
-    Column(Modifier.fillMaxSize().padding(if (compact) 16.dp else 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    val pagePadding = if (compact) 20.dp else 40.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+    Column(Modifier.widthIn(max = 1100.dp).fillMaxSize().padding(horizontal = pagePadding, vertical = if (compact) 12.dp else 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") }
-            Text("推荐历史与我的反馈", style = MaterialTheme.typography.titleLarge)
+            Text("推荐历史与我的反馈", style = MaterialTheme.typography.headlineMedium)
         }
         Text("反馈保存在本机，不随临时音频清理。可以撤销态度、编辑评论或重新查找歌曲。", style = MaterialTheme.typography.bodySmall)
         OutlinedTextField(query, { query = it.take(180) }, label = { Text("搜索歌名、歌手或评论") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -47,14 +51,14 @@ internal fun RecommendationHistoryScreen(compact: Boolean, onBack: () -> Unit) {
             listOf("全部", "点赞", "踩", "有评论").forEach { label -> FilterChip(filter == label, { filter = label }, label = { Text(label) }) }
         }
         if (feature.message.isNotBlank()) Text(feature.message, color = MaterialTheme.colorScheme.primary)
-        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             if (shown.isEmpty()) item { Text("暂无符合条件的记录。新推荐和你的反馈会出现在这里。") }
             items(shown, key = { it.artist + ":" + it.title }) { song ->
                 val track = feature.library.firstOrNull { it.title.equals(song.title, true) && it.artist.equals(song.artist, true) }
                     ?: Track("history", song.title, song.artist, song.album, "0:00", 0)
                 val feedback = assistant.feedbackFor(track)
-                Surface(shape = MaterialTheme.shapes.medium, color = com.resonance.player.design.ResonanceColors.GlassLight) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Box(Modifier.fillMaxWidth().atelierCard(shape = ResonanceShapes.Card)) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text(song.title, style = MaterialTheme.typography.titleMedium)
                         Text(song.artist + " · " + song.album.ifBlank { "专辑未提供" })
                         if (song.recommendedAt > 0) Text("最近记录：" + feature.services.formatDateTime(song.recommendedAt), style = MaterialTheme.typography.labelSmall)
@@ -70,6 +74,7 @@ internal fun RecommendationHistoryScreen(compact: Boolean, onBack: () -> Unit) {
                 }
             }
         }
+    }
     }
     editing?.let { track ->
         AlertDialog(onDismissRequest = { editing = null }, title = { Text("评价「${track.title}」") }, text = {

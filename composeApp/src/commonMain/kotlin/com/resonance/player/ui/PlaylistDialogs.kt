@@ -125,8 +125,8 @@ fun DeletePlaylistDialog(
                     onClick = onConfirm,
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = ResonanceColors.Danger,
+                        contentColor = if (ResonanceColors.isDark) Color(0xFF141315) else Color.White,
                     ),
                     modifier = Modifier.resonancePressable(deleteInteraction),
                     interactionSource = deleteInteraction,
@@ -156,8 +156,8 @@ fun DeleteTrackDialog(
                     onClick = onConfirm,
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = ResonanceColors.Danger,
+                        contentColor = if (ResonanceColors.isDark) Color(0xFF141315) else Color.White,
                     ),
                     modifier = Modifier.resonancePressable(deleteInteraction),
                     interactionSource = deleteInteraction,
@@ -197,8 +197,8 @@ fun BatchDeleteTracksDialog(
                     onClick = onConfirm,
                     shape = ResonanceShapes.Button,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ResonanceColors.Primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        containerColor = ResonanceColors.Danger,
+                        contentColor = if (ResonanceColors.isDark) Color(0xFF141315) else Color.White,
                     ),
                     modifier = Modifier.resonancePressable(deleteInteraction),
                     interactionSource = deleteInteraction,

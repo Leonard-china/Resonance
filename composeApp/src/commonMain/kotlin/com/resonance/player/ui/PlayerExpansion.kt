@@ -256,7 +256,7 @@ internal fun PlayerExpansionLayout(
                         val frame = if (reducedMotion) full else lerp(source, full, state.fraction)
                         translationX = frame.left
                         translationY = frame.top
-                        shape = PlayerClip(frame.width, frame.height, with(density) { 30.dp.toPx() } * (1f - state.fraction))
+                        shape = PlayerClip(frame.width, frame.height, with(density) { 16.dp.toPx() } * (1f - state.fraction))
                         clip = true
                         alpha = if (reducedMotion) state.fraction else if (state.fraction > 0f) 1f else 0f
                     }
@@ -285,7 +285,7 @@ internal fun PlayerExpansionLayout(
                         scaleY = bounds.height / to.height
                         shadowElevation = with(density) { 16.dp.toPx() } * state.fraction
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(
-                            (9f + 5f * state.fraction).dp / scaleX.coerceAtLeast(.01f))
+                            (9f + 7f * state.fraction).dp / scaleX.coerceAtLeast(.01f))
                         clip = true
                     }.testTag("player-transition-artwork")) {
                         AlbumArtwork(track.artworkSeed, Modifier.fillMaxSize(), 0.dp, track.artworkPath, track.sourceUri)
