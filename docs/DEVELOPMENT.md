@@ -458,6 +458,8 @@ ResonanceTheme/WeatherAppearance/AppearanceStorage 管理主题、天气和减�
 
 ## 12. 构建、测试与发布
 
+2026-11-21 发布与本机安装核对。0.7.0 / 70 按用户确认的当前工作区功能集构建，Android 正式签名沿用旧证书，Windows 与 Linux 提供原生安装包。本机桌面入口已切换到 ~/.local/opt/resonance/0.7.0，原 0.6.12 安装保留。源码、产物校验与渠道验收见[本次发布记录](changes/2026-11-21-07-publish-0.7.0-and-update-desktop.md)。
+
 ### 12.1 环境与配置
 
 推荐复用 CI 的 JDK 17；`scripts/build.ps1` 可选择 17–21。Gradle 使用 Wrapper，不要依赖全局 Gradle。Android SDK 需要 platform 36、Build Tools 36.0.0、platform-tools；设备测试还需要已连接的设备/模拟器。首次构建需要访问 Maven/Google/Gradle 仓库。

@@ -1,5 +1,7 @@
 # 2026-11-21 — Resonance 文档入口与开发变更索引
 
+2026-11-21 已发布 [GitHub v0.7.0](https://github.com/Leonard-china/Resonance/releases/tag/v0.7.0)，包含清岚界面与同步歌词直接校准。Android 使用沿用的正式证书，Windows 和 Linux 从同一份源码构建，本机桌面已更新为 0.7.0。[发布与安装记录](changes/2026-11-21-07-publish-0.7.0-and-update-desktop.md)。
+
 最新界面与缺陷修复交付：[清岚（Clearwater）清新界面、苹果式弹簧动效与 0.7.0 APK](changes/2026-11-21-05-clearwater-fresh-ui-apple-motion-and-apk.md)及[修复 Android 歌单导入失败与多选批量补全](changes/2026-11-21-04-fix-sync-import-and-batch-enrich.md)已完成：彻底去除红色主调转为薄雾浅瓷/深海暮蓝+海沫青碧/冰川天蓝配色，落地苹果式弹簧滑块/播放键形变/心形跃动/流体背景光团/绘制层光学聚焦歌词与工具 2×2 Bento 矩阵；修复 Android FUSE 下 `Files.getFileStore` 导致歌单导入失败、修复 MediaStore 曲目批量补全未持久化与假封面占位问题并接入 QQ 音乐目录。当前版本 `0.7.0 / 70`，Desktop/Android 全量编译、36 项同步与补全回归、53 项 UI 回归与多视口截图复检及新版 `Resonance-0.7.0-release.apk`（debug 签名，16 KiB 对齐）均已通过，真机实测与正式证书边界见记录。
 
 前轮界面升级：[Atelier Acoustics 原生 UI 全面重塑](changes/2026-11-21-01-atelier-acoustics-ui-redesign.md)已完成三端共享设计系统、主壳导航、2×2 歌单拼贴、声学几何封套、沉浸舞台与跨窗弹窗隔离重构，随后演进为上方清岚体系。
