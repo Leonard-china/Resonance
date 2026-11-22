@@ -478,6 +478,16 @@ $env:RESONANCE_FFMPEG = 'D:\Tools\ffmpeg\bin\ffmpeg.exe'
 
 Android Release 配置读取未提交的 `keystore.properties`，示例在 [keystore.properties.example](../keystore.properties.example)。有配置时启用 v1 和 v2 签名；无配置时不能把 Release 输出当成可分发且已校验的正式签名 APK。Debug applicationId 为 `com.resonance.player.debug`，正式包为 `com.resonance.player`，可并存。
 
+2026-11-22 签名核对。用同包名、不同证书签名的本机测试包和正式发布包，Android 会拒绝相互覆盖。给指定设备准备覆盖包时，先核对该设备已安装 APK 的包名、版本号与签名证书。本机 0.7.0 测试签名的覆盖包单独交付，见[手机覆盖包记录](changes/2026-11-22-01-android-phone-signature-update.md)。
+
+2026-11-22 签名规则。凡用于覆盖 `com.resonance.player` 的开发包与发布包，均使用现有正式证书。Android Studio 调试与 CI 继续使用独立包名 `com.resonance.player.debug`。从正式配置构建后，使用 Python 3 与 SDK Build Tools 36.0.0 验证将要交付的实际 APK。设置 `ANDROID_HOME` 或通过 `--sdk` 指定 SDK，Windows 可用 `python`。
+
+```bash
+python3 scripts/verify-android-release.py <实际APK> --version <版本>
+```
+
+[脚本](../scripts/verify-android-release.py)要求唯一签名者、固定正式证书 SHA-256、正式包名、关闭调试及 16 KiB 对齐。发布清单生成前自动执行该检查，手动交付和上传时直接执行。缺少正式签名配置时只使用独立 Debug 包做本机测试。见[统一签名记录](changes/2026-11-22-02-enforce-android-release-signing.md)。
+
 ### 12.2 常用命令
 
 从仓库根目录 PowerShell 执行，按本次任务选择必要命令；本轮实际结果见独立验证记录。

@@ -88,6 +88,12 @@ docs/changes/YYYY-MM-DD-NN-简要主题.md
 
 限额不能建立或构建超出预算时，停止这项验证并如实记录环境受阻；可使用已验证源码进行更轻量的本机验证，重量级目标移到具备预算的环境。不无上限重试，不自动提高限额，不关闭用户应用，不改系统 swap，也不隐式修改共享 Gradle 默认配置。用户可明确另行调整预算。采用普通 app image 替代 Release 构建时必须注明，不能称为已完成 ProGuard/Release。此次 2 GiB 限额的 Linux 完整 app image 构建通过，服务峰值 1.5 GiB；详见[资源修正记录](changes/2026-11-05-05-limit-local-build-memory.md)。
 
+## 5.1 Android 安装包签名（2026-11-22）
+
+发给手机覆盖的开发包和公开 Android APK 使用同一个正式证书，包名为 `com.resonance.player`。日常断点、模拟器和 CI 使用独立包名 `com.resonance.player.debug`。需要正式包时只通过既有私有 Gradle 签名配置构建；配置缺失时暂停同包名交付。
+
+用 `python3 scripts/verify-android-release.py <APK> --version <版本>` 核对最终文件，再发送或上传。发布清单调用同一脚本；手动发布须在 GitHub 与官网上传前运行。指定设备的覆盖安装以手机当前安装包的证书与版本为准。旧的测试签名安装单独迁移，避免影响现有正式签名用户。
+
 ## 6. 官网与服务器数据（2026-10-16）
 
 `website/` 与原生播放器隔离。先确认运行目录和数据库，所有发帖、删除、上传、SMTP 回归使用临时库/模拟服务；不要连接用户音频或真实订阅者群发。发布替换只清理官网控制的安装包目录，不清理原工程 `release/`。

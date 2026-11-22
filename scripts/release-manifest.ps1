@@ -7,6 +7,10 @@ if (-not $Version) {
 }
 $apkPath = Join-Path $projectRoot "composeApp/build/outputs/apk/release/Resonance-$Version-release.apk"
 if (-not (Test-Path -LiteralPath $apkPath)) { throw "Release APK 不存在：$apkPath" }
+$python = Get-Command python -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+if (-not $python) { $python = Get-Command python3 -CommandType Application -ErrorAction Stop | Select-Object -First 1 }
+& $python.Source (Join-Path $PSScriptRoot 'verify-android-release.py') $apkPath --version $Version
+if ($LASTEXITCODE -ne 0) { throw 'Android Release APK 签名或包信息校验失败。' }
 $releaseDirectory = Join-Path $projectRoot "release/$Version"
 New-Item -ItemType Directory -Path $releaseDirectory -Force | Out-Null
 $files = @($apkPath)

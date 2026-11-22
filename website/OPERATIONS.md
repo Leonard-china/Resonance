@@ -1,5 +1,7 @@
 # leonard.asia 现网运维
 
+2026-11-22 Android 下载重新上传。现网先核对活动版本及文件摘要，再用 GitHub 新附件原子替换同内容的 APK。相同版本且相同摘要的下载刷新保留原活动发布记录。内容有变化的发布继续使用受控版本导入。见[签名和上传记录](../docs/changes/2026-11-22-02-enforce-android-release-signing.md)。
+
 2026-11-21 下载发布核对。当前公开版本为 0.7.0，三端安装包通过受控流程校验后切换，服务器隔离回归 45 项通过，公开 Range、ETag、长度与首段字节通过。数据库和旧包已有发布备份。[发布记录](../docs/changes/2026-11-21-07-publish-0.7.0-and-update-desktop.md)
 
 2026-11-05：0.6.6已公开GitHub并受控切换官网三端，首页/五图/下载页更新，备份及公开校验见[本轮发布](../docs/changes/2026-11-05-29-publish-three-platform-release.md)。仅HUP Gunicorn master，保留Java启动器、Tunnel、中继和运行数据；未发邮件。服务器默认临时盘约56MiB不足发布保护的100MiB，候选回归须将TMPDIR/TEMP/TMP指向网站数据所在文件系统的独立目录，45项通过后再切换。普通首页/下载页缓存仍可能旧版，用户选择等待自然更新，不把源站上线写成全网已刷新；即时检查使用`/?v=0.6.6`及`/downloads?v=0.6.6`。

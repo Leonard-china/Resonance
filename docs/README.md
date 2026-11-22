@@ -1,4 +1,8 @@
-# 2026-11-21 — Resonance 文档入口与开发变更索引
+# 2026-11-22 — Resonance 文档入口与开发变更索引
+
+Android 同包名开发交付与公开发布统一使用正式证书，交付前执行 APK 检查。见[统一签名与重新上传记录](changes/2026-11-22-02-enforce-android-release-signing.md)。
+
+Android 本机测试包覆盖更新使用与原测试包同证书的独立 APK。签名对照、产物与验证见[手机覆盖包记录](changes/2026-11-22-01-android-phone-signature-update.md)。
 
 2026-11-21 已发布 [GitHub v0.7.0](https://github.com/Leonard-china/Resonance/releases/tag/v0.7.0)，包含清岚界面与同步歌词直接校准。Android 使用沿用的正式证书，Windows 和 Linux 从同一份源码构建，本机桌面已更新为 0.7.0。[发布与安装记录](changes/2026-11-21-07-publish-0.7.0-and-update-desktop.md)。
 
@@ -129,6 +133,8 @@ Linux x86_64 原生桌面版新增 DEB 与免安装包；安装与平台差异�
 
 | 修改日期 | 主要修改 | 详细记录 |
 | --- | --- | --- |
+| 2026-11-22 | 统一 Android 同包名 APK 的正式签名并重新上传 0.7.0 | [具体记录](changes/2026-11-22-02-enforce-android-release-signing.md) |
+| 2026-11-22 | 为 Android 本机测试签名准备 0.7.0 覆盖包 | [具体记录](changes/2026-11-22-01-android-phone-signature-update.md) |
 | 2026-11-21 | 清岚 0.7.0 三端发布与本机桌面更新 | [发布记录](changes/2026-11-21-07-publish-0.7.0-and-update-desktop.md) |
 | 2026-11-21 | 同步歌词页直接校准，调节时保留当前歌词和播放控制 | [具体记录](changes/2026-11-21-06-lyrics-calibration-toolbar.md) |
 | 2026-11-21 | 清岚（Clearwater）清新界面重构（去除红色主调）、苹果式弹簧动效与歌词舞台升级、Bento 排版及新版 0.7.0 Release APK（debug 签名，167524719 字节） | [具体记录](changes/2026-11-21-05-clearwater-fresh-ui-apple-motion-and-apk.md) |

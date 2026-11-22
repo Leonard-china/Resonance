@@ -38,4 +38,7 @@
 
 ## 发布
 
+- 所有用于覆盖 `com.resonance.player` 的 Android APK，包括日常开发交给手机试用的包，统一使用沿用的正式签名。普通 Debug 限于独立包名 `com.resonance.player.debug`。缺少正式签名配置时暂停交付同包名 APK。
+- 手机覆盖包、GitHub 和官网上传前，使用 [Android 验包脚本](scripts/verify-android-release.py)核验实际 APK。向指定手机交付时另核对手机实际安装包的证书和版本。此前测试签名的迁移单独处理。
+
 功能变更记录与版本发布说明各司其职。发布时另建 `docs/RELEASE_NOTES-<版本>.md`，标题同样带日期和版本重点；`scripts/release-manifest.ps1` 依赖这个路径。产物校验值必须从本次实际产物生成，不能复用旧值。
